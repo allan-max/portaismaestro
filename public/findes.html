@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAESTRO | Sistema Findes</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Roboto+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+    if (!localStorage.getItem('maestro_session')) {
+        window.location.href = 'index.html';
+    }
+</script>
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+
+        body {
+            height: 100vh;
+            display: flex;
+            justify-content: flex-end; /* Mantém na direita */
+            align-items: center;
+            padding-right: 50px; /* 👈 Empurra mais para a direita (estava 100px) */
+            position: relative;
+            background-color: #000;
+            overflow: hidden;
+        }
+
+        /* FUNDO INFALÍVEL */
+        .fundo-imagem {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            object-fit: cover; z-index: -2;
+        }
+
+        .fundo-escuro {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.65); z-index: -1;
+        }
+
+        /* ================= LOGO FIXO (Encolhido) ================= */
+        .absolute-logo {
+            position: fixed;
+            top: 30px; 
+            left: 40px; 
+            z-index: 20; 
+        }
+        .absolute-logo img {
+            height: 40px; /* 👈 LOGO MENOR (estava 60px) */
+            width: auto;
+        }
+
+        /* ================= PAINEL DE CONTROLES (Menor, mais fosco e mais abaixo) ================= */
+        .control-panel {
+            width: 100%;
+            max-width: 360px; /* 👈 PAINEL MAIS ESTREITO (estava 420px) */
+            
+            /* 👇 VIDRO MAIS TRANSPARENTE E SUAVE 👇 */
+            background: rgba(0, 0, 0, 0.15); 
+            backdrop-filter: blur(6px); 
+            -webkit-backdrop-filter: blur(6px); 
+            
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            
+            padding: 30px; /* Menos preenchimento interno */
+            margin-top: 120px; /* 👈 EMPURRA O PAINEL MAIS PARA BAIXO */
+            
+            z-index: 10;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        /* ======= ESTILO DOS BOTÕES E CAIXAS (Tamanhos reduzidos) ======= */
+        .status-container {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 15px;
+            font-size: 0.85rem; color: #555; background: #ffffff;
+            padding: 10px 14px; border-radius: 6px; border: 1px solid #eaeaea; /* 👈 MAIS FINO */
+        }
+        .led { width: 8px; height: 8px; border-radius: 50%; background-color: #999; transition: 0.3s; }
+        .led.running { background-color: #2e8b57; }
+
+        .event-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .event-input {
+            flex: 1;
+            padding: 10px 14px; /* 👈 INPUT MENOR */
+            background: #ffffff;
+            border: 1px solid #eaeaea;
+            border-radius: 6px;
+            color: #333;
+            font-size: 0.9rem; /* Letra menor */
+            outline: none;
+            transition: 0.2s;
+        }
+        .event-input:focus { border-color: #1a36c4; }
+        .event-input::placeholder { color: #888; }
+
+        .btn-copy {
+            padding: 0 15px; /* 👈 BOTÃO COPIAR MENOR */
+            background: #ffffff;
+            border: 1px solid #eaeaea;
+            color: #1a36c4;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 1rem;
+        }
+        .btn-copy:hover { background: #f0f4ff; color: #112596; }
+        .btn-copy:active { transform: scale(0.95); }
+
+        .btn-ligar {
+            width: 100%;
+            padding: 12px; /* 👈 BOTÃO LIGAR MAIS FINO */
+            background-color: #1a36c4;
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem; /* Fonte menor */
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex; justify-content: center; align-items: center; gap: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(26, 54, 196, 0.3);
+        }
+        .btn-ligar:hover { background-color: #112596; }
+        .btn-ligar:active { transform: translateY(2px); }
+
+        .btn-ligar.running {
+            background-color: #dc3545;
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+        }
+        .btn-ligar.running:hover { background-color: #c82333; }
+
+        .btn-link {
+            display: block; width: 100%; text-align: center; background: transparent;
+            color: #ffffff; margin-top: 10px; font-size: 0.85rem; text-decoration: none; 
+            border: none; cursor: pointer; text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            font-weight: 600;
+        }
+        .btn-link:hover { text-decoration: underline; }
+
+        .mini-terminal {
+            margin-top: 20px;
+            background-color: #f8f9fa;
+            border: 1px solid #eaeaea;
+            border-radius: 6px;
+            padding: 12px; /* 👈 TERMINAL MAIS COMPACTO */
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.75rem;
+            color: #555;
+            height: 110px; /* Altura reduzida */
+            overflow-y: auto;
+        }
+        .log-line { margin-bottom: 5px; line-height: 1.4; }
+        .log-time { color: #888; margin-right: 6px; }
+
+        /* ========================================== */
+        /* 🧭 NAVBAR FLUTUANTE GLOBAL                 */
+        /* ========================================== */
+        .floating-navbar {
+            position: fixed; top: 25px; left: 50%; transform: translateX(-50%);
+            background: rgba(15, 17, 21, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 40px; padding: 6px 10px;
+            display: flex; gap: 5px; z-index: 99999; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+        }
+        .nav-item {
+            color: #9aa0a6; text-decoration: none; padding: 8px 18px; border-radius: 30px;
+            font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s ease;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .nav-item:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+        .nav-item.active.nav-findes { background: #ff8c00; color: #000; box-shadow: 0 0 15px rgba(255, 140, 0, 0.4); }
+        /* ========================================== */
+        /* BOTÃO VOLTAR NA NAVBAR (VERMELHO)          */
+        /* ========================================== */
+        .nav-item.nav-voltar {
+            color: #f87171; /* Vermelho suave */
+        }
+        .nav-item.nav-voltar:hover {
+            color: #ff3d00; /* Vermelho forte no hover */
+            background: rgba(248, 113, 113, 0.15); /* Fundo avermelhado transparente */
+        }
+
+        /* ========================================== */
+        /* 📱 RESPONSIVIDADE (MOBILE & TABLETS)       */
+        /* ========================================== */
+        @media (max-width: 850px) {
+            body {
+                justify-content: center; /* Centraliza o painel operacional na tela */
+                padding: 100px 15px 120px 15px; /* Espaço para logo (topo) e navbar (baixo) */
+                align-items: flex-start; /* Alinha o conteúdo ao topo */
+                overflow-y: auto; /* Permite rolar a tela se for pequena */
+            }
+
+            /* 👇 LOGO CENTRALIZADA NO TOPO 👇 */
+            .absolute-logo {
+                position: absolute; /* Sai da posição fixa, fica no topo do body */
+                top: 25px; 
+                left: 50%;
+                transform: translateX(-50%); /* Técnica para centralizar horizontalmente */
+                z-index: 20; 
+                width: 100%;
+                display: flex; justify-content: center; /* Centraliza a imagem */
+                margin-bottom: 20px;
+            }
+            .absolute-logo img { height: 35px; } /* Ajuste de tamanho da logo no mobile */
+
+            /* 👇 PAINEL CENTRALIZADO 👇 */
+            .control-panel { 
+                padding: 20px; 
+                margin-top: 0;
+                width: 100%;
+                max-width: 340px; /* Um pouco mais estreito no mobile */
+                box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+                display: flex;
+                flex-direction: column;
+                align-items: center; /* Centraliza os itens dentro do painel operacional */
+            }
+            
+            /* 👇 CENTRALIZA OS ITENS DENTRO DO PAINEL Operacional 👇 */
+            .status-container { justify-content: center; width: 100%; max-width: 250px; }
+            .event-group { justify-content: center; width: 100%; }
+            
+            /* 👇 CENTRALIZA O CONTEÚDO DO MINI TERMINAL 👇 */
+            .mini-terminal { 
+                text-align: center; 
+                padding: 10px;
+                height: 100px;
+            }
+            .log-line { justify-content: center; } /* Se os logs usarem flex */
+
+            /* 👇 NAVBAR MOBILE (EM BAIXO) 👇 */
+            .floating-navbar {
+                top: auto; 
+                bottom: 20px; 
+                width: max-content; 
+                max-width: 90%;
+            }
+            .nav-item span { display: none; } /* Mostra só os ícones */
+            .nav-item { padding: 12px; font-size: 16px; border-radius: 50%; }
+        }
+    </style>
+</head>
+<body onload="setupPainelFindes()">
+
+    <img src="./img/Divulgacao-Findes-1536x864.png" class="fundo-imagem" alt="Fundo Findes">
+    <div class="fundo-escuro"></div>
+
+    <nav class="floating-navbar">
+        <a href="coupa.html" class="nav-item"><i class="fa-solid fa-cube"></i> <span>Coupa</span></a>
+        <a href="vale.html" class="nav-item"><i class="fa-solid fa-helmet-safety"></i> <span>Vale</span></a>
+        <a href="me.html" class="nav-item"><i class="fa-solid fa-shopping-cart"></i> <span>ME</span></a>
+        <a href="findes.html" class="nav-item active nav-findes"><i class="fa-solid fa-industry"></i> <span>Findes</span></a>
+        <a href="index.html" class="nav-item nav-voltar"><i class="fa-solid fa-arrow-left"></i> <span>Voltar</span></a>
+    </nav>
+
+    <div class="absolute-logo">
+        <img src="./img/logo-findes.png" alt="Logo Findes">
+    </div>
+
+    <main class="control-panel">
+        
+        <div class="status-container">
+            <div class="led" id="led-status"></div>
+            <span id="txt-status">Ocioso</span>
+        </div>
+
+        <div class="event-group">
+            <input type="text" id="id-evento" class="event-input" placeholder="ID do Evento">
+            <button class="btn-copy" onclick="copiarDadosEvento()" title="Copiar ID do Evento">
+                <i class="fa-solid fa-copy"></i>
+            </button>
+        </div>
+
+        <button class="btn-ligar" id="btn-acao" onclick="alternarEstadoFindes()">
+            <i class="fa-solid fa-play"></i> INICIAR MÓDULO
+        </button>
+
+        <a href="index.html" class="btn-link">
+            <i class="fa-solid fa-arrow-left"></i> Voltar ao Maestro
+        </a>
+
+        <div class="mini-terminal" id="mini-terminal">
+            <div class="log-line"><span class="log-time">[Sys]</span> Conectando ao Maestro...</div>
+        </div>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const sessionAtual = localStorage.getItem('maestro_session');
+
+// Só tenta conectar enviando o crachá real
+const socket = io({ 
+    auth: { sessionId: sessionAtual } 
+});
+
+// Removemos o 'connect_error'. Agora ouvimos a expulsão amigável do servidor:
+socket.on("sessao_invalida", () => {
+    console.error("A sua sessão expirou ou é inválida.");
+    localStorage.clear();
+    window.location.href = "index.html"; 
+});
+        let isRunning = false;
+
+        function setupPainelFindes() {
+            socket.emit('sou_frontend', { usuario: localStorage.getItem('maestro_user') });
+            addLog("Módulo Findes carregado.");
+            addLog("Pronto para iniciar rotinas no sistema Findes.");
+        }
+
+        function alternarEstadoFindes() {
+            const btn = document.getElementById('btn-acao');
+            const inputEvento = document.getElementById('id-evento');
+            
+            if (!isRunning) {
+                const idEvento = inputEvento.value.trim();
+                if (!idEvento) {
+                    alert("⚠️ Por favor, digite o ID do Evento antes de iniciar.");
+                    inputEvento.focus();
+                    return;
+                }
+
+                if(confirm(`Deseja iniciar a extração para o evento: ${idEvento}?`)) {
+                    socket.emit('comando_direto', { modo: 'ligar_robo', portal: 'findes', evento: idEvento });
+                    
+                    isRunning = true;
+                    btn.className = "btn-ligar running";
+                    btn.innerHTML = '<i class="fa-solid fa-stop"></i> PARAR MÓDULO';
+                    document.getElementById('led-status').className = "led running";
+                    document.getElementById('txt-status').innerText = "Processando dados...";
+                    inputEvento.disabled = true; 
+                    addLog(`Comando de INÍCIO enviado para o evento ${idEvento}.`);
+                }
+            } else {
+                if(confirm("Deseja interromper o processamento e desligar o robô?")) {
+                    socket.emit('comando_direto', { modo: 'desligar_robo', portal: 'findes' });
+                    
+                    isRunning = false;
+                    btn.className = "btn-ligar";
+                    btn.innerHTML = '<i class="fa-solid fa-play"></i> INICIAR MÓDULO';
+                    document.getElementById('led-status').className = "led";
+                    document.getElementById('txt-status').innerText = "Ocioso";
+                    inputEvento.disabled = false;
+                    addLog(`Ordem de PARADA enviada.`);
+                }
+            }
+        }
+
+        function copiarDadosEvento() {
+            const inputEvento = document.getElementById('id-evento');
+            const dados = inputEvento.value.trim();
+
+            if (!dados) {
+                addLog("Nada para copiar.");
+                return;
+            }
+
+            navigator.clipboard.writeText(dados).then(() => {
+                addLog(`Dados copiados: ${dados}`);
+                
+                const btnCopy = document.querySelector('.btn-copy');
+                btnCopy.style.color = '#2e8b57';
+                btnCopy.style.borderColor = '#2e8b57';
+                setTimeout(() => {
+                    btnCopy.style.color = ''; 
+                    btnCopy.style.borderColor = '';
+                }, 1000);
+
+            }).catch(err => {
+                addLog("Falha ao copiar dados.");
+            });
+        }
+
+        function addLog(msg) {
+            const term = document.getElementById('mini-terminal');
+            if (term) {
+                const now = new Date();
+                const hora = now.getHours().toString().padStart(2, '0') + ':' + 
+                             now.getMinutes().toString().padStart(2, '0');
+                
+                term.innerHTML += `<div class="log-line"><span class="log-time">[${hora}]</span> ${msg}</div>`;
+                
+                while (term.childElementCount > 50) {
+                    term.removeChild(term.firstChild);
+                }
+                term.scrollTop = term.scrollHeight;
+            }
+        }
+
+        socket.on('relatar_progresso_findes', function(dados) {
+            if (dados.mensagem) {
+                addLog(dados.mensagem);
+            }
+        });
+
+        socket.on('tarefa_concluida', function(dados) {
+            if (dados.portal === 'findes' && dados.evento === 'Desligar Robô') {
+                isRunning = false;
+                const btn = document.getElementById('btn-acao');
+                const inputEvento = document.getElementById('id-evento');
+                btn.className = "btn-ligar";
+                btn.innerHTML = '<i class="fa-solid fa-play"></i> INICIAR MÓDULO';
+                document.getElementById('led-status').className = "led";
+                document.getElementById('txt-status').innerText = "Ocioso";
+                inputEvento.disabled = false;
+                addLog(`Robô foi desligado no servidor.`);
+            }
+        });
+    </script>
+</body>
+</html>

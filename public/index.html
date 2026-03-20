@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f1219">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>MAESTRO | Portais Automatizados</title>
+    <link rel="icon" type="image/png" href="favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Estilos extras para manter os inputs com o visual glass do site */
+        .auth-input {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border-radius: 6px;
+            margin-top: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            box-sizing: border-box;
+            outline: none;
+            transition: all 0.3s;
+        }
+        .auth-input:focus { border-color: #ff6b9d; background: rgba(0, 0, 0, 0.4); }
+        .link-nav { color: #ff6b9d; text-decoration: none; cursor: pointer; transition: 0.2s; font-weight: 600; }
+        .link-nav:hover { color: #fff; }
+        .msg-erro { color: #ff4c4c; font-size: 12px; margin-top: 10px; display: none; background: rgba(255, 76, 76, 0.1); padding: 8px; border-radius: 4px; border: 1px solid rgba(255, 76, 76, 0.3); }
+        .msg-sucesso { color: #2E8B57; font-size: 12px; margin-top: 10px; display: none; background: rgba(46, 139, 87, 0.1); padding: 8px; border-radius: 4px; border: 1px solid rgba(46, 139, 87, 0.3); }
+        html { 
+            scroll-behavior: smooth; 
+            overflow-x: hidden; 
+            background-color: #0f1219; /* Elimina o fundo branco do "pulo" do Safari */
+        }
+
+        body {
+            overflow-x: hidden;
+            margin: 0;
+            min-height: 100vh;
+            /* Previne faixas brancas nos cantos de iPhones sem botão (Notch/Dynamic Island) */
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+        }
+
+        /* ========================================== */
+        /* 📱 RESPONSIVIDADE DEFINITIVA PARA O LOGIN  */
+        /* ========================================== */
+        
+        /* 1. MATA O SCROLL HORIZONTAL NA RAIZ */
+        html, body {
+            overflow-x: hidden !important;
+            max-width: 100vw !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* 2. FORÇA TUDO A RESPEITAR AS BORDAS */
+        *, *::before, *::after {
+            box-sizing: border-box !important;
+        }
+
+        @media (max-width: 850px) {
+            body.pagina-login {
+                display: block !important; /* Mudamos de flex para block para evitar bugs de margem */
+                padding: 20px 15px !important;
+                height: auto !important;
+                min-height: 100vh !important;
+            }
+
+            /* O Container Principal */
+            .login-container {
+                display: flex !important;
+                flex-direction: column !important; 
+                width: 100% !important;
+                max-width: 100% !important; 
+                margin: 0 auto !important;
+                overflow: hidden !important; /* Corta vazamentos do painel */
+            }
+
+            /* As Metades do Painel */
+            .login-left, .login-right {
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 30px 20px !important;
+                box-sizing: border-box !important;
+            }
+
+            .login-left { border-radius: 12px 12px 0 0 !important; }
+            .login-right { border-radius: 0 0 12px 12px !important; }
+
+            /* 🎯 A SOLUÇÃO PARA AS OPÇÕES CORTADAS 🎯 */
+            .form-box, .auth-input, select, #seletor-portal, .btn-entrar {
+                width: 100% !important;
+                max-width: 100% !important;
+                box-sizing: border-box !important;
+            }
+            
+            /* Obriga o Select a não crescer e meter "..." no texto comprido */
+            select {
+                text-overflow: ellipsis !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+            }
+
+            /* Ajustes Textuais */
+            .login-left h1 { font-size: 26px !important; word-break: break-word !important; }
+            .subtitle-maestro { font-size: 13px !important; white-space: normal !important; line-height: 1.4 !important; }
+            .img-logo { width: 70px !important; margin-bottom: 10px !important; }
+
+            /* Partículas no Fundo sem esticar a tela */
+            #particles-js {
+                position: fixed !important;
+                top: 0 !important; left: 0 !important;
+                width: 100vw !important; height: 100vh !important;
+                z-index: -1 !important;
+            }
+        }
+    </style>
+    <style>
+        .admin-drawer {
+            position: fixed;
+            top: 50%;
+            right: -260px; /* Fica escondido fora da tela */
+            width: 260px;
+            transform: translateY(-50%);
+            background: rgba(15, 17, 21, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-right: none;
+            border-radius: 16px 0 0 16px;
+            padding: 20px;
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 9999;
+            box-shadow: -5px 0 25px rgba(0,0,0,0.7);
+            display: none; /* Invisível por padrão (só admin vê) */
+        }
+        .admin-drawer.open { right: 0; }
+        
+        .drawer-handle {
+            position: absolute;
+            left: -25px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 25px;
+            height: 80px;
+            background: #34d399; /* Cor verde de destaque */
+            border-radius: 8px 0 0 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            color: #000;
+            box-shadow: -2px 0 10px rgba(52, 211, 153, 0.3);
+            font-size: 18px;
+        }
+        .drawer-handle:active { cursor: grabbing; }
+        
+        .drawer-content h3 { 
+            color: #fff; 
+            font-size: 15px; 
+            margin-bottom: 20px; 
+            border-bottom: 1px solid rgba(255,255,255,0.1); 
+            padding-bottom: 10px; 
+        }
+        .btn-drawer { 
+            width: 100%; 
+            padding: 12px; 
+            margin-bottom: 10px; 
+            border: none; 
+            border-radius: 6px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: 0.2s; 
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-drawer:hover { filter: brightness(1.2); transform: scale(1.02); }
+    </style>
+
+    <div id="admin-drawer" class="admin-drawer">
+        <div class="drawer-handle" id="drawer-handle" onclick="toggleGaveta()">
+            <i class="fa-solid fa-grip-lines-vertical"></i>
+        </div>
+        <div class="drawer-content">
+            <h3><i class="fa-solid fa-crown" style="color: #fbbf24;"></i> Gestão</h3>
+            
+            <button class="btn-drawer" style="background: #34d399; color: #000;" onclick="window.open('dashboard.html', '_blank')">
+                <i class="fa-solid fa-chart-pie"></i> Estatísticas
+            </button>
+            
+            <button id="btn-painel-dev" class="btn-drawer" style="background: #9b59b6; color: #fff;" onclick="window.open('dev.html', '_blank')">
+                <i class="fa-solid fa-code"></i> Painel DEV
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const gaveta = document.getElementById('admin-drawer');
+        const puxador = document.getElementById('drawer-handle');
+
+        // Mostrar gaveta se for Admin ou Dev
+        if (localStorage.getItem('maestro_admin') === 'true' || localStorage.getItem('maestro_dev') === 'true') {
+            gaveta.style.display = 'block';
+            
+            // Esconder o botão do Painel DEV se não for DEV
+            if (localStorage.getItem('maestro_dev') !== 'true') {
+                document.getElementById('btn-painel-dev').style.display = 'none';
+            }
+        }
+
+        // 2. Clique simples no puxador para abrir/fechar
+        function toggleGaveta() {
+            gaveta.classList.toggle('open');
+        }
+
+        // 3. Inteligência de "Arrastar" (Funciona com Mouse no PC e Dedo no Celular)
+        let isDragging = false;
+        let startX = 0;
+
+        // ---> Eventos para Mouse (PC)
+        puxador.addEventListener('mousedown', (e) => { 
+            isDragging = true; 
+            startX = e.clientX; 
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            if (startX - e.clientX > 15) { gaveta.classList.add('open'); isDragging = false; } // Puxou pra esquerda
+            if (e.clientX - startX > 15) { gaveta.classList.remove('open'); isDragging = false; } // Empurrou pra direita
+        });
+        document.addEventListener('mouseup', () => { isDragging = false; });
+
+        // ---> Eventos para Touch (Celular/Tablet)
+        puxador.addEventListener('touchstart', (e) => { 
+            isDragging = true; 
+            startX = e.touches[0].clientX; 
+        });
+        document.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            let touchX = e.touches[0].clientX;
+            if (startX - touchX > 15) { gaveta.classList.add('open'); isDragging = false; }
+            if (touchX - startX > 15) { gaveta.classList.remove('open'); isDragging = false; }
+        });
+        document.addEventListener('touchend', () => { isDragging = false; });
+    </script>
+</head>
+<body class="pagina-login">
+    <a href="docs.html" class="btn-docs-float"><i class="fa-solid fa-book"></i> Documentação</a>
+
+    <div id="particles-js"></div>
+            <a href="docs.html" class="btn-docs-float"><i class="fa-solid fa-book"></i> Documentação</a>
+
+    <div class="login-container">
+        <div class="login-left">
+            <img src="./img/logo-maestro.png" alt="Logo MAESTRO" class="img-logo">
+            <h1>MAESTRO</h1>
+            <div class="subtitle-maestro">Módulo de Automação Específico de Sites<br> e Tratamento de Recursos Online</div>
+        </div>
+        
+        <div class="login-right">
+            
+            <div id="box-login">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                    <i class="fa-solid fa-lock" style="color: #ff6b9d;"></i>
+                    <h2>Autenticação</h2>
+                </div>
+                <p>Acesso restrito. Faça login para continuar.</p>
+                
+                <div class="form-box" style="margin-top: 20px;">
+                    <label><i class="fa-regular fa-envelope"></i> E-mail Corporativo</label>
+                    <input type="text" id="log-user" class="auth-input" placeholder="seu.email@venturainformatica.com.br" onkeypress="verificarEnter(event, 'login')">
+                </div>
+                <div class="form-box" style="margin-top: 15px;">
+                    <label><i class="fa-solid fa-key"></i> Senha</label>
+                    <input type="password" id="log-pass" class="auth-input" placeholder="Digite sua senha" onkeypress="verificarEnter(event, 'login')">
+                </div>
+                
+                <div id="erro-login" class="msg-erro">Usuário ou senha incorretos!</div>
+                
+                <button class="btn-entrar" style="margin-top: 20px;" onclick="fazerLogin()">ACESSAR</button>
+                
+                <div style="margin-top: 20px; font-size: 13px; text-align: center; color: var(--text-dim);">
+                    <span class="link-nav" onclick="alternarTelas('recuperar')">Esqueci a senha</span> <br><br>
+                    Não tem uma conta? <span class="link-nav" onclick="alternarTelas('cadastro')">Cadastre-se aqui</span>
+                </div>
+            </div>
+
+            <div id="box-cadastro" style="display: none;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                    <i class="fa-solid fa-user-plus" style="color: #ff6b9d;"></i>
+                    <h2>Novo Usuário</h2>
+                </div>
+                <p>Confirmação automática via e-mail.</p>
+                
+                <div class="form-box" style="margin-top: 20px;">
+                    <label>E-mail da Ventura</label>
+                    <input type="email" id="cad-user" class="auth-input" placeholder="seu.email@venturainformatica.com.br" onkeypress="verificarEnter(event, 'cadastro')">
+                </div>
+                <div class="form-box" style="margin-top: 15px;">
+                    <label>Nova Senha</label>
+                    <input type="password" id="cad-pass" class="auth-input" placeholder="Crie uma senha segura" onkeypress="verificarEnter(event, 'cadastro')">
+                </div>
+                
+                <div id="erro-cad" class="msg-erro">Preencha todos os campos!</div>
+                <div id="sucesso-cad" class="msg-sucesso">E-mail de ativação enviado! Verifique a sua caixa.</div>
+                
+                <button class="btn-entrar" style="margin-top: 20px; background: #2E8B57; border-color: #2E8B57;" onclick="fazerCadastro()">CADASTRAR</button>
+                
+                <p style="margin-top: 20px; font-size: 13px; text-align: center; color: var(--text-dim);">
+                    Já possui conta? <span class="link-nav" onclick="alternarTelas('login')">Voltar ao Login</span>
+                </p>
+            </div>
+           <div id="box-recuperar" style="display: none;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;"><h2 style="color:#ff8c00;">Recuperar Acesso</h2></div>
+                <p>Enviaremos um link de redefinição para o seu e-mail.</p>
+                <div class="form-box">
+                    <input type="email" id="rec-email" class="auth-input" placeholder="Seu e-mail da Ventura" onkeypress="verificarEnter(event, 'recuperar')">
+                </div>
+                <div id="erro-rec" class="msg-erro"></div>
+                <div id="sucesso-rec" class="msg-sucesso">Se o e-mail existir, um link foi enviado.</div>
+                <button class="btn-entrar" style="margin-top: 20px; background: #ff8c00;" onclick="solicitarRecuperacao()">ENVIAR LINK</button>
+                <p style="margin-top: 20px; text-align: center;"><span class="link-nav" onclick="alternarTelas('login')">Cancelar</span></p>
+            </div>
+
+            <div id="box-nova-senha" style="display: none;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;"><h2 style="color:#ff6b9d;">Criar Nova Senha</h2></div>
+                <p>Digite a sua nova credencial de acesso.</p>
+                <div class="form-box">
+                    <input type="password" id="new-pass" class="auth-input" placeholder="Nova senha segura" onkeypress="verificarEnter(event, 'nova_senha')">
+                </div>
+                <div id="erro-newpass" class="msg-erro"></div>
+                <div id="sucesso-newpass" class="msg-sucesso">Senha alterada! Redirecionando para login...</div>
+                <button class="btn-entrar" style="margin-top: 20px;" onclick="salvarNovaSenha()">ATUALIZAR SENHA</button>
+            </div>
+
+            <div id="box-loading" style="display: none; text-align: center; padding: 40px 0;">
+                <h2 id="loading-txt" style="color: #fff;">A analisar Segurança...</h2>
+            </div>
+
+            <div id="box-portal" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                            <i class="fa-solid fa-network-wired" style="color: #ff6b9d;"></i>
+                            <h2>PORTAIS MAESTRO</h2>
+                        </div>
+                        <p>Selecione o ambiente para iniciar.</p>
+                    </div>
+                    <button onclick="fazerLogout()" style="background: none; border: 1px solid rgba(255,255,255,0.2); color: var(--text-dim); padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; transition: 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-dim)'">
+                        <i class="fa-solid fa-right-from-bracket"></i> Sair
+                    </button>
+                    <button id="btn-abrir-dashboard" class="btn-entrar" style="display: none; margin-top: 15px; background: #34d399; border-color: #34d399; color: #000;" onclick="window.open('dashboard.html', '_blank')">
+                        <i class="fa-solid fa-chart-pie"></i> DASHBOARD DE ESTATÍSTICAS
+                    </button>
+                </div>
+                
+                <div class="form-box" style="margin-top: 20px;">
+                    <label><i class="fa-solid fa-globe"></i> Portal</label>
+                    <select id="seletor-portal" onchange="verificarSelecao()">
+                        <option value="" disabled selected>Selecione seu ambiente...</option>
+                        <option value="coupa">Coupa Enterprise</option>
+                        <option value="vale">Portal Vale Metais</option>
+                        <option value="ariba">SAP Ariba</option>
+                        <option value="findes">Sistema Findes</option>
+                        <option value="me">Mercado Eletrônico</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down select-arrow"></i>
+                </div>
+                
+                <button id="btn-entrar" class="btn-entrar" disabled onclick="acessarSistema()">ENTRAR NO SISTEMA</button>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script>
+        const sessionAtual = localStorage.getItem('maestro_session');
+
+        // Só tenta conectar enviando o crachá real
+        const socket = io({ 
+            auth: { sessionId: sessionAtual } 
+        });
+
+        // Removemos o 'connect_error'. Agora ouvimos a expulsão amigável do servidor:
+socket.on("sessao_invalida", () => {
+    console.error("A sua sessão expirou ou é inválida.");
+    localStorage.clear();
+    window.location.href = "index.html"; 
+});
+        
+        // Configuração do efeito "Network"
+        particlesJS("particles-js", {
+            "particles": {
+                "number": { "value": 40, "density": { "enable": true, "value_area": 800 } },
+                "color": { "value": "#ffffff" },
+                "shape": { "type": "circle" },
+                "opacity": { "value": 0.3, "random": false },
+                "size": { "value": 3, "random": true },
+                "line_linked": { "enable": true, "distance": 150, "color": "#ffffff", "opacity": 0.2, "width": 1 },
+                "move": { "enable": true, "speed": 1.5, "direction": "none", "random": false, "straight": false, "out_mode": "out", "bounce": false }
+            },
+            "interactivity": {
+                "detect_on": "canvas",
+                "events": {
+                    "onhover": { "enable": true, "mode": "grab" },
+                    "onclick": { "enable": true, "mode": "push" }, 
+                    "resize": true
+                },
+                "modes": {
+                    "grab": { "distance": 140, "line_linked": { "opacity": 0.8 } },
+                    "push": { "particles_nb": 3 }
+                }
+            },
+            "retina_detect": true
+        });
+
+        // ================= SISTEMA DE LOGIN SEGURO (BACKEND) =================
+
+        function alternarTelas(tela) {
+            // 1. Esconde todas as caixas primeiro
+            const caixas = ['box-login', 'box-cadastro', 'box-recuperar', 'box-nova-senha', 'box-loading', 'box-portal'];
+            caixas.forEach(id => {
+                if(document.getElementById(id)) document.getElementById(id).style.display = 'none';
+            });
+            
+            // 2. Esconde todas as mensagens de erro
+            document.querySelectorAll('.msg-erro, .msg-sucesso').forEach(el => el.style.display = 'none');
+
+            // 3. Mostra apenas a caixa que foi solicitada
+            if(document.getElementById('box-' + tela)) {
+                document.getElementById('box-' + tela).style.display = 'block';
+            }
+        }
+
+       async function fazerLogin() {
+            const user = document.getElementById('log-user').value.trim();
+            const pass = document.getElementById('log-pass').value.trim();
+            const erro = document.getElementById('erro-login');
+            const btn = document.getElementById('box-login').querySelector('button.btn-entrar');
+
+            if (!user || !pass) { erro.innerText = "Preencha todos os campos!"; erro.style.display = 'block'; return; }
+
+            erro.style.display = 'none';
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> VALIDANDO...';
+            btn.disabled = true;
+
+            // Busca Localização RÁPIDA (Não trava o login se a API estiver lenta)
+            let loc = "Desconhecida";
+            try {
+                // Cria um limitador de tempo de 1.5 segundos
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 1500); 
+                
+                let res = await fetch('https://ipapi.co/json/', { signal: controller.signal });
+                let data = await res.json();
+                clearTimeout(timeoutId); // Cancela o timer se responder rápido
+                
+                loc = `${data.city}, ${data.region} - IP: ${data.ip}`;
+            } catch(e) {
+                console.log("Ignorando localização (Demorou muito ou falhou).");
+            }
+
+            socket.emit('solicitar_login', { user: user, pass: pass, localizacao: loc });
+        }
+        function fazerCadastro() {
+            const email = document.getElementById('cad-user').value.trim();
+            const pass = document.getElementById('cad-pass').value.trim();
+            const erro = document.getElementById('erro-cad');
+            const btn = document.querySelector('#box-cadastro button.btn-entrar');
+            
+            // 1. Validação do E-mail (Domínio e Minúsculas)
+            if (!email.endsWith('@venturainformatica.com.br') || email !== email.toLowerCase()) { 
+                erro.innerText = "Digite o e-mail @venturainformatica.com.br todo em letras minúsculas."; 
+                erro.style.display = 'block'; 
+                return; 
+            }
+            
+            // 2. Validação da Senha (Mínimo de 5 dígitos)
+            if (!pass || pass.length < 5) { 
+                erro.innerText = "A sua senha precisa ter no mínimo 5 dígitos."; 
+                erro.style.display = 'block'; 
+                return; 
+            }
+            
+            // Se passar nas validações, esconde o erro e trava o botão
+            erro.style.display = 'none';
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> A ENVIAR E-MAIL...';
+            
+            socket.emit('solicitar_cadastro', { email: email, senha: pass });
+        }
+
+        socket.on('resposta_cadastro', (res) => {
+            document.querySelector('#box-cadastro button').disabled = false;
+            document.querySelector('#box-cadastro button').innerHTML = "CADASTRAR";
+            if(res.sucesso) document.getElementById('sucesso-cad').style.display = 'block';
+            else { document.getElementById('erro-cad').innerText = res.erro; document.getElementById('erro-cad').style.display = 'block'; }
+        });
+
+       socket.on('resposta_login', function(resposta) {
+    const btnLogin = document.querySelector('#box-login button.btn-entrar');
+
+    if (resposta.sucesso) {
+        localStorage.setItem('maestro_session', resposta.sessionId);
+        localStorage.setItem('maestro_admin', resposta.admin);
+        localStorage.setItem('maestro_dev', resposta.dev);
+
+        socket.auth = { sessionId: resposta.sessionId };
+        socket.disconnect().connect();
+
+        socket.emit('sou_frontend', { usuario: document.getElementById('log-user').value.trim() });
+
+        alternarTelas('portal');
+        verificarPrivilegios();
+    } else {
+        document.getElementById('erro-login').innerText = resposta.erro;
+        document.getElementById('erro-login').style.display = 'block';
+
+        // ⚠️ DESTRAVA O BOTÃO PARA DEIXAR TENTAR DE NOVO
+        btnLogin.disabled = false;
+        btnLogin.innerHTML = 'ACESSAR';
+    }
+});
+
+// Mais abaixo no index.html, arrume a checagem inicial também:
+if (localStorage.getItem('maestro_session')) {
+    alternarTelas('portal');
+} else {
+    alternarTelas('login');
+}
+
+        function verificarPrivilegios() {
+            if(localStorage.getItem('maestro_admin') === 'true') {
+                document.getElementById('btn-painel-admin').style.display = 'block';
+                document.getElementById('btn-abrir-dashboard').style.display = 'block'; // <- ADICIONE ISTO!
+            }
+        }
+
+        function fazerLogout() {
+            // Limpa TODAS as variáveis de sessão
+            localStorage.removeItem('maestro_auth');
+            localStorage.removeItem('maestro_user');
+            localStorage.removeItem('maestro_admin'); // Apaga privilégio de Admin
+            localStorage.removeItem('maestro_dev');   // Apaga privilégio de Dev
+
+            document.getElementById('log-user').value = '';
+            document.getElementById('log-pass').value = '';
+            
+            // Esconde a gaveta forçadamente e fecha se estiver aberta
+            const gaveta = document.getElementById('admin-drawer');
+            if (gaveta) {
+                gaveta.style.display = 'none';
+                gaveta.classList.remove('open');
+            }
+
+            alternarTelas('login');
+        }
+
+        function verificarEnter(event, acao) {
+            if (event.key === 'Enter') {
+                if (acao === 'login') fazerLogin();
+                if (acao === 'cadastro') fazerCadastro();
+            }
+        }
+
+
+        // ================= LÓGICA DE REDIRECIONAMENTO =================
+        function verificarSelecao() {
+            const seletor = document.getElementById('seletor-portal');
+            document.getElementById('btn-entrar').disabled = (seletor.value === "");
+        }
+
+        function acessarSistema() {
+            const seletor = document.getElementById('seletor-portal');
+            const portal = seletor.value;
+            if (portal) {
+                window.location.href = portal + '.html';
+            }
+        }
+        let tokenGlobal = null;
+
+        function solicitarRecuperacao() {
+            const email = document.getElementById('rec-email').value.trim();
+            const erro = document.getElementById('erro-rec');
+            const btn = document.querySelector('#box-recuperar button.btn-entrar');
+
+            if (!email) {
+                erro.innerText = "Por favor, digite seu e-mail corporativo.";
+                erro.style.display = 'block';
+                return;
+            }
+
+            erro.style.display = 'none';
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> ENVIANDO...';
+            
+            socket.emit('solicitar_recuperacao', { email: email });
+        }
+
+        socket.on('resposta_recuperacao_solicitada', () => { 
+            const btn = document.querySelector('#box-recuperar button.btn-entrar');
+            btn.disabled = false;
+            btn.innerHTML = 'ENVIAR LINK';
+            document.getElementById('sucesso-rec').style.display = 'block'; 
+            document.getElementById('rec-email').value = '';
+        });
+
+        function salvarNovaSenha() {
+            const pass = document.getElementById('new-pass').value.trim();
+            const erro = document.getElementById('erro-newpass');
+            const btn = document.querySelector('#box-nova-senha button.btn-entrar');
+
+            if (!pass || pass.length < 4) {
+                erro.innerText = "A senha deve ter pelo menos 4 caracteres.";
+                erro.style.display = 'block';
+                return;
+            }
+
+            erro.style.display = 'none';
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> SALVANDO...';
+
+            // Envia a ordem final para a nuvem -> que repassa ao Robô Python
+            socket.emit('salvar_nova_senha', { token: tokenGlobal, senha: pass });
+        }
+
+        socket.on('resposta_nova_senha', (res) => {
+            const btn = document.querySelector('#box-nova-senha button.btn-entrar');
+            if(res.sucesso) { 
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> SUCESSO!';
+                document.getElementById('sucesso-newpass').style.display = 'block'; 
+                
+                // Redireciona e limpa o tokenGlobal automaticamente
+                setTimeout(() => { window.location.href = "index.html"; }, 2000); 
+            } else { 
+                btn.disabled = false;
+                btn.innerHTML = 'ATUALIZAR SENHA';
+                document.getElementById('erro-newpass').innerText = "Erro: Link expirado ou falha no servidor."; 
+                document.getElementById('erro-newpass').style.display = 'block'; 
+            }
+        });
+
+        // Lê o link enviado por e-mail quando a página abre
+        window.onload = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const action = urlParams.get('action');
+            tokenGlobal = urlParams.get('token');
+
+            if (action === 'verify' && tokenGlobal) {
+                alternarTelas('loading');
+                socket.emit('validar_token_email', { token: tokenGlobal, tipo: 'ativacao' });
+            } else if (action === 'reset' && tokenGlobal) {
+                alternarTelas('loading');
+                socket.emit('validar_token_email', { token: tokenGlobal, tipo: 'verificar_recuperacao' });
+            } 
+        };
+
+        socket.on('resposta_verificacao_token', (res) => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (res.sucesso) {
+                if (urlParams.get('action') === 'verify') {
+                    document.getElementById('loading-txt').innerText = "Ativado com sucesso! Faça login.";
+                    setTimeout(() => { window.location.href = "index.html"; }, 3000);
+                } else if (urlParams.get('action') === 'reset') alternarTelas('nova-senha');
+            } else { document.getElementById('loading-txt').innerText = "Link inválido."; }
+        });
+        // ==========================================
+        // ⚙️ LÓGICA DO PAINEL DEV
+        // ==========================================
+
+        function abrirPainelDev() {
+            document.getElementById('modal-dev').style.display = 'flex';
+            document.getElementById('lista-usuarios-dev').innerHTML = '<p style="color: #a1a1aa; text-align: center; margin-top: 20px;"><i class="fa-solid fa-circle-notch fa-spin"></i> A carregar base de dados...</p>';
+            
+            // Pede a lista completa ao servidor
+            socket.emit('pedir_dados_dev');
+        }
+
+        function fecharPainelDev() {
+            document.getElementById('modal-dev').style.display = 'none';
+        }
+
+        // Recebe a lista do Node.js e desenha no ecrã
+        socket.on('dados_dev_prontos', (usuarios) => {
+            const divLista = document.getElementById('lista-usuarios-dev');
+            divLista.innerHTML = ''; // Limpa a mensagem de "carregando"
+
+            // Varre todos os e-mails que vieram do banco_usuarios.json
+            for (let email in usuarios) {
+                let dados = usuarios[email];
+                
+                // Formatação Visual dos Status
+                let statusOnline = dados.online 
+                    ? '<span style="color: #34d399; font-size: 12px;"><i class="fa-solid fa-circle"></i> Online</span>' 
+                    : '<span style="color: #f87171; font-size: 12px;"><i class="fa-regular fa-circle"></i> Offline</span>';
+                
+                let badgeAdmin = dados.admin 
+                    ? '<span style="background: rgba(251, 191, 36, 0.2); color: #fbbf24; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 10px;"><i class="fa-solid fa-crown"></i> ADMIN</span>' 
+                    : '';
+                
+                let iconVerificado = dados.verificado 
+                    ? '<span style="color: #a1a1aa; font-size: 12px;"><i class="fa-solid fa-envelope-circle-check" style="color: #34d399;"></i> Verificado</span>'
+                    : '<span style="color: #a1a1aa; font-size: 12px;"><i class="fa-solid fa-triangle-exclamation" style="color: #fbbf24;"></i> Pendente</span>';
+
+                // Só mostra o botão "Promover" se a pessoa NÃO for admin
+                let btnPromover = !dados.admin 
+                    ? `<button onclick="darPrivilegioAdmin('${email}')" class="btn-entrar" style="background: #34d399; border: none; padding: 6px 12px; font-size: 11px; width: auto; margin: 0; color: #000;"><i class="fa-solid fa-arrow-up"></i> TORNAR ADMIN</button>` 
+                    : '';
+
+                // Desenha a "Caixa" de cada utilizador
+                divLista.innerHTML += `
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 15px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s;">
+                        <div>
+                            <div style="color: #fff; font-weight: 500; font-size: 15px; margin-bottom: 8px; font-family: 'Roboto Mono', monospace;">
+                                ${email} ${badgeAdmin}
+                            </div>
+                            <div style="display: flex; gap: 20px;">
+                                ${statusOnline}
+                                ${iconVerificado}
+                            </div>
+                        </div>
+                        <div>
+                            ${btnPromover}
+                        </div>
+                    </div>
+                `;
+            }
+        });
+
+        // Função que envia a ordem de promoção
+        function darPrivilegioAdmin(emailDoUsuario) {
+            if(confirm(`👑 Tem a certeza que deseja promover o utilizador ${emailDoUsuario} a Administrador do sistema?`)) {
+                socket.emit('promover_usuario', { alvo: emailDoUsuario });
+            }
+        }
+
+        // Ouve a resposta da promoção e recarrega a lista automaticamente
+        socket.on('resposta_promocao', (res) => {
+            if(res.sucesso) {
+                // Pede a lista novamente para atualizar o visual instantaneamente
+                socket.emit('pedir_dados_dev'); 
+            } else {
+                alert("❌ Erro ao promover: " + res.erro);
+            }
+        });
+    </script>
+    <script src="chat.js"></script>
+</body>
+</html>

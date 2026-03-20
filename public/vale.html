@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAESTRO | Vale Metais</title>
+    <link rel="icon" type="image/png" href="favicon-32x32.png">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script>
+    if (!localStorage.getItem('maestro_session')) {
+        window.location.href = 'index.html';
+    }
+    </script>
+
+    <style>
+        /* ========================================================
+           LAYOUT VALE - TEMA GLASSMORPHISM COM IMAGEM
+           ======================================================== */
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-image: url('Vale-fundo.jpg'); /* 👈 IMAGEM DE FUNDO AQUI */
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: #fff;
+            overflow: hidden;
+            display: flex;
+            height: 100vh;
+            width: 100%;
+        }
+
+        /* Sobreposição escura para garantir contraste dos textos */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.55); 
+            z-index: -1;
+        }
+
+        /* LADO ESQUERDO: Textos e Título */
+        .vale-left {
+            flex: 1.1;
+            padding: 80px 80px 80px 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .vale-title {
+            font-size: 3.5rem;
+            line-height: 1.1;
+            font-weight: 600;
+            margin-bottom: 30px;
+            max-width: 650px;
+            color: #00A69C; /* Verde Vale */
+            text-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .vale-title span { color: #FDB913; } /* Amarelo Vale */
+
+        .vale-text {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #e0e0e0;
+            max-width: 550px;
+            font-weight: 300;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+        }
+
+        /* LADO DIREITO: Secção Transparente (Glass) */
+        .vale-right {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 100px 40px 20px;
+        }
+
+        .glass-card {
+            background: rgba(20, 30, 25, 0.45); 
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px; 
+            width: 100%;
+            max-width: 550px;
+            max-height: 85vh;
+            padding: 35px 40px;
+            color: #ffffff;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .glass-card::-webkit-scrollbar { width: 6px; }
+        .glass-card::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 10px; }
+
+        /* ================= CONTROLES (Interface) ================= */
+        .header-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        .header-card h2 { font-size: 1.2rem; font-weight: 700; color: #ffffff; margin: 0;}
+        
+        .status-badge {
+            display: flex; align-items: center; gap: 8px;
+            background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 30px;
+        }
+        .led { width: 10px; height: 10px; border-radius: 50%; background-color: rgba(255,255,255,0.3); }
+        .led.active { background-color: #00e676; box-shadow: 0 0 8px rgba(0, 230, 118, 0.6); }
+        .led.running { background-color: #FDB913; box-shadow: 0 0 8px rgba(253, 185, 19, 0.6); }
+        .led.offline { background-color: #ff3d00; }
+
+        .btn-base {
+            width: 100%; padding: 14px; 
+            background: rgba(255, 255, 255, 0.18); 
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 30px; 
+            font-size: 0.95rem; font-weight: 600; text-transform: uppercase;
+            cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px;
+            margin-bottom: 12px;
+        }
+        .btn-base:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-base:hover:not(:disabled) { background: rgba(0, 166, 156, 0.5); transform: translateY(-1px); border-color: #00A69C; }
+
+        .btn-stop { 
+            background: #dc3545 !important; 
+            border-color: #dc3545 !important;
+            color: #ffffff !important;
+        }
+        .btn-stop:hover:not(:disabled) { background: #c82333 !important; }
+        
+        .grid-botoes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;}
+        
+        /* 👇 TELA DE BLOQUEIO FOSCA 👇 */
+        .lock-overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(10, 15, 12, 0.6); 
+            backdrop-filter: blur(12px); 
+            -webkit-backdrop-filter: blur(12px);
+            z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            border-radius: 12px; transition: 0.5s ease;
+        }
+        .lock-overlay i { font-size: 35px; color: #FDB913; margin-bottom: 10px; }
+        .lock-overlay p { font-weight: 600; color: #eeeeee; }
+
+        #conteudo-operacional { transition: opacity 0.5s ease; }
+
+        /* ================= TERMINAL E FILAS ================= */
+        .terminal-box {
+            background: rgba(0, 0, 0, 0.4); 
+            color: #ffffff; 
+            font-family: 'Roboto Mono', monospace;
+            font-size: 12px; padding: 15px; height: 130px; overflow-y: auto;
+            border-radius: 12px; margin-top: 25px; 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            border-left: 4px solid #00A69C;
+        }
+
+        .fila-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
+        .fila-box { background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 12px; }
+        .fila-box h4 { margin: 0 0 10px 0; font-size: 0.8rem; color: #ddd; text-transform: uppercase; }
+        .fila-list { list-style: none; padding: 0; margin: 0; font-size: 0.85rem; color: #fff; }
+        .fila-list li { padding: 6px 0; border-bottom: 1px dashed rgba(255,255,255,0.2); display: flex; justify-content: space-between; align-items: center;}
+        .fila-list li:last-child { border-bottom: none; }
+
+        /* ================= ÁREA DO ACORDEÃO ================= */
+        .form-container { display: none; margin-top: 25px; padding-top: 25px; border-top: 2px solid rgba(255,255,255,0.2); }
+        .evento-card { background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
+        .evento-header { padding: 12px 15px; background: rgba(255, 255, 255, 0.05); display: flex; justify-content: space-between; cursor: pointer; border-bottom: 1px solid transparent; }
+        .evento-header.active { border-bottom-color: rgba(255,255,255,0.15); background: rgba(255, 255, 255, 0.1); }
+        .evento-title { font-weight: 700; color: #ffffff; font-size: 0.9rem;}
+        .evento-body { padding: 15px; display: none; }
+        .evento-body.active { display: block; }
+        
+        .caixa-item { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); border-left: 3px solid #FDB913; padding: 15px; margin-bottom: 10px; border-radius: 12px;}
+        .form-group label { display: block; font-size: 0.75rem; color: #ccc; font-weight: 600; margin-bottom: 5px; }
+        
+        .form-group input { 
+            width: 100%; padding: 12px; border: 1px solid rgba(255, 255, 255, 0.2); 
+            background-color: rgba(0, 0, 0, 0.3); color: #ffffff; border-radius: 12px; 
+            font-size: 0.9rem; margin-bottom: 10px; outline: none; transition: 0.3s;
+        }
+        .form-group input:focus { border-color: #00A69C; background-color: rgba(0, 0, 0, 0.5); }
+        
+        .arquivo-item { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); padding: 8px; margin-top: 5px; border-radius: 8px; font-size: 0.8rem; display: flex; justify-content: space-between; }
+        .btn-remover { background: none; border: none; color: #ff3d00; cursor: pointer; font-weight: bold;} 
+
+        /* CAPTCHA */
+        #area-captcha { 
+            display: none; margin-top: 15px; margin-bottom: 15px;
+            border: 1px solid rgba(255,255,255,0.3); background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(10px);
+            padding: 15px; border-radius: 12px; text-align: center; position: relative; z-index: 100;
+        }
+
+        /* ========================================== */
+        /* 🧭 NAVBAR FLUTUANTE GLOBAL                 */
+        /* ========================================== */
+        .floating-navbar {
+            position: fixed; top: 25px; left: 50%; transform: translateX(-50%);
+            background: rgba(15, 17, 21, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 40px; padding: 6px 10px;
+            display: flex; gap: 5px; z-index: 99999; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+        }
+        .nav-item {
+            color: #9aa0a6; text-decoration: none; padding: 8px 18px; border-radius: 30px;
+            font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s ease;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .nav-item:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+        .nav-item.active.nav-vale { background: #00e676; color: #000; box-shadow: 0 0 15px rgba(0, 230, 118, 0.4); }
+        .nav-item.nav-voltar { color: #f87171; }
+        .nav-item.nav-voltar:hover { color: #ff3d00; background: rgba(248, 113, 113, 0.15); }
+
+        /* ========================================== */
+        /* 📱 RESPONSIVIDADE MOBILE                     */
+        /* ========================================== */
+        @media (max-width: 850px) {
+            body { overflow-y: auto; flex-direction: column; height: auto; }
+            .vale-left { padding: 80px 20px 20px 20px; text-align: center; align-items: center; }
+            .vale-title { font-size: 2.2rem; margin-bottom: 15px; }
+            .vale-right { padding: 10px 15px 120px 15px; }
+            .glass-card { max-height: none; padding: 25px 20px; }
+            .grid-botoes, .fila-grid { grid-template-columns: 1fr; }
+            .btn-base[style*="grid-column"] { grid-column: span 1 !important; }
+            .floating-navbar { top: auto; bottom: 20px; width: max-content; max-width: 90%; gap: 10px;}
+            .nav-item span { display: none; }
+            .nav-item { padding: 12px; font-size: 16px; border-radius: 50%; width: 45px; height: 45px; justify-content: center;}
+        }
+    </style>
+</head>
+<body onload="inicializarPainel()">
+
+    <nav class="floating-navbar">
+        <a href="coupa.html" class="nav-item"><i class="fa-solid fa-cube"></i> <span>Coupa</span></a>
+        <a href="vale.html" class="nav-item active nav-vale"><i class="fa-solid fa-helmet-safety"></i> <span>Vale</span></a>
+        <a href="me.html" class="nav-item"><i class="fa-solid fa-shopping-cart"></i> <span>ME</span></a>
+        <a href="findes.html" class="nav-item"><i class="fa-solid fa-industry"></i> <span>Findes</span></a>
+        <a href="index.html" class="nav-item nav-voltar"><i class="fa-solid fa-arrow-left"></i> <span>Voltar</span></a>
+    </nav>
+
+    <div class="vale-left">
+        <h1 class="vale-title">Automação de Fornecedores <span>Vale Metais</span></h1>
+        <p class="vale-text">Gestão inteligente e centralizada de ordens, cotações e processos do portal Vale Base Metals com a tecnologia Maestro.</p>
+    </div>
+
+    <div class="vale-right">
+        <div class="glass-card">
+            
+            <div class="header-card">
+                <h2>Controle Maestro</h2>
+                <div class="status-badge">
+                    <div id="indicador-status" class="led offline"></div>
+                    <span id="log" style="font-size: 11px; max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Aguardando...</span>
+                </div>
+            </div>
+
+            <button id="btn-ligar" onclick="ligarRobo()" class="btn-base">
+                <i class="fa-solid fa-power-off"></i> Iniciar Servidor
+            </button>
+
+            <div id="area-captcha">
+                <h4 style="color: #ffffff; margin: 0 0 10px 0;"><i class="fa-solid fa-shield-halved"></i> INTERVENÇÃO DE SEGURANÇA</h4>
+                <p style="font-size: 0.8rem; margin-bottom: 10px; color: #ccc;">Clique na imagem para resolver o desafio da Vale.</p>
+                <img id="imagem-captcha" src="" alt="Captcha" style="max-width: 100%; border-radius: 8px; cursor: crosshair;">
+            </div>
+
+            <div style="position: relative; margin-top: 10px; min-height: 250px;">
+                
+                <div id="overlay-lock" class="lock-overlay">
+                    <i class="fa-solid fa-lock"></i>
+                    <p>Autentique o servidor para liberar</p>
+                </div>
+
+                <div id="conteudo-operacional" style="opacity: 0; pointer-events: none;">
+                    <h3 id="txt-status" style="font-size: 0.9rem; color: #00A69C; text-transform: uppercase; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px; font-weight: bold;">Módulos Operacionais</h3>
+
+                    <div class="grid-botoes">
+                        <button id="btn-extrair" class="btn-base" onclick="executarTarefa('extrair')"><i class="fa-solid fa-download"></i> Extrair</button>
+                        <button id="btn-verificar" class="btn-base" onclick="executarTarefa('verificar')"><i class="fa-solid fa-check-double"></i> Verificar</button>
+                        <button id="btn-imprimir" class="btn-base" style="grid-column: span 2;" onclick="solicitarImpressao()"><i class="fa-solid fa-print"></i> Imprimir Arquivos</button>
+                        <button id="btn-abrir-res" class="btn-base" style="grid-column: span 2; background: rgba(253, 185, 19, 0.3); border-color: #FDB913; color: #FDB913;" onclick="mostrarFormResposta()"><i class="fa-solid fa-bolt"></i> Responder Eventos</button>
+                    </div>
+
+                    <div id="area-resposta" class="form-container">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h4 style="margin:0; color: #FDB913; font-size: 0.9rem;">DADOS DE TRANSMISSÃO</h4>
+                            <button type="button" onclick="adicionarBlocoEvento()" class="btn-base" style="width: auto; padding: 6px 12px; margin: 0; border-color: #FDB913;"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                        <form id="formResponder">
+                            <div id="container-eventos"></div>
+                            <button type="button" onclick="enviarRespostasEmLote()" class="btn-base" style="margin-top: 15px; background: #00A69C; border-color: #00A69C;"><i class="fa-solid fa-paper-plane"></i> Enviar Tudo para a Fila</button>
+                        </form>
+                    </div>
+
+                    <div id="terminal-logs" class="terminal-box">
+                        <div style="color: #ccc;">> Sistema Maestro inicializado. Aguardando processamento...</div>
+                    </div>
+
+                    <div class="fila-grid">
+                        <div class="fila-box">
+                            <h4><i class="fa-solid fa-clock"></i> Fila Pendente</h4>
+                            <ul id="lista-pendentes" class="fila-list">
+                                <li style="color: #aaa;">Vazia</li>
+                            </ul>
+                        </div>
+                        <div class="fila-box">
+                            <h4><i class="fa-solid fa-check-double"></i> Concluídos</h4>
+                            <ul id="lista-concluidos" class="fila-list">
+                                <li style="color: #aaa;">Nenhum evento</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-otp" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center;">
+        <div style="background: rgba(20,30,25,0.95); backdrop-filter: blur(10px); width: 350px; text-align: center; padding: 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2);">
+            <i class="fa-solid fa-shield-cat" style="color: #FDB913; font-size: 30px; margin-bottom: 15px;"></i>
+            <h3 style="color: #fff; margin-bottom: 10px;">Verificação de Segurança</h3>
+            <p style="color: #ccc; font-size: 13px; margin-bottom: 20px;">O portal da Vale solicitou um código OTP. Verifique o seu e-mail e insira-o abaixo:</p>
+            <input type="text" id="input-otp" placeholder="Digite o código" style="width: 100%; padding: 12px; background-color: rgba(0,0,0,0.5); border: 1px solid #00A69C; border-radius: 12px; text-align: center; font-size: 18px; letter-spacing: 2px; margin-bottom: 15px; outline: none; color: #fff;">
+            <button class="btn-base" style="background: #00A69C; border-color: #00A69C;" onclick="enviarOTP()">Confirmar</button>
+        </div>
+    </div>
+
+    <script>
+        const sessionAtual = localStorage.getItem('maestro_session');
+
+        const socket = io({ 
+            auth: { sessionId: sessionAtual } 
+        });
+
+        socket.on("connect_error", (err) => {
+            console.error("Conexão recusada pelo Servidor:", err.message);
+            localStorage.clear();
+            window.location.href = "index.html"; 
+        });
+        
+        socket.emit('sou_frontend', { usuario: localStorage.getItem('maestro_user') }); 
+        
+        let timerCaptcha; 
+        let contadorEventos = 0;
+        let arquivosPorEvento = {};
+
+        function inicializarPainel() { 
+            adicionarBlocoEvento(); 
+            pedirPermissaoNotificacao();
+        }
+
+        socket.on('sincronizar_estado', function(dados) {
+            const estado = dados.estado;
+            const msg = dados.mensagem;
+
+            if (msg) {
+                document.getElementById('log').innerText = msg;
+                const terminal = document.getElementById('terminal-logs');
+                if (terminal) {
+                    terminal.innerHTML += `<div style="margin-top: 4px; color: #fff; font-weight: 500;">> ${msg}</div>`;
+                    terminal.scrollTop = terminal.scrollHeight;
+                }
+            }
+
+            const btnImprimir = document.getElementById('btn-imprimir');
+            if (btnImprimir) {
+                btnImprimir.innerHTML = '<i class="fa-solid fa-print"></i> Imprimir Arquivos';
+                btnImprimir.disabled = false;
+            }
+
+            const listaPendentes = document.getElementById('lista-pendentes');
+            if (estado.fila_pendente && estado.fila_pendente.length > 0) {
+                listaPendentes.innerHTML = '';
+                estado.fila_pendente.forEach(ev => {
+                    listaPendentes.innerHTML += `
+                        <li>
+                            <span>Evt. <strong>${ev}</strong></span>
+                            <button onclick="removerDaFila('${ev}')" style="background:transparent; color:#ff3d00; border:none; padding:4px; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+                        </li>
+                    `;
+                });
+            } else {
+                listaPendentes.innerHTML = '<li style="color: #aaa;">Vazia</li>';
+            }
+
+            const listaConcluidos = document.getElementById('lista-concluidos');
+            if (estado.tarefas_concluidas && estado.tarefas_concluidas.length > 0) {
+                listaConcluidos.innerHTML = '';
+                estado.tarefas_concluidas.forEach(ev => {
+                    listaConcluidos.innerHTML += `
+                        <li style="color: #fff;">
+                            <i class="fa-solid fa-check" style="color:#00e676;"></i> Evt. <strong>${ev}</strong>
+                        </li>
+                    `;
+                });
+            } else {
+                listaConcluidos.innerHTML = '<li style="color: #aaa;">Nenhum evento</li>';
+            }
+
+            const dot = document.getElementById('indicador-status');
+            const btnLigar = document.getElementById('btn-ligar');
+            const txtStatus = document.getElementById('txt-status');
+            const overlayLock = document.getElementById('overlay-lock');
+            const conteudoOp = document.getElementById('conteudo-operacional'); 
+            
+            const btnExtrair = document.getElementById('btn-extrair');
+            const btnVerificar = document.getElementById('btn-verificar');
+            const btnAbrirRes = document.getElementById('btn-abrir-res');
+            
+            btnExtrair.className = 'btn-base';
+            btnExtrair.innerHTML = '<i class="fa-solid fa-download"></i> Extrair';
+            btnExtrair.disabled = false;
+            btnExtrair.onclick = function() { executarTarefa('extrair'); };
+
+            btnVerificar.className = 'btn-base';
+            btnVerificar.innerHTML = '<i class="fa-solid fa-check-double"></i> Verificar';
+            btnVerificar.disabled = false;
+            btnVerificar.onclick = function() { executarTarefa('verificar'); };
+
+            btnAbrirRes.className = 'btn-base';
+            btnAbrirRes.style.cssText = "grid-column: span 2; background: rgba(253, 185, 19, 0.3); border-color: #FDB913; color: #FDB913;";
+            btnAbrirRes.innerHTML = '<i class="fa-solid fa-bolt"></i> Responder Eventos';
+            btnAbrirRes.disabled = false;
+            btnAbrirRes.onclick = function() { mostrarFormResposta(); };
+
+            dot.className = "led"; 
+
+            if (estado.status === 'desligado') {
+                dot.classList.add("offline");
+                btnLigar.className = 'btn-base'; 
+                btnLigar.disabled = false; 
+                btnLigar.innerHTML = '<i class="fa-solid fa-power-off"></i> INICIAR SERVIDOR';
+                btnLigar.onclick = ligarRobo;
+                
+                overlayLock.style.opacity = '1';
+                overlayLock.style.pointerEvents = 'all';
+                conteudoOp.style.opacity = '0';
+                conteudoOp.style.pointerEvents = 'none';
+            } 
+            else if (estado.status === 'logando') {
+                dot.classList.add("running");
+                btnLigar.className = 'btn-base';
+                btnLigar.disabled = true; 
+                btnLigar.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> A AUTENTICAR...';
+                
+                overlayLock.style.opacity = '1';
+                overlayLock.style.pointerEvents = 'all';
+                conteudoOp.style.opacity = '0';
+                conteudoOp.style.pointerEvents = 'none';
+            } 
+            else {
+                btnLigar.className = 'btn-base btn-stop'; 
+                btnLigar.disabled = false; 
+                btnLigar.innerHTML = '<i class="fa-solid fa-power-off"></i> DESLIGAR ROBÔ';
+                btnLigar.onclick = desligarRobo;
+                
+                overlayLock.style.opacity = '0';
+                conteudoOp.style.opacity = '1';
+                conteudoOp.style.pointerEvents = 'all';
+                setTimeout(() => { overlayLock.style.pointerEvents = 'none'; }, 400);
+                
+                if (estado.status === 'ocioso') {
+                    dot.classList.add("active");
+                    txtStatus.innerHTML = '<i class="fa-solid fa-check"></i> PRONTO PARA OPERAR';
+                } else if (estado.status === 'extraindo' || estado.status === 'extrair') {
+                    dot.classList.add("running");
+                    txtStatus.innerHTML = '<i class="fa-solid fa-gear fa-spin"></i> A EXTRAIR DADOS...';
+                    btnExtrair.className = 'btn-base btn-stop';
+                    btnExtrair.innerHTML = '<i class="fa-solid fa-hand"></i> PARAR EXTRAÇÃO';
+                    btnExtrair.onclick = function() { solicitarParada(this); };
+                    btnVerificar.disabled = true; btnAbrirRes.disabled = true; btnImprimir.disabled = true;
+                    document.getElementById('area-resposta').style.display = 'none';
+                } else if (estado.status === 'verificando' || estado.status === 'verificar') {
+                    dot.classList.add("running");
+                    txtStatus.innerHTML = '<i class="fa-solid fa-gear fa-spin"></i> A VERIFICAR DADOS...';
+                    btnVerificar.className = 'btn-base btn-stop';
+                    btnVerificar.innerHTML = '<i class="fa-solid fa-hand"></i> PARAR VERIFICAÇÃO';
+                    btnVerificar.onclick = function() { solicitarParada(this); };
+                    btnExtrair.disabled = true; btnAbrirRes.disabled = true; btnImprimir.disabled = true;
+                    document.getElementById('area-resposta').style.display = 'none';
+                } else if (estado.status === 'respondendo' || estado.status === 'ocupado') {
+                    dot.classList.add("running");
+                    txtStatus.innerHTML = '<i class="fa-solid fa-database fa-spin"></i> ROBÔ OCUPADO (FILA)';
+                    btnExtrair.disabled = true; btnVerificar.disabled = true; btnAbrirRes.disabled = true; btnImprimir.disabled = true;
+                }
+            }
+        });
+
+        socket.on('nova_imagem', function(dados) { 
+            const areaCaptcha = document.getElementById('area-captcha');
+            const overlayLock = document.getElementById('overlay-lock');
+            const conteudoOp = document.getElementById('conteudo-operacional');
+            
+            if (overlayLock) {
+                overlayLock.style.opacity = '0';
+                overlayLock.style.pointerEvents = 'none';
+                conteudoOp.style.opacity = '1'; 
+            }
+
+            if (areaCaptcha.style.display === 'none' || areaCaptcha.style.display === '') {
+                areaCaptcha.style.display = 'block';
+                dispararAlerta("⚠️ Captcha Detectado!", "Resolva o desafio na tela do Maestro.");
+                setTimeout(() => window.scrollTo({ top: areaCaptcha.offsetTop - 20, behavior: 'smooth' }), 100);
+            }
+            
+            const imgOculta = new Image();
+            imgOculta.onload = function() { document.getElementById('imagem-captcha').src = this.src; };
+            imgOculta.src = "data:image/png;base64," + dados.imagem; 
+
+            clearTimeout(timerCaptcha);
+            timerCaptcha = setTimeout(() => { areaCaptcha.style.display = 'none'; }, 5000);
+        });
+
+        document.getElementById('imagem-captcha').addEventListener('click', function(event) {
+            this.style.opacity = '0.5';
+            setTimeout(() => { this.style.opacity = '1'; }, 150);
+            const rect = this.getBoundingClientRect();
+            socket.emit('clique_no_captcha', { 
+                x: Math.round(event.offsetX * (this.naturalWidth / rect.width)), 
+                y: Math.round(event.offsetY * (this.naturalHeight / rect.height)) 
+            });
+        });
+
+        function desligarRobo() {
+            if(confirm("🚨 Tem a certeza de que deseja encerrar o robô e fechar o navegador?")) {
+                socket.emit('comando_direto', { modo: 'desligar_robo', portal: 'vale' }); // Ajustado para Vale
+                const btnLigar = document.getElementById('btn-ligar');
+                btnLigar.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A ENCERRAR...';
+                btnLigar.disabled = true;
+            }
+        }
+
+        function ligarRobo() { socket.emit('comando_direto', { modo: 'ligar_robo', portal: 'vale' }); }
+        function executarTarefa(modo) { socket.emit('comando_direto', { modo: modo, portal: 'vale' }); }
+        
+        function solicitarParada(btnElement) { 
+            socket.emit('comando_direto', { modo: 'solicitar_parada', portal: 'vale' }); 
+            if(btnElement) {
+                btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> FORÇANDO PARADA...'; 
+                btnElement.disabled = true; 
+            }
+        }
+        function mostrarFormResposta() { document.getElementById('area-resposta').style.display = 'block'; }
+
+        function removerDaFila(eventoId) {
+            if(confirm(`🚨 Atenção: Deseja cancelar o Evento ${eventoId}?`)) {
+                socket.emit('remover_da_fila', { evento: eventoId });
+            }
+        }
+
+        function adicionarBlocoEvento() {
+            contadorEventos++;
+            const id = contadorEventos;
+            arquivosPorEvento[id] = { ds: [], dav: [] };
+
+            const blocosAbertos = document.querySelectorAll('.evento-body.active');
+            blocosAbertos.forEach(corpo => {
+                const header = corpo.previousElementSibling;
+                corpo.classList.remove('active');
+                header.classList.remove('active');
+            });
+
+            const div = document.createElement('div');
+            div.className = 'evento-card';
+            div.id = `bloco_evento_${id}`;
+            
+            div.innerHTML = `
+                <div class="evento-header active" onclick="toggleBlocoEvento(${id})">
+                    <div class="evento-title"><i class="fa-solid fa-box-archive"></i> <span id="titulo_evento_${id}" style="margin-left:5px;">EVENTO #NOVO</span></div>
+                    <div>
+                        ${id > 1 ? `<button type="button" class="btn-remover" onclick="removerBlocoEvento(${id}, event)" style="margin-right:15px;"><i class="fa-solid fa-trash"></i></button>` : ''}
+                        <i class="fa-solid fa-chevron-down" id="icone_toggle_${id}" style="color: #aaa;"></i>
+                    </div>
+                </div>
+                
+                <div class="evento-body active" id="corpo_evento_${id}">
+                    <div style="display:flex; gap:15px; margin-bottom:15px;">
+                        <div class="form-group" style="flex:1;">
+                            <label>ID DO EVENTO VALE</label>
+                            <input type="text" id="res_evento_${id}" placeholder="Ex: 165060" oninput="atualizarTituloEvento(${id})" required>
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label>MÁXIMO DE ITENS</label>
+                            <input type="number" id="res_qtd_itens_${id}" min="1" value="1" onchange="gerarCamposItensBloco(${id})">
+                        </div>
+                    </div>
+                    
+                    <div id="container-itens-${id}"></div>
+
+                    <div style="display:flex; gap:15px; margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.2);">
+                        <div class="form-group" style="flex:1;">
+                            <label><i class="fa-solid fa-paperclip" style="color: #ccc"></i> DATASHEET (.PDF)</label>
+                            <input type="file" accept=".pdf" multiple onchange="adicionarArquivosBloco(event, 'ds', ${id})" style="border:none; padding:0; background:transparent;">
+                            <div id="lista-ds-${id}"></div>
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label><i class="fa-solid fa-paperclip" style="color: #ccc"></i> DAV (.PDF)</label>
+                            <input type="file" accept=".pdf" multiple onchange="adicionarArquivosBloco(event, 'dav', ${id})" style="border:none; padding:0; background:transparent;">
+                            <div id="lista-dav-${id}"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('container-eventos').appendChild(div);
+            gerarCamposItensBloco(id); 
+        }
+
+        function toggleBlocoEvento(id) {
+            const corpo = document.getElementById(`corpo_evento_${id}`);
+            const header = corpo.previousElementSibling;
+            corpo.classList.toggle('active');
+            header.classList.toggle('active');
+        }
+
+        function removerBlocoEvento(id, event) {
+            if(event) event.stopPropagation();
+            document.getElementById(`bloco_evento_${id}`).remove();
+            delete arquivosPorEvento[id]; 
+        }
+
+        function atualizarTituloEvento(id) {
+            const val = document.getElementById(`res_evento_${id}`).value;
+            document.getElementById(`titulo_evento_${id}`).innerText = val ? `EVENTO #${val}` : 'EVENTO #NOVO';
+        }
+
+        function gerarCamposItensBloco(id) {
+            const qtd = parseInt(document.getElementById(`res_qtd_itens_${id}`).value) || 1;
+            const container = document.getElementById(`container-itens-${id}`);
+            container.innerHTML = ''; 
+            for(let i=1; i<=qtd; i++) {
+                container.innerHTML += `
+                    <div class="caixa-item">
+                        <strong style="font-size:12px; color:#fff; margin-bottom:10px; display:block;">[ ITEM_0${i} ]</strong>
+                        <div style="display:flex; gap:10px;">
+                            <div class="form-group" style="flex:1; margin:0;"><label>R$ UNITÁRIO</label><input type="text" id="res_preco_${id}_${i}" placeholder="0,00"></div>
+                            <div class="form-group" style="flex:1; margin:0;"><label>PRAZO (DIAS)</label><input type="number" id="res_prazo_${id}_${i}" placeholder="0"></div>
+                        </div>
+                        <div style="display:flex; gap:10px; margin-top:5px;">
+                            <div class="form-group" style="flex:1; margin:0;"><label>ORIGEM</label><input type="text" id="res_origem_${id}_${i}" placeholder="Nacional"></div>
+                            <div class="form-group" style="flex:1; margin:0;"><label>ICMS (%)</label><input type="text" id="res_icms_${id}_${i}" placeholder="18"></div>
+                        </div>
+                    </div>`;
+            }
+        }
+
+        function adicionarArquivosBloco(event, tipo, id) {
+            const files = event.target.files;
+            for(let i = 0; i < files.length; i++) { arquivosPorEvento[id][tipo].push(files[i]); }
+            event.target.value = ""; 
+            atualizarListasNaTelaBloco(tipo, id);
+        }
+
+        function removerArquivoBloco(tipo, index, id) {
+            arquivosPorEvento[id][tipo].splice(index, 1);
+            atualizarListasNaTelaBloco(tipo, id);
+        }
+
+        function atualizarListasNaTelaBloco(tipo, id) {
+            const div = document.getElementById(`lista-${tipo}-${id}`);
+            const lista = arquivosPorEvento[id][tipo];
+            div.innerHTML = "";
+            lista.forEach((arquivo, index) => {
+                div.innerHTML += `
+                    <div class="arquivo-item">
+                        <span><i class="fa-regular fa-file" style="color:#aaa;"></i> ${arquivo.name}</span> 
+                        <button type="button" class="btn-remover" onclick="removerArquivoBloco('${tipo}', ${index}, ${id})"><i class="fa-solid fa-xmark"></i></button>
+                    </div>`;
+            });
+        }
+
+        async function enviarRespostasEmLote() {
+            const blocos = document.querySelectorAll('.evento-card');
+            if(blocos.length === 0) return;
+
+            const btnEnviar = document.querySelector('button[onclick="enviarRespostasEmLote()"]');
+            const textoOriginal = btnEnviar.innerHTML;
+            btnEnviar.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> TRANSMITINDO...';
+            btnEnviar.disabled = true;
+
+            for (const bloco of blocos) {
+                const idStr = bloco.id.split('_')[2];
+                const id = parseInt(idStr);
+
+                const eventoId = document.getElementById(`res_evento_${id}`).value;
+                if(!eventoId) continue; 
+
+                const qtd = parseInt(document.getElementById(`res_qtd_itens_${id}`).value) || 1;
+                
+                let precos = []; let prazos = []; let origens = []; let icmsList = [];
+                for(let i=1; i<=qtd; i++) {
+                    precos.push(document.getElementById(`res_preco_${id}_${i}`).value);
+                    prazos.push(document.getElementById(`res_prazo_${id}_${i}`).value);
+                    origens.push(document.getElementById(`res_origem_${id}_${i}`).value);
+                    icmsList.push(document.getElementById(`res_icms_${id}_${i}`).value);
+                }
+
+                const formData = new FormData();
+                formData.append('sessionId', localStorage.getItem('maestro_session'));
+                formData.append('evento', eventoId);
+                formData.append('precos', JSON.stringify(precos));
+                formData.append('prazos', JSON.stringify(prazos));
+                formData.append('origens', JSON.stringify(origens)); 
+                formData.append('icms', JSON.stringify(icmsList));   
+                
+                const filesDS = arquivosPorEvento[id]['ds'];
+                const filesDAV = arquivosPorEvento[id]['dav'];
+                for(let i=0; i < filesDS.length; i++) { formData.append('datasheet', filesDS[i]); }
+                for(let i=0; i < filesDAV.length; i++) { formData.append('dav', filesDAV[i]); }
+
+                try { await fetch('/api/responder', { method: 'POST', body: formData }); } 
+                catch(err) { console.error("Falha ao transmitir: " + eventoId); }
+            }
+
+            btnEnviar.innerHTML = textoOriginal;
+            btnEnviar.disabled = false;
+            document.getElementById('area-resposta').style.display = 'none';
+            
+            document.getElementById('container-eventos').innerHTML = '';
+            contadorEventos = 0; arquivosPorEvento = {};
+            adicionarBlocoEvento(); 
+        }
+
+        function solicitarImpressao() {
+            if(confirm("Deseja imprimir TODOS os relatórios da pasta?")) {
+                socket.emit('solicitar_impressao', { portal: 'vale' }); 
+            }
+        }
+
+        // ======================================================================
+        // SISTEMA DE OTP (CÓDIGO DE SEGURANÇA PARA A VALE)
+        // ======================================================================
+        socket.on('mostrar_popup_otp', () => {
+            dispararAlerta("🔐 Código Exigido", "Insira o OTP recebido no email.");
+            document.getElementById('input-otp').value = '';
+            document.getElementById('modal-otp').style.display = 'flex';
+        });
+
+        function enviarOTP() {
+            const codigo = document.getElementById('input-otp').value.trim();
+            if (codigo) {
+                socket.emit('enviar_otp_para_robo', { otp: codigo });
+                document.getElementById('modal-otp').style.display = 'none'; 
+            }
+        }
+
+        socket.on('tarefa_concluida', function(dados) {
+            if (dados.evento === 'Lote de Extração' && dados.sucesso) {
+                dispararAlerta("✅ Concluído", "Extração salva na planilha!");
+            }
+        });
+  
+        socket.on('relatar_progresso', function(dados) {
+            if (dados.mensagem) {
+                if (dados.mensagem.includes("ERRO DE PERMISSÃO") || dados.mensagem.includes("aberta")) {
+                    dispararAlerta("❌ Planilha Bloqueada!", "Feche a planilha Excel.");
+                }
+                document.getElementById('log').innerText = dados.mensagem; 
+                
+                const terminal = document.getElementById('terminal-logs');
+                terminal.innerHTML += `<div style="margin-top: 4px; color: #ddd;">> ${dados.mensagem}</div>`;
+                while (terminal.childElementCount > 100) terminal.removeChild(terminal.firstChild);
+                terminal.scrollTop = terminal.scrollHeight; 
+            }
+        });
+
+        function pedirPermissaoNotificacao() {
+            if ("Notification" in window) {
+                if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+                    Notification.requestPermission();
+                }
+            }
+        }
+
+        function dispararAlerta(titulo, mensagem) {
+            if ("Notification" in window && Notification.permission === "granted") {
+                new Notification(titulo, { body: mensagem, requireInteraction: true });
+            }
+            try {
+                let audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                audio.play();
+            } catch(e) {}
+        }
+    </script>
+</body>
+</html>
