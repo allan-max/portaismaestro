@@ -522,7 +522,7 @@ socket.on('comando_dev_acao_seguro', (dados) => {
     
     socket.on('disparar_email_verificacao', async (dados) => {
         console.log(`[NODE] 📩 Recebi ordem do Python para enviar e-mail a: ${dados.email}`);
-        const link = `https://portaismaestro.onrender.com/index.html?action=verify&token=${dados.token}`;
+        const link = `https://portaismaestro-ved1.onrender.com/index.html?action=verify&token=${dados.token}`;
         
         try {
             console.log("[NODE] ⏳ A tentar entregar a mensagem ao Gmail...");
