@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAESTRO | Mercado Eletrônico</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+    if (!localStorage.getItem('maestro_session')) {
+        window.location.href = 'index.html';
+    }
+    </script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #ffffff;
+        }
+
+        /* ================= LADO ESQUERDO (VISUAL) ================= */
+        .left-pane {
+            flex: 1.2;
+            background: linear-gradient(135deg, #03148a 0%, #0a2ed1 100%);
+            color: white;
+            padding: 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+        }
+
+        .left-pane::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
+            pointer-events: none;
+        }
+
+        .logo-me {
+            position: absolute;
+            top: 40px;
+            left: 50px;
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+
+        .logo-me span {
+            color: #ffffff;
+        }
+
+        .hero-text {
+            font-size: 3rem;
+            line-height: 1.2;
+            font-weight: 400;
+            max-width: 600px;
+            z-index: 1;
+        }
+
+        .hero-text strong {
+            font-weight: 800;
+        }
+
+        /* ================= LADO DIREITO (CONTROLES) ================= */
+        .right-pane {
+            flex: 1;
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            position: relative;
+        }
+
+        .header-lang {
+            position: absolute;
+            top: 40px;
+            right: 40px;
+            font-size: 0.85rem;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-panel {
+            width: 100%;
+            max-width: 380px;
+        }
+
+        .control-panel h2 {
+            font-size: 1.5rem;
+            color: #1a1a1a;
+            margin-bottom: 25px;
+            font-weight: 600;
+            border-bottom: 1px solid #eaeaea;
+            padding-bottom: 15px;
+        }
+
+        /* Status LED */
+        .status-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 25px;
+            font-size: 0.9rem;
+            color: #555;
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 6px;
+            border: 1px solid #eaeaea;
+        }
+
+        .led {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #999;
+        }
+        .led.running { background-color: #2e8b57; box-shadow: 0 0 8px rgba(46,139,87,0.6); }
+        .led.error { background-color: #dc3545; box-shadow: 0 0 8px rgba(220,53,69,0.6); }
+
+        /* Botões */
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-primary { background-color: #1a36c4; color: #ffffff; }
+        .btn-primary:hover { background-color: #112596; }
+        .btn-stop { background-color: #dc3545; color: #ffffff; }
+        .btn-stop:hover { background-color: #c82333; }
+        .btn-outline { background-color: transparent; border: 1px solid #1a36c4; color: #1a36c4; }
+        .btn-outline:hover { background-color: #f0f4ff; }
+        .btn-link { background-color: transparent; color: #666; margin-top: 10px; font-size: 0.9rem; text-decoration: none; }
+        .btn-link:hover { color: #1a1a1a; text-decoration: underline; }
+
+        /* Mini Terminal */
+        .mini-terminal {
+            margin-top: 30px;
+            background-color: #f8f9fa;
+            border: 1px solid #eaeaea;
+            border-radius: 6px;
+            padding: 12px;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.75rem;
+            color: #444;
+            height: 120px;
+            overflow-y: auto;
+        }
+
+        .log-line { margin-bottom: 4px; line-height: 1.4; }
+        .log-time { color: #888; margin-right: 5px; }
+
+        /* ========================================== */
+        /* 🧭 NAVBAR FLUTUANTE GLOBAL                 */
+        /* ========================================== */
+        .floating-navbar {
+            position: fixed;
+            top: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 17, 21, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 40px;
+            padding: 6px 10px;
+            display: flex;
+            gap: 5px;
+            z-index: 99999;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+        }
+
+        .nav-item {
+            color: #9aa0a6;
+            text-decoration: none;
+            padding: 8px 18px;
+            border-radius: 30px;
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-item:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+        .nav-item.active.nav-coupa { background: #4da8da; color: #000; box-shadow: 0 0 15px rgba(77, 168, 218, 0.4); }
+        .nav-item.active.nav-vale { background: #00e676; color: #000; box-shadow: 0 0 15px rgba(0, 230, 118, 0.4); }
+        .nav-item.active.nav-me { background: #1a36c4; color: #fff; box-shadow: 0 0 15px rgba(26, 54, 196, 0.5); }
+        .nav-item.active.nav-findes { background: #ff8c00; color: #000; box-shadow: 0 0 15px rgba(255, 140, 0, 0.4); }
+        /* ========================================== */
+        /* BOTÃO VOLTAR NA NAVBAR (VERMELHO)          */
+        /* ========================================== */
+        .nav-item.nav-voltar {
+            color: #f87171; /* Vermelho suave */
+        }
+        .nav-item.nav-voltar:hover {
+            color: #ff3d00; /* Vermelho forte no hover */
+            background: rgba(248, 113, 113, 0.15); /* Fundo avermelhado transparente */
+        }
+
+        /* ========================================== */
+        /* 📱 RESPONSIVIDADE (MOBILE & TABLETS)       */
+        /* ========================================== */
+        @media (max-width: 850px) {
+            body {
+                flex-direction: column; /* Empilha as divisões */
+                height: auto;
+                min-height: 100vh;
+                overflow-y: auto; /* Liberta a rolagem */
+                padding-bottom: 90px; /* Espaço para a Navbar Flutuante */
+            }
+
+            .left-pane {
+                flex: none;
+                padding: 40px 20px;
+                text-align: center; /* Centraliza tudo */
+                align-items: center;
+                min-height: 35vh;
+            }
+
+            .logo-me {
+                position: relative; /* Remove a posição absoluta no telemóvel */
+                top: 0; left: 0;
+                margin-bottom: 20px;
+                font-size: 2rem;
+            }
+
+            .hero-text {
+                font-size: 1.8rem; /* Reduz a fonte do título */
+                z-index: 1;
+            }
+
+            .right-pane {
+                flex: none;
+                padding: 30px 20px;
+                justify-content: flex-start;
+            }
+
+            .header-lang {
+                position: relative;
+                top: 0; right: 0;
+                margin-bottom: 20px;
+                justify-content: center;
+            }
+
+            .control-panel {
+                margin-top: 10px;
+            }
+
+            /* Ajuste da Navbar no Mobile */
+            .floating-navbar {
+                top: auto;
+                bottom: 20px;
+                width: max-content;
+                max-width: 90%;
+            }
+            .nav-item span { display: none; } /* Esconde o texto, mostra só os ícones */
+            .nav-item { padding: 12px; font-size: 16px; border-radius: 50%; }
+        }
+    </style>
+</head>
+<body onload="setupPainelME()">
+    <nav class="floating-navbar">
+        <a href="coupa.html" class="nav-item"><i class="fa-solid fa-cube"></i> <span>Coupa</span></a>
+        <a href="vale.html" class="nav-item"><i class="fa-solid fa-helmet-safety"></i> <span>Vale</span></a>
+        <a href="me.html" class="nav-item active nav-me"><i class="fa-solid fa-shopping-cart"></i> <span>ME</span></a>
+        <a href="findes.html" class="nav-item"><i class="fa-solid fa-industry"></i> <span>Findes</span></a>
+        <a href="index.html" class="nav-item nav-voltar"><i class="fa-solid fa-arrow-left"></i> <span>Voltar</span></a>
+    </nav>
+
+    <div class="left-pane">
+        <div class="logo-me">me<span>.</span></div>
+        <div class="hero-text">
+            O <strong>MERCADO</strong> elevado à<br>potência do <strong>ELETRÔNICO</strong>
+        </div>
+    </div>
+
+    <div class="right-pane">
+        
+        <div class="header-lang">
+            <i class="fa-solid fa-globe"></i> Português (pt-BR) <i class="fa-solid fa-chevron-down" style="font-size: 0.7rem;"></i>
+        </div>
+
+        <div class="control-panel">
+            <h2>Painel de Automação</h2>
+
+            <div class="status-container">
+                <div class="led" id="led-status"></div>
+                <span id="txt-status">Aguardando conexão...</span>
+            </div>
+
+            <button class="btn btn-primary" id="btn-acao" onclick="alternarEstado()">
+                <i class="fa-solid fa-play"></i> INICIAR EXTRAÇÃO
+            </button>
+
+            <button class="btn btn-outline" id="btn-imprimir" onclick="solicitarImpressao()">
+                <i class="fa-solid fa-print"></i> IMPRIMIR RELATÓRIOS
+            </button>
+
+            <a href="index.html" class="btn btn-link">
+                <i class="fa-solid fa-arrow-left"></i> Voltar ao Maestro
+            </a>
+
+            <div class="mini-terminal" id="mini-terminal">
+                <div class="log-line"><span class="log-time">[Sys]</span> Módulo ME carregado.</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io({ 
+    auth: { sessionId: sessionAtual } 
+});
+        let isRunning = false;
+
+        // Removemos o 'connect_error'. Agora ouvimos a expulsão amigável do servidor:
+socket.on("sessao_invalida", () => {
+    console.error("A sua sessão expirou ou é inválida.");
+    localStorage.clear();
+    window.location.href = "index.html"; 
+});
+
+        function setupPainelME() {
+            socket.emit('sou_frontend', { usuario: localStorage.getItem('maestro_user') });
+            addLog("Pronto para iniciar rotinas no Mercado Eletrônico.");
+        }
+
+        // ========================================================
+        // 🧠 RECEBE O ESTADO DO SERVIDOR E AJUSTA OS BOTÕES SOZINHO
+        // ========================================================
+        socket.on('sincronizar_estado_me', function(estado) {
+            const btn = document.getElementById('btn-acao');
+            const led = document.getElementById('led-status');
+            const txt = document.getElementById('txt-status');
+            const btnImp = document.getElementById('btn-imprimir');
+
+            if (estado.status === 'extraindo') {
+                isRunning = true;
+                btn.className = "btn btn-stop";
+                btn.innerHTML = '<i class="fa-solid fa-stop"></i> PARAR ROBÔ';
+                led.className = "led running";
+                txt.innerText = "Processando dados...";
+                btnImp.disabled = true;
+            } else {
+                isRunning = false;
+                btn.className = "btn btn-primary";
+                btn.innerHTML = '<i class="fa-solid fa-play"></i> INICIAR EXTRAÇÃO';
+                led.className = "led";
+                txt.innerText = "Ocioso";
+                btnImp.disabled = false;
+            }
+        });
+
+        // --- CONTROLE DOS BOTÕES ---
+        function alternarEstado() {
+            if (!isRunning) {
+                if(confirm("Deseja iniciar a extração no Mercado Eletrônico?")) {
+                    socket.emit('comando_direto', { modo: 'extrair', portal: 'me' });
+                    addLog("Enviando comando de início...");
+                }
+            } else {
+                socket.emit('comando_direto', { modo: 'solicitar_parada', portal: 'me' });
+                addLog("Ordem de parada enviada ao robô.");
+            }
+        }
+
+        function solicitarImpressao() {
+            if(confirm("Deseja imprimir os relatórios gerados do Mercado Eletrônico?")) {
+                socket.emit('solicitar_impressao', { portal: 'me' });
+                addLog("Enviando relatórios para a fila de impressão...");
+            }
+        }
+
+        // --- MINI TERMINAL ---
+        function addLog(msg) {
+            const term = document.getElementById('mini-terminal');
+            if (term) {
+                const now = new Date();
+                const hora = now.getHours().toString().padStart(2, '0') + ':' + 
+                             now.getMinutes().toString().padStart(2, '0');
+                
+                term.innerHTML += `<div class="log-line"><span class="log-time">[${hora}]</span> ${msg}</div>`;
+                
+                while (term.childElementCount > 30) {
+                    term.removeChild(term.firstChild);
+                }
+                term.scrollTop = term.scrollHeight;
+            }
+        }
+
+        socket.on('relatar_progresso_me', function(dados) {
+            if (dados.mensagem) addLog(dados.mensagem);
+        });
+
+    </script>
+</body>
+</html>

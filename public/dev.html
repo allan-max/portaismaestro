@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAESTRO | Dev Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script>
+        if (localStorage.getItem('maestro_dev') !== 'true') {
+            alert("⚠️ Acesso Negado! Nível de autorização 'Desenvolvedor' exigido.");
+            window.location.href = 'index.html';
+        }
+    </script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: #e4e4e7; min-height: 100vh; display: flex; overflow: hidden; }
+        
+        .sidebar { width: 260px; background: rgba(15, 17, 21, 0.6); border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; padding: 20px 0; backdrop-filter: blur(10px); }
+        .sidebar-header { padding: 0 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px; display: flex; align-items: center; gap: 12px; }
+        .sidebar-header img { width: 32px; height: 32px; }
+        .sidebar-title { font-weight: 700; font-size: 18px; color: #fff; }
+        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 24px; color: #a1a1aa; text-decoration: none; transition: 0.2s; cursor: pointer; border-left: 3px solid transparent; }
+        .nav-link.active { background: rgba(155, 89, 182, 0.1); color: #9b59b6; border-left-color: #9b59b6; }
+        .sidebar-footer { margin-top: auto; padding: 0 24px; }
+        .btn-logout { display: flex; align-items: center; gap: 10px; color: #f87171; text-decoration: none; font-weight: 500; cursor: pointer; padding: 10px 0; }
+
+        .main-content { flex: 1; padding: 40px; overflow-y: auto; height: 100vh; filter: blur(5px); transition: 0.5s; pointer-events: none; }
+        .main-content.unlocked { filter: blur(0); pointer-events: all; }
+        .page-header { margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .page-title { font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+
+        .dev-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
+        .dev-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 20px; display: flex; justify-content: space-between; align-items: center; transition: 0.3s; }
+        .dev-card.blocked { border-color: #f87171; background: rgba(248, 113, 113, 0.05); opacity: 0.8; }
+        
+        .info-section { display: flex; gap: 20px; align-items: center; }
+        .user-email { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 5px; }
+        .tech-info { font-family: 'Roboto Mono', monospace; font-size: 11px; color: #a1a1aa; line-height: 1.6; }
+        .tech-info i { width: 15px; text-align: center; margin-right: 5px; color: #34d399; }
+        
+        .pass-box { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.3); padding: 5px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); }
+        .pass-input { background: transparent; border: none; color: #fff; font-family: 'Roboto Mono', monospace; font-size: 13px; width: 120px; outline: none; }
+        .pass-btn { background: none; border: none; color: #a1a1aa; cursor: pointer; transition: 0.2s; }
+        .pass-btn:hover { color: #fff; }
+
+        .action-group { display: flex; gap: 8px; }
+        .btn-dev-action { padding: 8px 12px; border-radius: 6px; border: none; font-weight: 600; font-size: 12px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px; }
+        .btn-ban { background: rgba(248, 113, 113, 0.1); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.3); }
+        .btn-ban:hover { background: #f87171; color: #fff; }
+        .btn-unban { background: rgba(52, 211, 153, 0.1); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); }
+        .btn-unban:hover { background: #34d399; color: #000; }
+        .btn-del { background: transparent; color: #a1a1aa; border: 1px solid rgba(255,255,255,0.1); }
+        .btn-del:hover { background: #f87171; color: #fff; border-color: #f87171; }
+
+        .badge { padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; margin-left: 10px; }
+        .bg-dev { background: #9b59b6; color: #fff; }
+        .bg-admin { background: #fbbf24; color: #000; }
+        .bg-online { background: #34d399; color: #000; }
+        .bg-offline { background: rgba(255,255,255,0.1); color: #a1a1aa; }
+
+        /* TELA DE AUTENTICAÇÃO SEGURA */
+        #modal-security {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 12, 41, 0.95);
+            z-index: 999999; display: flex; justify-content: center; align-items: center; flex-direction: column;
+            backdrop-filter: blur(10px);
+        }
+        .security-box { background: rgba(255,255,255,0.05); padding: 40px; border-radius: 12px; border: 1px solid #9b59b6; text-align: center; max-width: 400px; box-shadow: 0 0 30px rgba(155, 89, 182, 0.2); }
+        .input-token { width: 100%; padding: 15px; font-size: 16px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px; text-align: center; letter-spacing: 2px; margin-bottom: 20px; outline: none; transition: 0.3s; }
+        .input-token:focus { border-color: #9b59b6; }
+        .btn-unlock { width: 100%; padding: 15px; background: #9b59b6; color: #fff; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; transition: 0.2s; font-size: 14px; }
+        .btn-unlock:hover { background: #8e44ad; box-shadow: 0 0 15px rgba(155, 89, 182, 0.5); }
+    </style>
+</head>
+<body>
+
+    <div id="modal-security">
+        <div class="security-box">
+            <i class="fa-solid fa-user-ninja" style="font-size: 50px; color: #9b59b6; margin-bottom: 20px;"></i>
+            <h2 style="color: #fff; margin-bottom: 10px;">Acesso Restrito</h2>
+            <p style="color: #a1a1aa; font-size: 13px; margin-bottom: 25px; line-height: 1.5;">O banco de dados possui Criptografia de Ponta-a-Ponta (E2EE). Insira o Token Master para descriptografar os pacotes localmente.</p>
+            <input type="password" id="input-token" class="input-token" placeholder="Token de Acesso" onkeypress="if(event.key === 'Enter') destravarPainel()">
+            <div id="erro-token" style="color: #f87171; font-size: 12px; margin-bottom: 15px; display: none;">Chave inválida. O pacote não pôde ser decifrado.</div>
+            <button class="btn-unlock" onclick="destravarPainel()" id="btn-autenticar"><i class="fa-solid fa-lock-open"></i> DESCRIPTOGRAFAR DADOS</button>
+        </div>
+    </div>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <img src="logo-maestro.png" alt="Logo">
+            <span class="sidebar-title">Modo DEV</span>
+        </div>
+        <div class="nav-link active"><i class="fa-solid fa-users-gear"></i> Controle Criptografado</div>
+        <div class="nav-link" onclick="pedirLista()"><i class="fa-solid fa-rotate-right"></i> Forçar Atualização</div>
+        <div class="sidebar-footer">
+            <a href="index.html" class="btn-logout"><i class="fa-solid fa-arrow-right-from-bracket"></i> Voltar ao Portal</a>
+        </div>
+    </aside>
+
+    <main class="main-content" id="conteudo-principal">
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Overwatch de Contas</h1>
+                <p class="page-subtitle" style="color: #34d399;"><i class="fa-solid fa-shield-check"></i> Criptografia E2EE Ativada</p>
+            </div>
+            <div id="stat-counter" style="color: #9b59b6; font-family: 'Roboto Mono', monospace; font-weight: bold;"></div>
+        </div>
+
+        <div class="dev-grid" id="lista-usuarios-dev">
+            </div>
+    </main>
+
+    <script>
+        const sessionAtual = localStorage.getItem('maestro_session');
+
+    // Só tenta conectar enviando o crachá real
+const socket = io({ 
+    auth: { sessionId: sessionAtual } 
+});
+
+// Removemos o 'connect_error'. Agora ouvimos a expulsão amigável do servidor:
+socket.on("sessao_invalida", () => {
+    console.error("A sua sessão expirou ou é inválida.");
+    localStorage.clear();
+    window.location.href = "index.html"; 
+});
+        let tokenMaster = "";
+
+        // ====================================================
+        // MOTORES DE CRIPTOGRAFIA JS (PONTA-A-PONTA)
+        // ====================================================
+        function cifra_dev(texto, chave) {
+            const textBytes = new TextEncoder().encode(texto);
+            const keyBytes = new TextEncoder().encode(chave);
+            let cifrado = new Uint8Array(textBytes.length);
+            for(let i=0; i<textBytes.length; i++) {
+                cifrado[i] = textBytes[i] ^ keyBytes[i % keyBytes.length];
+            }
+            let binary = '';
+            for(let i=0; i<cifrado.length; i++) binary += String.fromCharCode(cifrado[i]);
+            return btoa(binary);
+        }
+
+        function decifra_dev(b64_texto, chave) {
+            try {
+                const binary = atob(b64_texto);
+                const keyBytes = new TextEncoder().encode(chave);
+                let originalBytes = new Uint8Array(binary.length);
+                for(let i=0; i<binary.length; i++) {
+                    originalBytes[i] = binary.charCodeAt(i) ^ keyBytes[i % keyBytes.length];
+                }
+                return new TextDecoder().decode(originalBytes);
+            } catch(e) { return ""; }
+        }
+
+        // ====================================================
+        // AUTENTICAÇÃO E BUSCA DE DADOS
+        // ====================================================
+        function destravarPainel() {
+            const input = document.getElementById('input-token').value.trim();
+            if(!input) return;
+            
+            tokenMaster = input;
+            document.getElementById('btn-autenticar').innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> PROCESSANDO...';
+            document.getElementById('erro-token').style.display = 'none';
+            
+            pedirLista();
+        }
+
+        function pedirLista() {
+            if (!tokenMaster) return;
+            // Cria a requisição, tranca com a senha, e envia!
+            let req = JSON.stringify({ comando: "listar" });
+            let cifrado = cifra_dev(req, tokenMaster);
+            socket.emit('pedir_dados_dev_seguro', { payload_cifrado: cifrado });
+        }
+
+        setInterval(() => { if(tokenMaster) pedirLista(); }, 15000);
+
+        socket.on('dados_dev_prontos_cifrados', (payload_cifrado) => {
+            const btn = document.getElementById('btn-autenticar');
+            btn.innerHTML = '<i class="fa-solid fa-lock-open"></i> DESCRIPTOGRAFAR DADOS';
+
+            if (payload_cifrado === false) {
+                // Senha errada ou ataque bloqueado pelo Python
+                tokenMaster = "";
+                document.getElementById('erro-token').style.display = 'block';
+                return;
+            }
+
+            // Descriptografa localmente no navegador!
+            let json_str = decifra_dev(payload_cifrado, tokenMaster);
+            if (!json_str) {
+                tokenMaster = "";
+                document.getElementById('erro-token').style.display = 'block';
+                return;
+            }
+
+            // Sucesso! Esconde a tela de bloqueio
+            document.getElementById('modal-security').style.display = 'none';
+            document.getElementById('conteudo-principal').classList.add('unlocked');
+            
+            let pacote = JSON.parse(json_str);
+            renderizarLista(pacote.usuarios, pacote.ips_bloqueados);
+        });
+
+        // ====================================================
+        // RENDERIZAÇÃO E AÇÕES E2E
+        // ====================================================
+        function renderizarLista(usuarios, ips_bloqueados) {
+            const divLista = document.getElementById('lista-usuarios-dev');
+            divLista.innerHTML = ''; 
+            
+            let total = Object.keys(usuarios).length;
+            document.getElementById('stat-counter').innerText = `TOTAL REGISTROS: ${total}`;
+
+            for (let email in usuarios) {
+                let dados = usuarios[email];
+                let isBlocked = dados.bloqueado;
+                
+                let bOnline = dados.online ? '<span class="badge bg-online">Online</span>' : '<span class="badge bg-offline">Offline</span>';
+                let bRole = dados.dev ? '<span class="badge bg-dev">DEV</span>' : (dados.admin ? '<span class="badge bg-admin">ADMIN</span>' : '');
+                let bBlock = isBlocked ? '<span class="badge" style="background:#f87171; color:#fff;">BLOQUEADO</span>' : '';
+
+                let local = dados.ultima_localizacao || "Desconhecida";
+                let logData = dados.ultimo_login || "Nunca acedeu";
+                let senha = dados.senha || "---";
+
+                // --- 🚨 DETECTA E EXTRAI O IP REAL DA STRING ---
+                let ipMatch = local.match(/IP:\s*([0-9a-fA-F:\.]+)/i);
+                let ipExtract = ipMatch ? ipMatch[1] : null;
+                
+                let isIpBlocked = ipExtract && ips_bloqueados.includes(ipExtract);
+                let bIpBlock = isIpBlocked ? '<span class="badge" style="background:#f87171; color:#fff;"><i class="fa-solid fa-network-wired"></i> IP BANIDO</span>' : '';
+
+                let htmlAcoes = '';
+                if (email !== "admin@venturainformatica.com.br") { 
+                    if (dados.admin) {
+                        htmlAcoes += `<button class="btn-dev-action" style="background: rgba(251, 191, 36, 0.1); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3);" onclick="acaoDev('remover_admin', '${email}')"><i class="fa-solid fa-arrow-down"></i> Tirar Admin</button>`;
+                    } else {
+                        htmlAcoes += `<button class="btn-dev-action" style="background: rgba(251, 191, 36, 0.1); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3);" onclick="acaoDev('promover_admin', '${email}')"><i class="fa-solid fa-crown"></i> Dar Admin</button>`;
+                    }
+                    if (isBlocked) {
+                        htmlAcoes += `<button class="btn-dev-action btn-unban" onclick="acaoDev('desbloquear', '${email}')"><i class="fa-solid fa-unlock"></i> Desbloquear Conta</button>`;
+                    } else {
+                        htmlAcoes += `<button class="btn-dev-action btn-ban" onclick="acaoDev('bloquear', '${email}')"><i class="fa-solid fa-ban"></i> Suspender Conta</button>`;
+                    }
+                    htmlAcoes += `<button class="btn-dev-action btn-del" onclick="acaoDev('excluir', '${email}')"><i class="fa-solid fa-trash"></i></button>`;
+                }
+
+                // Botões de Banimento de IP 
+                if (ipExtract) {
+                    if (isIpBlocked) {
+                        htmlAcoes += `<button class="btn-dev-action" style="background: rgba(52, 211, 153, 0.1); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3);" onclick="acaoDev('desbloquear_ip', null, '${ipExtract}')"><i class="fa-solid fa-network-wired"></i> Desbanir IP</button>`;
+                    } else {
+                        htmlAcoes += `<button class="btn-dev-action btn-ban" onclick="acaoDev('bloquear_ip', null, '${ipExtract}')"><i class="fa-solid fa-network-wired"></i> Banir IP</button>`;
+                    }
+                }
+
+                let idSanitizado = email.replace(/[^a-zA-Z0-9]/g, '');
+
+                divLista.innerHTML += `
+                    <div class="dev-card ${isBlocked || isIpBlocked ? 'blocked' : ''}">
+                        <div class="info-section">
+                            <div>
+                                <div class="user-email">${email} ${bRole} ${bBlock} ${bIpBlock}</div>
+                                <div class="tech-info">
+                                    <div><i class="fa-solid fa-location-crosshairs"></i> ${local}</div>
+                                    <div><i class="fa-regular fa-clock"></i> Último: ${logData} ${bOnline}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 20px; align-items: center;">
+                            <div class="pass-box">
+                                <i class="fa-solid fa-key" style="color: #9b59b6;"></i>
+                                <input type="password" id="pass_${idSanitizado}" class="pass-input" value="${senha}">
+                                <button class="pass-btn" onclick="toggleSenha('pass_${idSanitizado}', this)" title="Ver Senha"><i class="fa-regular fa-eye"></i></button>
+                                <button class="pass-btn" onclick="salvarSenhaEditada('${email}', 'pass_${idSanitizado}')" title="Salvar Alteração"><i class="fa-solid fa-floppy-disk"></i></button>
+                            </div>
+                            <div class="action-group">
+                                ${htmlAcoes}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function toggleSenha(inputId, btn) {
+            let inp = document.getElementById(inputId);
+            if (inp.type === "password") { inp.type = "text"; btn.innerHTML = '<i class="fa-regular fa-eye-slash"></i>'; } 
+            else { inp.type = "password"; btn.innerHTML = '<i class="fa-regular fa-eye"></i>'; }
+        }
+
+        function salvarSenhaEditada(email, inputId) {
+            let novaSenha = document.getElementById(inputId).value.trim();
+            if(confirm(`Tem certeza que deseja alterar a senha de ${email} para: ${novaSenha}?`)) {
+                executarComandoCriptografado('alterar_senha', email, novaSenha);
+            }
+        }
+
+        function acaoDev(acao, email, valor=null) {
+            let msg = '';
+            if (acao === 'excluir') msg = `🧨 ATENÇÃO: Deseja EXCLUIR PERMANENTEMENTE a conta de ${email}?`;
+            if (acao === 'bloquear') msg = `🚫 Deseja bloquear o acesso da conta de ${email}?`;
+            if (acao === 'desbloquear') msg = `✅ Deseja restaurar o acesso da conta de ${email}?`;
+            if (acao === 'promover_admin') msg = `👑 Deseja dar privilégios de ADMINISTRADOR para ${email}? (Eles poderão ver o painel de estatísticas)`;
+            if (acao === 'remover_admin') msg = `🔽 Deseja REMOVER os privilégios de Administrador de ${email}?`;
+            if (acao === 'bloquear_ip') msg = `🚨 PERIGO EXTREMO: Deseja BANIR O IP [${valor}]? Todos os usuários operando nessa mesma rede de internet perderão o acesso instantaneamente.`;
+            if (acao === 'desbloquear_ip') msg = `✅ Deseja remover o banimento do IP [${valor}]?`;
+
+            if(confirm(msg)) {
+                executarComandoCriptografado(acao, email, valor);
+            }
+        }
+
+        // Função que criptografa qualquer ação antes de enviar!
+        function executarComandoCriptografado(acao, email, valor) {
+            let req = JSON.stringify({ acao: acao, email: email, valor: valor });
+            let cifrado = cifra_dev(req, tokenMaster);
+            socket.emit('comando_dev_acao_seguro', { payload_cifrado: cifrado });
+        }
+
+        socket.on('resposta_dev_acao', (res) => { if(res.sucesso) pedirLista(); });
+    </script>
+</body>
+</html>

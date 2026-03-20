@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAESTRO | Documentação</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* ========================================== */
+        /* 🎨 VARIÁVEIS BASE (Garantia de fallback)   */
+        /* ========================================== */
+        :root {
+            --accent-blue: #4da8da;
+            --text-dim: #8b9bb4;
+            --vale-green: #009b72;
+            --vale-yellow: #ffd600;
+            --border-glass: rgba(255, 255, 255, 0.08);
+        }
+
+        /* ========================================== */
+        /* 📱 RESET E FLUIDEZ                         */
+        /* ========================================== */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        html { 
+            scroll-behavior: smooth; 
+            overflow-x: hidden; /* Evita rolagem horizontal acidental */
+        }
+
+        body {
+            overflow-x: hidden;
+            margin: 0;
+        }
+
+        img, video, iframe {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* ========================================== */
+        /* 🖥️ LAYOUT PRINCIPAL (DESKTOP)              */
+        /* ========================================== */
+        .docs-wrapper {
+            display: flex;
+            gap: 30px;
+            max-width: 1200px;
+            margin: 80px auto 40px auto;
+            padding: 0 20px;
+            align-items: flex-start;
+        }
+
+        /* --- MENU LATERAL (SIDEBAR) --- */
+        .docs-sidebar {
+            width: 260px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 30px;
+            max-height: calc(100vh - 60px);
+            overflow-y: auto;
+            padding: 20px;
+            border-radius: 12px;
+        }
+
+        .docs-sidebar h3 {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-dim);
+            margin: 25px 0 10px 0;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .docs-sidebar h3:first-child { margin-top: 0; }
+
+        .docs-sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .docs-sidebar li { margin-bottom: 5px; }
+
+        .docs-sidebar a {
+            display: block;
+            color: #d0d0d0;
+            text-decoration: none;
+            font-size: 13px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            font-family: 'Inter', sans-serif;
+            border-left: 2px solid transparent;
+        }
+
+        .docs-sidebar a:hover {
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+            border-left-color: var(--accent-blue);
+        }
+
+        /* Oculta a barra de rolagem do menu lateral */
+        .docs-sidebar::-webkit-scrollbar { width: 4px; }
+        .docs-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+        /* --- ÁREA DE CONTEÚDO --- */
+        .docs-content {
+            flex: 1;
+            min-width: 0; /* Previne que o flexbox estoure a tela se houver texto longo */
+        }
+
+        .docs-section {
+            margin-bottom: 40px;
+            padding: 25px;
+            border-radius: 12px;
+            scroll-margin-top: 30px; /* Respiro pro link âncora */
+        }
+
+        .docs-section h2 {
+            color: var(--accent-blue);
+            font-size: 20px;
+            border-bottom: 1px solid var(--border-glass);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            line-height: 1.3;
+        }
+
+        .docs-section p, .docs-section li {
+            color: #d0d0d0;
+            line-height: 1.8;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .docs-section ul, .docs-section ol { padding-left: 20px; }
+
+        .highlight-box {
+            background: rgba(255, 214, 0, 0.05);
+            border-left: 4px solid var(--vale-yellow);
+            padding: 15px 20px;
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 20px;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 13px;
+            overflow-wrap: break-word; /* Quebra palavras muito longas */
+        }
+
+        /* ========================================== */
+        /* 🚀 OTIMIZAÇÃO EXTREMA DE PERFORMANCE       */
+        /* ========================================== */
+        .docs-sidebar.glass-card, 
+        .docs-section.glass-card {
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            background: rgba(20, 24, 34, 0.98) !important;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3) !important;
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+            transform: translateZ(0);
+            will-change: transform;
+        }
+
+        /* ========================================== */
+        /* 💻 RESPONSIVIDADE: TABLETS (Até 992px)     */
+        /* ========================================== */
+        @media (max-width: 992px) {
+            .docs-wrapper {
+                gap: 20px;
+            }
+            .docs-sidebar {
+                width: 220px; /* Reduz o menu lateral um pouco */
+            }
+        }
+
+        /* ========================================== */
+        /* 🍔 CABEÇALHO MOBILE (Invisível no PC)      */
+        /* ========================================== */
+        .mobile-header {
+            display: none; /* Escondido no Desktop */
+        }
+
+        /* ========================================== */
+        /* 📱 RESPONSIVIDADE: CELULARES (Até 768px)   */
+        /* ========================================== */
+        @media (max-width: 768px) {
+            /* 1. Barra Fixa no Topo */
+            .mobile-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                position: fixed;
+                top: 0; left: 0; width: 100%;
+                height: 65px;
+                padding: 0 20px;
+                z-index: 9999;
+                background: rgba(20, 24, 34, 0.98);
+                border-bottom: 1px solid var(--border-glass);
+                box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            }
+
+            .mobile-logo {
+                color: #fff;
+                font-family: 'Inter', sans-serif;
+                font-weight: 700;
+                font-size: 16px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                letter-spacing: 0.5px;
+            }
+
+            /* O ícone do hambúrguer, agora pequeno e do lado direito */
+            .hamburger-btn {
+                background: transparent;
+                border: none;
+                color: #fff;
+                font-size: 24px;
+                cursor: pointer;
+                padding: 5px;
+                transition: transform 0.2s;
+            }
+
+            .hamburger-btn:active { transform: scale(0.9); }
+
+            /* 2. Ajuste do Espaço de Leitura */
+            .docs-wrapper { 
+                flex-direction: column; 
+                margin-top: 85px; /* Empurra o conteúdo para baixo da barra fixa */
+                padding: 0 15px;
+            }
+
+            /* Esconde a logo duplicada de dentro do menu lateral */
+            .docs-sidebar > div:first-child { display: none; }
+
+            /* 3. Formatação Perfeita do Menu Aberto (Dropdown) */
+            .docs-sidebar { 
+                display: none; 
+                width: 100%; 
+                position: static; 
+                padding: 5px 15px 20px 15px;
+                margin-top: 0;
+                margin-bottom: 25px;
+                border-radius: 8px;
+            }
+
+            .docs-sidebar.ativo { 
+                display: block; 
+                animation: slideDown 0.3s ease;
+            }
+
+            @keyframes slideDown {
+                from { opacity: 0; transform: translateY(-15px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+
+            /* Textos do menu super legíveis e fáceis de tocar */
+            .docs-sidebar h3 {
+                font-size: 14px;
+                color: var(--accent-blue);
+                border-bottom: 1px solid var(--border-glass);
+                padding-bottom: 8px;
+                margin-top: 25px;
+            }
+
+            .docs-sidebar a {
+                font-size: 15px;
+                padding: 14px 10px;
+                border-bottom: 1px solid rgba(255,255,255,0.03);
+                border-radius: 4px;
+            }
+
+            .docs-sidebar a:active { background: rgba(255,255,255,0.08); }
+
+            .docs-section { padding: 20px; }
+            .docs-section h2 { font-size: 18px; }
+        }
+    </style>
+</head>
+<body class="pagina-painel" style="background: linear-gradient(135deg, #0f1219, #1a1e29);">
+
+    <a href="index.html" class="btn-docs-float"><i class="fa-solid fa-arrow-left"></i> Voltar</a>
+    
+    <div class="mobile-header glass-card">
+        <div class="mobile-logo">
+            <i class="fa-solid fa-book" style="color: var(--accent-blue);"></i> MAESTRO Docs
+        </div>
+        <button id="mobile-menu-btn" class="hamburger-btn">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+    </div>
+
+    <div class="docs-wrapper">
+        
+        <aside class="docs-sidebar glass-card">
+            <div style="text-align: center; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border-glass);">
+                <img src="logo-maestro.png" alt="Logo" style="width: 80px; opacity: 0.9;">
+                <h2 style="margin: 10px 0 0 0; font-size: 16px; letter-spacing: 1px;">MAESTRO Docs</h2>
+            </div>
+
+            <h3>Visão Geral</h3>
+            <ul>
+                <li><a href="#geral-introducao">1. Introdução</a></li>
+                <li><a href="#geral-servidor">2. Ligando o Servidor</a></li>
+                <li><a href="#geral-seguranca">3. Segurança (Captcha)</a></li>
+                <li><a href="#geral-legalidade">4. Conformidade Legal</a></li>
+                <li><a href="#geral-eventos">5. Envio de Eventos</a></li>
+            </ul>
+
+            <h3>Manuais por Portal</h3>
+            <ul>
+                <li><a href="#portal-coupa">Coupa Enterprise</a></li>
+                <li><a href="#portal-vale">Vale Base Metals</a></li>
+                <li><a href="#portal-ariba">SAP Ariba</a></li>
+                <li><a href="#portal-findes">Sistema Findes</a></li>
+                <li><a href="#portal-me">Mercado Eletrônico</a></li>
+            </ul>
+        </aside>
+
+        <main class="docs-content">
+            
+            <div id="geral-introducao" class="glass-card docs-section">
+            <h2><i class="fa-solid fa-rocket"></i> 1. Visão Geral da Plataforma</h2>
+
+            <p>O <strong>MAESTRO</strong> é uma plataforma de orquestração de automação que conecta a interface web hospedada em nuvem a um robô operacional executado em ambiente de servidor controlado.</p>
+
+            <p>Essa arquitetura permite a execução de <strong>processos automatizados</strong> em portais corporativos, incluindo extração estruturada de informações, verificações operacionais e envio de respostas a eventos.</p>
+
+            <p>As rotinas são processadas em lote por meio de agentes automatizados, garantindo maior eficiência, padronização de operações e redução significativa de intervenções manuais em fluxos de consulta e resposta em sistemas externos.</p>
+        </div>
+
+    <div id="geral-servidor" class="glass-card docs-section">
+        <h2><i class="fa-solid fa-power-off"></i> 2. Inicialização do Servidor Operacional</h2>
+    
+        <p>Antes da execução de qualquer rotina automatizada, é necessário estabelecer a conexão entre o ambiente em nuvem do sistema MAESTRO e o robô operacional executado no servidor.</p>
+    
+        <ul>
+            <li>No painel de controle do módulo desejado, clique em <strong>INICIAR SERVIDOR</strong>.</li>
+            <li>O sistema iniciará automaticamente o navegador controlado, acessará o portal configurado e realizará o processo de autenticação utilizando as credenciais previamente cadastradas.</li>
+            <li>Aguarde até que o indicador de status seja atualizado para <span style="color: var(--vale-green);">STATUS: AGUARDANDO COMANDOS</span>.</li>
+        </ul>
+
+        <div class="highlight-box">
+            <i class="fa-solid fa-triangle-exclamation" style="color: var(--vale-yellow)"></i>
+            <strong>Aviso operacional:</strong> Caso o robô não responda aos comandos, verifique se o processo de gerenciamento (<strong>gerenciador.py</strong>) está ativo no ambiente do <strong>Windows Server</strong> responsável pela execução das rotinas automatizadas.
+        </div>
+    </div>
+
+            <div id="geral-seguranca" class="glass-card docs-section">
+                <h2><i class="fa-solid fa-shield-halved"></i> 3.  Conformidade e Intervenção de Segurança (Captcha)</h2>
+                <p>Alguns portais utilizam mecanismos de verificação humana, como sistemas de <strong>Captcha</strong>, para garantir que a interação esteja sendo realizada por um usuário legítimo.</p>
+
+                <p>O MAESTRO não utiliza mecanismos automatizados para contornar, quebrar ou burlar esses sistemas de segurança. Sempre que um Captcha é identificado durante a execução do robô, o sistema ativa automaticamente o modo de <strong>intervenção assistida</strong>, permitindo que o próprio usuário realize a validação manualmente.</p>
+
+                <p>Nesse momento, a interface exibirá uma área de <strong>espelhamento operacional</strong> do portal. É importante observar que o sistema <strong>não espelha diretamente o Captcha original do site</strong>. Em vez disso, o robô realiza capturas periódicas da tela do portal remoto e transmite essas imagens para a interface do MAESTRO.</p>
+
+                <p>Quando o usuário interage com a imagem exibida (clicando ou resolvendo o desafio), o sistema registra as coordenadas do clique e <strong>replica essa mesma ação no navegador real que está sendo executado no servidor</strong>. Dessa forma, a interação ocorre diretamente no portal original, mantendo a integridade do processo de autenticação.</p>
+
+            <div class="highlight-box">
+                <i class="fa-solid fa-clock" style="color: var(--vale-yellow)"></i>
+                <strong>Nota sobre tempo de resposta:</strong> Como o sistema depende de capturas de tela e da retransmissão das ações do usuário para o navegador remoto, pode haver um pequeno <strong>delay (atraso de resposta)</strong> entre a ação realizada na interface e sua execução no portal.
+            </div>
+
+            <p>Em alguns casos, após a validação do Captcha, o portal pode apresentar elementos adicionais de verificação, como confirmação por <strong>e-mail</strong> ou atualização de sessão. Esses elementos podem aparecer com alguns segundos de atraso na interface devido ao mesmo processo de atualização visual entre o robô e o painel do usuário.</p>
+            
+             <div class="highlight-box">
+                <i class="fa-solid fa-scale-balanced" style="color: var(--vale-green)"></i>
+                <strong>Conformidade Legal:</strong> O MAESTRO opera sob o princípio de <strong>automação assistida</strong>. O sistema não coleta, armazena ou processa dados pessoais sensíveis e não executa quebra automatizada de mecanismos de segurança. As interações ocorrem sempre mediante ação direta do usuário e apenas em portais onde não existem restrições explícitas nos termos de uso ou contratos de acesso.
+            </div>
+            <div id="geral-legalidade" class="glass-card docs-section">
+                <h2><i class="fa-solid fa-scale-balanced"></i> 4. Conformidade Legal e Diretrizes de Uso</h2>
+
+                <p>O <strong>MAESTRO</strong> foi desenvolvido com estrita observância às legislações vigentes, operando sob o modelo de <strong>Automação Robótica de Processos (RPA) Assistida</strong>. Nossa arquitetura garante que a ferramenta atue como um facilitador das atividades do usuário, e não como um agente autônomo de exploração de sistemas.</p>
+
+                <p>Abaixo detalhamos os pilares legais e operacionais que respaldam o funcionamento da nossa plataforma:</p>
+
+                <ul>
+                    <li><strong>Acesso Legítimo:</strong> O robô opera exclusivamente utilizando as credenciais (login e senha) fornecidas e autorizadas pelo próprio usuário ou empresa operadora. Não realizamos intrusão, força bruta ou qualquer tipo de acesso não autorizado.</li>
+                    <li><strong>Respeito aos Mecanismos de Defesa:</strong> O MAESTRO não possui algoritmos para burlar, adulterar ou contornar proteções cibernéticas, como firewalls, bloqueios de IP ou sistemas de verificação humana (Captchas). Toda validação exigida pelos portais é obrigatoriamente repassada para intervenção manual do operador.</li>
+                    <li><strong>Privacidade e Proteção de Dados (LGPD):</strong> O sistema atua apenas como um orquestrador de informações. Não realizamos a coleta predatória (<em>scraping</em> malicioso), armazenamento indevido ou comercialização de dados sensíveis ou informações de negócios de terceiros. O tráfego de dados ocorre estritamente para a execução da rotina solicitada pelo usuário.</li>
+                    <li><strong>Carga de Acesso Controlada:</strong> As requisições feitas pelo MAESTRO aos portais externos (como Coupa, Vale, etc.) simulam o comportamento e o tempo de resposta humanos, evitando sobrecarga de servidores (como em ataques de negação de serviço - DDoS) e respeitando a integridade e disponibilidade dos sistemas de destino.</li>
+                </ul>
+
+                <div class="highlight-box" style="border-left-color: var(--vale-green); background: rgba(0, 255, 100, 0.05);">
+                    <i class="fa-solid fa-file-contract" style="color: var(--vale-green)"></i>
+                    <strong>Nota de Responsabilidade:</strong> O MAESTRO é uma ferramenta tecnológica lícita e estruturada de forma ética. Cabe ao usuário final certificar-se de que a utilização de ferramentas de automação para inserção de dados não viola cláusulas contratuais específicas (Termos de Uso) firmadas individualmente entre a sua empresa e os portais de compras dos seus clientes.
+                </div>
+            </div>
+
+            <div id="geral-eventos" class="glass-card docs-section">
+                <h2><i class="fa-solid fa-bolt"></i> 3. Respondendo Eventos em Lote</h2>
+                <p>O módulo de resposta permite enviar cotações e arquivos PDF diretamente para o portal sem precisar acessar o site manualmente.</p>
+                <ol>
+                    <li>Clique em <strong>Responder Eventos</strong> para abrir a área de pacotes de transmissão.</li>
+                    <li>Preencha o Número do Evento e informe a quantidade de itens.</li>
+                    <li>Anexe os arquivos DATASHEET e DAV (apenas formato .PDF).</li>
+                    <li>Clique em <strong>Adicionar Evento</strong> caso queira enfileirar mais de uma resposta ao mesmo tempo.</li>
+                    <li>Clique em <strong>Enviar tudo para a Fila</strong>.</li>
+                </ol>
+            </div>
+
+            </div>
+            <!-- ===================== Coupa Enterprise ========================= -->
+            <div id="portal-coupa" class="glass-card docs-section">
+                <h2 style="color: #fff;"><i class="fa-solid fa-globe"></i> Coupa Enterprise</h2>
+                <p>O módulo especialista do Coupa foi projetado para lidar com rodadas de negociação complexas, extração inteligente de itens e preenchimento automatizado de propostas diretamente no portal.</p>
+
+                <h3 style="color: var(--text-dim); margin-top: 20px; font-size: 16px;"><i class="fa-solid fa-play"></i> Como Usar o Módulo</h3>
+                <ol>
+                    <li><strong>Iniciando e Logando:</strong> Ao ligar o servidor, o robô tentará acessar o portal. Caso o site exija verificação de segurança (Captcha), a imagem da caixinha aparecerá no seu painel Maestro. Clique na imagem para resolver o desafio e liberar o acesso do robô.</li>
+                    <li><strong>Extrair Cotações:</strong> Ao acionar este comando, o robô vai varrer as páginas de eventos buscando novas cotações (ignorando as que já extraiu antes). Ele lerá os itens, locais de entrega e vencimentos. No final, ele gerará automaticamente <strong>Documentos Word</strong> formatados para precificação e atualizará a <strong>Planilha Excel</strong> de controle na rede.</li>
+                    <li><strong>Responder Eventos:</strong> No painel, informe o número do evento, digite os preços e prazos de entrega, e anexe os arquivos em PDF (Datasheets e DAVs). O robô navegará diretamente até o evento, fará o upload dos arquivos, limpará os campos antigos e digitará os novos valores item a item, salvando o rascunho com segurança.</li>
+                    <li><strong>Verificar Status:</strong> O robô lê a sua planilha Excel em busca de eventos que vencem hoje ou que já venceram. Em seguida, ele vai ao portal confirmar se a proposta foi realmente enviada, pintando a linha do Excel de Verde (RESPONDIDO) ou Vermelho (NÃO RESPONDIDO).</li>
+                </ol>
+
+                <h3 style="color: var(--text-dim); margin-top: 20px; font-size: 16px;"><i class="fa-solid fa-gears"></i> Como o Robô Realiza as Tarefas (Bastidores)</h3>
+                <ul>
+                    <li><strong>Inteligência Artificial (Integração Gemini):</strong> Durante a extração, o portal costuma apresentar textos de itens muito bagunçados. O robô utiliza IA para ler esse texto e extrair cirurgicamente a <em>Marca</em>, o <em>Modelo</em> e o <em>Part Number (PN)</em>, preenchendo o Excel de forma limpa e organizada.</li>
+                    <li><strong>Navegação de Aquecimento:</strong> Para evitar que o portal desconecte a sessão ou identifique o acesso como "robótico", o bot simula comportamento humano visitando páginas aleatórias (como Perfil e Pedidos) entre uma tarefa e outra.</li>
+                    <li><strong>Preenchimento Seguro de Preços:</strong> O site do Coupa pode ser instável. Para garantir que o preço seja salvo, o robô foca no campo, simula atalhos de teclado humanos (Ctrl+A, Backspace para apagar), digita o novo valor e força uma atualização no código da página para que o portal reconheça a mudança, salvando item por item.</li>
+                    <li><strong>Gestão Autônoma de Arquivos:</strong> Todo o processo ocorre integrado ao servidor (<code>\\SERVIDOR2\Publico\ALLAN</code>). O robô cria backups automáticos da sua planilha a cada sessão para evitar perda de dados e separa eventos com "Marcas Bloqueadas" ou "Complexos" em pastas diferentes.</li>
+                </ul>
+
+                <div class="highlight-box">
+                    <i class="fa-solid fa-file-excel" style="color: var(--vale-yellow)"></i>
+                    <strong>Atenção à Planilha:</strong> Certifique-se de que o arquivo Excel de Controle esteja <strong>fechado</strong> no seu computador durante os processos de "Extrair" e "Verificar Status". Se o arquivo estiver aberto, o Windows bloqueará a edição e o robô não conseguirá salvar os novos dados extraídos.
+                </div>
+            </div>
+
+          
+                        <!-- ===================== Vale Base Metals ========================= -->
+        <div id="portal-vale" class="glass-card docs-section">
+
+            <h2 style="color: var(--vale-green);">
+                <i class="fa-solid fa-mountain-sun"></i> Vale Base Metals
+            </h2>
+
+            <p>
+            O módulo <strong>Vale Base Metals</strong> é uma extensão especializada do ambiente Coupa, desenvolvida para operar especificamente nos processos de <strong>Sourcing Privado</strong> utilizados pela Vale. 
+            Este módulo incorpora rotinas automatizadas adicionais para lidar com a complexidade operacional do portal, incluindo o preenchimento de formulários fiscais, campos aduaneiros e etapas obrigatórias exigidas pelo cliente.
+            </p>
+
+            <p>
+            A automação foi projetada para reduzir o tempo de interação manual com o portal, minimizar erros operacionais e aumentar a eficiência no processamento de eventos de cotação.
+            </p>
+
+            <h3 style="color: var(--text-dim); margin-top: 20px; font-size: 16px;">
+            <i class="fa-solid fa-play"></i> Fluxo de Utilização do Módulo
+            </h3>
+
+            <ol>
+            <li>
+            <strong>Login e Identificação do Cliente:</strong> Após a autenticação no portal (com suporte a resolução assistida de Captcha pelo painel MAESTRO), o robô acessa automaticamente a área de eventos e aplica filtros na tabela para selecionar o cliente <strong>"Vale Base Metals"</strong>.
+            </li>
+
+            <li>
+            <strong>Extração Otimizada de Eventos:</strong> Durante a extração, o sistema ajusta automaticamente a visualização da tabela para <strong>90 itens por página</strong>, reduzindo paginações desnecessárias. 
+            O robô identifica eventos não lidos, extrai os dados relevantes, gera documentos formatados em Word e atualiza a planilha de controle armazenada no servidor.
+            </li>
+
+            <li>
+            <strong>Resposta de Eventos com Parâmetros Fiscais:</strong> Além do preenchimento padrão de <strong>preços, prazos e anexos em PDF</strong>, o módulo permite informar campos fiscais adicionais exigidos pela Vale, como <strong>ICMS (%)</strong> e <strong>Origem do Material</strong>. 
+            O robô realiza o preenchimento automático desses dados item por item, evitando a necessidade de navegação manual nos painéis laterais do portal.
+            </li>
+            </ol>
+
+                <h3 style="color: var(--text-dim); margin-top: 20px; font-size: 16px;">
+                <i class="fa-solid fa-gears"></i> Funcionamento Interno da Automação
+                </h3>
+
+                    <ul>
+
+                        <li>
+                        <strong>Navegação em Múltiplas Abas (Multi-Tabbing):</strong>  
+                        O portal da Vale pode perder o estado da página quando um evento é aberto e fechado. Para evitar esse comportamento, o robô abre cada cotação em uma <em>nova guia</em> do navegador.  
+                        Após coletar as informações, a guia é encerrada automaticamente e o robô retorna à lista principal, mantendo a posição original da tabela.
+                        </li>
+
+                        <li>
+                        <strong>Gestão Automatizada de Código NCM:</strong>  
+                        A plataforma exige o preenchimento do código NCM (Nomenclatura Comum do Mercosul) para cada item. O robô captura esse código diretamente da descrição do produto no portal e o insere automaticamente no campo correspondente, utilizando interações simuladas para confirmar a seleção no sistema.
+                        </li>
+
+                        <li>
+                        <strong>Preenchimento de Campos Dinâmicos (Formulário React):</strong>  
+                        Alguns campos fiscais obrigatórios do portal utilizam componentes dinâmicos que dificultam automações tradicionais.  
+                        Para garantir a consistência dos dados, o MAESTRO injeta eventos controlados via JavaScript para preencher automaticamente parâmetros exigidos pelo sistema.
+                        </li>
+
+                        <li>
+                        <strong>Salvamento Preventivo de Rascunho:</strong>  
+                        Após o envio dos anexos (Datasheets e DAVs), o robô executa automaticamente a ação <strong>"Salvar Rascunho"</strong>.  
+                        Isso garante que os arquivos já estejam registrados no portal antes do preenchimento completo da cotação, prevenindo perda de dados em caso de instabilidade da página.
+                        </li>
+
+                    </ul>
+
+                    <div class="highlight-box" style="border-left-color: var(--vale-green); background: rgba(0, 255, 100, 0.05);">
+
+                        <i class="fa-solid fa-up-right-from-square" style="color: var(--vale-green)"></i>
+
+                        <strong>Aviso de comportamento visual:</strong>  
+                        Durante a etapa de <strong>extração de cotações</strong>, o navegador do servidor poderá abrir e fechar abas rapidamente. 
+                        Esse comportamento faz parte da estratégia de processamento <em>Multi-Tabbing</em> utilizada pelo robô para acelerar a coleta de informações.  
+
+                        Evite interagir manualmente com o navegador do servidor durante esse processo para não interromper o fluxo automatizado.
+
+                    </div>
+
+        </div>
+
+            <div id="portal-ariba" class="glass-card docs-section">
+                <h2 style="color: #ff9900;"><i class="fa-solid fa-network-wired"></i> SAP Ariba</h2>
+                <p>Módulo em fase de homologação. O SAP Ariba utiliza tokens de sessão curtos, portanto, as respostas em lote devem ser enviadas rapidamente após a inicialização do servidor.</p>
+            </div>
+
+            <div id="portal-findes" class="glass-card docs-section">
+                <h2 style="color: #4da8da;"><i class="fa-solid fa-industry"></i> Sistema Findes</h2>
+                <p>As instruções específicas para o portal Findes serão documentadas em atualizações futuras do Maestro Core.</p>
+            </div>
+
+            <div id="portal-me" class="glass-card docs-section">
+                <h2 style="color: #8c52ff;"><i class="fa-solid fa-cart-shopping"></i> Mercado Eletrônico</h2>
+                <p>As instruções específicas para o Mercado Eletrônico serão documentadas em atualizações futuras do Maestro Core.</p>
+            </div>
+            
+            <div style="text-align: center; color: var(--text-dim); margin-top: 50px; font-size: 12px; padding-bottom: 20px;">
+                &copy; 2026 Ventura Informática - Sistema MAESTRO CORE - by Allan Simão
+            </div>
+
+        </main>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuBtn = document.getElementById('mobile-menu-btn');
+            const sidebar = document.querySelector('.docs-sidebar');
+            const icon = menuBtn.querySelector('i');
+
+            menuBtn.addEventListener('click', function() {
+                sidebar.classList.toggle('ativo');
+                
+                if (sidebar.classList.contains('ativo')) {
+                    icon.classList.remove('fa-bars');
+                    icon.classList.add('fa-xmark'); // Muda pra X
+                } else {
+                    icon.classList.remove('fa-xmark');
+                    icon.classList.add('fa-bars'); // Volta pro Hambúrguer
+                }
+            });
+
+            // Fecha o menu sozinho ao clicar num link
+            const links = sidebar.querySelectorAll('a');
+            links.forEach(link => {
+                link.addEventListener('click', function() {
+                    if (window.innerWidth <= 768) {
+                        sidebar.classList.remove('ativo');
+                        icon.classList.remove('fa-xmark');
+                        icon.classList.add('fa-bars');
+                    }
+                });
+            });
+        });
+    </script>
+
+</body>
+</html>
