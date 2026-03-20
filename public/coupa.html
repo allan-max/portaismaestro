@@ -231,9 +231,15 @@
         .nav-item.nav-voltar { color: #f87171; }
         .nav-item.nav-voltar:hover { color: #ff3d00; background: rgba(248, 113, 113, 0.15); }
 
-        /* 📱 RESPONSIVIDADE MOBILE (TELEFONE) */
+         /* 📱 RESPONSIVIDADE MOBILE (TELEFONE) */
         @media (max-width: 850px) {
-            body { overflow-y: auto; flex-direction: column; height: auto; }
+            body {
+                flex-direction: column; /* Empilha as divisões */
+                height: auto;
+                min-height: 100vh;
+                overflow-y: auto; /* Liberta a rolagem */
+                padding-bottom: 90px; /* Espaço para a Navbar Flutuante */
+            }
             .coupa-left { padding: 80px 20px 20px 20px; text-align: center; align-items: center; }
             .coupa-title { font-size: 2rem; margin-bottom: 15px; }
             .coupa-right { padding: 10px 15px 120px 15px; } 
@@ -241,9 +247,15 @@
             .grid-botoes, .fila-grid { grid-template-columns: 1fr; }
             .btn-base[style*="grid-column"] { grid-column: span 1 !important; }
             
-            .floating-navbar { top: auto; bottom: 20px; width: max-content; max-width: 90%; gap: 10px;}
-            .nav-item span { display: none; }
-            .nav-item { padding: 12px; font-size: 16px; border-radius: 50%; width: 45px; height: 45px; justify-content: center;}
+            /* Ajuste da Navbar no Mobile */
+            .floating-navbar {
+                top: auto;
+                bottom: 20px;
+                width: max-content;
+                max-width: 90%;
+            }
+            .nav-item span { display: none; } /* Esconde o texto, mostra só os ícones */
+            .nav-item { padding: 12px; font-size: 16px; border-radius: 50%; }
         }
     </style>
 </head>

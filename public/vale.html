@@ -243,7 +243,13 @@
         /* 📱 RESPONSIVIDADE MOBILE                     */
         /* ========================================== */
         @media (max-width: 850px) {
-            body { overflow-y: auto; flex-direction: column; height: auto; }
+            body {
+                flex-direction: column; /* Empilha as divisões */
+                height: auto;
+                min-height: 100vh;
+                overflow-y: auto; /* Liberta a rolagem */
+                padding-bottom: 90px; /* Espaço para a Navbar Flutuante */
+            }
             .absolute-logo { top: 20px; left: 20px; }
             .absolute-logo img { height: 35px; }
             .vale-left { padding: 90px 20px 20px 20px; text-align: center; align-items: center; }
@@ -252,9 +258,15 @@
             .glass-card { max-height: none; padding: 25px 20px; max-width: 100%; }
             .grid-botoes, .fila-grid { grid-template-columns: 1fr; }
             .btn-base[style*="grid-column"] { grid-column: span 1 !important; }
-            .floating-navbar { top: auto; bottom: 20px; width: max-content; max-width: 90%; gap: 10px;}
-            .nav-item span { display: none; }
-            .nav-item { padding: 12px; font-size: 16px; border-radius: 50%; width: 45px; height: 45px; justify-content: center;}
+            /* Ajuste da Navbar no Mobile */
+            .floating-navbar {
+                top: auto;
+                bottom: 20px;
+                width: max-content;
+                max-width: 90%;
+            }
+            .nav-item span { display: none; } /* Esconde o texto, mostra só os ícones */
+            .nav-item { padding: 12px; font-size: 16px; border-radius: 50%; }
         }
     </style>
 </head>
