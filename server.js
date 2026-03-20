@@ -204,11 +204,15 @@ io.on('connection', (socket) => {
         console.log("🤖 Robô Local Conectado ao Servidor Cloud! ID:", bot_socket_id);
         notificar_todos("Robô operacional e conectado! Aguardando o Início do Servidor.");
     });
-    // O Python usa esta rota para relatar o progresso ao vivo
+    // O Python usa esta rota para relatar o progresso ao vivo (Coupa/Vale)
     socket.on('relatar_progresso', (dados) => {
-    // Envia o log direto para o terminal do Frontend sem recarregar o painel todo
-    io.to('frontend').emit('relatar_progresso', dados);
+        io.to('frontend').emit('relatar_progresso', dados);
     });
+
+    // 👇 ADICIONE ESTAS 3 LINHAS PARA O FINDES E O M.E FUNCIONAREM 👇
+    socket.on('relatar_progresso_me', (dados) => io.to('frontend').emit('relatar_progresso_me', dados));
+    socket.on('relatar_progresso_findes', (dados) => io.to('frontend').emit('relatar_progresso_findes', dados));
+    socket.on('findes_textos_gerados', (dados) => io.to('frontend').emit('findes_textos_gerados', dados));
     
 
     // Os utilizadores que abrirem o site emitem 'sou_frontend'
