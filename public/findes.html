@@ -391,15 +391,17 @@
             }
         });
 
-        // 👇 RECEBE O TEXTO GIGANTE COM TODOS OS MODELOS PRONTOS DO PYTHON 👇
+
         socket.on('findes_textos_gerados', function(dados) {
             textoGeradoFindes = dados.texto;
             addLog("📝 Modelos de texto prontos! Clique no botão de copiar.");
-            piscarBotaoCopiar('#2e8b57', '#fff'); // Pisca verde para avisar que está pronto!
+            piscarBotaoCopiar('#2e8b57', '#fff'); 
         });
 
-        socket.on('tarefa_concluida', function(dados) {
-            if (dados.portal === 'findes' && dados.evento === 'Desligar Robô') {
+
+        socket.on('relatar_progresso_findes', function(dados) {
+            
+            if (dados.comando_interno === 'desligar_botoes') {
                 isRunning = false;
                 const btn = document.getElementById('btn-acao');
                 const inputEvento = document.getElementById('id-evento');
@@ -408,8 +410,29 @@
                 document.getElementById('led-status').className = "led";
                 document.getElementById('txt-status').innerText = "Ocioso";
                 inputEvento.disabled = false;
+                addLog(`✅ Módulo Finalizado e Liberado.`);
+                return; 
+            }
+            
+            if (dados.mensagem) {
+                addLog(dados.mensagem);
             }
         });
+
+        socket.on('findes_textos_gerados', function(dados) {
+            textoGeradoFindes = dados.texto;
+            addLog("📝 Modelos de texto prontos! Clique no botão de copiar.");
+            
+            const btnCopy = document.querySelector('.btn-copy');
+            btnCopy.style.background = '#2e8b57';
+            btnCopy.style.color = '#fff';
+            setTimeout(() => {
+                btnCopy.style.background = '';
+                btnCopy.style.color = '';
+            }, 1500);
+        });
+        
+        // (Nota: NÃO ADICIONE mais o socket.on('tarefa_concluida') aqui para não voltar o bug do Coupa!)
     </script>
 </body>
 </html>
