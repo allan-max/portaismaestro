@@ -598,7 +598,7 @@ socket.on('comando_dev_acao_seguro', (dados) => {
 // ==========================================
 const Groq = require('groq-sdk');
 // Cole a sua chave real do Groq no lugar do texto abaixo, mantendo as aspas!
-const groq = new Groq({ apiKey: "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" });
+const groq = new Groq({ apiKey: "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" });
 
 // ==========================================
 // ROTA DO CHAT DE SUPORTE (MAESTRO IA)
