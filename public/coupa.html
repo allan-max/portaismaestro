@@ -377,6 +377,7 @@
         socket.on('sincronizar_estado', function(dados) {
             const estado = dados.estado;
             const msg = dados.mensagem;
+            const MEU_PORTAL = 'coupa';
 
             if (msg) {
                 document.getElementById('log').innerText = msg;
@@ -388,39 +389,19 @@
             }
 
             const btnImprimir = document.getElementById('btn-imprimir');
-            if (btnImprimir) {
-                btnImprimir.innerHTML = '<i class="fa-solid fa-print"></i> Imprimir Arquivos';
-                btnImprimir.disabled = false;
-            }
+            if (btnImprimir) { btnImprimir.innerHTML = '<i class="fa-solid fa-print"></i> Imprimir Arquivos'; btnImprimir.disabled = false; }
 
             const listaPendentes = document.getElementById('lista-pendentes');
             if (estado.fila_pendente && estado.fila_pendente.length > 0) {
                 listaPendentes.innerHTML = '';
-                estado.fila_pendente.forEach(ev => {
-                    listaPendentes.innerHTML += `
-                        <li>
-                            <span>Evt. <strong>${ev}</strong></span>
-                            <button onclick="removerDaFila('${ev}')" style="background:transparent; color:#ef4444; border:none; padding:4px; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
-                        </li>
-                    `;
-                });
-            } else {
-                listaPendentes.innerHTML = '<li style="color: #64748b;">Vazia</li>';
-            }
+                estado.fila_pendente.forEach(ev => { listaPendentes.innerHTML += `<li><span>Evt. <strong>${ev}</strong></span><button onclick="removerDaFila('${ev}')" style="background:transparent; color:#ef4444; border:none; padding:4px; cursor:pointer;"><i class="fa-solid fa-trash"></i></button></li>`; });
+            } else { listaPendentes.innerHTML = '<li style="color: #64748b;">Vazia</li>'; }
 
             const listaConcluidos = document.getElementById('lista-concluidos');
             if (estado.tarefas_concluidas && estado.tarefas_concluidas.length > 0) {
                 listaConcluidos.innerHTML = '';
-                estado.tarefas_concluidas.forEach(ev => {
-                    listaConcluidos.innerHTML += `
-                        <li style="color: #e2e8f0;">
-                            <i class="fa-solid fa-check" style="color:#10b981;"></i> Evt. <strong>${ev}</strong>
-                        </li>
-                    `;
-                });
-            } else {
-                listaConcluidos.innerHTML = '<li style="color: #64748b;">Nenhum</li>';
-            }
+                estado.tarefas_concluidas.forEach(ev => { listaConcluidos.innerHTML += `<li style="color: #e2e8f0;"><i class="fa-solid fa-check" style="color:#10b981;"></i> Evt. <strong>${ev}</strong></li>`; });
+            } else { listaConcluidos.innerHTML = '<li style="color: #64748b;">Nenhum</li>'; }
 
             const dot = document.getElementById('indicador-status');
             const btnLigar = document.getElementById('btn-ligar');
@@ -432,49 +413,65 @@
             const btnVerificar = document.getElementById('btn-verificar');
             const btnAbrirRes = document.getElementById('btn-abrir-res');
             
-            btnExtrair.className = 'btn-base';
-            btnExtrair.innerHTML = '<i class="fa-solid fa-download"></i> Extrair';
-            btnExtrair.disabled = false;
-            btnExtrair.onclick = function() { executarTarefa('extrair'); };
+            btnExtrair.className = 'btn-base'; btnExtrair.innerHTML = '<i class="fa-solid fa-download"></i> Extrair'; btnExtrair.disabled = false; btnExtrair.onclick = function() { executarTarefa('extrair'); };
+            btnVerificar.className = 'btn-base'; btnVerificar.innerHTML = '<i class="fa-solid fa-check-double"></i> Verificar'; btnVerificar.disabled = false; btnVerificar.onclick = function() { executarTarefa('verificar'); };
+            btnAbrirRes.className = 'btn-base'; btnAbrirRes.style.cssText = "grid-column: span 2; background: rgba(59, 130, 246, 0.15); border-color: #3b82f6; color: #60a5fa;"; btnAbrirRes.innerHTML = '<i class="fa-solid fa-bolt"></i> Responder Eventos'; btnAbrirRes.disabled = false; btnAbrirRes.onclick = function() { mostrarFormResposta(); };
 
-            btnVerificar.className = 'btn-base';
-            btnVerificar.innerHTML = '<i class="fa-solid fa-check-double"></i> Verificar';
-            btnVerificar.disabled = false;
-            btnVerificar.onclick = function() { executarTarefa('verificar'); };
-
-            btnAbrirRes.className = 'btn-base';
-            btnAbrirRes.style.cssText = "grid-column: span 2; background: rgba(59, 130, 246, 0.15); border-color: #3b82f6; color: #60a5fa;";
-            btnAbrirRes.innerHTML = '<i class="fa-solid fa-bolt"></i> Responder Eventos';
-            btnAbrirRes.disabled = false;
-            btnAbrirRes.onclick = function() { mostrarFormResposta(); };
+            const txtLock = overlayLock.querySelector('p');
+            const iconLock = overlayLock.querySelector('i');
 
             dot.className = "led"; 
 
-            if (estado.status === 'desligado') {
+            // 👇 LÓGICA DE INTERTRAVAMENTO (TROCA DE PORTAL) 👇
+            if (estado.status !== 'desligado' && estado.portal_atual && estado.portal_atual !== MEU_PORTAL) {
+                const nomeOutro = estado.portal_atual.toUpperCase();
                 dot.classList.add("offline");
                 btnLigar.className = 'btn-base'; 
+                btnLigar.style.background = 'rgba(239, 68, 68, 0.15)'; 
+                btnLigar.style.borderColor = '#ef4444';
+                btnLigar.style.color = '#f87171';
+                btnLigar.disabled = false; 
+                btnLigar.innerHTML = `<i class="fa-solid fa-right-left"></i> ASSUMIR CONTROLE (PARAR ${nomeOutro})`;
+                
+                btnLigar.onclick = function() {
+                    if(confirm(`⚠️ ATENÇÃO: O portal ${nomeOutro} está em execução no momento.\n\nDeseja parar o robô da ${nomeOutro} e iniciar o COUPA?`)) {
+                        socket.emit('comando_direto', { modo: 'forcar_troca', portal: MEU_PORTAL });
+                    }
+                };
+                
+                overlayLock.style.opacity = '1'; overlayLock.style.pointerEvents = 'all';
+                txtLock.innerText = `Servidor em uso pela ${nomeOutro}`;
+                iconLock.style.color = '#ef4444'; 
+                conteudoOp.style.opacity = '0'; conteudoOp.style.pointerEvents = 'none';
+            } 
+            else if (estado.status === 'desligado') {
+                dot.classList.add("offline");
+                btnLigar.className = 'btn-base'; 
+                btnLigar.style.cssText = ""; // Reseta cores
                 btnLigar.disabled = false; 
                 btnLigar.innerHTML = '<i class="fa-solid fa-power-off"></i> INICIAR SERVIDOR';
                 btnLigar.onclick = ligarRobo;
                 
-                overlayLock.style.opacity = '1';
-                overlayLock.style.pointerEvents = 'all';
-                conteudoOp.style.opacity = '0';
-                conteudoOp.style.pointerEvents = 'none';
+                overlayLock.style.opacity = '1'; overlayLock.style.pointerEvents = 'all';
+                txtLock.innerText = 'Autentique o servidor para liberar';
+                iconLock.style.color = '#3b82f6'; // Volta a cor Azul do Coupa
+                conteudoOp.style.opacity = '0'; conteudoOp.style.pointerEvents = 'none';
             } 
             else if (estado.status === 'logando') {
                 dot.classList.add("running");
                 btnLigar.className = 'btn-base';
+                btnLigar.style.cssText = "";
                 btnLigar.disabled = true; 
                 btnLigar.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> A AUTENTICAR...';
                 
-                overlayLock.style.opacity = '1';
-                overlayLock.style.pointerEvents = 'all';
-                conteudoOp.style.opacity = '0';
-                conteudoOp.style.pointerEvents = 'none';
+                overlayLock.style.opacity = '1'; overlayLock.style.pointerEvents = 'all';
+                txtLock.innerText = 'Autentique o servidor para liberar';
+                iconLock.style.color = '#3b82f6';
+                conteudoOp.style.opacity = '0'; conteudoOp.style.pointerEvents = 'none';
             } 
             else {
                 btnLigar.className = 'btn-base btn-stop'; 
+                btnLigar.style.cssText = "";
                 btnLigar.disabled = false; 
                 btnLigar.innerHTML = '<i class="fa-solid fa-power-off"></i> DESLIGAR ROBÔ';
                 btnLigar.onclick = desligarRobo;
@@ -490,17 +487,13 @@
                 } else if (estado.status === 'extraindo' || estado.status === 'extrair') {
                     dot.classList.add("running");
                     txtStatus.innerHTML = '<i class="fa-solid fa-gear fa-spin"></i> A EXTRAIR DADOS...';
-                    btnExtrair.className = 'btn-base btn-stop';
-                    btnExtrair.innerHTML = '<i class="fa-solid fa-hand"></i> PARAR EXTRAÇÃO';
-                    btnExtrair.onclick = function() { solicitarParada(this); };
+                    btnExtrair.className = 'btn-base btn-stop'; btnExtrair.innerHTML = '<i class="fa-solid fa-hand"></i> PARAR EXTRAÇÃO'; btnExtrair.onclick = function() { solicitarParada(this); };
                     btnVerificar.disabled = true; btnAbrirRes.disabled = true; btnImprimir.disabled = true;
                     document.getElementById('area-resposta').style.display = 'none';
                 } else if (estado.status === 'verificando' || estado.status === 'verificar') {
                     dot.classList.add("running");
                     txtStatus.innerHTML = '<i class="fa-solid fa-gear fa-spin"></i> A VERIFICAR DADOS...';
-                    btnVerificar.className = 'btn-base btn-stop';
-                    btnVerificar.innerHTML = '<i class="fa-solid fa-hand"></i> PARAR VERIFICAÇÃO';
-                    btnVerificar.onclick = function() { solicitarParada(this); };
+                    btnVerificar.className = 'btn-base btn-stop'; btnVerificar.innerHTML = '<i class="fa-solid fa-hand"></i> PARAR VERIFICAÇÃO'; btnVerificar.onclick = function() { solicitarParada(this); };
                     btnExtrair.disabled = true; btnAbrirRes.disabled = true; btnImprimir.disabled = true;
                     document.getElementById('area-resposta').style.display = 'none';
                 } else if (estado.status === 'respondendo' || estado.status === 'ocupado') {

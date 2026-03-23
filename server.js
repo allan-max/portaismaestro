@@ -50,9 +50,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
 // === GERENCIADOR DE ESTADO E FILA ===
-// === GERENCIADOR DE ESTADO E FILA ===
 let estado_global = {
     status: 'desligado',
+    portal_atual: null, // 👇 Guarda qual portal é o dono atual do servidor
     fila_pendente: [],
     tarefas_concluidas: [] 
 };
@@ -204,12 +204,12 @@ io.on('connection', (socket) => {
         console.log("🤖 Robô Local Conectado ao Servidor Cloud! ID:", bot_socket_id);
         notificar_todos("Robô operacional e conectado! Aguardando o Início do Servidor.");
     });
-    // O Python usa esta rota para relatar o progresso ao vivo (Coupa/Vale)
+    /// O Python usa esta rota para relatar o progresso ao vivo
     socket.on('relatar_progresso', (dados) => {
         io.to('frontend').emit('relatar_progresso', dados);
     });
 
-    // 👇 ADICIONE ESTAS 3 LINHAS PARA O FINDES E O M.E FUNCIONAREM 👇
+    // 👇 ADICIONE ESTAS 3 LINHAS PARA O FINDES E O M.E FALAREM COM O SITE 👇
     socket.on('relatar_progresso_me', (dados) => io.to('frontend').emit('relatar_progresso_me', dados));
     socket.on('relatar_progresso_findes', (dados) => io.to('frontend').emit('relatar_progresso_findes', dados));
     socket.on('findes_textos_gerados', (dados) => io.to('frontend').emit('findes_textos_gerados', dados));
@@ -285,9 +285,9 @@ io.on('connection', (socket) => {
 
             if (dados.modo === 'ligar_robo') {
                 estado_global.status = 'logando';
+                estado_global.portal_atual = dados.portal; // Assumiu o controle
                 notificar_todos("A iniciar navegador e autenticar...");
                 
-                // MÁGICA ATUALIZADA: Damos 60 segundos para você resolver o captcha com calma!
                 setTimeout(() => {
                     if (estado_global.status === 'logando') {
                         estado_global.status = 'ocioso';
@@ -305,7 +305,14 @@ io.on('connection', (socket) => {
             }
             else if (dados.modo === 'desligar_robo') {
                 estado_global.status = 'desligado';
+                estado_global.portal_atual = null; // Liberta a vaga
                 notificar_todos("Navegador fechado. Robô desligado.");
+            }
+            // 👇 ADICIONE ESTE BLOCO AQUI PARA A TROCA MÁGICA 👇
+            else if (dados.modo === 'forcar_troca') {
+                estado_global.status = 'logando';
+                estado_global.portal_atual = dados.portal; // O novo portal roubou o controle
+                notificar_todos(`A trocar o servidor para o portal ${dados.portal.toUpperCase()}...`);
             }
 
             // Manda a ordem para o Python trabalhar (para Coupa e Vale)
@@ -367,6 +374,7 @@ io.on('connection', (socket) => {
         } else {
             if (evento === 'Login do Robô') {
                 estado_global.status = 'desligado';
+                estado_global.portal_atual = null; // Liberta a vaga se der erro na senha
             } else {
                 estado_global.status = 'ocioso';
             }
