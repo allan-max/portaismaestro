@@ -362,6 +362,12 @@
             localStorage.clear();
             window.location.href = "index.html"; 
         });
+
+        socket.on("sessao_invalida", () => {
+            console.error("A sua sessão expirou (O Servidor foi reiniciado).");
+            localStorage.clear();
+            window.location.href = "index.html"; 
+        });
         
         socket.emit('sou_frontend', { usuario: localStorage.getItem('maestro_user') }); 
         
