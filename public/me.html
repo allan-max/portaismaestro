@@ -399,9 +399,16 @@ socket.on("sessao_invalida", () => {
         }
 
         function solicitarImpressao() {
-            if(confirm("Deseja imprimir os relatórios gerados do Mercado Eletrônico?")) {
-                socket.emit('solicitar_impressao', { portal: 'me' });
-                addLog("Enviando relatórios para a fila de impressão...");
+            let opcao = prompt("🖨️ Selecione a Impressora:\n\nDigite 1 para: Lex611\nDigite 2 para: HP LaserJet P205X\n\n(Digite 1 ou 2 e pressione OK)", "1");
+            
+            let impressoraEscolhida = "";
+            if (opcao === "1") { impressoraEscolhida = "Lex611"; } 
+            else if (opcao === "2") { impressoraEscolhida = "HP LaserJet P205X series PCL6 Class Driver"; } 
+            else { return; } 
+
+            if(confirm(`Deseja imprimir TODOS os relatórios do MERCADO ELETRÔNICO na impressora:\n👉 ${impressoraEscolhida}?`)) {
+                socket.emit('solicitar_impressao', { portal: 'me', impressora: impressoraEscolhida });
+                addLog(`Enviando para a impressora: ${impressoraEscolhida}...`);
             }
         }
 
