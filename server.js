@@ -57,8 +57,8 @@ let estado_global = {
     tarefas_concluidas: [] 
 };
 
-// 👇 NOVA MEMÓRIA INDEPENDENTE PARA O ME 👇
 let estado_me = { status: 'ocioso' };
+let estado_ariba = { status: 'desligado' };
 let fila_respostas = [];
 let bot_socket_id = null; // Guarda a ligação exclusiva do seu servidor Python local
 let usuarios_logados = {};
@@ -244,6 +244,7 @@ io.on('connection', (socket) => {
         
         socket.emit('sincronizar_estado', { estado: estado_global, mensagem: "Sincronizado com a Nuvem." });
         socket.emit('sincronizar_estado_me', estado_me); // <-- NOVA LINHA PARA ENVIAR O STATUS DO ME
+        socket.emit('sincronizar_estado_ariba', estado_ariba);
     });
 
     // 👇 ROTA DE REPASSE DAS MENSAGENS SECRETAS 👇
@@ -280,6 +281,15 @@ io.on('connection', (socket) => {
             if (dados.portal === 'findes') {
                 io.to(bot_socket_id).emit('comando_para_robo', dados);
                 return; 
+            }
+            if (dados.portal === 'ariba') {
+            if (dados.modo === 'ligar_robo') estado_ariba.status = 'logando';
+            else if (dados.modo === 'desligar_robo') estado_ariba.status = 'desligado';
+            else if (dados.modo === 'extrair') estado_ariba.status = 'extraindo';
+    
+            io.emit('sincronizar_estado_ariba', estado_ariba);
+            io.to(bot_socket_id).emit('comando_para_robo', dados);
+            return; 
             }
             // 👆 ================================================== 👆
 
@@ -352,14 +362,18 @@ io.on('connection', (socket) => {
         // 1. Repassa o evento para TODOS os sites (para os alertas visuais do ME funcionarem)
         io.to('frontend').emit('tarefa_concluida', dados);
 
-        // 2. BLINDAGEM: Se for um evento exclusivo do Mercado Eletrônico, NÃO mexe no status global
-        if (evento === 'Lote de Extração' || evento === 'Impressão Lote') {
-            if (evento === 'Lote de Extração') {
-                estado_me.status = 'ocioso';
-                io.emit('sincronizar_estado_me', estado_me);
-            }
-            return; // O código para aqui.
+        // 2. BLINDAGEM: Se for um evento exclusivo do M.E ou Ariba, NÃO mexe no status global
+    if (evento === 'Lote de Extração' || evento === 'Impressão Lote' || dados.portal === 'ariba' || evento === 'Desligar Ariba') {
+        if (evento === 'Lote de Extração') {
+            estado_me.status = 'ocioso';
+            io.emit('sincronizar_estado_me', estado_me);
         }
+        if (dados.portal === 'ariba' || evento === 'Desligar Ariba') {
+            estado_ariba.status = (evento === 'Desligar Ariba') ? 'desligado' : 'ocioso';
+            io.emit('sincronizar_estado_ariba', estado_ariba);
+        }
+        return; // O código para aqui.
+    }
 
         // 3. Se foi um evento real de Resposta (com números), guarda na lista verde de "FINALIZADOS"
         const numExtraido = String(evento).replace(/\D/g, ""); 
