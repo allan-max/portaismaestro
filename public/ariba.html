@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MAESTRO | SAP Ariba</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Roboto+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <script>
@@ -15,162 +15,189 @@
 
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-        
-        /* 👇 FUNDO IGUAL AO FINDES (Mudando apenas o nome da imagem) 👇 */
-        body { 
-            display: flex; height: 100vh; overflow: hidden; 
-            background-image: url('img/ariba_fundo.png'); 
-            background-size: cover; background-position: center;
+
+        body {
+            height: 100vh;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding-right: 50px; 
+            position: relative;
+            background-color: #000;
+            overflow: hidden;
         }
 
-        /* LADO ESQUERDO (VISUAL SAP) */
-        .left-pane {
-            flex: 1.2;
-            background: linear-gradient(135deg, rgba(0,20,40,0.9) 0%, rgba(0,75,145,0.9) 100%);
-            color: white; padding: 50px;
-            display: flex; flex-direction: column; justify-content: center; position: relative;
+        /* FUNDO INFALÍVEL */
+        .fundo-imagem {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            object-fit: cover; z-index: -2;
         }
-        .left-pane::before {
-            content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-            background-size: 30px 30px; pointer-events: none;
-        }
-        .logo-ariba { position: absolute; top: 40px; left: 50px; font-size: 2.5rem; font-weight: 800; letter-spacing: -1px; }
-        .logo-ariba span { color: #f5a623; } /* Destaque SAP */
-        
-        .hero-text { font-size: 3rem; line-height: 1.2; font-weight: 300; max-width: 600px; z-index: 1; }
-        .hero-text strong { font-weight: 800; }
 
-        /* LADO DIREITO (CONTROLES) */
-        .right-pane {
-            flex: 1; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; padding: 40px; position: relative;
+        .fundo-escuro {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.65); z-index: -1;
         }
-        
-        /* 👇 CAIXA DE CONTROLE ESTILO FINDES 👇 */
-        .control-panel { 
-            width: 100%; max-width: 420px; 
-            background: rgba(255, 255, 255, 0.95);
-            padding: 30px; border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            border: 2px solid #eaeaea; /* Borda igual do Findes */
-        }
-        .control-panel h2 { font-size: 1.5rem; color: #1a1a1a; margin-bottom: 25px; font-weight: 600; border-bottom: 1px solid #eaeaea; padding-bottom: 15px; }
 
-        /* Status LED */
+        .absolute-logo {
+            position: fixed;
+            top: 30px; 
+            left: 40px; 
+            z-index: 20; 
+            color: white; 
+            font-size: 2rem; 
+            font-weight: 800; 
+            letter-spacing: -1px;
+        }
+        .absolute-logo span { color: #f5a623; } /* Amarelo/Ouro SAP */
+
+        .control-panel {
+            width: 100%;
+            max-width: 360px;
+            background: rgba(0, 0, 0, 0.15); 
+            backdrop-filter: blur(6px); 
+            -webkit-backdrop-filter: blur(6px); 
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 30px; 
+            margin-top: 50px; 
+            z-index: 10;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
         .status-container {
-            display: flex; align-items: center; gap: 10px; margin-bottom: 25px;
-            font-size: 0.9rem; color: #555; background: #f8f9fa; padding: 10px 15px;
-            border-radius: 6px; border: 1px solid #eaeaea;
+            display: flex; align-items: center; gap: 10px; margin-bottom: 20px;
+            font-size: 0.85rem; color: #555; background: #ffffff;
+            padding: 10px 14px; border-radius: 6px; border: 1px solid #eaeaea; 
         }
-        .led { width: 10px; height: 10px; border-radius: 50%; background-color: #999; }
-        .led.active { background-color: #004b91; box-shadow: 0 0 8px rgba(0,75,145,0.6); }
+        .led { width: 8px; height: 8px; border-radius: 50%; background-color: #999; transition: 0.3s; }
+        .led.running { background-color: #004b91; box-shadow: 0 0 8px rgba(0,75,145,0.6); }
 
         /* 👇 BOTÕES SELECIONÁVEIS DAS EMPRESAS 👇 */
-        .section-label { font-size: 0.8rem; font-weight: 600; color: #666; margin-bottom: 10px; display: block; text-transform: uppercase; }
-        .grid-empresas { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 25px; }
+        .section-label { font-size: 0.75rem; font-weight: 600; color: #ccc; margin-bottom: 8px; display: block; text-transform: uppercase; }
+        .grid-empresas { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 20px; }
         .btn-empresa {
-            padding: 12px 5px; border: 1px solid #ccc; background: #fff; color: #555;
-            border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
-            transition: all 0.2s; text-align: center;
+            padding: 10px 5px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+            color: #fff; border-radius: 6px; font-size: 0.7rem; font-weight: 600; cursor: pointer; transition: 0.2s; text-align: center;
         }
-        .btn-empresa:hover { background: #f0f4ff; border-color: #004b91; color: #004b91; }
-        .btn-empresa.active { background: #004b91; color: #fff; border-color: #004b91; box-shadow: 0 4px 10px rgba(0,75,145,0.3); }
+        .btn-empresa:hover { background: rgba(255,255,255,0.2); }
+        .btn-empresa.active { background: #f5a623; color: #000; border-color: #f5a623; box-shadow: 0 0 10px rgba(245, 166, 35, 0.4); }
 
-        /* Botões de Ação */
-        .btn {
-            width: 100%; padding: 14px; border: none; border-radius: 6px; font-size: 1rem;
-            font-weight: 600; cursor: pointer; transition: all 0.2s; margin-bottom: 15px;
-            display: flex; justify-content: center; align-items: center; gap: 10px;
+        /* Botões Principais */
+        .btn-ligar {
+            width: 100%; padding: 12px; background-color: #004b91; color: #ffffff; border: none;
+            border-radius: 6px; font-size: 0.9rem; font-weight: 700; text-transform: uppercase;
+            cursor: pointer; transition: all 0.2s ease; display: flex; justify-content: center; align-items: center; gap: 8px;
+            margin-bottom: 10px; box-shadow: 0 4px 15px rgba(0, 75, 145, 0.3);
         }
-        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-        .btn-primary { background-color: #004b91; color: #ffffff; }
-        .btn-primary:hover:not(:disabled) { background-color: #00366b; }
-        .btn-stop { background-color: #dc3545; color: #ffffff; }
-        .btn-stop:hover:not(:disabled) { background-color: #c82333; }
-        .btn-outline { background-color: transparent; border: 1px solid #004b91; color: #004b91; }
-        .btn-outline:hover:not(:disabled) { background-color: #f0f4ff; }
-        
-        .btn-link { background-color: transparent; color: #666; margin-top: 10px; font-size: 0.9rem; text-decoration: none; border: none; width: auto; }
-        .btn-link:hover { color: #1a1a1a; text-decoration: underline; }
+        .btn-ligar:hover:not(:disabled) { background-color: #00366b; }
+        .btn-ligar:active:not(:disabled) { transform: translateY(2px); }
+        .btn-ligar:disabled { opacity: 0.6; cursor: not-allowed; }
 
-        /* 👇 TERMINAL/LOG IGUAL AO FINDES 👇 */
-        .log-section {
-            width: 100%; max-width: 420px; margin-top: 20px;
-            background: #1a1a1a; border-radius: 8px; padding: 15px;
-            border: 2px solid #eaeaea; /* Borda igual do Findes */
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        .log-header { color: #fff; font-size: 0.8rem; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; text-transform: uppercase; }
-        .log-terminal {
-            width: 100%; height: 180px; overflow-y: auto;
-            color: #dcdcdc; font-family: 'Consolas', 'Monaco', monospace; font-size: 0.8rem;
-            line-height: 1.5; padding-right: 5px;
-        }
-        .log-terminal::-webkit-scrollbar { width: 6px; }
-        .log-terminal::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+        .btn-ligar.running { background-color: #dc3545; box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3); }
+        .btn-ligar.running:hover { background-color: #c82333; }
 
-        /* Overlay Lock */
-        .overlay-lock {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); color: #fff; border-radius: 12px;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            opacity: 0; pointer-events: none; transition: all 0.4s; z-index: 10;
+        .btn-imprimir {
+            width: 100%; padding: 12px; background-color: transparent; color: #f5a623;
+            border: 1px solid #f5a623; border-radius: 6px; font-size: 0.85rem; font-weight: 700;
+            text-transform: uppercase; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px;
+            margin-bottom: 15px;
         }
-        .overlay-lock i { font-size: 3rem; margin-bottom: 15px; color: #ef4444; }
+        .btn-imprimir:hover { background-color: rgba(245, 166, 35, 0.1); }
+
+        .btn-link {
+            display: block; width: 100%; text-align: center; background: transparent;
+            color: #ffffff; margin-top: 10px; font-size: 0.85rem; text-decoration: none; 
+            border: none; cursor: pointer; text-shadow: 0 2px 4px rgba(0,0,0,0.8); font-weight: 600;
+        }
+        .btn-link:hover { text-decoration: underline; }
+
+        .mini-terminal {
+            margin-top: 20px; background-color: #f8f9fa; border: 1px solid #eaeaea;
+            border-radius: 6px; padding: 12px; font-family: 'Roboto Mono', monospace;
+            font-size: 0.75rem; color: #555; height: 110px; overflow-y: auto;
+        }
+        .log-line { margin-bottom: 5px; line-height: 1.4; }
+        .log-time { color: #888; margin-right: 6px; }
+
+        /* Navbar Global */
+        .floating-navbar {
+            position: fixed; top: 25px; left: 50%; transform: translateX(-50%);
+            background: rgba(15, 17, 21, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 40px; padding: 6px 10px;
+            display: flex; gap: 5px; z-index: 99999; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+        }
+        .nav-item {
+            color: #9aa0a6; text-decoration: none; padding: 8px 18px; border-radius: 30px;
+            font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s ease;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .nav-item:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+        .nav-item.active.nav-ariba { background: #f5a623; color: #000; box-shadow: 0 0 15px rgba(245, 166, 35, 0.4); }
+        .nav-item.nav-voltar { color: #f87171; }
+        .nav-item.nav-voltar:hover { color: #ff3d00; background: rgba(248, 113, 113, 0.15); }
+
+        @media (max-width: 850px) {
+            body { justify-content: center; padding: 100px 15px 120px 15px; align-items: flex-start; overflow-y: auto; }
+            .absolute-logo { position: absolute; top: 25px; left: 50%; transform: translateX(-50%); z-index: 20; width: 100%; display: flex; justify-content: center; margin-bottom: 20px;}
+            .control-panel { padding: 20px; margin-top: 0; width: 100%; max-width: 340px; box-shadow: 0 5px 20px rgba(0,0,0,0.4); display: flex; flex-direction: column; align-items: center; }
+            .status-container { justify-content: center; width: 100%; }
+            .mini-terminal { text-align: left; width: 100%; }
+            .floating-navbar { top: auto; bottom: 20px; width: max-content; max-width: 90%; }
+            .nav-item span { display: none; } 
+            .nav-item { padding: 12px; font-size: 16px; border-radius: 50%; }
+        }
     </style>
 </head>
-<body>
-    <div class="left-pane">
-        <div class="logo-ariba">MAESTRO / <span>ARIBA</span></div>
-        <h1 class="hero-text">Central de Automação de Cotações <strong>SAP Ariba</strong>.</h1>
+<body onload="setupPainelAriba()">
+
+    <img src="./img/ariba_fundo.png" class="fundo-imagem" alt="Fundo SAP Ariba">
+    <div class="fundo-escuro"></div>
+
+    <nav class="floating-navbar">
+        <a href="coupa.html" class="nav-item"><i class="fa-solid fa-cube"></i> <span>Coupa</span></a>
+        <a href="vale.html" class="nav-item"><i class="fa-solid fa-helmet-safety"></i> <span>Vale</span></a>
+        <a href="me.html" class="nav-item"><i class="fa-solid fa-shopping-cart"></i> <span>ME</span></a>
+        <a href="ariba.html" class="nav-item active nav-ariba"><i class="fa-solid fa-cloud"></i> <span>Ariba</span></a>
+        <a href="findes.html" class="nav-item"><i class="fa-solid fa-industry"></i> <span>Findes</span></a>
+        <a href="index.html" class="nav-item nav-voltar"><i class="fa-solid fa-arrow-left"></i> <span>Voltar</span></a>
+    </nav>
+
+    <div class="absolute-logo">
+        MAESTRO / <span>ARIBA</span>
     </div>
 
-    <div class="right-pane">
-        <div id="overlay-lock" class="overlay-lock">
-            <i class="fa-solid fa-lock"></i>
-            <p>Servidor ocupado por outro portal</p>
-        </div>
-
-        <div class="control-panel">
-            <h2>Módulo SAP Ariba</h2>
-            
-            <div class="status-container">
-                <div id="indicador-status" class="led"></div>
-                <span id="txt-status">Aguardando início...</span>
-            </div>
-
-            <label class="section-label">Empresas Prioritárias</label>
-            <div class="grid-empresas">
-                <button class="btn-empresa" id="emp-ventura">VENTURA</button>
-                <button class="btn-empresa" id="emp-uniao">UNIÃO</button>
-                <button class="btn-empresa" id="emp-alianca">ALIANÇA</button>
-            </div>
-
-            <button class="btn btn-primary" id="btn-iniciar">
-                <i class="fa-solid fa-play"></i> INICIAR EXTRATOR (ARIBA)
-            </button>
-            
-            <button class="btn btn-outline" id="btn-imprimir">
-                <i class="fa-solid fa-print"></i> IMPRIMIR RELATÓRIOS
-            </button>
-
-            <button class="btn btn-link" id="btn-desligar">Desligar Robô</button>
-        </div>
-
-        <div class="log-section">
-            <div class="log-header">
-                <i class="fa-solid fa-terminal"></i> Terminal de Progresso (ARIBA)
-            </div>
-            <div id="terminal-logs" class="log-terminal">
-                <div>> Pronto para operar.</div>
-            </div>
-        </div>
+    <main class="control-panel">
         
-        <a href="dashboard.html" class="btn btn-link" style="margin-top: 15px; position: absolute; bottom: 20px;">
-            <i class="fa-solid fa-arrow-left"></i> Voltar ao Dashboard
+        <div class="status-container">
+            <div class="led" id="led-status"></div>
+            <span id="txt-status">Ocioso</span>
+        </div>
+
+        <label class="section-label">Empresas Prioritárias</label>
+        <div class="grid-empresas">
+            <button class="btn-empresa" id="emp-ventura">VENTURA</button>
+            <button class="btn-empresa" id="emp-hse">HSE</button>
+            <button class="btn-empresa" id="emp-hse_es">HSE ES</button>
+        </div>
+
+        <button class="btn-ligar" id="btn-iniciar" onclick="alternarEstadoAriba()">
+            <i class="fa-solid fa-play"></i> INICIAR EXTRATOR
+        </button>
+
+        <button class="btn-imprimir" id="btn-imprimir" onclick="solicitarImpressao()">
+            <i class="fa-solid fa-print"></i> Imprimir Arquivos
+        </button>
+
+        <a href="index.html" class="btn-link">
+            <i class="fa-solid fa-arrow-left"></i> Voltar ao Maestro
         </a>
-    </div>
+
+        <div class="mini-terminal" id="mini-terminal">
+            <div class="log-line"><span class="log-time">[Sys]</span> Conectando ao Maestro...</div>
+        </div>
+    </main>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
@@ -178,7 +205,19 @@
         const socket = io({ auth: { sessionId: sessionAtual } });
         const MEU_PORTAL = 'ariba';
 
+        socket.on("sessao_invalida", () => {
+            console.error("A sua sessão expirou ou é inválida.");
+            localStorage.clear();
+            window.location.href = "index.html"; 
+        });
+
+        let isRunning = false;
         const empresas_ativas = { ventura: false, hse: false, hse_es: false };
+
+        function setupPainelAriba() {
+            socket.emit('sou_frontend', { usuario: localStorage.getItem('maestro_user') });
+            addLog("Módulo SAP Ariba carregado e pronto.");
+        }
 
         // Lógica de seleção dos botões das empresas
         document.querySelectorAll('.btn-empresa').forEach(btn => {
@@ -189,75 +228,25 @@
             });
         });
 
-        // Eventos dos botões principais
-        document.getElementById('btn-iniciar').addEventListener('click', () => {
-            addLog("Solicitando início do robô SAP Ariba...");
-            socket.emit('comando_direto', { 
-                modo: 'ligar_robo', 
-                portal: MEU_PORTAL,
-                empresas: empresas_ativas 
-            });
-        });
-
-        document.getElementById('btn-imprimir').addEventListener('click', solicitarImpressao);
-
-        function desligarRobo() {
-            if(confirm("Deseja fechar o navegador e desligar o robô SAP Ariba?")) {
-                socket.emit('comando_direto', { modo: 'desligar_robo', portal: MEU_PORTAL });
-                const btnLigar = document.getElementById('btn-iniciar');
-                btnLigar.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> DESLIGANDO...';
-                btnLigar.disabled = true;
+        function alternarEstadoAriba() {
+            if (!isRunning) {
+                if(confirm("Deseja iniciar o robô do SAP Ariba com as empresas selecionadas?")) {
+                    socket.emit('comando_direto', { 
+                        modo: 'ligar_robo', 
+                        portal: MEU_PORTAL,
+                        empresas: empresas_ativas 
+                    });
+                }
+            } else {
+                if(confirm("Deseja fechar o navegador e desligar o robô SAP Ariba?")) {
+                    socket.emit('comando_direto', { modo: 'desligar_robo', portal: MEU_PORTAL });
+                    const btn = document.getElementById('btn-iniciar');
+                    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> DESLIGANDO...';
+                    btn.disabled = true;
+                }
             }
         }
 
-        // 👇 AQUI ESTÁ O SEGREDO: Ele agora escuta o seu estado independente! 👇
-        socket.on('sincronizar_estado_ariba', (estado) => {
-            const dot = document.getElementById('indicador-status');
-            const txt = document.getElementById('txt-status');
-            const overlayLock = document.getElementById('overlay-lock');
-            const btnLigar = document.getElementById('btn-iniciar');
-
-            dot.className = "led"; 
-            
-            // O Cadeado de Intertravamento morre aqui! Ele fica sempre escondido.
-            if(overlayLock) { overlayLock.style.opacity = '0'; overlayLock.style.pointerEvents = 'none'; }
-            btnLigar.disabled = false;
-
-            if (estado.status === 'desligado') {
-                dot.classList.add("offline");
-                txt.innerText = "Aguardando início...";
-                btnLigar.className = 'btn btn-primary';
-                btnLigar.innerHTML = '<i class="fa-solid fa-play"></i> INICIAR EXTRATOR (ARIBA)';
-                btnLigar.onclick = function() {
-                    socket.emit('comando_direto', { modo: 'ligar_robo', portal: MEU_PORTAL, empresas: empresas_ativas });
-                };
-            } else if (estado.status === 'logando') {
-                dot.classList.add("active");
-                txt.innerText = "Autenticando no SAP Ariba...";
-                btnLigar.disabled = true;
-                btnLigar.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> AUTENTICANDO...';
-            } else if (estado.status === 'ocioso') {
-                dot.classList.add("active");
-                txt.innerText = "Navegador operacional.";
-                btnLigar.className = 'btn btn-stop';
-                btnLigar.innerHTML = '<i class="fa-solid fa-power-off"></i> DESLIGAR NAVEGADOR';
-                btnLigar.onclick = desligarRobo;
-            }
-        });
-
-        // Logs do Python
-        socket.on('relatar_progresso_ariba', (dados) => {
-            if (dados.mensagem) addLog(dados.mensagem);
-        });
-
-        function addLog(msg) {
-            const terminal = document.getElementById('terminal-logs');
-            const agora = new Date().toLocaleTimeString();
-            terminal.innerHTML += `<div style="margin-top: 4px; color: #a2adb7;">> ${agora} - ${msg}</div>`;
-            terminal.scrollTop = terminal.scrollHeight;
-        }
-
-        // Função de Impressão
         function solicitarImpressao() {
             let opcao = prompt("🖨️ Selecione a Impressora:\n\nDigite 1 para: Lex611\nDigite 2 para: HP LaserJet P205X\n\n(Digite 1 ou 2 e pressione OK)", "1");
             let impressoraEscolhida = "";
@@ -267,9 +256,57 @@
 
             if(confirm(`Deseja imprimir TODOS os relatórios do ARIBA na impressora:\n👉 ${impressoraEscolhida}?`)) {
                 socket.emit('solicitar_impressao', { portal: 'ariba', impressora: impressoraEscolhida }); 
-                addLog(`Enviando comando para imprimir na ${impressoraEscolhida}...`);
+                addLog(`Ordem de impressão enviada para a ${impressoraEscolhida}.`);
             }
         }
+
+        // Mini Terminal
+        function addLog(msg) {
+            const term = document.getElementById('mini-terminal');
+            if (term) {
+                const now = new Date();
+                const hora = now.getHours().toString().padStart(2, '0') + ':' + 
+                             now.getMinutes().toString().padStart(2, '0');
+                
+                term.innerHTML += `<div class="log-line"><span class="log-time">[${hora}]</span> ${msg}</div>`;
+                while (term.childElementCount > 50) term.removeChild(term.firstChild);
+                term.scrollTop = term.scrollHeight;
+            }
+        }
+
+        socket.on('relatar_progresso_ariba', (dados) => {
+            if (dados.mensagem) addLog(dados.mensagem);
+        });
+
+        // Escuta o estado independente do Ariba
+        socket.on('sincronizar_estado_ariba', (estado) => {
+            const btnLigar = document.getElementById('btn-iniciar');
+            const led = document.getElementById('led-status');
+            const txtStatus = document.getElementById('txt-status');
+
+            btnLigar.disabled = false;
+
+            if (estado.status === 'desligado') {
+                isRunning = false;
+                led.className = "led";
+                txtStatus.innerText = "Ocioso";
+                btnLigar.className = "btn-ligar";
+                btnLigar.innerHTML = '<i class="fa-solid fa-play"></i> INICIAR EXTRATOR';
+            } else if (estado.status === 'logando') {
+                isRunning = true;
+                led.className = "led running";
+                txtStatus.innerText = "Autenticando...";
+                btnLigar.className = "btn-ligar running";
+                btnLigar.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> AUTENTICANDO...';
+                btnLigar.disabled = true;
+            } else if (estado.status === 'ocioso') {
+                isRunning = true;
+                led.className = "led running";
+                txtStatus.innerText = "Navegador Ativo";
+                btnLigar.className = "btn-ligar running";
+                btnLigar.innerHTML = '<i class="fa-solid fa-stop"></i> DESLIGAR MÓDULO';
+            }
+        });
     </script>
 </body>
 </html>
