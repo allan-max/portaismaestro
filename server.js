@@ -213,6 +213,7 @@ io.on('connection', (socket) => {
     socket.on('relatar_progresso_me', (dados) => io.to('frontend').emit('relatar_progresso_me', dados));
     socket.on('relatar_progresso_findes', (dados) => io.to('frontend').emit('relatar_progresso_findes', dados));
     socket.on('findes_textos_gerados', (dados) => io.to('frontend').emit('findes_textos_gerados', dados));
+    socket.on('contagem_me', (dados) => { io.emit('atualizar_contagem_me', dados); });
     
 
     // Os utilizadores que abrirem o site emitem 'sou_frontend'

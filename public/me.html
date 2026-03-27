@@ -325,6 +325,12 @@
                 <i class="fa-solid fa-play"></i> INICIAR EXTRAÇÃO
             </button>
 
+            <div id="painel-progresso-me" style="display: none; background: #f8f9fa; border: 1px solid #eaeaea; padding: 12px; border-radius: 6px; margin-bottom: 15px; text-align: center; color: #555; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                <span style="font-size: 0.9rem; font-weight: 600; text-transform: uppercase;">
+                    Novos Eventos: <span id="qtd-novos-me" style="color: #03148a; font-size: 1.2rem; font-weight: 800;">0</span>
+                </span>
+            </div>
+
             <button class="btn btn-outline" id="btn-imprimir" onclick="solicitarImpressao()">
                 <i class="fa-solid fa-print"></i> IMPRIMIR RELATÓRIOS
             </button>
@@ -368,6 +374,21 @@ socket.on("sessao_invalida", () => {
             const led = document.getElementById('led-status');
             const txt = document.getElementById('txt-status');
             const btnImp = document.getElementById('btn-imprimir');
+
+            if (estado.status === 'desligado') {
+                // 👇 Esconde o contador quando o robô desliga 👇
+                document.getElementById('painel-progresso-me').style.display = 'none';
+                
+                isRunning = false;
+                led.className = "led";
+                // ... (restante do código original)
+                
+            } else {
+                // 👇 Mostra o contador sempre que o robô estiver logando, extraindo ou ocioso 👇
+                document.getElementById('painel-progresso-me').style.display = 'block';
+                
+                isRunning = true;
+            }
 
             if (estado.status === 'extraindo') {
                 isRunning = true;
@@ -432,6 +453,12 @@ socket.on("sessao_invalida", () => {
 
         socket.on('relatar_progresso_me', function(dados) {
             if (dados.mensagem) addLog(dados.mensagem);
+        });
+
+        // 👇 Atualiza o número de PDFs na tela 👇
+        socket.on('atualizar_contagem_me', function(dados) {
+            const spanQtd = document.getElementById('qtd-novos-me');
+            if(spanQtd) spanQtd.innerText = dados.quantidade;
         });
 
     </script>
