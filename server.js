@@ -57,7 +57,7 @@ let estado_global = {
     tarefas_concluidas: [] 
 };
 
-let estado_me = { status: 'ocioso' };
+let estado_me = { status: 'desligado' };
 let estado_ariba = { status: 'desligado' };
 let fila_respostas = [];
 let bot_socket_id = null; // Guarda a ligação exclusiva do seu servidor Python local
