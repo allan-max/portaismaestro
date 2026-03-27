@@ -383,9 +383,17 @@ socket.on("sessao_invalida", () => {
                 if (painelContador) painelContador.style.display = 'block'; // Mostra
             }
 
-            if (estado.status === 'desligado') {
+            // 👆 ========================== 👆
+
+            if (estado.status === 'desligado' || estado.status === 'ocioso') {
                 isRunning = false;
                 led.className = "led";
+                txtStatus.innerText = "Aguardando início...";
+                
+                // Reseta o botão para o estado original
+                btnLigar.disabled = false;
+                btnLigar.className = "btn btn-primary";
+                btnLigar.innerHTML = '<i class="fa-solid fa-play"></i> INICIAR MÓDULO';
                 
             } else {
                 // 👇 Mostra o contador sempre que o robô estiver logando, extraindo ou ocioso 👇
