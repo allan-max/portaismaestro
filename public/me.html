@@ -374,11 +374,16 @@ socket.on("sessao_invalida", () => {
             const led = document.getElementById('led-status');
             const txt = document.getElementById('txt-status');
             const btnImp = document.getElementById('btn-imprimir');
+            const painelContador = document.getElementById('painel-progresso-me');
+
+            // 👇 2. CONTROLE DE VISIBILIDADE 👇
+            if (estado.status === 'desligado') {
+                if (painelContador) painelContador.style.display = 'none'; // Esconde
+            } else {
+                if (painelContador) painelContador.style.display = 'block'; // Mostra
+            }
 
             if (estado.status === 'desligado') {
-                // 👇 Esconde o contador quando o robô desliga 👇
-                document.getElementById('painel-progresso-me').style.display = 'none';
-                
                 isRunning = false;
                 led.className = "led";
                 // ... (restante do código original)
