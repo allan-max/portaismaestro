@@ -377,7 +377,7 @@ socket.on("sessao_invalida", () => {
             const painelContador = document.getElementById('painel-progresso-me');
 
             // 👇 2. CONTROLE DE VISIBILIDADE 👇
-            if (estado.status === 'desligado') {
+            if (estado.status === 'desligado' || estado.status === 'ocioso') {
                 if (painelContador) painelContador.style.display = 'none'; // Esconde
             } else {
                 if (painelContador) painelContador.style.display = 'block'; // Mostra
@@ -386,7 +386,6 @@ socket.on("sessao_invalida", () => {
             if (estado.status === 'desligado') {
                 isRunning = false;
                 led.className = "led";
-                // ... (restante do código original)
                 
             } else {
                 // 👇 Mostra o contador sempre que o robô estiver logando, extraindo ou ocioso 👇
