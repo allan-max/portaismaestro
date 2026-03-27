@@ -355,11 +355,16 @@
         let isRunning = false;
 
         // Removemos o 'connect_error'. Agora ouvimos a expulsão amigável do servidor:
-socket.on("sessao_invalida", () => {
+        socket.on("sessao_invalida", () => {
     console.error("A sua sessão expirou ou é inválida.");
     localStorage.clear();
     window.location.href = "index.html"; 
 });
+
+        socket.on('connect', () => {
+            addLog("Conectado ao servidor.");
+            socket.emit('ping_estado_me', { portal: 'me' }); // Solicita sync inicial
+        });
 
         function setupPainelME() {
             socket.emit('sou_frontend', { usuario: localStorage.getItem('maestro_user') });
@@ -376,57 +381,71 @@ socket.on("sessao_invalida", () => {
             const btnImp = document.getElementById('btn-imprimir');
             const painelContador = document.getElementById('painel-progresso-me');
 
-            // 👇 2. CONTROLE DE VISIBILIDADE 👇
-            if (estado.status === 'desligado' || estado.status === 'ocioso') {
-                if (painelContador) painelContador.style.display = 'none'; // Esconde
-            } else {
-                if (painelContador) painelContador.style.display = 'block'; // Mostra
-            }
+            const isStopped = (estado.status === 'desligado' || estado.status === 'ocioso');
+            isRunning = !isStopped;
 
-            // 👆 ========================== 👆
-
-            if (estado.status === 'desligado' || estado.status === 'ocioso') {
-                isRunning = false;
-                led.className = "led";
-                txtStatus.innerText = "Aguardando início...";
-                
-                // Reseta o botão para o estado original
-                btnLigar.disabled = false;
-                btnLigar.className = "btn btn-primary";
-                btnLigar.innerHTML = '<i class="fa-solid fa-play"></i> INICIAR MÓDULO';
-                
-            } else {
-                // 👇 Mostra o contador sempre que o robô estiver logando, extraindo ou ocioso 👇
-                document.getElementById('painel-progresso-me').style.display = 'block';
-                
-                isRunning = true;
-            }
-
-            if (estado.status === 'extraindo') {
-                isRunning = true;
-                btn.className = "btn btn-stop";
-                btn.innerHTML = '<i class="fa-solid fa-stop"></i> PARAR ROBÔ';
-                led.className = "led running";
-                txt.innerText = "Processando dados...";
-                btnImp.disabled = true;
-            } else {
-                isRunning = false;
+            if (isStopped) {
+                // Estado parado: botão iniciar, led cinza, aguardando
                 btn.className = "btn btn-primary";
                 btn.innerHTML = '<i class="fa-solid fa-play"></i> INICIAR EXTRAÇÃO';
                 led.className = "led";
-                txt.innerText = "Ocioso";
+                txt.innerText = "Aguardando início...";
                 btnImp.disabled = false;
+                if (painelContador) painelContador.style.display = 'none';
+            } else {
+                // Estado rodando: mostrar progress sempre
+                if (painelContador) painelContador.style.display = 'block';
+
+                if (estado.status === 'extraindo') {
+                    btn.className = "btn btn-stop";
+                    btn.innerHTML = '<i class="fa-solid fa-stop"></i> PARAR ROBÔ';
+                    led.className = "led running";
+                    txt.innerText = "Processando dados...";
+                    btnImp.disabled = true;
+                } else {
+                    // Outros estados rodando (ex: logando)
+                    btn.className = "btn btn-stop";
+                    btn.innerHTML = '<i class="fa-solid fa-stop"></i> PARAR ROBÔ';
+                    led.className = "led running";
+                    txt.innerText = estado.status.toUpperCase();
+                    btnImp.disabled = false;
+                }
             }
         });
 
         // --- CONTROLE DOS BOTÕES ---
         function alternarEstado() {
-            if (!isRunning) {
+            const btn = document.getElementById('btn-acao');
+            const led = document.getElementById('led-status');
+            const txt = document.getElementById('txt-status');
+            const btnImp = document.getElementById('btn-imprimir');
+
+            // Toggle otimista
+            isRunning = !isRunning;
+            if (isRunning) {
+                btn.className = "btn btn-stop";
+                btn.innerHTML = '<i class="fa-solid fa-stop"></i> PARAR ROBÔ';
+                led.className = "led running";
+                txt.innerText = "Enviando comando...";
+                btnImp.disabled = true;
                 if(confirm("Deseja iniciar a extração no Mercado Eletrônico?")) {
                     socket.emit('comando_direto', { modo: 'extrair', portal: 'me' });
-                    addLog("Enviando comando de início...");
+                    addLog("Comando de início enviado.");
+                } else {
+                    // Reverte se cancelar
+                    isRunning = false;
+                    btn.className = "btn btn-primary";
+                    btn.innerHTML = '<i class="fa-solid fa-play"></i> INICIAR EXTRAÇÃO';
+                    led.className = "led";
+                    txt.innerText = "Aguardando início...";
+                    btnImp.disabled = false;
                 }
             } else {
+                btn.className = "btn btn-primary";
+                btn.innerHTML = '<i class="fa-solid fa-play"></i> INICIAR EXTRAÇÃO';
+                led.className = "led";
+                txt.innerText = "Enviando parada...";
+                btnImp.disabled = false;
                 socket.emit('comando_direto', { modo: 'solicitar_parada', portal: 'me' });
                 addLog("Ordem de parada enviada ao robô.");
             }
