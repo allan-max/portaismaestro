@@ -186,6 +186,26 @@
             <i class="fa-solid fa-play"></i> INICIAR EXTRATOR
         </button>
 
+        <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 15px; margin-bottom: 20px; color: #fff;">
+                <h4 style="margin-bottom: 10px; font-size: 0.9rem; color: #f5a623;">Selecione as Empresas Prioritárias:</h4>
+                <div style="display: flex; gap: 15px; font-size: 0.9rem; margin-bottom: 15px;">
+                    <label><input type="checkbox" id="prio-alianca" value="1"> 1: ALIANÇA</label>
+                    <label><input type="checkbox" id="prio-ventura" value="2"> 2: VENTURA</label>
+                    <label><input type="checkbox" id="prio-uniao" value="3"> 3: UNIÃO</label>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px;">
+                <select id="impressora-ariba" style="padding: 10px; border-radius: 6px; border: none; outline: none; background: rgba(255,255,255,0.9); font-weight: bold;">
+                    <option value="1">Lex611</option>
+                    <option value="2">HP LaserJet P205X series PCL6 Class Driver</option>
+                </select>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="imprimirAriba('aegea')" style="flex: 1; background: #0ea5e9; color: #fff; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;">🖨️ IMPRIMIR AEGEA</button>
+                    <button onclick="imprimirAriba('estacio')" style="flex: 1; background: #eab308; color: #fff; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;">🖨️ IMPRIMIR ESTÁCIO</button>
+                </div>
+            </div>
+
         <button class="btn-imprimir" id="btn-imprimir" onclick="solicitarImpressao()">
             <i class="fa-solid fa-print"></i> Imprimir Arquivos
         </button>
@@ -307,6 +327,49 @@
                 btnLigar.innerHTML = '<i class="fa-solid fa-stop"></i> DESLIGAR MÓDULO';
             }
         });
+
+        // Substitua ou adicione a função ligarRobo
+        function ligarRobo() {
+            // Se o botão já estiver no modo de parar, ele desliga
+            if (isRunning) {
+                socket.emit('comando_para_robo', { portal: 'ariba', modo: 'desligar_robo' });
+                return;
+            }
+
+            // Pega os checkboxes selecionados
+            let prioridades = [];
+            if(document.getElementById('prio-alianca').checked) prioridades.push("1");
+            if(document.getElementById('prio-ventura').checked) prioridades.push("2");
+            if(document.getElementById('prio-uniao').checked) prioridades.push("3");
+            
+            let prioStr = prioridades.join(" "); // Gera algo como "3 1"
+            
+            socket.emit('comando_para_robo', {
+                portal: 'ariba',
+                modo: 'ligar_robo',
+                prioridades: prioStr
+            });
+        }
+
+        // Função para imprimir pastas específicas do Ariba
+        function imprimirAriba(cliente) {
+            const opcao = document.getElementById('impressora-ariba').value;
+            let impressoraEscolhida = "";
+            if (opcao === "1") { impressoraEscolhida = "Lex611"; } 
+            else if (opcao === "2") { impressoraEscolhida = "HP LaserJet P205X series PCL6 Class Driver"; }
+            
+            const nomeCliente = cliente === 'aegea' ? 'AEGEA' : 'ESTÁCIO';
+            
+            if(confirm(`Deseja imprimir TODOS os relatórios da ${nomeCliente} na impressora:\n👉 ${impressoraEscolhida}?`)) {
+                socket.emit('solicitar_impressao', { portal: 'ariba', cliente: cliente, impressora: impressoraEscolhida });
+                
+                // Manda um log visual se existir a div de logs
+                const term = document.getElementById('terminal-logs');
+                if(term) {
+                    term.innerHTML += `<div style="color: #cbd5e1;">> Enviando pasta ${nomeCliente} para a impressora...</div>`;
+                }
+            }
+        }
     </script>
 </body>
 </html>
