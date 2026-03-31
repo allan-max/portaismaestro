@@ -315,7 +315,8 @@
        function ligarRobo() {
             if (isRunning) {
                 if(confirm("Deseja fechar o executável e desligar o robô SAP Ariba?")) {
-                    socket.emit('comando_para_robo', { portal: 'ariba', modo: 'desligar_robo' });
+                    // 👇 AQUI ELE AVISA EXCLUSIVAMENTE O ARIBA 👇
+                    socket.emit('comando_direto', { portal: 'ariba', modo: 'desligar_robo' });
                     const btn = document.getElementById('btn-iniciar');
                     btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> DESLIGANDO...';
                     btn.disabled = true;
@@ -332,7 +333,8 @@
             let prioStr = prioridades.join(" "); 
             
             if(confirm("Deseja iniciar o robô do SAP Ariba com as empresas selecionadas?")) {
-                socket.emit('comando_para_robo', {
+                // 👇 AQUI ELE AVISA EXCLUSIVAMENTE O ARIBA 👇
+                socket.emit('comando_direto', {
                     portal: 'ariba',
                     modo: 'ligar_robo',
                     prioridades: prioStr
