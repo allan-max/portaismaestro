@@ -175,14 +175,8 @@
             <span id="txt-status">Ocioso</span>
         </div>
 
-        <label class="section-label">Empresas Prioritárias</label>
-        <div class="grid-empresas">
-            <button class="btn-empresa" id="emp-ventura">VENTURA</button>
-            <button class="btn-empresa" id="emp-uniao">UNIÃO</button>
-            <button class="btn-empresa" id="emp-alianca">ALIANÇA</button>
-        </div>
 
-        <button class="btn-ligar" id="btn-iniciar" onclick="alternarEstadoAriba()">
+        <button class="btn-ligar" id="btn-iniciar" onclick="ligarRobo()">
             <i class="fa-solid fa-play"></i> INICIAR EXTRATOR
         </button>
 
@@ -192,17 +186,6 @@
                     <label><input type="checkbox" id="prio-alianca" value="1"> 1: ALIANÇA</label>
                     <label><input type="checkbox" id="prio-ventura" value="2"> 2: VENTURA</label>
                     <label><input type="checkbox" id="prio-uniao" value="3"> 3: UNIÃO</label>
-                </div>
-            </div>
-
-            <div style="margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px;">
-                <select id="impressora-ariba" style="padding: 10px; border-radius: 6px; border: none; outline: none; background: rgba(255,255,255,0.9); font-weight: bold;">
-                    <option value="1">Lex611</option>
-                    <option value="2">HP LaserJet P205X series PCL6 Class Driver</option>
-                </select>
-                <div style="display: flex; gap: 10px;">
-                    <button onclick="imprimirAriba('aegea')" style="flex: 1; background: #0ea5e9; color: #fff; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;">🖨️ IMPRIMIR AEGEA</button>
-                    <button onclick="imprimirAriba('estacio')" style="flex: 1; background: #eab308; color: #fff; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;">🖨️ IMPRIMIR ESTÁCIO</button>
                 </div>
             </div>
 
@@ -329,26 +312,55 @@
         });
 
         // Substitua ou adicione a função ligarRobo
-        function ligarRobo() {
-            // Se o botão já estiver no modo de parar, ele desliga
+       function ligarRobo() {
             if (isRunning) {
-                socket.emit('comando_para_robo', { portal: 'ariba', modo: 'desligar_robo' });
+                if(confirm("Deseja fechar o executável e desligar o robô SAP Ariba?")) {
+                    socket.emit('comando_para_robo', { portal: 'ariba', modo: 'desligar_robo' });
+                    const btn = document.getElementById('btn-iniciar');
+                    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> DESLIGANDO...';
+                    btn.disabled = true;
+                }
                 return;
             }
 
-            // Pega os checkboxes selecionados
+            // Pega os checkboxes
             let prioridades = [];
             if(document.getElementById('prio-alianca').checked) prioridades.push("1");
             if(document.getElementById('prio-ventura').checked) prioridades.push("2");
             if(document.getElementById('prio-uniao').checked) prioridades.push("3");
             
-            let prioStr = prioridades.join(" "); // Gera algo como "3 1"
+            let prioStr = prioridades.join(" "); 
             
-            socket.emit('comando_para_robo', {
-                portal: 'ariba',
-                modo: 'ligar_robo',
-                prioridades: prioStr
-            });
+            if(confirm("Deseja iniciar o robô do SAP Ariba com as empresas selecionadas?")) {
+                socket.emit('comando_para_robo', {
+                    portal: 'ariba',
+                    modo: 'ligar_robo',
+                    prioridades: prioStr
+                });
+            }
+        }
+
+        function solicitarImpressao() {
+            // 1ª Pergunta: Qual Cliente?
+            let opCliente = prompt("🏢 Qual cliente deseja imprimir?\n\nDigite 1 para: AEGEA\nDigite 2 para: ESTÁCIO\n\n(Digite 1 ou 2 e pressione OK)", "1");
+            let cliente = "";
+            let nomeCliente = "";
+            if (opCliente === "1") { cliente = "aegea"; nomeCliente = "AEGEA"; }
+            else if (opCliente === "2") { cliente = "estacio"; nomeCliente = "ESTÁCIO"; }
+            else { return; } // Se o utilizador cancelar, para por aqui.
+
+            // 2ª Pergunta: Qual Impressora?
+            let opcao = prompt("🖨️ Selecione a Impressora:\n\nDigite 1 para: Lex611\nDigite 2 para: HP LaserJet P205X\n\n(Digite 1 ou 2 e pressione OK)", "1");
+            let impressoraEscolhida = "";
+            if (opcao === "1") { impressoraEscolhida = "Lex611"; } 
+            else if (opcao === "2") { impressoraEscolhida = "HP LaserJet P205X series PCL6 Class Driver"; } 
+            else { return; } 
+
+            // Confirmação Final e Envio
+            if(confirm(`Deseja imprimir TODOS os relatórios da ${nomeCliente} na impressora:\n👉 ${impressoraEscolhida}?`)) {
+                socket.emit('solicitar_impressao', { portal: 'ariba', cliente: cliente, impressora: impressoraEscolhida }); 
+                addLog(`Ordem enviada: ${nomeCliente} -> ${impressoraEscolhida}.`);
+            }
         }
 
         // Função para imprimir pastas específicas do Ariba
