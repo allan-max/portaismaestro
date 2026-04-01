@@ -382,25 +382,6 @@
             }
         }
 
-        // Função para imprimir pastas específicas do Ariba
-        function imprimirAriba(cliente) {
-            const opcao = document.getElementById('impressora-ariba').value;
-            let impressoraEscolhida = "";
-            if (opcao === "1") { impressoraEscolhida = "Lex611"; } 
-            else if (opcao === "2") { impressoraEscolhida = "HP LaserJet P205X series PCL6 Class Driver"; }
-            
-            const nomeCliente = cliente === 'aegea' ? 'AEGEA' : 'ESTÁCIO';
-            
-            if(confirm(`Deseja imprimir TODOS os relatórios da ${nomeCliente} na impressora:\n👉 ${impressoraEscolhida}?`)) {
-                socket.emit('solicitar_impressao', { portal: 'ariba', cliente: cliente, impressora: impressoraEscolhida });
-                
-                // Manda um log visual se existir a div de logs
-                const term = document.getElementById('terminal-logs');
-                if(term) {
-                    term.innerHTML += `<div style="color: #cbd5e1;">> Enviando pasta ${nomeCliente} para a impressora...</div>`;
-                }
-            }
-        }
     </script>
 </body>
 </html>
