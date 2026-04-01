@@ -374,12 +374,14 @@
         // ========================================================
         // 🧠 RECEBE O ESTADO DO SERVIDOR E AJUSTA OS BOTÕES SOZINHO
         // ========================================================
+        // ========================================================
+        // 🧠 RECEBE O ESTADO DO SERVIDOR E AJUSTA OS BOTÕES SOZINHO
+        // ========================================================
         socket.on('sincronizar_estado_me', function(estado) {
             const btn = document.getElementById('btn-acao');
             const led = document.getElementById('led-status');
             const txt = document.getElementById('txt-status');
             const btnImp = document.getElementById('btn-imprimir');
-            const painelContador = document.getElementById('painel-progresso-me');
 
             const isStopped = (estado.status === 'desligado' || estado.status === 'ocioso');
             isRunning = !isStopped;
@@ -391,11 +393,7 @@
                 led.className = "led";
                 txt.innerText = "Aguardando início...";
                 btnImp.disabled = false;
-                if (painelContador) painelContador.style.display = 'none';
             } else {
-                // Estado rodando: mostrar progress sempre
-                if (painelContador) painelContador.style.display = 'block';
-
                 if (estado.status === 'extraindo') {
                     btn.className = "btn btn-stop";
                     btn.innerHTML = '<i class="fa-solid fa-stop"></i> PARAR ROBÔ';
@@ -486,10 +484,21 @@
             if (dados.mensagem) addLog(dados.mensagem);
         });
 
-        // 👇 Atualiza o número de PDFs na tela 👇
+        // 👇 Atualiza o número de PDFs na tela e esconde a caixa se for zero 👇
         socket.on('atualizar_contagem_me', function(dados) {
+            const painel = document.getElementById('painel-progresso-me');
             const spanQtd = document.getElementById('qtd-novos-me');
-            if(spanQtd) spanQtd.innerText = dados.quantidade;
+            
+            if(spanQtd && painel) {
+                spanQtd.innerText = dados.quantidade;
+                
+                // Se for maior que 0, aparece. Se for 0, some!
+                if (dados.quantidade > 0) {
+                    painel.style.display = 'block';
+                } else {
+                    painel.style.display = 'none';
+                }
+            }
         });
 
     </script>
