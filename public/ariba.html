@@ -231,8 +231,7 @@
         // Lógica de seleção dos botões das empresas
         document.querySelectorAll('.btn-empresa').forEach(btn => {
             btn.addEventListener('click', () => {
-                const id_emp = btn.id.split('-')[1]; 
-                empresas_ativas[id_emp] = !empresas_ativas[id_emp]; 
+                // Apenas liga/desliga a cor do botão, sem procurar IDs antigos!
                 btn.classList.toggle('active'); 
             });
         });
