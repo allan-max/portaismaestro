@@ -215,6 +215,7 @@ io.on('connection', (socket) => {
     socket.on('findes_textos_gerados', (dados) => io.to('frontend').emit('findes_textos_gerados', dados));
     socket.on('baixar_pdf_findes', (dados) => io.to('frontend').emit('baixar_pdf_findes', dados));//Rota para transferir o PDF do Findes 
     socket.on('contagem_me', (dados) => { io.emit('atualizar_contagem_me', dados); });
+    socket.on('contagem_ariba', (dados) => { io.emit('atualizar_contagem_ariba', dados); });
     
 
     // Os utilizadores que abrirem o site emitem 'sou_frontend'

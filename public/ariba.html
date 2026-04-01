@@ -189,6 +189,11 @@
             <i class="fa-solid fa-play"></i> INICIAR EXTRATOR
         </button>
 
+        <div id="painel-contador-ariba" style="display: none; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); padding: 12px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
+            <span style="font-size: 0.9rem; font-weight: 600; text-transform: uppercase; color: #ccc;">
+                Cotações Prontas: <span id="qtd-ariba" style="color: #f5a623; font-size: 1.2rem; font-weight: 800;">0</span>
+            </span>
+        </div>
 
         <button class="btn-imprimir" id="btn-imprimir" onclick="solicitarImpressao()">
             <i class="fa-solid fa-print"></i> Imprimir Arquivos
@@ -252,17 +257,30 @@
         }
 
         function solicitarImpressao() {
+            // Pergunta apenas a impressora
             let opcao = prompt("🖨️ Selecione a Impressora:\n\nDigite 1 para: Lex611\nDigite 2 para: HP LaserJet P205X\n\n(Digite 1 ou 2 e pressione OK)", "1");
             let impressoraEscolhida = "";
             if (opcao === "1") { impressoraEscolhida = "Lex611"; } 
             else if (opcao === "2") { impressoraEscolhida = "HP LaserJet P205X series PCL6 Class Driver"; } 
             else { return; } 
 
-            if(confirm(`Deseja imprimir TODOS os relatórios do ARIBA na impressora:\n👉 ${impressoraEscolhida}?`)) {
+            if(confirm(`Deseja imprimir TODAS as cotações pendentes (Aegea e Estácio) na impressora:\n👉 ${impressoraEscolhida}?`)) {
                 socket.emit('solicitar_impressao', { portal: 'ariba', impressora: impressoraEscolhida }); 
-                addLog(`Ordem de impressão enviada para a ${impressoraEscolhida}.`);
+                addLog(`Iniciando impressão em lote...`);
             }
         }
+
+        // 👇 Escuta o vigia do Python e controla a visibilidade da caixinha 👇
+        socket.on('atualizar_contagem_ariba', function(dados) {
+            const painel = document.getElementById('painel-contador-ariba');
+            const spanQtd = document.getElementById('qtd-ariba');
+            
+            if(spanQtd && painel) {
+                spanQtd.innerText = dados.quantidade;
+                // Aparece se > 0, some se for 0
+                painel.style.display = (dados.quantidade > 0) ? 'block' : 'none';
+            }
+        });
 
         // Mini Terminal
         function addLog(msg) {
