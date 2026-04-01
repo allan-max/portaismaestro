@@ -334,18 +334,20 @@
             }
         }
 
-        // 👇 NOVA LÓGICA DE COPIAR TEXTO 👇
         function copiarDadosEvento() {
             // Se o Python já devolveu o texto longo formatado
             if (textoGeradoFindes) {
                 navigator.clipboard.writeText(textoGeradoFindes).then(() => {
                     addLog(`📋 Textos das cotações copiados com sucesso!`);
                     piscarBotaoCopiar('#2e8b57', '#fff');
+                    
+                    // 👇 AVISA O PYTHON PARA LER E MOVER OS PDFs NA MESMA HORA 👇
+                    socket.emit('comando_direto', { modo: 'mover_anexos_findes', portal: 'findes' });
+                    
                 }).catch(err => {
                     addLog("Falha ao copiar dados da cotação.");
                 });
             } 
-            // Se o robô ainda não rodou, apenas copia o que está escrito no campo
             else {
                 const inputEvento = document.getElementById('id-evento').value.trim();
                 if (!inputEvento) {
@@ -434,6 +436,22 @@
         });
         
         // (Nota: NÃO ADICIONE mais o socket.on('tarefa_concluida') aqui para não voltar o bug do Coupa!)
+
+        //  RECEBE O PDF DO PYTHON E BAIXA AUTOMATICAMENTE 
+        socket.on('baixar_pdf_findes', function(dados) {
+            // Cria um link HTML invisível na memória
+            const link = document.createElement('a');
+            // Anexa o PDF convertido
+            link.href = `data:application/pdf;base64,${dados.base64}`;
+            link.download = dados.nome; // Nome do arquivo original
+            
+            // Clica no link invisível para forçar o download no Chrome/Edge
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            addLog(`✅ Arquivo '${dados.nome}' transferido para os seus Downloads!`);
+        });
     </script>
 </body>
 </html>
