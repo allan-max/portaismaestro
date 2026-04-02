@@ -211,6 +211,7 @@ io.on('connection', (socket) => {
 
     // 👇 ADICIONE ESTAS 3 LINHAS PARA O FINDES E O M.E FALAREM COM O SITE 👇
     socket.on('relatar_progresso_me', (dados) => io.to('frontend').emit('relatar_progresso_me', dados));
+    socket.on('relatar_progresso_coupa', (dados) => io.to('frontend').emit('relatar_progresso_coupa', dados));
     socket.on('relatar_progresso_findes', (dados) => io.to('frontend').emit('relatar_progresso_findes', dados));
     socket.on('findes_textos_gerados', (dados) => io.to('frontend').emit('findes_textos_gerados', dados));
     socket.on('baixar_pdf_findes', (dados) => io.to('frontend').emit('baixar_pdf_findes', dados));//Rota para transferir o PDF do Findes 
