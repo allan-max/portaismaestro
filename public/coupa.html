@@ -777,9 +777,20 @@
             }
         });
   
-        // Função unificada para processar Logs no painel
-        function processarLog(dados) {
-            // 👇 LÊ OS CONTADORES DO PYTHON 👇
+        // =================================================================
+        // 1. MENSAGENS DE SISTEMA (GERENCIADOR) -> VÃO PARA A BARRA SUPERIOR
+        // =================================================================
+        socket.on('relatar_progresso', function(dados) {
+            if (dados.mensagem) {
+                document.getElementById('log').innerText = dados.mensagem; 
+            }
+        });
+
+        // =================================================================
+        // 2. MENSAGENS DO ROBÔ (COUPA) -> VÃO PARA O MINI TERMINAL E CONTADORES
+        // =================================================================
+        socket.on('relatar_progresso_coupa', function(dados) {
+            // Atualiza os contadores
             if (dados.total !== undefined) {
                 const painel = document.getElementById('painel-progresso');
                 if(painel) painel.style.display = 'block';
@@ -790,11 +801,11 @@
                 document.getElementById('qtd-retirados').innerText = dados.atual;
             }
 
+            // Escreve no Terminal
             if (dados.mensagem) {
                 if (dados.mensagem.includes("ERRO DE PERMISSÃO") || dados.mensagem.includes("aberta")) {
                     dispararAlerta("❌ Planilha Bloqueada!", "Feche a planilha Excel.");
                 }
-                document.getElementById('log').innerText = dados.mensagem; 
                 
                 const terminal = document.getElementById('terminal-logs');
                 terminal.innerHTML += `<div style="margin-top: 4px; color: #cbd5e1;">> ${dados.mensagem}</div>`;
@@ -802,7 +813,7 @@
                 while (terminal.childElementCount > 100) terminal.removeChild(terminal.firstChild);
                 terminal.scrollTop = terminal.scrollHeight; 
             }
-        }
+        });
 
         // 👇 O SEGREDO AQUI: O site agora escuta a Nuvem e os logs exclusivos do Coupa! 👇
         socket.on('relatar_progresso', processarLog);
