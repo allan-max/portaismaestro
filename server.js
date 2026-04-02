@@ -4,10 +4,15 @@ const { Server } = require('socket.io');
 const multer = require('multer');
 const path = require('path');
 const nodemailer = require('nodemailer');
+const helmet = require('helmet');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+const io = new Server(server, { 
+    cors: { 
+        origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:8000', 'https://portaismaestro-ved1.onrender.com'] 
+    } 
+});
 
 // Usamos memória em vez de disco, porque serviços cloud (como o Render) apagam ficheiros temporários
 const storage = multer.memoryStorage();
@@ -34,7 +39,7 @@ const transporter = nodemailer.createTransport({
     },
     // Este parâmetro extra evita que a nuvem bloqueie o certificado SSL
     tls: {
-        rejectUnauthorized: false
+        rejectUnauthorized: true
     }
 });
 
@@ -46,6 +51,18 @@ transporter.verify(function(error, success) {
         console.log("✅ GMAIL CONECTADO COM SUCESSO via IPv4! O Carteiro está pronto!");
     }
 });
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://cdn.socket.io"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      connectSrc: ["'self'", "wss://*"]
+    }
+  }
+}));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
@@ -174,15 +191,30 @@ io.use((socket, next) => { // <-- Removido o 'async'
         return next();
     }
 
-    // 5. Sessão verdadeira! Recebe o crachá e acesso total.
+    const ficha = JSON.parse(fichaStr);
+    
+    // Mata a sessão se o tempo já expirou (8 horas)
+    if (Date.now() > ficha.expires) {
+        cofreSessoes.delete(sessionId);
+        socket.autenticado = false;
+        return next();
+    }
+
     socket.autenticado = true;
-    socket.usuarioLogado = JSON.parse(fichaStr);
+    socket.usuarioLogado = ficha;
     socket.sessionId = sessionId;
     next();
 });
 
 // === GESTÃO DE WEBSOCKETS (FRONTEND vs ROBÔ) ===
 io.on('connection', (socket) => {
+    const requireAuth = (fn) => (...args) => {
+        if (!socket.autenticado) {
+            console.log('Bloqueado (Anônimo/Expirado):', args[0]);
+            return;
+        }
+        fn(...args);
+    };
     // === NOVA FUNÇÃO: O UTILIZADOR CLICOU EM REMOVER DA FILA ===
     socket.on('remover_da_fila', (dados) => {
         const eventoId = dados.evento;
@@ -477,7 +509,7 @@ io.on('connection', (socket) => {
     socket.on('resultado_login', async (dados) => { 
     if(dados.sucesso) {
         const sessionId = uuidv4(); 
-        const fichaDoUsuario = JSON.stringify({ email: dados.user, admin: dados.isAdmin, dev: dados.isDev });
+        const fichaDoUsuario = JSON.stringify({ email: dados.user, admin: dados.isAdmin, dev: dados.isDev, expires: Date.now() + (28800 * 1000) });
         
         // Salva a ficha no cofre do Redis (Expira em 8 horas)
         cofreSessoes.set(sessionId, fichaDoUsuario);
