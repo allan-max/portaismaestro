@@ -8,11 +8,7 @@ const helmet = require('helmet');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { 
-    cors: { 
-        origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:8000', 'https://portaismaestro-ved1.onrender.com'] 
-    } 
-});
+const io = new Server(server, { cors: { origin: '*' } });
 
 // Usamos memória em vez de disco, porque serviços cloud (como o Render) apagam ficheiros temporários
 const storage = multer.memoryStorage();
@@ -39,7 +35,7 @@ const transporter = nodemailer.createTransport({
     },
     // Este parâmetro extra evita que a nuvem bloqueie o certificado SSL
     tls: {
-        rejectUnauthorized: true
+        rejectUnauthorized: false
     }
 });
 
@@ -52,17 +48,6 @@ transporter.verify(function(error, success) {
     }
 });
 
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://cdn.socket.io"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      connectSrc: ["'self'", "wss://*"]
-    }
-  }
-}));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
@@ -209,8 +194,10 @@ io.use((socket, next) => { // <-- Removido o 'async'
 // === GESTÃO DE WEBSOCKETS (FRONTEND vs ROBÔ) ===
 io.on('connection', (socket) => {
     const requireAuth = (fn) => (...args) => {
-        if (!socket.autenticado) {
-            console.log('Bloqueado (Anônimo/Expirado):', args[0]);
+        // Se NÃO estiver logado E NÃO for o robô Python, bloqueia a ação!
+        if (!socket.autenticado && !socket.isBot) {
+            console.log(`🛡️ Bloqueio de Segurança.`);
+            if (socket.handshake.auth.sessionId) { socket.emit('sessao_invalida'); }
             return;
         }
         fn(...args);
