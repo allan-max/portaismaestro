@@ -15,10 +15,10 @@ const server = http.createServer(app);
 
 // 🛡️ CONFIGURAÇÃO DE SEGURANÇA GLOBAL
 app.use(helmet({
-    contentSecurityPolicy: false, // Ajuste conforme necessário para seus scripts externos
+    contentSecurityPolicy: false, 
 }));
 app.use(cors({
-    origin: process.env.ALLOWED_ORIGIN || '*', // No Render, defina ALLOWED_ORIGIN com sua URL
+    origin: process.env.ALLOWED_ORIGIN || '*', 
     methods: ["GET", "POST"]
 }));
 
@@ -56,11 +56,10 @@ function decrypt(cipherText) {
     }
 }
 
-// Usamos memória em vez de disco
 const storage = multer.memoryStorage();
 const upload = multer({ 
     storage: storage,
-    limits: { fileSize: 10 * 1024 * 1024 } // Limite de 10MB para arquivos
+    limits: { fileSize: 10 * 1024 * 1024 } 
 });
 
 const { v4: uuidv4 } = require('uuid');
@@ -74,15 +73,13 @@ const transporter = nodemailer.createTransport({
     secure: true,
     auth: {
         user: process.env.GMAIL_USER || "maestro.validacao@gmail.com", 
-        pass: process.env.GMAIL_PASS // REMOVIDO: Senha em texto limpo
+        pass: process.env.GMAIL_PASS 
     }
-    // TLS: Rejeição ativada por padrão para segurança (removido rejectUnauthorized: false)
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// === GESTÃO DE ESTADO ===
 let estado_global = { status: 'desligado', portal_atual: null, fila_pendente: [], tarefas_concluidas: [] };
 let estado_me = { status: 'desligado' };
 let estado_ariba = { status: 'desligado' };
@@ -95,45 +92,36 @@ function notificar_todos(mensagem = null) {
     io.to('frontend').emit('sincronizar_estado', { estado: estado_global, mensagem: mensagem });
 }
 
-// === MIDDLEWARE DE AUTENTICAÇÃO ===
 io.use((socket, next) => {
     const authData = socket.handshake.auth;
-
-    // 1. Robô Python (Segurança por segredo no ENV)
     if (authData.robo_secret === (process.env.ROBO_SECRET || "VEMKAUAN")) {
         socket.isBot = true;
         return next();
     }
-
     const sessionId = authData.sessionId;
     if (!sessionId) {
         socket.autenticado = false;
         return next();
     }
-
     const fichaStr = cofreSessoes.get(sessionId);
     if (!fichaStr) {
         socket.autenticado = false;
         return next();
     }
-
     const ficha = JSON.parse(fichaStr);
     if (Date.now() > ficha.expires) {
         cofreSessoes.delete(sessionId);
         socket.autenticado = false;
         return next();
     }
-
     socket.autenticado = true;
     socket.usuarioLogado = ficha;
     socket.sessionId = sessionId;
     next();
 });
 
-// === WEBSOCKETS ===
 io.on('connection', (socket) => {
     
-    // Auxiliar para validar permissões no servidor
     const checkRole = (role) => {
         if (!socket.autenticado) return false;
         if (role === 'admin' && !socket.usuarioLogado.admin) return false;
@@ -154,19 +142,15 @@ io.on('connection', (socket) => {
         socket.join('frontend');
         if (dados && dados.usuario) {
             usuarios_logados[dados.usuario] = socket.id;
-            // Alerta admin agora usa criptografia AES
             const alerta = encrypt(`🔵 Usuário ${dados.usuario} Online`);
             io.emit('alerta_admin_cifrado', { payload: alerta });
         }
         socket.emit('sincronizar_estado', { estado: estado_global, mensagem: "Conectado com segurança." });
     });
 
-    // 🛡️ PROTEÇÃO DE COMANDOS DEV (SERVER-SIDE VALIDATION)
     socket.on('pedir_dados_dev_seguro', (dados) => {
         if (!checkRole('dev')) return;
-        
         if (bot_socket_id) {
-            // Repassa para o bot e aguarda resposta
             io.to(bot_socket_id).emit('pedir_dados_dev_seguro', { 
                 payload_cifrado: dados.payload_cifrado, 
                 online_users: Object.keys(usuarios_logados),
@@ -183,17 +167,17 @@ io.on('connection', (socket) => {
     });
 
     socket.on('resposta_painel_dev_cifrado', (dados) => {
-        // O servidor limpa dados sensíveis (como senhas) se necessário antes de repassar, 
-        // mas aqui mantemos o fluxo cifrado ponta-a-ponta com o Token Master do DEV.
         io.to(dados.clientId).emit('dados_dev_prontos_cifrados', dados.payload);
     });
 
     socket.on('promover_usuario', (dados) => {
-        if (!checkRole('admin')) {
-            console.warn(`🚨 TENTATIVA DE ESCALADA DE PRIVILÉGIO: ${socket.usuarioLogado?.email}`);
-            return;
-        }
+        if (!checkRole('admin')) return;
         if (bot_socket_id) io.to(bot_socket_id).emit('comando_promover_usuario', { ...dados, clientId: socket.id });
+    });
+
+    socket.on('comando_direto', (dados) => {
+        if (!socket.autenticado) return;
+        if (bot_socket_id) io.to(bot_socket_id).emit('comando_para_robo', dados);
     });
 
     // === SISTEMA DE LOGIN (PONTE FRONTEND -> ROBÔ) ===
@@ -208,14 +192,13 @@ io.on('connection', (socket) => {
     socket.on('resultado_login', (dados) => {
         if (dados.sucesso) {
             const sessionId = uuidv4();
-            const expires = Date.now() + (28800 * 1000); // 8 horas
+            const expires = Date.now() + (28800 * 1000); 
             cofreSessoes.set(sessionId, JSON.stringify({ 
                 email: dados.user, 
                 admin: dados.isAdmin, 
                 dev: dados.isDev, 
                 expires: expires 
             }));
-            
             socket.emit('resposta_login', { 
                 sucesso: true, 
                 sessionId: sessionId,
@@ -260,7 +243,15 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
-
+        for (let email in usuarios_logados) {
+            if (usuarios_logados[email] === socket.id) delete usuarios_logados[email];
+        }
+        if (socket.id === bot_socket_id) {
+            bot_socket_id = null;
+            console.log("❌ Ligação com o Robô Local perdida.");
+        }
+    });
+});
 
 // === GROQ IA (SEGURANÇA) ===
 const Groq = require('groq-sdk');
@@ -269,7 +260,6 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 app.post('/api/chat', async (req, res) => {
     try {
         const userMessage = req.body.message;
-        // Validação básica de input
         if (!userMessage || userMessage.length > 500) return res.status(400).json({ error: "Mensagem inválida." });
 
         const chatCompletion = await groq.chat.completions.create({
@@ -290,4 +280,3 @@ const PORT = process.env.PORT || 8000;
 server.listen(PORT, () => {
     console.log(`🛡️ Servidor Protegido rodando na porta ${PORT}`);
 });
-
