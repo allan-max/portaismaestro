@@ -512,6 +512,7 @@ socket.on("sessao_invalida", () => {
 
     if (resposta.sucesso) {
         localStorage.setItem('maestro_session', resposta.sessionId);
+        localStorage.setItem('maestro_user', document.getElementById('log-user').value.trim()); // ✅ SALVA O USUÁRIO
         localStorage.setItem('maestro_admin', resposta.admin);
         localStorage.setItem('maestro_dev', resposta.dev);
 

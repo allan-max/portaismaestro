@@ -132,6 +132,32 @@ io.on('connection', (socket) => {
     socket.on('sou_o_robo', () => {
         bot_socket_id = socket.id;
         console.log("🤖 Robô Local Conectado.");
+        io.to('frontend').emit('sincronizar_estado', { estado: estado_global, mensagem: "Robô operacional e conectado!" });
+    });
+
+    // === PONTES DE RELATÓRIOS (ROBÔ -> SITES) ===
+    socket.on('relatar_progresso', (dados) => io.to('frontend').emit('relatar_progresso', dados));
+    socket.on('relatar_progresso_me', (dados) => io.to('frontend').emit('relatar_progresso_me', dados));
+    socket.on('relatar_progresso_coupa', (dados) => io.to('frontend').emit('relatar_progresso_coupa', dados));
+    socket.on('relatar_progresso_vale', (dados) => io.to('frontend').emit('relatar_progresso_vale', dados));
+    socket.on('relatar_progresso_findes', (dados) => io.to('frontend').emit('relatar_progresso_findes', dados));
+    socket.on('relatar_progresso_ariba', (dados) => io.to('frontend').emit('relatar_progresso_ariba', dados));
+
+    socket.on('contagem_me', (dados) => io.to('frontend').emit('atualizar_contagem_me', dados));
+    socket.on('contagem_ariba', (dados) => io.to('frontend').emit('atualizar_contagem_ariba', dados));
+    
+    socket.on('sincronizar_estado_me', (dados) => { estado_me = dados; io.to('frontend').emit('sincronizar_estado_me', dados); });
+    socket.on('sincronizar_estado_ariba', (dados) => { estado_ariba = dados; io.to('frontend').emit('sincronizar_estado_ariba', dados); });
+
+    socket.on('tarefa_concluida', (dados) => {
+        if (dados.evento === 'Login do Robô') {
+            if (dados.sucesso) estado_global.status = 'ocioso';
+            else { estado_global.status = 'desligado'; estado_global.portal_atual = null; }
+        } else {
+            estado_global.status = 'ocioso';
+        }
+        io.to('frontend').emit('tarefa_concluida', dados);
+        notificar_todos();
     });
 
     socket.on('sou_frontend', (dados) => {
@@ -146,6 +172,8 @@ io.on('connection', (socket) => {
             io.emit('alerta_admin_cifrado', { payload: alerta });
         }
         socket.emit('sincronizar_estado', { estado: estado_global, mensagem: "Conectado com segurança." });
+        socket.emit('sincronizar_estado_me', estado_me);
+        socket.emit('sincronizar_estado_ariba', estado_ariba);
     });
 
     socket.on('pedir_dados_dev_seguro', (dados) => {
@@ -177,7 +205,20 @@ io.on('connection', (socket) => {
 
     socket.on('comando_direto', (dados) => {
         if (!socket.autenticado) return;
+        
+        // ⚡ FEEDBACK VISUAL IMEDIATO: Atualiza o estado ANTES de mandar pro robô
+        if (dados.modo === 'ligar_robo') {
+            estado_global.status = 'logando';
+            estado_global.portal_atual = dados.portal;
+        } else if (dados.modo === 'desligar_robo') {
+            estado_global.status = 'desligado';
+            estado_global.portal_atual = null;
+        }
+
         if (bot_socket_id) io.to(bot_socket_id).emit('comando_para_robo', dados);
+        
+        // Avisa todos os sites da mudança de cor do botão
+        notificar_todos();
     });
 
     // === SISTEMA DE LOGIN (PONTE FRONTEND -> ROBÔ) ===
