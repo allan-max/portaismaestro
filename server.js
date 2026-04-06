@@ -196,12 +196,71 @@ io.on('connection', (socket) => {
         if (bot_socket_id) io.to(bot_socket_id).emit('comando_promover_usuario', { ...dados, clientId: socket.id });
     });
 
-    // ... (restante das rotas de repasse mantidas com validação socket.autenticado)
-    socket.on('comando_direto', (dados) => {
-        if (!socket.autenticado) return;
-        if (bot_socket_id) io.to(bot_socket_id).emit('comando_para_robo', dados);
+    // === SISTEMA DE LOGIN (PONTE FRONTEND -> ROBÔ) ===
+    socket.on('solicitar_login', (dados) => {
+        if (bot_socket_id) {
+            io.to(bot_socket_id).emit('validar_login', { ...dados, clientId: socket.id });
+        } else {
+            socket.emit('resposta_login', { sucesso: false, erro: "O Servidor Central (Robô) está offline." });
+        }
     });
-});
+
+    socket.on('resultado_login', (dados) => {
+        if (dados.sucesso) {
+            const sessionId = uuidv4();
+            const expires = Date.now() + (28800 * 1000); // 8 horas
+            cofreSessoes.set(sessionId, JSON.stringify({ 
+                email: dados.user, 
+                admin: dados.isAdmin, 
+                dev: dados.isDev, 
+                expires: expires 
+            }));
+            
+            socket.emit('resposta_login', { 
+                sucesso: true, 
+                sessionId: sessionId,
+                admin: dados.isAdmin, 
+                dev: dados.isDev 
+            });
+        } else {
+            socket.emit('resposta_login', dados);
+        }
+    });
+
+    socket.on('solicitar_cadastro', (dados) => {
+        if (bot_socket_id) io.to(bot_socket_id).emit('registrar_usuario', { ...dados, clientId: socket.id });
+    });
+
+    socket.on('resposta_cadastro', (dados) => {
+        io.to(dados.clientId).emit('resposta_cadastro', dados);
+    });
+
+    socket.on('validar_token_email', (dados) => {
+        if (bot_socket_id) io.to(bot_socket_id).emit('verificar_token_python', { ...dados, clientId: socket.id });
+    });
+
+    socket.on('resultado_verificacao_token', (dados) => {
+        io.to(dados.clientId).emit('resposta_verificacao_token', dados);
+    });
+
+    socket.on('solicitar_recuperacao', (dados) => {
+        if (bot_socket_id) io.to(bot_socket_id).emit('gerar_token_recuperacao', { ...dados, clientId: socket.id });
+    });
+
+    socket.on('resposta_recuperacao_solicitada', (dados) => {
+        io.to(dados.clientId).emit('resposta_recuperacao_solicitada', dados);
+    });
+
+    socket.on('salvar_nova_senha', (dados) => {
+        if (bot_socket_id) io.to(bot_socket_id).emit('processar_nova_senha', { ...dados, clientId: socket.id });
+    });
+
+    socket.on('resultado_nova_senha', (dados) => {
+        io.to(dados.clientId).emit('resposta_nova_senha', dados);
+    });
+
+    socket.on('disconnect', () => {
+
 
 // === GROQ IA (SEGURANÇA) ===
 const Groq = require('groq-sdk');
