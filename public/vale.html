@@ -378,24 +378,20 @@
 
     <script>
         const sessionAtual = localStorage.getItem('maestro_session');
-
         const socket = io({ 
             auth: { sessionId: sessionAtual } 
         });
 
-        socket.on("connect_error", (err) => {
-            console.error("Conexão recusada pelo Servidor:", err.message);
-            localStorage.clear();
-            window.location.href = "index.html"; 
+        socket.on('connect', () => {
+            console.log("✅ Conectado ao Servidor Vale com Segurança.");
+            socket.emit('sou_frontend', { usuario: localStorage.getItem('maestro_user') || 'Usuário' });
         });
 
         socket.on("sessao_invalida", () => {
-            console.error("A sua sessão expirou (O Servidor foi reiniciado).");
+            console.error("A sua sessão expirou ou é inválida.");
             localStorage.clear();
             window.location.href = "index.html"; 
         });
-        
-        socket.emit('sou_frontend', { usuario: localStorage.getItem('maestro_user') }); 
         
         let timerCaptcha; 
         let contadorEventos = 0;
