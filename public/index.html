@@ -690,50 +690,51 @@ if (localStorage.getItem('maestro_session')) {
             document.getElementById('modal-dev').style.display = 'none';
         }
 
-        // Recebe a lista do Node.js e desenha no ecrã
+        // Recebe a lista do Node.js e desenha no ecrã com segurança (Zero XSS)
         socket.on('dados_dev_prontos', (usuarios) => {
             const divLista = document.getElementById('lista-usuarios-dev');
-            divLista.innerHTML = ''; // Limpa a mensagem de "carregando"
+            divLista.innerHTML = ''; 
 
-            // Varre todos os e-mails que vieram do banco_usuarios.json
             for (let email in usuarios) {
                 let dados = usuarios[email];
                 
-                // Formatação Visual dos Status
-                let statusOnline = dados.online 
-                    ? '<span style="color: #34d399; font-size: 12px;"><i class="fa-solid fa-circle"></i> Online</span>' 
-                    : '<span style="color: #f87171; font-size: 12px;"><i class="fa-regular fa-circle"></i> Offline</span>';
-                
-                let badgeAdmin = dados.admin 
-                    ? '<span style="background: rgba(251, 191, 36, 0.2); color: #fbbf24; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 10px;"><i class="fa-solid fa-crown"></i> ADMIN</span>' 
-                    : '';
-                
-                let iconVerificado = dados.verificado 
-                    ? '<span style="color: #a1a1aa; font-size: 12px;"><i class="fa-solid fa-envelope-circle-check" style="color: #34d399;"></i> Verificado</span>'
-                    : '<span style="color: #a1a1aa; font-size: 12px;"><i class="fa-solid fa-triangle-exclamation" style="color: #fbbf24;"></i> Pendente</span>';
+                const card = document.createElement('div');
+                card.style.cssText = "background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;";
 
-                // Só mostra o botão "Promover" se a pessoa NÃO for admin
-                let btnPromover = !dados.admin 
-                    ? `<button onclick="darPrivilegioAdmin('${email}')" class="btn-entrar" style="background: #34d399; border: none; padding: 6px 12px; font-size: 11px; width: auto; margin: 0; color: #000;"><i class="fa-solid fa-arrow-up"></i> TORNAR ADMIN</button>` 
-                    : '';
+                const info = document.createElement('div');
+                
+                const userLine = document.createElement('div');
+                userLine.style.cssText = "color: #fff; font-weight: 500; font-size: 15px; margin-bottom: 8px; font-family: 'Roboto Mono', monospace;";
+                userLine.textContent = email;
 
-                // Desenha a "Caixa" de cada utilizador
-                divLista.innerHTML += `
-                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 15px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s;">
-                        <div>
-                            <div style="color: #fff; font-weight: 500; font-size: 15px; margin-bottom: 8px; font-family: 'Roboto Mono', monospace;">
-                                ${email} ${badgeAdmin}
-                            </div>
-                            <div style="display: flex; gap: 20px;">
-                                ${statusOnline}
-                                ${iconVerificado}
-                            </div>
-                        </div>
-                        <div>
-                            ${btnPromover}
-                        </div>
-                    </div>
-                `;
+                if (dados.admin) {
+                    const badge = document.createElement('span');
+                    badge.style.cssText = "background: rgba(251, 191, 36, 0.2); color: #fbbf24; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 10px;";
+                    badge.textContent = "ADMIN";
+                    userLine.appendChild(badge);
+                }
+
+                const statusLine = document.createElement('div');
+                statusLine.style.cssText = "display: flex; gap: 20px; font-size: 12px; color: #a1a1aa;";
+                statusLine.textContent = dados.online ? "● Online" : "○ Offline";
+                statusLine.style.color = dados.online ? "#34d399" : "#f87171";
+
+                info.appendChild(userLine);
+                info.appendChild(statusLine);
+
+                const actions = document.createElement('div');
+                if (!dados.admin) {
+                    const btn = document.createElement('button');
+                    btn.className = "btn-entrar";
+                    btn.style.cssText = "background: #34d399; border: none; padding: 6px 12px; font-size: 11px; width: auto; margin: 0; color: #000;";
+                    btn.textContent = "TORNAR ADMIN";
+                    btn.onclick = () => darPrivilegioAdmin(email);
+                    actions.appendChild(btn);
+                }
+
+                card.appendChild(info);
+                card.appendChild(actions);
+                divLista.appendChild(card);
             }
         });
 

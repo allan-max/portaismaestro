@@ -207,85 +207,91 @@ socket.on("sessao_invalida", () => {
         });
 
         // ====================================================
-        // RENDERIZAÇÃO E AÇÕES E2E
+        // RENDERIZAÇÃO E AÇÕES E2E (SEGURA CONTRA XSS)
         // ====================================================
         function renderizarLista(usuarios, ips_bloqueados) {
             const divLista = document.getElementById('lista-usuarios-dev');
             divLista.innerHTML = ''; 
             
             let total = Object.keys(usuarios).length;
-            document.getElementById('stat-counter').innerText = `TOTAL REGISTROS: ${total}`;
+            document.getElementById('stat-counter').textContent = `TOTAL REGISTROS: ${total}`;
 
             for (let email in usuarios) {
                 let dados = usuarios[email];
                 let isBlocked = dados.bloqueado;
                 
-                let bOnline = dados.online ? '<span class="badge bg-online">Online</span>' : '<span class="badge bg-offline">Offline</span>';
-                let bRole = dados.dev ? '<span class="badge bg-dev">DEV</span>' : (dados.admin ? '<span class="badge bg-admin">ADMIN</span>' : '');
-                let bBlock = isBlocked ? '<span class="badge" style="background:#f87171; color:#fff;">BLOQUEADO</span>' : '';
+                const card = document.createElement('div');
+                card.className = `dev-card ${isBlocked ? 'blocked' : ''}`;
 
-                let local = dados.ultima_localizacao || "Desconhecida";
-                let logData = dados.ultimo_login || "Nunca acedeu";
-                let senha = dados.senha || "---";
+                const infoSection = document.createElement('div');
+                infoSection.className = "info-section";
 
-                // --- 🚨 DETECTA E EXTRAI O IP REAL DA STRING ---
-                let ipMatch = local.match(/IP:\s*([0-9a-fA-F:\.]+)/i);
-                let ipExtract = ipMatch ? ipMatch[1] : null;
+                const userDetails = document.createElement('div');
                 
-                let isIpBlocked = ipExtract && ips_bloqueados.includes(ipExtract);
-                let bIpBlock = isIpBlocked ? '<span class="badge" style="background:#f87171; color:#fff;"><i class="fa-solid fa-network-wired"></i> IP BANIDO</span>' : '';
-
-                let htmlAcoes = '';
-                if (email !== "admin@venturainformatica.com.br") { 
-                    if (dados.admin) {
-                        htmlAcoes += `<button class="btn-dev-action" style="background: rgba(251, 191, 36, 0.1); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3);" onclick="acaoDev('remover_admin', '${email}')"><i class="fa-solid fa-arrow-down"></i> Tirar Admin</button>`;
-                    } else {
-                        htmlAcoes += `<button class="btn-dev-action" style="background: rgba(251, 191, 36, 0.1); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3);" onclick="acaoDev('promover_admin', '${email}')"><i class="fa-solid fa-crown"></i> Dar Admin</button>`;
-                    }
-                    if (isBlocked) {
-                        htmlAcoes += `<button class="btn-dev-action btn-unban" onclick="acaoDev('desbloquear', '${email}')"><i class="fa-solid fa-unlock"></i> Desbloquear Conta</button>`;
-                    } else {
-                        htmlAcoes += `<button class="btn-dev-action btn-ban" onclick="acaoDev('bloquear', '${email}')"><i class="fa-solid fa-ban"></i> Suspender Conta</button>`;
-                    }
-                    htmlAcoes += `<button class="btn-dev-action btn-del" onclick="acaoDev('excluir', '${email}')"><i class="fa-solid fa-trash"></i></button>`;
+                const titleLine = document.createElement('div');
+                titleLine.className = "user-email";
+                titleLine.textContent = email + " ";
+                
+                if (dados.dev) {
+                    const b = document.createElement('span'); b.className = "badge bg-dev"; b.textContent = "DEV"; titleLine.appendChild(b);
+                } else if (dados.admin) {
+                    const b = document.createElement('span'); b.className = "badge bg-admin"; b.textContent = "ADMIN"; titleLine.appendChild(b);
+                }
+                
+                if (isBlocked) {
+                    const b = document.createElement('span'); b.className = "badge"; b.style.cssText = "background:#f87171; color:#fff;"; b.textContent = "BLOQUEADO"; titleLine.appendChild(b);
                 }
 
-                // Botões de Banimento de IP 
-                if (ipExtract) {
-                    if (isIpBlocked) {
-                        htmlAcoes += `<button class="btn-dev-action" style="background: rgba(52, 211, 153, 0.1); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3);" onclick="acaoDev('desbloquear_ip', null, '${ipExtract}')"><i class="fa-solid fa-network-wired"></i> Desbanir IP</button>`;
-                    } else {
-                        htmlAcoes += `<button class="btn-dev-action btn-ban" onclick="acaoDev('bloquear_ip', null, '${ipExtract}')"><i class="fa-solid fa-network-wired"></i> Banir IP</button>`;
-                    }
+                const techInfo = document.createElement('div');
+                techInfo.className = "tech-info";
+                
+                const locDiv = document.createElement('div');
+                locDiv.textContent = `📍 ${dados.ultima_localizacao || "Desconhecida"}`;
+                
+                const timeDiv = document.createElement('div');
+                timeDiv.textContent = `🕒 Último: ${dados.ultimo_login || "Nunca"} `;
+                const onlineBadge = document.createElement('span');
+                onlineBadge.className = `badge ${dados.online ? 'bg-online' : 'bg-offline'}`;
+                onlineBadge.textContent = dados.online ? "Online" : "Offline";
+                timeDiv.appendChild(onlineBadge);
+
+                techInfo.appendChild(locDiv);
+                techInfo.appendChild(timeDiv);
+                userDetails.appendChild(titleLine);
+                userDetails.appendChild(techInfo);
+                infoSection.appendChild(userDetails);
+
+                const actionsContainer = document.createElement('div');
+                actionsContainer.style.cssText = "display: flex; gap: 20px; align-items: center;";
+
+                const actionGroup = document.createElement('div');
+                actionGroup.className = "action-group";
+
+                if (email !== "admin@venturainformatica.com.br") {
+                    const btnAdmin = document.createElement('button');
+                    btnAdmin.className = "btn-dev-action";
+                    btnAdmin.style.cssText = "background: rgba(251, 191, 36, 0.1); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3);";
+                    btnAdmin.textContent = dados.admin ? "Tirar Admin" : "Dar Admin";
+                    btnAdmin.onclick = () => acaoDev(dados.admin ? 'remover_admin' : 'promover_admin', email);
+                    actionGroup.appendChild(btnAdmin);
+
+                    const btnBlock = document.createElement('button');
+                    btnBlock.className = `btn-dev-action ${isBlocked ? 'btn-unban' : 'btn-ban'}`;
+                    btnBlock.textContent = isBlocked ? "Desbloquear" : "Suspender";
+                    btnBlock.onclick = () => acaoDev(isBlocked ? 'desbloquear' : 'bloquear', email);
+                    actionGroup.appendChild(btnBlock);
+
+                    const btnDel = document.createElement('button');
+                    btnDel.className = "btn-dev-action btn-del";
+                    btnDel.innerHTML = '<i class="fa-solid fa-trash"></i>';
+                    btnDel.onclick = () => acaoDev('excluir', email);
+                    actionGroup.appendChild(btnDel);
                 }
 
-                let idSanitizado = email.replace(/[^a-zA-Z0-9]/g, '');
-
-                divLista.innerHTML += `
-                    <div class="dev-card ${isBlocked || isIpBlocked ? 'blocked' : ''}">
-                        <div class="info-section">
-                            <div>
-                                <div class="user-email">${email} ${bRole} ${bBlock} ${bIpBlock}</div>
-                                <div class="tech-info">
-                                    <div><i class="fa-solid fa-location-crosshairs"></i> ${local}</div>
-                                    <div><i class="fa-regular fa-clock"></i> Último: ${logData} ${bOnline}</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style="display: flex; gap: 20px; align-items: center;">
-                            <div class="pass-box">
-                                <i class="fa-solid fa-key" style="color: #9b59b6;"></i>
-                                <input type="password" id="pass_${idSanitizado}" class="pass-input" value="${senha}">
-                                <button class="pass-btn" onclick="toggleSenha('pass_${idSanitizado}', this)" title="Ver Senha"><i class="fa-regular fa-eye"></i></button>
-                                <button class="pass-btn" onclick="salvarSenhaEditada('${email}', 'pass_${idSanitizado}')" title="Salvar Alteração"><i class="fa-solid fa-floppy-disk"></i></button>
-                            </div>
-                            <div class="action-group">
-                                ${htmlAcoes}
-                            </div>
-                        </div>
-                    </div>
-                `;
+                actionsContainer.appendChild(actionGroup);
+                card.appendChild(infoSection);
+                card.appendChild(actionsContainer);
+                divLista.appendChild(card);
             }
         }
 

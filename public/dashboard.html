@@ -565,6 +565,7 @@ socket.on("connect_error", (err) => {
 
     function renderStats() {
       const statsGrid = document.getElementById("statsGrid");
+      statsGrid.innerHTML = '';
       const stats = [
         { label: "Total de Cotações", value: totalCotacoes, percentage: "100%", type: "total", trend: "neutral" },
         { label: "Respondidas", value: totalRespondidas, percentage: percRespondidas + "%", type: "respondidas", trend: "up" },
@@ -572,122 +573,33 @@ socket.on("connect_error", (err) => {
         { label: "Pendentes", value: totalPendentes, percentage: percPendentes + "%", type: "pendentes", trend: "neutral" }
       ];
 
-      statsGrid.innerHTML = stats.map(stat => `
-        <div class="stat-card ${stat.type}">
-          <div class="label">${stat.label}</div>
-          <div class="value">${stat.value.toLocaleString()}</div>
-          <div class="percentage ${stat.trend}">${stat.percentage} do total</div>
-        </div>
-      `).join("");
-    }
-
-    function drawDonutChart() {
-      const canvas = document.getElementById("donutChart");
-      const ctx = canvas.getContext("2d");
-      const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2;
-      const radius = 80;
-      const lineWidth = 24;
-
-      const data = [
-        { value: totalRespondidas, color: "#34d399", label: "Respondidas" },
-        { value: totalNaoRespondidas, color: "#f87171", label: "Não Respondidas" },
-        { value: totalPendentes, color: "#fbbf24", label: "Pendentes" }
-      ];
-
-      const total = data.reduce((acc, d) => acc + d.value, 0);
-      let startAngle = -Math.PI / 2;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      if(total === 0) return; // Proteção contra planilha vazia
-
-      data.forEach(segment => {
-        const sliceAngle = (segment.value / total) * 2 * Math.PI;
-        if(sliceAngle > 0) {
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
-            ctx.strokeStyle = segment.color;
-            ctx.lineWidth = lineWidth;
-            ctx.lineCap = "round";
-            ctx.stroke();
-        }
-        startAngle += sliceAngle + 0.05;
-      });
-
-      document.getElementById("totalDonut").textContent = total.toLocaleString();
-
-      const legend = document.getElementById("donutLegend");
-      legend.innerHTML = data.map(d => `
-        <div class="legend-item">
-          <div class="legend-color" style="background: ${d.color}"></div>
-          <span class="legend-label">${d.label}</span>
-          <span class="legend-value">${d.value.toLocaleString()} (${((d.value / total) * 100).toFixed(1)}%)</span>
-        </div>
-      `).join("");
-    }
-
-    function drawBarChart() {
-      const canvas = document.getElementById("barChart");
-      const ctx = canvas.getContext("2d");
-      const width = canvas.width;
-      const height = canvas.height;
-      const padding = { top: 20, right: 20, bottom: 40, left: 60 };
-
-      ctx.clearRect(0, 0, width, height);
-      if(dadosMarcas.length === 0) return;
-
-      const chartWidth = width - padding.left - padding.right;
-      const chartHeight = height - padding.top - padding.bottom;
-      const barWidth = Math.max(10, chartWidth / dadosMarcas.length - 10);
-      const maxValue = Math.max(1, ...dadosMarcas.map(m => m.total));
-
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
-      ctx.lineWidth = 1;
-      for (let i = 0; i <= 4; i++) {
-        const y = padding.top + (chartHeight / 4) * i;
-        ctx.beginPath();
-        ctx.moveTo(padding.left, y);
-        ctx.lineTo(width - padding.right, y);
-        ctx.stroke();
-
-        ctx.fillStyle = "#a1a1aa";
-        ctx.font = "11px sans-serif";
-        ctx.textAlign = "right";
-        const value = Math.round(maxValue - (maxValue / 4) * i);
-        ctx.fillText(value.toString(), padding.left - 10, y + 4);
-      }
-
-      dadosMarcas.forEach((marca, i) => {
-        const x = padding.left + (chartWidth / dadosMarcas.length) * i + 5;
-        const barHeight = (marca.respondidas / maxValue) * chartHeight;
-        const y = padding.top + chartHeight - barHeight;
-
-        const totalHeight = (marca.total / maxValue) * chartHeight;
-        ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
-        ctx.fillRect(x, padding.top + chartHeight - totalHeight, barWidth, totalHeight);
-
-        const gradient = ctx.createLinearGradient(x, y, x, padding.top + chartHeight);
-        gradient.addColorStop(0, "#818cf8");
-        gradient.addColorStop(1, "#6366f1");
-        ctx.fillStyle = gradient;
-        ctx.fillRect(x, y, barWidth, barHeight);
-
-        ctx.save();
-        ctx.fillStyle = "#a1a1aa";
-        ctx.font = "10px sans-serif";
-        ctx.textAlign = "center";
-        ctx.translate(x + barWidth / 2, height - 8);
-        ctx.rotate(-Math.PI / 6);
-        ctx.fillText(marca.nome.substring(0, 8), 0, 0);
-        ctx.restore();
+      stats.forEach(stat => {
+        const card = document.createElement('div');
+        card.className = `stat-card ${stat.type}`;
+        
+        const label = document.createElement('div');
+        label.className = 'label';
+        label.textContent = stat.label;
+        
+        const value = document.createElement('div');
+        value.className = 'value';
+        value.textContent = stat.value.toLocaleString();
+        
+        const percentage = document.createElement('div');
+        percentage.className = `percentage ${stat.trend}`;
+        percentage.textContent = `${stat.percentage} do total`;
+        
+        card.appendChild(label);
+        card.appendChild(value);
+        card.appendChild(percentage);
+        statsGrid.appendChild(card);
       });
     }
 
     function renderBrands() {
       const marcasComTaxa = dadosMarcas.map(m => ({
         ...m,
-        taxa: m.total > 0 ? (m.respondidas / m.total) * 100 : 0,
-        naoRespondidas: m.total - m.respondidas - m.pendentes
+        taxa: m.total > 0 ? (m.respondidas / m.total) * 100 : 0
       }));
 
       const topBrands = [...marcasComTaxa].sort((a, b) => b.taxa - a.taxa).slice(0, 5);
@@ -695,20 +607,35 @@ socket.on("connect_error", (err) => {
 
       const renderBrandList = (brands, containerId) => {
         const container = document.getElementById(containerId);
-        container.innerHTML = brands.map(brand => {
-          const progressClass = brand.taxa >= 80 ? "high" : brand.taxa >= 50 ? "medium" : "low";
-          return `
-            <div class="brand-item">
-              <div class="brand-info">
-                <span class="brand-name">${brand.nome}</span>
-                <span class="brand-stats">${brand.respondidas}/${brand.total} (${brand.taxa.toFixed(1)}%)</span>
-              </div>
-              <div class="progress-bar">
-                <div class="progress-fill ${progressClass}" style="width: ${brand.taxa}%"></div>
-              </div>
-            </div>
-          `;
-        }).join("");
+        container.innerHTML = '';
+        brands.forEach(brand => {
+          const item = document.createElement('div');
+          item.className = 'brand-item';
+          
+          const info = document.createElement('div');
+          info.className = 'brand-info';
+          
+          const name = document.createElement('span');
+          name.className = 'brand-name';
+          name.textContent = brand.nome;
+          
+          const stats = document.createElement('span');
+          stats.className = 'brand-stats';
+          stats.textContent = `${brand.respondidas}/${brand.total} (${brand.taxa.toFixed(1)}%)`;
+          
+          const bar = document.createElement('div');
+          bar.className = 'progress-bar';
+          const fill = document.createElement('div');
+          fill.className = `progress-fill ${brand.taxa >= 80 ? "high" : brand.taxa >= 50 ? "medium" : "low"}`;
+          fill.style.width = `${brand.taxa}%`;
+          
+          info.appendChild(name);
+          info.appendChild(stats);
+          bar.appendChild(fill);
+          item.appendChild(info);
+          item.appendChild(bar);
+          container.appendChild(item);
+        });
       };
 
       renderBrandList(topBrands, "topBrands");
@@ -717,46 +644,94 @@ socket.on("connect_error", (err) => {
 
     function renderSellers() {
       const sellersGrid = document.getElementById("sellersGrid");
+      sellersGrid.innerHTML = '';
       const sortedSellers = [...dadosVendedores].sort((a, b) => b.respostas - a.respostas);
 
-      sellersGrid.innerHTML = sortedSellers.map((seller, i) => {
+      sortedSellers.forEach((seller, i) => {
         const rankClass = i === 0 ? "gold" : i === 1 ? "silver" : i === 2 ? "bronze" : "normal";
         const taxa = seller.total > 0 ? ((seller.respostas / seller.total) * 100).toFixed(1) : 0;
-        return `
-          <div class="seller-card">
-            <div class="seller-rank ${rankClass}">${i + 1}</div>
-            <div class="seller-info">
-              <div class="seller-name">${seller.nome}</div>
-              <div class="seller-responses">${seller.respostas} de ${seller.total} cotações</div>
-            </div>
-            <div class="seller-percentage">
-              <div class="value">${taxa}%</div>
-              <div class="label">taxa</div>
-            </div>
-          </div>
-        `;
-      }).join("");
+        
+        const card = document.createElement('div');
+        card.className = 'seller-card';
+        
+        const rank = document.createElement('div');
+        rank.className = `seller-rank ${rankClass}`;
+        rank.textContent = i + 1;
+        
+        const info = document.createElement('div');
+        info.className = 'seller-info';
+        const name = document.createElement('div');
+        name.className = 'seller-name';
+        name.textContent = seller.nome;
+        const resp = document.createElement('div');
+        resp.className = 'seller-responses';
+        resp.textContent = `${seller.respostas} de ${seller.total} cotações`;
+        
+        const perc = document.createElement('div');
+        perc.className = 'seller-percentage';
+        const val = document.createElement('div');
+        val.className = 'value';
+        val.textContent = `${taxa}%`;
+        const lbl = document.createElement('div');
+        lbl.className = 'label';
+        lbl.textContent = 'taxa';
+        
+        info.appendChild(name);
+        info.appendChild(resp);
+        perc.appendChild(val);
+        perc.appendChild(lbl);
+        card.appendChild(rank);
+        card.appendChild(info);
+        card.appendChild(perc);
+        sellersGrid.appendChild(card);
+      });
     }
 
     function renderTable() {
       const tbody = document.getElementById("brandTableBody");
+      tbody.innerHTML = '';
       
-      tbody.innerHTML = dadosMarcas.map(marca => {
+      dadosMarcas.forEach(marca => {
         const naoRespondidas = marca.total - marca.respondidas - marca.pendentes;
         const taxa = marca.total > 0 ? ((marca.respondidas / marca.total) * 100).toFixed(1) : 0;
         const statusClass = taxa >= 80 ? "high" : taxa >= 50 ? "medium" : "low";
         
-        return `
-          <tr>
-            <td><strong>${marca.nome}</strong></td>
-            <td>${marca.total}</td>
-            <td style="color: #34d399">${marca.respondidas}</td>
-            <td style="color: #f87171">${naoRespondidas}</td>
-            <td style="color: #fbbf24">${marca.pendentes}</td>
-            <td><span class="status-badge ${statusClass}">${taxa}%</span></td>
-          </tr>
-        `;
-      }).join("");
+        const tr = document.createElement('tr');
+        
+        const tdName = document.createElement('td');
+        const strong = document.createElement('strong');
+        strong.textContent = marca.nome;
+        tdName.appendChild(strong);
+        
+        const tdTotal = document.createElement('td');
+        tdTotal.textContent = marca.total;
+        
+        const tdResp = document.createElement('td');
+        tdResp.style.color = "#34d399";
+        tdResp.textContent = marca.respondidas;
+        
+        const tdNao = document.createElement('td');
+        tdNao.style.color = "#f87171";
+        tdNao.textContent = naoRespondidas;
+        
+        const tdPend = document.createElement('td');
+        tdPend.style.color = "#fbbf24";
+        tdPend.textContent = marca.pendentes;
+        
+        const tdTaxa = document.createElement('td');
+        const badge = document.createElement('span');
+        badge.className = `status-badge ${statusClass}`;
+        badge.textContent = `${taxa}%`;
+        tdTaxa.appendChild(badge);
+        
+        tr.appendChild(tdName);
+        tr.appendChild(tdTotal);
+        tr.appendChild(tdResp);
+        tr.appendChild(tdNao);
+        tr.appendChild(tdPend);
+        tr.appendChild(tdTaxa);
+        tbody.appendChild(tr);
+      });
     }
 
     function init() {
