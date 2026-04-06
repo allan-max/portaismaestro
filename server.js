@@ -199,14 +199,17 @@ io.on('connection', (socket) => {
                 dev: dados.isDev, 
                 expires: expires 
             }));
-            socket.emit('resposta_login', { 
+            
+            // ✅ CORREÇÃO: Envia para o navegador (clientId) em vez de enviar para o robô
+            io.to(dados.clientId).emit('resposta_login', { 
                 sucesso: true, 
                 sessionId: sessionId,
                 admin: dados.isAdmin, 
                 dev: dados.isDev 
             });
         } else {
-            socket.emit('resposta_login', dados);
+            // ✅ CORREÇÃO: Envia o erro para o navegador (clientId)
+            io.to(dados.clientId).emit('resposta_login', dados);
         }
     });
 
