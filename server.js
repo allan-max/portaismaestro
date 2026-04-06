@@ -135,6 +135,19 @@ io.on('connection', (socket) => {
         io.to('frontend').emit('sincronizar_estado', { estado: estado_global, mensagem: "Robô operacional e conectado!" });
     });
 
+    // === PONTES DE CAPTCHA (ROBÔ <-> SITE) ===
+    socket.on('imagem_captcha_do_robo', (dados) => {
+        // Envia a imagem do desafio para todos os navegadores na sala frontend
+        io.to('frontend').emit('nova_imagem', dados);
+    });
+
+    socket.on('clique_no_captcha', (dados) => {
+        // Repassa o clique do usuário diretamente para o robô local
+        if (bot_socket_id) {
+            io.to(bot_socket_id).emit('executar_clique', dados);
+        }
+    });
+
     // === PONTES DE RELATÓRIOS (ROBÔ -> SITES) ===
     socket.on('relatar_progresso', (dados) => io.to('frontend').emit('relatar_progresso', dados));
     socket.on('relatar_progresso_me', (dados) => io.to('frontend').emit('relatar_progresso_me', dados));
