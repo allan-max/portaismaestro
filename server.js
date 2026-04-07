@@ -216,10 +216,17 @@ io.on('connection', (socket) => {
         if (bot_socket_id) io.to(bot_socket_id).emit('comando_promover_usuario', { ...dados, clientId: socket.id });
     });
 
+    socket.on('solicitar_impressao', (dados) => {
+        if (!socket.autenticado) return;
+        estado_global.status = 'ocupado';
+        notificar_todos();
+        if (bot_socket_id) io.to(bot_socket_id).emit('comando_imprimir', dados);
+    });
+
     socket.on('comando_direto', (dados) => {
         if (!socket.autenticado) return;
         
-        // ⚡ FEEDBACK VISUAL IMEDIATO: Atualiza o estado ANTES de mandar pro robô
+        // Feedback visual para o Site
         if (dados.modo === 'ligar_robo') {
             estado_global.status = 'logando';
             estado_global.portal_atual = dados.portal;
@@ -227,16 +234,16 @@ io.on('connection', (socket) => {
             estado_global.status = 'desligado';
             estado_global.portal_atual = null;
         } 
-        // 👇 AS LINHAS QUE FALTAVAM PARA OS BOTÕES MUDAREM DE COR 👇
-        else if (dados.modo === 'extrair' || dados.modo === 'verificar' || dados.modo === 'responder') {
-            estado_global.status = dados.modo;
+        // 👇 NOMES CORRIGIDOS PARA O HTML RECONHECER 👇
+        else if (dados.modo === 'extrair') {
+            estado_global.status = 'extraindo';
+        } else if (dados.modo === 'verificar') {
+            estado_global.status = 'verificando';
         } else if (dados.modo === 'solicitar_parada') {
             estado_global.status = 'ocioso';
         }
 
         if (bot_socket_id) io.to(bot_socket_id).emit('comando_para_robo', dados);
-        
-        // Avisa todos os sites da mudança de cor do botão
         notificar_todos();
     });
 
