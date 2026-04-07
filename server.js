@@ -226,25 +226,25 @@ io.on('connection', (socket) => {
     socket.on('comando_direto', (dados) => {
         if (!socket.autenticado) return;
         
-        // Feedback visual para o Site
-        if (dados.modo === 'ligar_robo') {
-            estado_global.status = 'logando';
-            estado_global.portal_atual = dados.portal;
-        } else if (dados.modo === 'desligar_robo') {
-            estado_global.status = 'desligado';
-            estado_global.portal_atual = null;
-        } 
-        // 👇 NOMES CORRIGIDOS PARA O HTML RECONHECER 👇
-        else if (dados.modo === 'extrair') {
-            estado_global.status = 'extraindo';
-        } else if (dados.modo === 'verificar') {
-            estado_global.status = 'verificando';
-        } else if (dados.modo === 'solicitar_parada') {
-            estado_global.status = 'ocioso';
+        // 👇 Só altera o estado GLOBAL (travando a tela) se for Coupa ou Vale 👇
+        if (dados.portal === 'coupa' || dados.portal === 'vale') {
+            if (dados.modo === 'ligar_robo') {
+                estado_global.status = 'logando';
+                estado_global.portal_atual = dados.portal;
+            } else if (dados.modo === 'desligar_robo') {
+                estado_global.status = 'desligado';
+                estado_global.portal_atual = null;
+            } else if (dados.modo === 'extrair') {
+                estado_global.status = 'extraindo';
+            } else if (dados.modo === 'verificar') {
+                estado_global.status = 'verificando';
+            } else if (dados.modo === 'solicitar_parada') {
+                estado_global.status = 'ocioso';
+            }
+            notificar_todos();
         }
 
         if (bot_socket_id) io.to(bot_socket_id).emit('comando_para_robo', dados);
-        notificar_todos();
     });
 
     // === SISTEMA DE LOGIN (PONTE FRONTEND -> ROBÔ) ===
