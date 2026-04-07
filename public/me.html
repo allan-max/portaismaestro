@@ -485,21 +485,27 @@
         });
 
         // 👇 Atualiza o número de PDFs na tela e esconde a caixa se for zero 👇
-        socket.on('atualizar_contagem_me', function(dados) {
-            const painel = document.getElementById('painel-progresso-me');
-            const spanQtd = document.getElementById('qtd-novos-me');
-            
-            if(spanQtd && painel) {
-                spanQtd.innerText = dados.quantidade;
-                
-                // Se for maior que 0, aparece. Se for 0, some!
-                if (dados.quantidade > 0) {
-                    painel.style.display = 'block';
-                } else {
-                    painel.style.display = 'none';
-                }
-            }
-        });
+socket.on('atualizar_contagem_me', function(dados) {
+    // Esse aviso vai aparecer se você apertar F12 (Console) no navegador, ótimo para testar!
+    console.log("Chegou contagem do ME:", dados.quantidade); 
+    
+    const painel = document.getElementById('painel-progresso-me');
+    const spanQtd = document.getElementById('qtd-novos-me');
+    
+    if(spanQtd && painel) {
+        spanQtd.innerText = dados.quantidade;
+        
+        // 👇 Converte a quantidade recebida para Número inteiro com segurança 👇
+        const quantidadeNumerica = parseInt(dados.quantidade) || 0;
+        
+        // Se for maior que 0, aparece. Se for 0, some!
+        if (quantidadeNumerica > 0) {
+            painel.style.display = 'block';
+        } else {
+            painel.style.display = 'none';
+        }
+    }
+});
 
     </script>
 </body>
