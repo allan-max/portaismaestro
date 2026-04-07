@@ -226,6 +226,12 @@ io.on('connection', (socket) => {
         } else if (dados.modo === 'desligar_robo') {
             estado_global.status = 'desligado';
             estado_global.portal_atual = null;
+        } 
+        // 👇 AS LINHAS QUE FALTAVAM PARA OS BOTÕES MUDAREM DE COR 👇
+        else if (dados.modo === 'extrair' || dados.modo === 'verificar' || dados.modo === 'responder') {
+            estado_global.status = dados.modo;
+        } else if (dados.modo === 'solicitar_parada') {
+            estado_global.status = 'ocioso';
         }
 
         if (bot_socket_id) io.to(bot_socket_id).emit('comando_para_robo', dados);
