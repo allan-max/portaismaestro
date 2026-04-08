@@ -336,6 +336,63 @@ socket.on('log_ponto', (dados) => {
     });
 });
 
+// =======================================================
+// ROTA: RECEBER EVENTOS DO COUPA E MANDAR PARA O ROBÔ
+// =======================================================
+app.post('/api/responder', upload.fields([{ name: 'datasheet' }, { name: 'dav' }]), (req, res) => {
+    try {
+        const sessionId = req.body.sessionId;
+        if (!cofreSessoes.has(sessionId)) return res.status(401).json({ error: "Sessão inválida" });
+
+        const evento = req.body.evento;
+        const precos = JSON.parse(req.body.precos || '[]');
+        const prazos = JSON.parse(req.body.prazos || '[]');
+        const origens = JSON.parse(req.body.origens || '[]');
+        const icms = JSON.parse(req.body.icms || '[]');
+
+        // Converte os Datasheets recebidos para Base64 (Para viajar via Socket.io)
+        const datasheets = [];
+        if (req.files && req.files['datasheet']) {
+            req.files['datasheet'].forEach(file => {
+                datasheets.push({ name: file.originalname, data: file.buffer.toString('base64') });
+            });
+        }
+
+        // Converte os DAVs recebidos para Base64
+        const davs = [];
+        if (req.files && req.files['dav']) {
+            req.files['dav'].forEach(file => {
+                davs.push({ name: file.originalname, data: file.buffer.toString('base64') });
+            });
+        }
+
+        // Atualiza a tela de todo mundo dizendo que o robô entrou em modo de resposta (Ocupado)
+        estado_global.status = 'respondendo';
+        io.to('frontend').emit('sincronizar_estado', { estado: estado_global, mensagem: `Evento ${evento} enviado para a fila!` });
+
+        // Manda o pacote completo pro Gerenciador Python local
+        if (bot_socket_id) {
+            io.to(bot_socket_id).emit('comando_para_robo', {
+                modo: 'responder',
+                portal: 'coupa',
+                evento: evento,
+                precos: precos,
+                prazos: prazos,
+                origens: origens,
+                icms: icms,
+                datasheets: datasheets,
+                davs: davs
+            });
+            res.json({ sucesso: true, mensagem: "Evento transmitido para o robô." });
+        } else {
+            res.status(503).json({ error: "Robô offline." });
+        }
+    } catch (error) {
+        console.error("Erro no /api/responder:", error);
+        res.status(500).json({ error: "Erro interno no servidor." });
+    }
+});
+
 // === GROQ IA (SEGURANÇA) ===
 const Groq = require('groq-sdk');
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
