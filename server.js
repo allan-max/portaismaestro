@@ -239,7 +239,7 @@ io.on('connection', (socket) => {
             } else if (dados.modo === 'verificar') {
                 estado_global.status = 'verificando';
             } else if (dados.modo === 'solicitar_parada') {
-                estado_global.status = 'ocioso';
+                estado_global.status = 'parando'; // 👇 CORRIGIDO
             }
             notificar_todos();
         }

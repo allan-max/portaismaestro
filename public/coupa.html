@@ -516,7 +516,21 @@
                     dot.classList.add("running");
                     txtStatus.innerHTML = '<i class="fa-solid fa-database fa-spin"></i> ROBÔ OCUPADO (FILA)';
                     btnExtrair.disabled = true; btnVerificar.disabled = true; btnAbrirRes.disabled = true; btnImprimir.disabled = true;
+                } else if (estado.status === 'respondendo' || estado.status === 'ocupado') {
+                    dot.classList.add("running");
+                    txtStatus.innerHTML = '<i class="fa-solid fa-database fa-spin"></i> ROBÔ OCUPADO (FILA)';
+                    btnExtrair.disabled = true; btnVerificar.disabled = true; btnAbrirRes.disabled = true; btnImprimir.disabled = true;
+                
+                // 👇 ADICIONE ESTE BLOCO INTEIRO AQUI 👇
+                } else if (estado.status === 'parando') {
+                    dot.classList.add("running");
+                    txtStatus.innerHTML = '<i class="fa-solid fa-hand"></i> FINALIZANDO CICLO ATUAL...';
+                    btnExtrair.className = 'btn-base'; 
+                    btnExtrair.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> AGUARDE...'; 
+                    btnExtrair.disabled = true;
+                    btnVerificar.disabled = true; btnAbrirRes.disabled = true; btnImprimir.disabled = true;
                 }
+                // 👆 -------------------------------- 👆
             }
         });
 
@@ -774,11 +788,24 @@
         });
   
         // =================================================================
-        // 1. MENSAGENS DE SISTEMA (GERENCIADOR) -> VÃO PARA A BARRA SUPERIOR
+        // 1. MENSAGENS DE SISTEMA (GERENCIADOR) -> VÃO PARA A BARRA SUPERIOR E TERMINAL
         // =================================================================
         socket.on('relatar_progresso', function(dados) {
             if (dados.mensagem) {
+                // 1. Atualiza a barra superior pequena
                 document.getElementById('log').innerText = dados.mensagem; 
+                
+                // 2. 👇 ADICIONADO: Joga a mensagem no Terminal Preto também! 👇
+                const terminal = document.getElementById('terminal-logs');
+                if (terminal) {
+                    terminal.innerHTML += `<div style="margin-top: 4px; color: #cbd5e1;">> ${dados.mensagem}</div>`;
+                    
+                    // Limpa mensagens antigas para não pesar o navegador
+                    while (terminal.childElementCount > 100) terminal.removeChild(terminal.firstChild);
+                    
+                    // Rola o terminal automaticamente para o fundo
+                    terminal.scrollTop = terminal.scrollHeight; 
+                }
             }
         });
 
