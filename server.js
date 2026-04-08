@@ -135,6 +135,17 @@ io.on('connection', (socket) => {
         io.to('frontend').emit('sincronizar_estado', { estado: estado_global, mensagem: "Robô operacional e conectado!" });
     });
 
+    // Dentro de io.on('connection', (socket) => { ... })
+socket.on('comando_ponto', (dados) => {
+    if (bot_socket_id) {
+        io.to(bot_socket_id).emit('comando_ponto_robo', dados);
+    }
+});
+
+socket.on('log_ponto', (dados) => {
+    io.to('frontend').emit('atualizar_log_ponto', dados);
+});
+
     // === PONTES DE CAPTCHA (ROBÔ <-> SITE) ===
     socket.on('imagem_captcha_do_robo', (dados) => {
         // Envia a imagem do desafio para todos os navegadores na sala frontend
