@@ -792,9 +792,9 @@ if (localStorage.getItem('maestro_session')) {
 // 🕵️ GATILHOS SECRETOS (MODO CHEAT CODE)
 // ==========================================
 
-const ADMIN_EMAIL = 'admin@venturainformatica.com';
+const ADMIN_EMAIL = 'admin@venturainformatica.com.br';
 
-// Gatilho 1: Digitar "ponto" no teclado (PC) BLINDADO
+// Gatilho 1: Digitar "ponto" no teclado (PC) 100% SILENCIOSO
 let bufferTeclado = '';
 const palavraSecreta = 'ponto';
 
@@ -802,27 +802,24 @@ document.addEventListener('keydown', (e) => {
     // 1. Ignora se estiver digitando senhas ou e-mails
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return; 
     
-    // 2. Só aceita a tecla se for uma única letra (ignora Shift, CapsLock, Ctrl)
+    // 2. Só aceita a tecla se for uma única letra
     if (e.key.length === 1) {
         bufferTeclado += e.key.toLowerCase();
         
-        // Mantém o buffer sempre com 5 letras
+        // Mantém o buffer com 5 letras
         if (bufferTeclado.length > palavraSecreta.length) {
             bufferTeclado = bufferTeclado.slice(-palavraSecreta.length);
         }
         
-        // 3. Verifica se formou a palavra
+        // 3. Verifica a palavra
         if (bufferTeclado === palavraSecreta) {
-            // Pega o usuário logado e converte tudo para minúsculo para evitar erros de case-sensitive
             const usuarioAtual = (localStorage.getItem('maestro_user') || '').trim().toLowerCase();
             
             if (usuarioAtual === ADMIN_EMAIL) {
                 document.getElementById('painel-ponto').style.display = 'block';
                 bufferTeclado = ''; // Reseta após abrir
-                console.log("✅ Acesso de Ponto Liberado!");
             } else {
-                console.warn(`🛑 Palavra secreta digitada, mas o usuário atual é: '${usuarioAtual}' e não o admin.`);
-                bufferTeclado = ''; // Reseta para não travar
+                bufferTeclado = ''; // Apenas reseta silenciosamente se não for o admin
             }
         }
     }
