@@ -882,8 +882,8 @@ socket.on('atualizar_log_ponto', (dados) => {
 let cliquesLogo = 0;
 let timerCliquesLogo;
 
-// Procura a logo principal do site (ajuste o seletor se a sua logo usar outra classe)
-const logoGrande = document.querySelector('.logo h1') || document.querySelector('.logo');
+// 👇 AGORA ELE PROCURA EXATAMENTE PELA SUA IMG-LOGO (seja class ou id) 👇
+const logoGrande = document.querySelector('.img-logo') || document.getElementById('img-logo');
 
 if (logoGrande) {
     // Muda o cursor para parecer clicável
@@ -903,6 +903,9 @@ if (logoGrande) {
             cliquesLogo = 0;
         }, 1500);
     });
+} else {
+    // Só pra te avisar no F12 caso ele ainda não ache a imagem
+    console.log("EASTER EGG: Não encontrei a logo para colocar o gatilho.");
 }
 </script>
 </body>
