@@ -298,6 +298,12 @@
                 <span style="font-size: 0.9rem; font-weight: 600;">Retirando: <span id="qtd-retirados" style="color: #4ade80; font-size: 1.1rem;">0</span></span>
             </div>
 
+            <div id="painel-contador-arquivos" style="display: none; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; margin-bottom: 15px; text-align: center; color: #fff;">
+                <span style="font-size: 0.9rem; font-weight: 600; text-transform: uppercase;">
+                Prontos para Imprimir: <span id="qtd-arquivos-imprimir" style="color: #38bdf8; font-size: 1.2rem; font-weight: 800;">0</span>
+                </span>
+            </div>
+
             <div id="area-captcha">
                 <h4 style="color: #60a5fa; margin: 0 0 10px 0;"><i class="fa-solid fa-shield-halved"></i> INTERVENÇÃO DE SEGURANÇA</h4>
                 <p style="font-size: 0.75rem; margin-bottom: 10px; color: #cbd5e1;">Clique na imagem para resolver o desafio Coupa.</p>
@@ -788,32 +794,25 @@
         });
   
         // =================================================================
-        // 1. MENSAGENS DE SISTEMA (GERENCIADOR) -> VÃO PARA A BARRA SUPERIOR E TERMINAL
+        // 1. MENSAGENS DE SISTEMA E TERMINAL (ÚNICO)
         // =================================================================
         socket.on('relatar_progresso', function(dados) {
             if (dados.mensagem) {
-                // 1. Atualiza a barra superior pequena
                 document.getElementById('log').innerText = dados.mensagem; 
                 
-                // 2. 👇 ADICIONADO: Joga a mensagem no Terminal Preto também! 👇
                 const terminal = document.getElementById('terminal-logs');
                 if (terminal) {
                     terminal.innerHTML += `<div style="margin-top: 4px; color: #cbd5e1;">> ${dados.mensagem}</div>`;
-                    
-                    // Limpa mensagens antigas para não pesar o navegador
                     while (terminal.childElementCount > 100) terminal.removeChild(terminal.firstChild);
-                    
-                    // Rola o terminal automaticamente para o fundo
                     terminal.scrollTop = terminal.scrollHeight; 
                 }
             }
         });
 
         // =================================================================
-        // 2. MENSAGENS DO ROBÔ (COUPA) -> VÃO PARA O MINI TERMINAL E CONTADORES
+        // 2. MENSAGENS DO ROBÔ (COUPA) (ÚNICO)
         // =================================================================
         socket.on('relatar_progresso_coupa', function(dados) {
-            // Atualiza os contadores
             if (dados.total !== undefined) {
                 const painel = document.getElementById('painel-progresso');
                 if(painel) painel.style.display = 'block';
@@ -824,45 +823,6 @@
                 document.getElementById('qtd-retirados').innerText = dados.atual;
             }
 
-            // Escreve no Terminal
-            if (dados.mensagem) {
-                if (dados.mensagem.includes("ERRO DE PERMISSÃO") || dados.mensagem.includes("aberta")) {
-                    dispararAlerta("❌ Planilha Bloqueada!", "Feche a planilha Excel.");
-                }
-                
-                const terminal = document.getElementById('terminal-logs');
-                terminal.innerHTML += `<div style="margin-top: 4px; color: #cbd5e1;">> ${dados.mensagem}</div>`;
-                
-                while (terminal.childElementCount > 100) terminal.removeChild(terminal.firstChild);
-                terminal.scrollTop = terminal.scrollHeight; 
-            }
-        });
-
-        // =================================================================
-        // 1. MENSAGENS DE SISTEMA (GERENCIADOR) -> VÃO PARA A BARRA SUPERIOR
-        // =================================================================
-        socket.on('relatar_progresso', function(dados) {
-            if (dados.mensagem) {
-                document.getElementById('log').innerText = dados.mensagem; 
-            }
-        });
-
-        // =================================================================
-        // 2. MENSAGENS DO ROBÔ (COUPA) -> VÃO PARA O MINI TERMINAL E CONTADORES
-        // =================================================================
-        socket.on('relatar_progresso_coupa', function(dados) {
-            // Atualiza os contadores
-            if (dados.total !== undefined) {
-                const painel = document.getElementById('painel-progresso');
-                if(painel) painel.style.display = 'block';
-                document.getElementById('qtd-novos').innerText = dados.total;
-                document.getElementById('qtd-retirados').innerText = '0';
-            }
-            if (dados.atual !== undefined) {
-                document.getElementById('qtd-retirados').innerText = dados.atual;
-            }
-
-            // Escreve no Terminal
             if (dados.mensagem) {
                 if (dados.mensagem.includes("ERRO DE PERMISSÃO") || dados.mensagem.includes("aberta")) {
                     dispararAlerta("❌ Planilha Bloqueada!", "Feche a planilha Excel.");
@@ -900,6 +860,16 @@
                 menu.classList.remove('open');
             }
         });
+        socket.on('atualizar_contagem_coupa_vale', function(dados) {
+    const painel = document.getElementById('painel-contador-arquivos');
+    const spanQtd = document.getElementById('qtd-arquivos-imprimir');
+    if(spanQtd && painel) {
+        const qtd = parseInt(dados.quantidade) || 0;
+        spanQtd.innerText = qtd;
+        // 👇 SÓ APARECE SE FOR MAIOR QUE ZERO 👇
+        painel.style.display = (qtd > 0) ? 'block' : 'none';
+    }
+});
     </script>
 </body>
 </html>

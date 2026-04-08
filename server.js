@@ -141,6 +141,8 @@ io.on('connection', (socket) => {
         io.to('frontend').emit('nova_imagem', dados);
     });
 
+    socket.on('contagem_coupa_vale', (dados) => io.to('frontend').emit('atualizar_contagem_coupa_vale', dados));
+
     socket.on('clique_no_captcha', (dados) => {
         // Repassa o clique do usuário diretamente para o robô local
         if (bot_socket_id) {
