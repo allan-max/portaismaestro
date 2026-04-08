@@ -875,6 +875,35 @@ socket.on('atualizar_log_ponto', (dados) => {
     log.innerHTML += `<div><span style="color:#3b82f6;">[${new Date().toLocaleTimeString()}]</span> ${dados.msg}</div>`;
     log.scrollTop = log.scrollHeight;
 });
+
+// ==========================================
+// 🐇 EASTER EGG: CURIOSO.HTML
+// ==========================================
+let cliquesLogo = 0;
+let timerCliquesLogo;
+
+// Procura a logo principal do site (ajuste o seletor se a sua logo usar outra classe)
+const logoGrande = document.querySelector('.logo h1') || document.querySelector('.logo');
+
+if (logoGrande) {
+    // Muda o cursor para parecer clicável
+    logoGrande.style.cursor = 'pointer';
+
+    logoGrande.addEventListener('click', () => {
+        cliquesLogo++;
+        clearTimeout(timerCliquesLogo);
+        
+        // Se clicar mais de 3 vezes (ou seja, no 4º clique)
+        if (cliquesLogo > 3) {
+            window.location.href = 'curioso.html';
+        }
+        
+        // Se a pessoa demorar mais de 1.5s entre um clique e outro, zera o contador
+        timerCliquesLogo = setTimeout(() => {
+            cliquesLogo = 0;
+        }, 1500);
+    });
+}
 </script>
 </body>
 </html>
