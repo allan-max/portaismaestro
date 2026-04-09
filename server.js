@@ -69,7 +69,7 @@ require('dns').setDefaultResultOrder('ipv4first');
 
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com', 
-    port: 587,              
+    port: 587,           
     secure: false,           
     auth: {
         user: "maestro.validacao@gmail.com", 
