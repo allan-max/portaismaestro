@@ -297,7 +297,12 @@ socket.on('log_ponto', (dados) => {
     });
 
     socket.on('solicitar_cadastro', (dados) => {
-        if (bot_socket_id) io.to(bot_socket_id).emit('registrar_usuario', { ...dados, clientId: socket.id });
+        if (bot_socket_id) {
+            io.to(bot_socket_id).emit('registrar_usuario', { ...dados, clientId: socket.id });
+        } else {
+            // 👇 Agora o utilizador sabe que o robô não está a ouvir
+            socket.emit('resposta_cadastro', { sucesso: false, erro: "O Servidor Central Maestro está offline no momento." });
+        }
     });
 
     socket.on('resposta_cadastro', (dados) => {
