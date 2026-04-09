@@ -441,7 +441,15 @@ app.post('/api/chat', async (req, res) => {
     }
 });
 
+// === ROTA DE SAÚDE (HEALTH CHECK) PARA O RENDER ===
+// O Render fica acessando essa rota para saber se o seu servidor não travou!
+app.get('/', (req, res) => {
+    res.status(200).send("MAESTRO Cloud Server OK!");
+});
+
 const PORT = process.env.PORT || 8000;
-server.listen(PORT, () => {
+
+// 👇 O '0.0.0.0' AQUI É A CHAVE MÁGICA PARA O RENDER FUNCIONAR 👇
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`🛡️ Servidor Protegido rodando na porta ${PORT}`);
 });
