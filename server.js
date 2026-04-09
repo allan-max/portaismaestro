@@ -67,18 +67,6 @@ const cofreSessoes = new Map();
 
 require('dns').setDefaultResultOrder('ipv4first');
 
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com', 
-    port: 587,           
-    secure: false,           
-    auth: {
-        user: "maestro.validacao@gmail.com", 
-        pass: process.env.GMAIL_PASS || "Aaibumpjuhuhvhxfc"     
-    }, // <-- Certifique-se de colocar esta vírgula aqui
-    tls: {
-        rejectUnauthorized: false // 🔓 Permite a conexão em servidores cloud
-    }
-});
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
@@ -305,34 +293,7 @@ socket.on('log_ponto', (dados) => {
         }
     });
 
-    socket.on('resposta_cadastro', (dados) => {
-        io.to(dados.clientId).emit('resposta_cadastro', dados);
-    });
 
-    // 👇 O CARTEIRO (COM RASTREADORES DE LOG) 👇
-    socket.on('disparar_email_verificacao', async (dados) => {
-        console.log(`[CARTEIRO] 📩 Recebi a ordem do Python para: ${dados.email}`);
-        const link = `https://portaismaestro-ved1.onrender.com/index.html?action=verify&token=${dados.token}`;
-        
-        try {
-            console.log(`[CARTEIRO] ⏳ Tentando conectar ao Gmail...`);
-            let info = await transporter.sendMail({
-                from: '"Maestro Suporte" <maestro.validacao@gmail.com>',
-                to: dados.email,
-                subject: 'MAESTRO - Confirme o seu E-mail',
-                html: `<div style="font-family: Arial; padding: 20px; background: #0f1115; color: #fff; text-align: center; border-radius: 8px;">
-                        <h2 style="color: #3b82f6;">MAESTRO CORE</h2>
-                        <p>Você solicitou acesso ao sistema Maestro. Clique no link para ativar a sua conta:</p>
-                        <a href="${link}" style="background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 15px; font-weight: bold;">ATIVAR A MINHA CONTA</a>
-                      </div>`
-            });
-            console.log(`[CARTEIRO] ✅ E-mail enviado com sucesso! ID do Google: ${info.messageId}`);
-            io.to(dados.clientId).emit('resposta_cadastro', { sucesso: true });
-        } catch(e) {
-            console.error("[CARTEIRO] ❌ Erro fatal no envio pelo Gmail:", e);
-            io.to(dados.clientId).emit('resposta_cadastro', { sucesso: false, erro: 'Falha na conexão com o Gmail no Render.' });
-        }
-    });
 
     socket.on('validar_token_email', (dados) => {
         if (bot_socket_id) io.to(bot_socket_id).emit('verificar_token_python', { ...dados, clientId: socket.id });
