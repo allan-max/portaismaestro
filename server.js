@@ -309,11 +309,14 @@ socket.on('log_ponto', (dados) => {
         io.to(dados.clientId).emit('resposta_cadastro', dados);
     });
 
-    // 👇 O CARTEIRO: Ouve o Python e dispara o e-mail de verdade! 👇
+    // 👇 O CARTEIRO (COM RASTREADORES DE LOG) 👇
     socket.on('disparar_email_verificacao', async (dados) => {
+        console.log(`[CARTEIRO] 📩 Recebi a ordem do Python para: ${dados.email}`);
         const link = `https://portaismaestro-ved1.onrender.com/index.html?action=verify&token=${dados.token}`;
+        
         try {
-            await transporter.sendMail({
+            console.log(`[CARTEIRO] ⏳ Tentando conectar ao Gmail...`);
+            let info = await transporter.sendMail({
                 from: '"Maestro Suporte" <maestro.validacao@gmail.com>',
                 to: dados.email,
                 subject: 'MAESTRO - Confirme o seu E-mail',
@@ -323,10 +326,10 @@ socket.on('log_ponto', (dados) => {
                         <a href="${link}" style="background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 15px; font-weight: bold;">ATIVAR A MINHA CONTA</a>
                       </div>`
             });
-            // Avisa o site que o email foi enviado com sucesso!
+            console.log(`[CARTEIRO] ✅ E-mail enviado com sucesso! ID do Google: ${info.messageId}`);
             io.to(dados.clientId).emit('resposta_cadastro', { sucesso: true });
         } catch(e) {
-            console.error("Erro no Gmail:", e);
+            console.error("[CARTEIRO] ❌ Erro fatal no envio pelo Gmail:", e);
             io.to(dados.clientId).emit('resposta_cadastro', { sucesso: false, erro: 'Falha na conexão com o Gmail no Render.' });
         }
     });
