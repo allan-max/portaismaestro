@@ -386,10 +386,11 @@
     <script>
         const sessionAtual = localStorage.getItem('maestro_session');
 
-        // Só tenta conectar enviando o crachá real
         const socket = io({ 
-            auth: { sessionId: sessionAtual } 
-        });
+    auth: { sessionId: sessionAtual },
+    transports: ['websocket'],
+    upgrade: false
+});
 
         // Removemos o 'connect_error'. Agora ouvimos a expulsão amigável do servidor:
 socket.on("sessao_invalida", () => {

@@ -350,7 +350,9 @@
         const sessionAtual = localStorage.getItem('maestro_session'); 
 
         const socket = io({ 
-            auth: { sessionId: sessionAtual } 
+            auth: { sessionId: sessionAtual },
+            transports: ['websocket'],
+            upgrade: false
         });
         let isRunning = false;
 

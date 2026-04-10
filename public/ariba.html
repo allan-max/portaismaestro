@@ -211,7 +211,11 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const sessionAtual = localStorage.getItem('maestro_session');
-        const socket = io({ auth: { sessionId: sessionAtual } });
+        const socket = io({ 
+            auth: { sessionId: sessionAtual },
+            transports: ['websocket'],
+            upgrade: false
+        });
         const MEU_PORTAL = 'ariba';
 
         socket.on("sessao_invalida", () => {
