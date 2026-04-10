@@ -20,11 +20,12 @@ const app = express();
 const server = http.createServer(app);
 
 // 👇 O SONAR (Adicione este bloco) 👇
+/*
 app.use((req, res, next) => {
     console.log(`[SONAR] 🔎 Alguém está a tentar entrar: ${req.method} ${req.url}`);
     next(); // Passa a visita para a próxima etapa
 });
-
+*/
 
 // 🛡️ CONFIGURAÇÃO DE SEGURANÇA GLOBAL
 app.use(helmet({
