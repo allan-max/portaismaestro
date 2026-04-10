@@ -7,6 +7,8 @@ const nodemailer = require('nodemailer');
 const helmet = require('helmet');
 const cors = require('cors');
 const crypto = require('crypto');
+const fs = require('fs');
+const os = require('os');
 
 require('dotenv').config();
 
@@ -60,10 +62,19 @@ function decrypt(cipherText) {
     }
 }
 
-const storage = multer.memoryStorage();
+// 💾 NOVO SISTEMA: Salva no HD temporário em vez de explodir a RAM
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, os.tmpdir()); // Guarda na pasta oculta /tmp do servidor
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + '-' + file.originalname);
+    }
+});
+
 const upload = multer({ 
     storage: storage,
-    limits: { fileSize: 10 * 1024 * 1024 } 
+    limits: { fileSize: 10 * 1024 * 1024 } // Limite de 10MB por arquivo
 });
 
 const { v4: uuidv4 } = require('uuid');
@@ -351,21 +362,30 @@ app.post('/api/responder', upload.fields([{ name: 'datasheet' }, { name: 'dav' }
         const origens = JSON.parse(req.body.origens || '[]');
         const icms = JSON.parse(req.body.icms || '[]');
 
-        // Converte os Datasheets recebidos para Base64 (Para viajar via Socket.io)
-        const datasheets = [];
-        if (req.files && req.files['datasheet']) {
-            req.files['datasheet'].forEach(file => {
-                datasheets.push({ name: file.originalname, data: file.buffer.toString('base64') });
-            });
-        }
+        // FUNÇÃO NOVA: Lê do Disco HD, converte e apaga a prova do crime
+        const processarArquivos = (filesArray) => {
+            const result = [];
+            if (filesArray) {
+                filesArray.forEach(file => {
+                    try {
+                        // 1. Lê o arquivo direto do HD
+                        const fileData = fs.readFileSync(file.path);
+                        // 2. Transforma em Base64 para o Python
+                        result.push({ name: file.originalname, data: fileData.toString('base64') });
+                        
+                        // 3. Apaga o arquivo do HD para manter o servidor limpo!
+                        fs.unlinkSync(file.path);
+                    } catch (err) {
+                        console.error(`Erro ao processar arquivo ${file.originalname}:`, err);
+                    }
+                });
+            }
+            return result;
+        };
 
-        // Converte os DAVs recebidos para Base64
-        const davs = [];
-        if (req.files && req.files['dav']) {
-            req.files['dav'].forEach(file => {
-                davs.push({ name: file.originalname, data: file.buffer.toString('base64') });
-            });
-        }
+        // Transforma os Datasheets e DAVs usando a nova função
+        const datasheets = processarArquivos(req.files['datasheet']);
+        const davs = processarArquivos(req.files['dav']);
 
         // Atualiza a tela de todo mundo dizendo que o robô entrou em modo de resposta (Ocupado)
         estado_global.status = 'respondendo';
@@ -417,18 +437,15 @@ app.post('/api/chat', async (req, res) => {
     }
 });
 
-// === ROTA DE SAÚDE (HEALTH CHECK) PARA O RENDER ===
+// === ROTA DE SAÚDE EXCLUSIVA PARA O RENDER ===
 // O Render fica acessando essa rota para saber se o seu servidor não travou!
-app.get('/', (req, res) => {
+app.get('/health', (req, res) => {
     res.status(200).send("MAESTRO Cloud Server OK!");
 });
 
-// === ROTA DE SAÚDE EXCLUSIVA PARA O RENDER ===
-app.get('/health', (req, res) => {
-    res.status(200).send("OK");
-});
-
 const PORT = process.env.PORT || 8000;
+
+// 👇 O '0.0.0.0' AQUI É A CHAVE MÁGICA PARA O RENDER FUNCIONAR 👇
 server.listen(PORT, '0.0.0.0', () => {
-    console.log(`🛡️ Servidor Cloud a rodar na porta ${PORT}`);
+    console.log(`🛡️ Servidor Protegido rodando na porta ${PORT}`);
 });
