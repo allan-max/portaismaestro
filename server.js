@@ -10,6 +10,10 @@ const crypto = require('crypto');
 
 require('dotenv').config();
 
+// 🛡️ AIRBAG ANTI-CRASH (Impede o servidor de morrer por erros invisíveis)
+process.on('uncaughtException', (err) => console.error('Erro Crítico (Não tratado):', err));
+process.on('unhandledRejection', (err) => console.error('Promessa Rejeitada:', err));
+
 const app = express();
 const server = http.createServer(app);
 
@@ -171,7 +175,10 @@ socket.on('log_ponto', (dados) => {
             if (dados.sucesso) estado_global.status = 'ocioso';
             else { estado_global.status = 'desligado'; estado_global.portal_atual = null; }
         } else {
-            estado_global.status = 'ocioso';
+            // 👇 O SEGREDO AQUI: O fantasma não pode ressuscitar o status! 👇
+            if (estado_global.status !== 'desligado') {
+                estado_global.status = 'ocioso';
+            }
         }
         io.to('frontend').emit('tarefa_concluida', dados);
         notificar_todos();
@@ -416,9 +423,12 @@ app.get('/', (req, res) => {
     res.status(200).send("MAESTRO Cloud Server OK!");
 });
 
-const PORT = process.env.PORT || 8000;
+// === ROTA DE SAÚDE EXCLUSIVA PARA O RENDER ===
+app.get('/health', (req, res) => {
+    res.status(200).send("OK");
+});
 
-// 👇 O '0.0.0.0' AQUI É A CHAVE MÁGICA PARA O RENDER FUNCIONAR 👇
+const PORT = process.env.PORT || 8000;
 server.listen(PORT, '0.0.0.0', () => {
-    console.log(`🛡️ Servidor Protegido rodando na porta ${PORT}`);
+    console.log(`🛡️ Servidor Cloud a rodar na porta ${PORT}`);
 });
