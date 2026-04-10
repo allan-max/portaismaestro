@@ -229,11 +229,11 @@
     <div class="fundo-escuro"></div>
 
     <nav class="floating-navbar">
-        <a href="coupa.html" class="nav-item"><i class="fa-solid fa-cube"></i> <span>Coupa</span></a>
-        <a href="vale.html" class="nav-item"><i class="fa-solid fa-helmet-safety"></i> <span>Vale</span></a>
-        <a href="me.html" class="nav-item"><i class="fa-solid fa-shopping-cart"></i> <span>ME</span></a>
-        <a href="findes.html" class="nav-item active nav-findes"><i class="fa-solid fa-industry"></i> <span>Findes</span></a>
-        <a href="ariba.html" class="nav-item"><i class="fa-solid fa-cloud"></i> <span>Ariba</span></a>
+        <a href="javascript:void(0)" onclick="irPara('coupa.html')" class="nav-item"><i class="fa-solid fa-cube"></i> <span>Coupa</span></a>
+        <a href="javascript:void(0)" onclick="irPara('vale.html')" class="nav-item"><i class="fa-solid fa-helmet-safety"></i> <span>Vale</span></a>
+        <a href="javascript:void(0)" onclick="irPara('me.html')" class="nav-item"><i class="fa-solid fa-shopping-cart"></i> <span>ME</span></a>
+        <a href="javascript:void(0)" onclick="irPara('findes.html')" class="nav-item active nav-findes"><i class="fa-solid fa-industry"></i> <span>Findes</span></a>
+        <a href="javascript:void(0)" onclick="irPara('ariba.html')" class="nav-item"><i class="fa-solid fa-cloud"></i> <span>Ariba</span></a>
         <a href="index.html" class="nav-item nav-voltar"><i class="fa-solid fa-arrow-left"></i> <span>Voltar</span></a>
     </nav>
 
@@ -454,6 +454,17 @@
             
             addLog(`✅ Arquivo '${dados.nome}' transferido para os seus Downloads!`);
         });
+
+        // ⚡ Função de Troca de Módulo Sem Erro 502
+function irPara(url) {
+    if (typeof socket !== 'undefined' && socket.connected) {
+        socket.disconnect(); // Fecha a conexão VIP com educação
+    }
+    // Pequena pausa de 100ms para o Render limpar a memória antes de mudar
+    setTimeout(() => {
+        window.location.href = url;
+    }, 100);
+}
     </script>
 </body>
 </html>

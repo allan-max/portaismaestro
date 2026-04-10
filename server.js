@@ -90,7 +90,10 @@ const cofreSessoes = new Map();
 require('dns').setDefaultResultOrder('ipv4first');
 
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+    maxAge: '1d', // O navegador guarda imagens e CSS por 1 dia inteiro
+    etag: false
+}));
 app.use(express.json());
 
 let estado_global = { status: 'desligado', portal_atual: null, fila_pendente: [], tarefas_concluidas: [] };
