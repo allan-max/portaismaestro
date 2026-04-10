@@ -815,10 +815,18 @@
             }
         });
   
-        // 1. MENSAGENS DE SISTEMA (GERENCIADOR) -> VÃO PARA A BARRA SUPERIOR
+        // 1. MENSAGENS DE SISTEMA (GERENCIADOR) -> VÃO PARA A BARRA SUPERIOR E TERMINAL
         socket.on('relatar_progresso', function(dados) {
             if (dados.mensagem) {
                 document.getElementById('log').innerText = dados.mensagem; 
+                
+                // 👇 AGORA AS MENSAGENS TAMBÉM DESCEM PARA O TERMINAL PRETO 👇
+                const terminal = document.getElementById('terminal-logs');
+                if (terminal) {
+                    terminal.innerHTML += `<div style="margin-top: 4px; color: #cbd5e1;">> ${dados.mensagem}</div>`;
+                    while (terminal.childElementCount > 100) terminal.removeChild(terminal.firstChild);
+                    terminal.scrollTop = terminal.scrollHeight; 
+                }
             }
         });
 
