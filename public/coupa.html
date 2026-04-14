@@ -429,7 +429,18 @@
             const btnVerificar = document.getElementById('btn-verificar');
             const btnAbrirRes = document.getElementById('btn-abrir-res');
             
-            btnExtrair.className = 'btn-base'; btnExtrair.innerHTML = '<i class="fa-solid fa-download"></i> Extrair'; btnExtrair.disabled = false; btnExtrair.onclick = function() { executarTarefa('extrair'); };
+            // 👇 APLICA A MEMÓRIA DO BOTÃO EXTRAIR 👇
+            if (localStorage.getItem('coupa_extracting') === 'true') {
+                btnExtrair.className = 'btn-base btn-stop'; 
+                btnExtrair.innerHTML = '<i class="fa-solid fa-hand"></i> PARAR EXTRAÇÃO'; 
+                btnExtrair.disabled = false; 
+                btnExtrair.onclick = function() { solicitarParada(this); };
+            } else {
+                btnExtrair.className = 'btn-base'; 
+                btnExtrair.innerHTML = '<i class="fa-solid fa-download"></i> Extrair'; 
+                btnExtrair.disabled = false; 
+                btnExtrair.onclick = function() { executarTarefa('extrair'); };
+            }
             btnVerificar.className = 'btn-base'; btnVerificar.innerHTML = '<i class="fa-solid fa-check-double"></i> Verificar'; btnVerificar.disabled = false; btnVerificar.onclick = function() { executarTarefa('verificar'); };
             btnAbrirRes.className = 'btn-base'; btnAbrirRes.style.cssText = "grid-column: span 2; background: rgba(59, 130, 246, 0.15); border-color: #3b82f6; color: #60a5fa;"; btnAbrirRes.innerHTML = '<i class="fa-solid fa-bolt"></i> Responder Eventos'; btnAbrirRes.disabled = false; btnAbrirRes.onclick = function() { mostrarFormResposta(); };
 
@@ -579,6 +590,7 @@
 
         function desligarRobo() {
             if(confirm("🚨 Tem a certeza de que deseja encerrar o robô e fechar o navegador?")) {
+                localStorage.removeItem('coupa_extracting');
                 socket.emit('comando_direto', { modo: 'desligar_robo', portal: 'coupa' });
                 const btnLigar = document.getElementById('btn-ligar');
                 btnLigar.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A ENCERRAR...';
@@ -587,13 +599,33 @@
         }
 
         function ligarRobo() { socket.emit('comando_direto', { modo: 'ligar_robo', portal: 'coupa' }); }
-        function executarTarefa(modo) { socket.emit('comando_direto', { modo: modo, portal: 'coupa' }); }
+        
+        function executarTarefa(modo) { 
+            if (modo === 'extrair') {
+                if (confirm("Deseja extrair os dados dos eventos disponíveis?")) {
+                    socket.emit('comando_direto', { modo: modo, portal: 'coupa' }); 
+                    localStorage.setItem('coupa_extracting', 'true'); // GRAVA NA MEMÓRIA
+                    
+                    const btnExtrair = document.getElementById('btn-extrair');
+                    if (btnExtrair) {
+                        btnExtrair.className = 'btn-base btn-stop'; 
+                        btnExtrair.innerHTML = '<i class="fa-solid fa-hand"></i> PARAR EXTRAÇÃO'; 
+                        btnExtrair.onclick = function() { solicitarParada(this); };
+                    }
+                }
+            } else {
+                socket.emit('comando_direto', { modo: modo, portal: 'coupa' }); 
+            }
+        }
         
         function solicitarParada(btnElement) { 
-            socket.emit('comando_direto', { modo: 'solicitar_parada', portal: 'coupa' }); 
-            if(btnElement) {
-                btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> FORÇANDO PARADA...'; 
-                btnElement.disabled = true; 
+            if (confirm("Deseja parar a extração atual de forma segura? O robô finalizará o evento atual e irá parar.")) {
+                socket.emit('comando_direto', { modo: 'parar_extracao', portal: 'coupa' }); 
+                localStorage.removeItem('coupa_extracting'); // LIMPA A MEMÓRIA
+                if(btnElement) {
+                    btnElement.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> PARANDO...'; 
+                    btnElement.disabled = true; 
+                }
             }
         }
         function mostrarFormResposta() { document.getElementById('area-resposta').style.display = 'block'; }
@@ -792,7 +824,21 @@
         socket.on('tarefa_concluida', function(dados) {
             if (dados.evento === 'Lote de Extração' && dados.sucesso) {
                 dispararAlerta("✅ Concluído", "Extração salva na planilha!");
+            }socket.on('tarefa_concluida', function(dados) {
+            if (dados.evento === 'Lote de Extração') {
+                localStorage.removeItem('coupa_extracting'); // Limpa a memória
+                
+                const btnExtrair = document.getElementById('btn-extrair');
+                if (btnExtrair) {
+                    btnExtrair.className = 'btn-base'; 
+                    btnExtrair.innerHTML = '<i class="fa-solid fa-download"></i> Extrair'; 
+                    btnExtrair.disabled = false; 
+                    btnExtrair.onclick = function() { executarTarefa('extrair'); };
+                }
+                
+                if (dados.sucesso) dispararAlerta("✅ Concluído", "Extração salva na planilha!");
             }
+        });
         });
   
         // =================================================================
