@@ -303,9 +303,9 @@
                 <i class="fa-solid fa-power-off"></i> Iniciar Servidor
             </button>
 
-            <div id="painel-progresso" style="display: none; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; margin-bottom: 15px; text-align: center; color: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
-                <span style="font-size: 0.9rem; font-weight: 600;">Novos: <span id="qtd-novos" style="color: #38bdf8; font-size: 1.1rem;">0</span></span> &nbsp;&nbsp;|&nbsp;&nbsp;
-                <span style="font-size: 0.9rem; font-weight: 600;">Retirando: <span id="qtd-retirados" style="color: #4ade80; font-size: 1.1rem;">0</span></span>
+            <div id="painel-progresso-vale" style="display: none; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; margin-bottom: 15px; text-align: center; color: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+                <span style="font-size: 0.9rem; font-weight: 600;">Eventos Novos: <span id="qtd-total-vale" style="color: #38bdf8; font-size: 1.1rem;">0</span></span> &nbsp;&nbsp;|&nbsp;&nbsp;
+                <span style="font-size: 0.9rem; font-weight: 600;">Extraindo: <span id="qtd-atual-vale" style="color: #4ade80; font-size: 1.1rem;">0</span></span>
             </div>
 
             <div id="painel-contador-arquivos" style="display: none; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; margin-bottom: 15px; text-align: center; color: #fff;">
@@ -810,17 +810,30 @@
         }
 
         socket.on('tarefa_concluida', function(dados) {
+            document.getElementById('painel-progresso-vale').style.display = 'none';
             if (dados.evento === 'Lote de Extração' && dados.sucesso) {
                 dispararAlerta("✅ Concluído", "Extração salva na planilha!");
             }
         });
   
         // 1. MENSAGENS DE SISTEMA (GERENCIADOR) -> VÃO PARA A BARRA SUPERIOR E TERMINAL
+        // ATUALIZADO: Agora mostra as mensagens e também os contadores da Vale
         socket.on('relatar_progresso', function(dados) {
+            // 1. Atualiza os Números (Total e Progresso)
+            if (dados.total !== undefined) {
+                const painel = document.getElementById('painel-progresso-vale');
+                if(painel) painel.style.display = 'block'; // Mostra o painel quando começa
+                document.getElementById('qtd-total-vale').innerText = dados.total;
+                document.getElementById('qtd-atual-vale').innerText = '0';
+            }
+            if (dados.atual !== undefined) {
+                document.getElementById('qtd-atual-vale').innerText = dados.atual;
+            }
+
+            // 2. Atualiza os Textos (Barra de Status e Terminal)
             if (dados.mensagem) {
                 document.getElementById('log').innerText = dados.mensagem; 
                 
-                // 👇 AGORA AS MENSAGENS TAMBÉM DESCEM PARA O TERMINAL PRETO 👇
                 const terminal = document.getElementById('terminal-logs');
                 if (terminal) {
                     terminal.innerHTML += `<div style="margin-top: 4px; color: #cbd5e1;">> ${dados.mensagem}</div>`;
