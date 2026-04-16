@@ -240,6 +240,28 @@
         .nav-item.nav-voltar { color: #f87171; }
         .nav-item.nav-voltar:hover { color: #ff3d00; background: rgba(248, 113, 113, 0.15); }
 
+        /* ================= MODAL DE ALERTA GLOBAL ================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px);
+            display: none; justify-content: center; align-items: center; z-index: 100000;
+            opacity: 0; transition: opacity 0.3s ease;
+        }
+        .modal-box {
+            background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px; padding: 30px; max-width: 400px; width: 90%;
+            text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            transform: scale(0.8); transition: transform 0.3s ease;
+        }
+        .modal-icon { font-size: 40px; margin-bottom: 15px; }
+        .modal-title { font-size: 1.2rem; font-weight: 700; color: #fff; margin-bottom: 10px; }
+        .modal-text { font-size: 0.9rem; color: #cbd5e1; margin-bottom: 20px; }
+        .modal-btn {
+            background: #3b82f6; color: #fff; border: none; padding: 10px 20px;
+            border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; width: 100%;
+        }
+        .modal-btn:hover { background: #2563eb; }
+
         /* ========================================== */
         /* 📱 RESPONSIVIDADE MOBILE                     */
         /* ========================================== */
@@ -382,6 +404,52 @@
         </div>
     </div>
 
+    <div id="maestro-modal" class="modal-overlay">
+        <div class="modal-box" id="maestro-modal-box">
+            <div id="modal-icone" class="modal-icon">✅</div>
+            <h3 id="modal-titulo" class="modal-title">Título</h3>
+            <p id="modal-mensagem" class="modal-text">Mensagem</p>
+            <button class="modal-btn" onclick="fecharModal()">OK, ENTENDI</button>
+        </div>
+    </div>
+    <script>
+        function mostrarModal(titulo, mensagem, tipo) {
+            const overlay = document.getElementById('maestro-modal');
+            const box = document.getElementById('maestro-modal-box');
+            const elTitulo = document.getElementById('modal-titulo');
+            const elMensagem = document.getElementById('modal-mensagem');
+            const elIcone = document.getElementById('modal-icone');
+
+            elTitulo.innerText = titulo;
+            elMensagem.innerText = mensagem;
+
+            if (tipo === 'sucesso') {
+                elIcone.innerHTML = '<i class="fa-solid fa-circle-check" style="color: #10b981;"></i>';
+            } else if (tipo === 'alerta') {
+                elIcone.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color: #FDB913;"></i>';
+            } else if (tipo === 'captcha') {
+                elIcone.innerHTML = '<i class="fa-solid fa-shield-halved" style="color: #38bdf8;"></i>';
+            }
+
+            overlay.style.display = 'flex';
+            setTimeout(() => {
+                overlay.style.opacity = '1';
+                box.style.transform = 'scale(1)';
+            }, 10);
+
+            // Toca um som de notificação (opcional)
+            try { new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play(); } catch(e) {}
+        }
+
+        function fecharModal() {
+            const overlay = document.getElementById('maestro-modal');
+            const box = document.getElementById('maestro-modal-box');
+            overlay.style.opacity = '0';
+            box.style.transform = 'scale(0.8)';
+            setTimeout(() => { overlay.style.display = 'none'; }, 300);
+        }
+    </script>
+
     <script>
         const sessionAtual = localStorage.getItem('maestro_session');
         const socket = io({ 
@@ -419,8 +487,13 @@
                 document.getElementById('log').innerText = msg;
                 const terminal = document.getElementById('terminal-logs');
                 if (terminal) {
-                    terminal.innerHTML += `<div style="margin-top: 4px; color: #fff; font-weight: 500;">> ${msg}</div>`;
+                    terminal.innerHTML += `<div style="margin-top: 4px; color: #e2e8f0;">> ${msg}</div>`;
                     terminal.scrollTop = terminal.scrollHeight;
+                }
+
+                // 👇 DISPARA O MODAL DE FIM DA FILA DE RESPOSTAS 👇
+                if (msg.includes("Todas as respostas na fila foram concluídas")) {
+                    mostrarModal("Fila Concluída!", "O robô terminou de responder e enviar todos os eventos pendentes com sucesso.", "sucesso");
                 }
             }
 
@@ -575,7 +648,10 @@
 
             if (areaCaptcha.style.display === 'none' || areaCaptcha.style.display === '') {
                 areaCaptcha.style.display = 'block';
-                dispararAlerta("⚠️ Captcha Detectado!", "Resolva o desafio na tela do Maestro.");
+                
+                // 👇 DISPARA O MODAL A AVISAR DO CAPTCHA 👇
+                mostrarModal("Intervenção de Segurança!", "O portal detetou tráfego incomum e ativou o Captcha. Por favor, resolva o desafio de imagens na tela do Maestro para continuar.", "captcha");
+                
                 setTimeout(() => window.scrollTo({ top: areaCaptcha.offsetTop - 20, behavior: 'smooth' }), 100);
             }
             
@@ -827,9 +903,21 @@
         }
 
         socket.on('tarefa_concluida', function(dados) {
-            document.getElementById('painel-progresso-vale').style.display = 'none';
-            if (dados.evento === 'Lote de Extração' && dados.sucesso) {
-                dispararAlerta("✅ Concluído", "Extração salva na planilha!");
+            if (dados.evento === 'Lote de Extração') {
+                localStorage.removeItem('coupa_extracting'); 
+                
+                const btnExtrair = document.getElementById('btn-extrair');
+                if (btnExtrair) {
+                    btnExtrair.className = 'btn-base'; 
+                    btnExtrair.innerHTML = '<i class="fa-solid fa-download"></i> Extrair'; 
+                    btnExtrair.disabled = false; 
+                    btnExtrair.onclick = function() { executarTarefa('extrair'); };
+                }
+                
+                if (dados.sucesso) {
+                    // 👇 DISPARA O MODAL DE EXTRAÇÃO AQUI 👇
+                    mostrarModal("Extração Concluída!", "Todos os dados foram extraídos e a planilha do Excel foi atualizada e libertada com sucesso.", "sucesso");
+                }
             }
         });
   
