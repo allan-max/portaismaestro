@@ -618,11 +618,14 @@
             }
         }
         
-        function solicitarParada(btnElement) { 
+function solicitarParada(btnElement) { 
     if (confirm("Deseja parar a extração atual de forma segura? O robô finalizará o evento atual e irá parar.")) {
         
-        // 1. Envia o comando correto que o Servidor e o Python entendem
+        // Envia o comando universal
         socket.emit('comando_direto', { modo: 'solicitar_parada', portal: 'coupa' }); 
+        
+        // ⚠️ REMOVIDO: localStorage.removeItem('coupa_extracting');
+        // A memória agora SÓ é limpa quando o robô responde dizendo "Terminei e guardei o Excel".
         
         if(btnElement) {
             btnElement.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> PARANDO...'; 

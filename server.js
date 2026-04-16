@@ -259,7 +259,7 @@ socket.on('log_ponto', (dados) => {
     socket.on('comando_direto', (dados) => {
         if (!socket.autenticado) return;
         
-        // 👇 Só altera o estado GLOBAL (travando a tela) se for Coupa ou Vale 👇
+        // Só altera o estado GLOBAL (travando a tela) se for Coupa ou Vale
         if (dados.portal === 'coupa' || dados.portal === 'vale') {
             if (dados.modo === 'ligar_robo') {
                 estado_global.status = 'logando';
@@ -271,8 +271,9 @@ socket.on('log_ponto', (dados) => {
                 estado_global.status = 'extraindo';
             } else if (dados.modo === 'verificar') {
                 estado_global.status = 'verificando';
-            } else if (dados.modo === 'solicitar_parada') {
-                estado_global.status = 'parando'; // 👇 CORRIGIDO
+            } else if (dados.modo === 'solicitar_parada' || dados.modo === 'parar_extracao') {
+                // 👇 A CHAVE MÁGICA PARA A INTERFACE NÃO PISCAR E VOLTAR AO NORMAL 👇
+                estado_global.status = 'parando'; 
             }
             notificar_todos();
         }
