@@ -544,8 +544,22 @@
                     dot.classList.add("running");
                     txtStatus.innerHTML = '<i class="fa-solid fa-database fa-spin"></i> ROBÔ OCUPADO (FILA)';
                     btnExtrair.disabled = true; btnVerificar.disabled = true; btnAbrirRes.disabled = true; btnImprimir.disabled = true;
+                } else if (estado.status === 'respondendo' || estado.status === 'ocupado') {
+                    dot.classList.add("running");
+                    txtStatus.innerHTML = '<i class="fa-solid fa-database fa-spin"></i> ROBÔ OCUPADO (FILA)';
+                    btnExtrair.disabled = true; btnVerificar.disabled = true; btnAbrirRes.disabled = true; btnImprimir.disabled = true;
+                
+                // 👇 ADICIONE ESTE BLOCO AQUI 👇
+                } else if (estado.status === 'parando') {
+                    dot.classList.add("running");
+                    txtStatus.innerHTML = '<i class="fa-solid fa-hand"></i> FINALIZANDO CICLO ATUAL...';
+                    btnExtrair.className = 'btn-base'; 
+                    btnExtrair.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> AGUARDE...'; 
+                    btnExtrair.disabled = true;
+                    btnVerificar.disabled = true; btnAbrirRes.disabled = true; btnImprimir.disabled = true;
                 }
-            }
+
+            } 
         });
 
         socket.on('nova_imagem', function(dados) { 
@@ -596,10 +610,12 @@
         function executarTarefa(modo) { socket.emit('comando_direto', { modo: modo, portal: 'vale' }); }
         
         function solicitarParada(btnElement) { 
-            socket.emit('comando_direto', { modo: 'solicitar_parada', portal: 'vale' }); 
-            if(btnElement) {
-                btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> FORÇANDO PARADA...'; 
-                btnElement.disabled = true; 
+            if (confirm("Deseja parar a extração atual de forma segura? O robô finalizará o evento atual e irá parar.")) {
+                socket.emit('comando_direto', { modo: 'solicitar_parada', portal: 'vale' }); 
+                if(btnElement) {
+                    btnElement.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> PARANDO...'; 
+                    btnElement.disabled = true; 
+                }
             }
         }
         function mostrarFormResposta() { document.getElementById('area-resposta').style.display = 'block'; }
@@ -758,6 +774,7 @@
 
                 const formData = new FormData();
                 formData.append('sessionId', localStorage.getItem('maestro_session'));
+                formData.append('portal', 'vale');
                 formData.append('evento', eventoId);
                 formData.append('precos', JSON.stringify(precos));
                 formData.append('prazos', JSON.stringify(prazos));
