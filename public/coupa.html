@@ -620,9 +620,10 @@
         
         function solicitarParada(btnElement) { 
     if (confirm("Deseja parar a extração atual de forma segura? O robô finalizará o evento atual e irá parar.")) {
-        // 👇 AQUI: Mudou de 'parar_extracao' para 'solicitar_parada' 👇
+        
+        // 1. Envia o comando correto que o Servidor e o Python entendem
         socket.emit('comando_direto', { modo: 'solicitar_parada', portal: 'coupa' }); 
-        localStorage.removeItem('coupa_extracting'); 
+        
         if(btnElement) {
             btnElement.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> PARANDO...'; 
             btnElement.disabled = true; 
