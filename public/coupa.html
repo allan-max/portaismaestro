@@ -619,15 +619,16 @@
         }
         
         function solicitarParada(btnElement) { 
-            if (confirm("Deseja parar a extração atual de forma segura? O robô finalizará o evento atual e irá parar.")) {
-                socket.emit('comando_direto', { modo: 'parar_extracao', portal: 'coupa' }); 
-                localStorage.removeItem('coupa_extracting'); // LIMPA A MEMÓRIA
-                if(btnElement) {
-                    btnElement.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> PARANDO...'; 
-                    btnElement.disabled = true; 
-                }
-            }
+    if (confirm("Deseja parar a extração atual de forma segura? O robô finalizará o evento atual e irá parar.")) {
+        // 👇 AQUI: Mudou de 'parar_extracao' para 'solicitar_parada' 👇
+        socket.emit('comando_direto', { modo: 'solicitar_parada', portal: 'coupa' }); 
+        localStorage.removeItem('coupa_extracting'); 
+        if(btnElement) {
+            btnElement.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> PARANDO...'; 
+            btnElement.disabled = true; 
         }
+    }
+}
         function mostrarFormResposta() { document.getElementById('area-resposta').style.display = 'block'; }
 
         function removerDaFila(eventoId) {
