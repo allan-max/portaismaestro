@@ -138,6 +138,22 @@ io.use((socket, next) => {
 });
 
 io.on('connection', (socket) => {
+
+    // Cancelar Evento da Fila
+    socket.on('remover_da_fila', (dados) => {
+        const eventoId = dados.evento;
+
+        // Proteção: não cancela se já estiver a ser preenchido pelo robô
+        if (fila_respostas.length > 0 && fila_respostas[0].id === eventoId && estado_global.status === 'respondendo') {
+            return; // Já está no forno, não pode cancelar!
+        }
+
+        fila_respostas = fila_respostas.filter(e => e.id !== eventoId);
+        if (estado_global.fila_pendente) {
+            estado_global.fila_pendente = estado_global.fila_pendente.filter(e => e !== eventoId);
+        }
+        notificar_todos(`🚫 Evento ${eventoId} cancelado pelo utilizador.`);
+    });
     
     const checkRole = (role) => {
         if (!socket.autenticado) return false;
@@ -193,17 +209,41 @@ socket.on('log_ponto', (dados) => {
     socket.on('sincronizar_estado_ariba', (dados) => { estado_ariba = dados; io.to('frontend').emit('sincronizar_estado_ariba', dados); });
 
     socket.on('tarefa_concluida', (dados) => {
-        if (dados.evento === 'Login do Robô') {
-            if (dados.sucesso) estado_global.status = 'ocioso';
-            else { estado_global.status = 'desligado'; estado_global.portal_atual = null; }
-        } else {
-            // 👇 O SEGREDO AQUI: O fantasma não pode ressuscitar o status! 👇
-            if (estado_global.status !== 'desligado') {
-                estado_global.status = 'ocioso';
+        // 👇 NOVA ROTINA PARA CONTROLE DE FILA (EVENTOS) 👇
+        if (dados.evento && dados.evento.startsWith('Evento ')) {
+            const eventoId = dados.evento.replace('Evento ', '');
+
+            // 1. Remove da Fila Pendente
+            fila_respostas = fila_respostas.filter(e => e.id !== eventoId);
+            if (estado_global.fila_pendente) {
+                estado_global.fila_pendente = estado_global.fila_pendente.filter(e => e !== eventoId);
             }
+
+            // 2. Move para os Concluídos
+            if (dados.sucesso) {
+                if (!estado_global.tarefas_concluidas) estado_global.tarefas_concluidas = [];
+                if (!estado_global.tarefas_concluidas.includes(eventoId)) {
+                    estado_global.tarefas_concluidas.push(eventoId);
+                }
+            }
+
+            // 3. PUXA O PRÓXIMO DA FILA
+            processarProximoDaFila();
+            notificar_todos();
+
+        } else {
+            // 👇 ROTINA ORIGINAL PARA AS OUTRAS TAREFAS 👇
+            if (dados.evento === 'Login do Robô') {
+                if (dados.sucesso) estado_global.status = 'ocioso';
+                else { estado_global.status = 'desligado'; estado_global.portal_atual = null; }
+            } else {
+                if (estado_global.status !== 'desligado') {
+                    estado_global.status = 'ocioso';
+                }
+            }
+            io.to('frontend').emit('tarefa_concluida', dados);
+            notificar_todos();
         }
-        io.to('frontend').emit('tarefa_concluida', dados);
-        notificar_todos();
     });
 
     socket.on('sou_frontend', (dados) => {
@@ -360,6 +400,28 @@ socket.on('log_ponto', (dados) => {
     });
 });
 
+// 🛠️ GESTOR DE FILA MAESTRO 🛠️
+function processarProximoDaFila() {
+    if (fila_respostas.length === 0) {
+        if (estado_global.status === 'respondendo') {
+            estado_global.status = 'ocioso';
+            notificar_todos("Todas as respostas na fila foram concluídas.");
+        }
+        return;
+    }
+
+    // Pega o 1º da fila, mas não o apaga já
+    const proximo = fila_respostas[0]; 
+    estado_global.status = 'respondendo';
+
+    if (bot_socket_id) {
+        io.to(bot_socket_id).emit('comando_para_robo', proximo.payload);
+        notificar_todos(`🤖 A iniciar o processamento do evento ${proximo.id}...`);
+    } else {
+        notificar_todos("⚠️ Aguardando robô conectar para processar a fila...");
+    }
+}
+
 // =======================================================
 // ROTA: RECEBER EVENTOS DO COUPA E MANDAR PARA O ROBÔ
 // =======================================================
@@ -395,31 +457,44 @@ app.post('/api/responder', upload.fields([{ name: 'datasheet' }, { name: 'dav' }
             return result;
         };
 
-        // Transforma os Datasheets e DAVs usando a nova função
+        // Transforma os Datasheets e DAVs usando a nova função (MANTIDO INTACTO)
         const datasheets = processarArquivos(req.files['datasheet']);
         const davs = processarArquivos(req.files['dav']);
 
-        // Atualiza a tela de todo mundo dizendo que o robô entrou em modo de resposta (Ocupado)
-        estado_global.status = 'respondendo';
-        io.to('frontend').emit('sincronizar_estado', { estado: estado_global, mensagem: `Evento ${evento} enviado para a fila!` });
+        // 👇 AQUI COMEÇA A LÓGICA DA FILA QUE SUBSTITUI O ENVIO DIRETO 👇
+        
+        // 1. Cria o pacote com todos os dados (inclusive os arquivos já convertidos)
+        const payload = {
+            modo: 'responder', 
+            portal: 'coupa', 
+            evento: evento,
+            precos: precos, 
+            prazos: prazos, 
+            origens: origens,
+            icms: icms, 
+            datasheets: datasheets, 
+            davs: davs
+        };
 
-        // Manda o pacote completo pro Gerenciador Python local
-        if (bot_socket_id) {
-            io.to(bot_socket_id).emit('comando_para_robo', {
-                modo: 'responder',
-                portal: 'coupa',
-                evento: evento,
-                precos: precos,
-                prazos: prazos,
-                origens: origens,
-                icms: icms,
-                datasheets: datasheets,
-                davs: davs
-            });
-            res.json({ sucesso: true, mensagem: "Evento transmitido para o robô." });
+        // 2. Adiciona à fila real de trabalho do servidor
+        fila_respostas.push({ id: evento, payload: payload });
+        
+        // 3. Adiciona à fila visual para aparecer no site
+        if (!estado_global.fila_pendente) estado_global.fila_pendente = [];
+        estado_global.fila_pendente.push(evento);
+
+        // 4. Responde ao site IMEDIATAMENTE dizendo que deu certo (libera a interface do utilizador)
+        res.json({ sucesso: true, mensagem: "Evento adicionado à fila." });
+
+        // 5. O GESTOR DE FILA ENTRA EM AÇÃO:
+        // Se o robô estiver parado (ocioso), acorda-o para começar a fila.
+        // Se já estiver a trabalhar, apenas avisa na tela que entrou na espera.
+        if (estado_global.status !== 'respondendo') {
+            processarProximoDaFila();
         } else {
-            res.status(503).json({ error: "Robô offline." });
+            notificar_todos(`📥 Evento ${evento} entrou na fila de espera.`);
         }
+
     } catch (error) {
         console.error("Erro no /api/responder:", error);
         res.status(500).json({ error: "Erro interno no servidor." });
