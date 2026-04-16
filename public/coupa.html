@@ -633,29 +633,39 @@
             const overlayLock = document.getElementById('overlay-lock');
             const conteudoOp = document.getElementById('conteudo-operacional');
             
+            // Destranca o painel principal se estiver bloqueado
             if (overlayLock) {
                 overlayLock.style.opacity = '0';
                 overlayLock.style.pointerEvents = 'none';
                 conteudoOp.style.opacity = '1'; 
             }
 
+            // 👇 FORÇA O MODAL A ABRIR SEMPRE QUE UMA NOVA SESSÃO DE CAPTCHA COMEÇA 👇
             if (areaCaptcha.style.display === 'none' || areaCaptcha.style.display === '') {
                 areaCaptcha.style.display = 'block';
                 
-                // 👇 DISPARA O MODAL A AVISAR DO CAPTCHA 👇
-                mostrarModal("Intervenção de Segurança!", "O portal detetou tráfego incomum e ativou o Captcha. Por favor, resolva o desafio de imagens na tela do Maestro para continuar.", "captcha");
+                // 1. Toca o som e a notificação do Windows
+                dispararAlerta("⚠️ Captcha Detectado!", "O portal exige uma validação de segurança.");
                 
-                setTimeout(() => window.scrollTo({ top: areaCaptcha.offsetTop - 20, behavior: 'smooth' }), 100);
+                // 2. Força o Modal a saltar na tela (com um pequeno atraso para não bugar o renderizador)
+                setTimeout(() => {
+                    mostrarModal("Intervenção de Segurança!", "O portal detetou tráfego incomum e ativou o Captcha.\n\nPor favor, feche este aviso e clique na imagem correta no painel do Maestro para o robô continuar.", "captcha");
+                }, 200);
+                
+                // 3. Rola a página suavemente para o Captcha
+                setTimeout(() => window.scrollTo({ top: areaCaptcha.offsetTop - 20, behavior: 'smooth' }), 500);
             }
             
+            // Renderiza a imagem que veio do Python
             const imgOculta = new Image();
             imgOculta.onload = function() { document.getElementById('imagem-captcha').src = this.src; };
             imgOculta.src = "data:image/png;base64," + dados.imagem; 
 
+            // Reseta o temporizador que esconde o Captcha se não houver cliques
             clearTimeout(timerCaptcha);
             timerCaptcha = setTimeout(() => { areaCaptcha.style.display = 'none'; }, 5000);
         });
-
+        
         document.getElementById('imagem-captcha').addEventListener('click', function(event) {
             this.style.opacity = '0.5';
             setTimeout(() => { this.style.opacity = '1'; }, 150);
