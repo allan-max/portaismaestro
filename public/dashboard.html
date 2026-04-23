@@ -421,31 +421,57 @@
     }
 
     socket.on('receber_dados_dashboard', (res) => {
-        if(!res.sucesso) return;
+    if (!res.sucesso) {
+        alert("Erro ao carregar dados: " + res.erro);
+        return;
+    }
 
-        // LIMPEZA PARA NÃO DUPLICAR
-        document.getElementById('statsGrid').innerHTML = '';
-        document.getElementById('topBrands').innerHTML = '';
-        document.getElementById('lowBrands').innerHTML = '';
-        document.getElementById('sellersGrid').innerHTML = '';
-        document.getElementById('brandTableBody').innerHTML = '';
+    // 1. Limpa os campos para atualizar sem duplicar
+    document.getElementById('statsGrid').innerHTML = '';
+    document.getElementById('topBrands').innerHTML = '';
+    document.getElementById('lowBrands').innerHTML = '';
+    document.getElementById('sellersGrid').innerHTML = '';
+    document.getElementById('brandTableBody').innerHTML = '';
 
-        dadosMarcas = res.marcas;
-        dadosVendedores = res.vendedores;
+    // 2. Atualiza os cards de totais
+    const t = res.totais;
+    // Aqui você chama sua função que cria os cards (Cotações, Respondidas, etc)
+    // Exemplo: criarCard("Total", t.total); criarCard("Respondidas", t.respondidas)...
 
-        // Totais vindos prontos do Python
-        totalCotacoes = res.totais.total;
-        totalRespondidas = res.totais.respondidas;
-        totalPendentes = res.totais.pendentes;
-        totalNaoRespondidas = res.totais.nao_respondidas;
+    // 3. Marcas mais e menos respondidas (Ordenação)
+    let marcasMais = [...res.marcas].sort((a, b) => b.respondidas - a.respondidas).slice(0, 5);
+    let marcasMenos = [...res.marcas].sort((a, b) => a.respondidas - b.respondidas).slice(0, 5);
 
-        // Cálculos de porcentagem
-        percRespondidas = totalCotacoes > 0 ? ((totalRespondidas / totalCotacoes) * 100).toFixed(1) : 0;
-        percNaoRespondidas = totalCotacoes > 0 ? ((totalNaoRespondidas / totalCotacoes) * 100).toFixed(1) : 0;
-        percPendentes = totalCotacoes > 0 ? ((totalPendentes / totalCotacoes) * 100).toFixed(1) : 0;
-
-        init(); 
+    marcasMais.forEach(m => {
+        document.getElementById('topBrands').innerHTML += `<li>${m.nome}: ${m.respondidas} respostas</li>`;
     });
+
+    marcasMenos.forEach(m => {
+        document.getElementById('lowBrands').innerHTML += `<li>${m.nome}: ${m.respondidas} respostas</li>`;
+    });
+
+    // 4. Top Vendedores
+    let topVendedores = [...res.vendedores].sort((a, b) => b.respostas - a.respostas);
+    topVendedores.forEach(v => {
+        document.getElementById('sellersGrid').innerHTML += `
+            <div class="seller-card">
+                <strong>${v.nome}</strong>
+                <p>${v.respostas} Respondidas de ${v.total}</p>
+            </div>`;
+    });
+
+    // 5. Detalhamento por Marca (Tabela)
+    res.marcas.forEach(m => {
+        const taxa = m.total > 0 ? ((m.respondidas / m.total) * 100).toFixed(1) : 0;
+        document.getElementById('brandTableBody').innerHTML += `
+            <tr>
+                <td>${m.nome}</td>
+                <td>${m.total}</td>
+                <td>${m.respondidas}</td>
+                <td>${taxa}%</td>
+            </tr>`;
+    });
+});
 </script>
 
     <section class="stats-grid" id="statsGrid"></section>
