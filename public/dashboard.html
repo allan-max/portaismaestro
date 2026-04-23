@@ -421,46 +421,37 @@
     }
 
     socket.on('receber_dados_dashboard', (res) => {
-    if (!res.sucesso) {
-        alert("Erro ao carregar dados: " + res.erro);
-        return;
-    }
+    if (!res.sucesso) return;
 
-    // 1. Limpa os campos para atualizar sem duplicar
-    document.getElementById('statsGrid').innerHTML = '';
+    // Limpa os containers antes de preencher para não duplicar
     document.getElementById('topBrands').innerHTML = '';
     document.getElementById('lowBrands').innerHTML = '';
     document.getElementById('sellersGrid').innerHTML = '';
-    document.getElementById('brandTableBody').innerHTML = '';
 
-    // 2. Atualiza os cards de totais
-    const t = res.totais;
-    // Aqui você chama sua função que cria os cards (Cotações, Respondidas, etc)
-    // Exemplo: criarCard("Total", t.total); criarCard("Respondidas", t.respondidas)...
-
-    // 3. Marcas mais e menos respondidas (Ordenação)
-    let marcasMais = [...res.marcas].sort((a, b) => b.respondidas - a.respondidas).slice(0, 5);
-    let marcasMenos = [...res.marcas].sort((a, b) => a.respondidas - b.respondidas).slice(0, 5);
-
-    marcasMais.forEach(m => {
-        document.getElementById('topBrands').innerHTML += `<li>${m.nome}: ${m.respondidas} respostas</li>`;
+    // 1. MARCAS MAIS RESPONDIDAS (Ordena do maior para o menor)
+    const topMarcas = [...res.marcas].sort((a, b) => b.respondidas - a.respondidas).slice(0, 5);
+    topMarcas.forEach(m => {
+        const item = document.createElement('li');
+        item.textContent = `${m.nome}: ${m.respondidas} respondidas`;
+        document.getElementById('topBrands').appendChild(item);
     });
 
-    marcasMenos.forEach(m => {
-        document.getElementById('lowBrands').innerHTML += `<li>${m.nome}: ${m.respondidas} respostas</li>`;
+    // 2. MARCAS MENOS RESPONDIDAS (Ordena do menor para o maior)
+    const lowMarcas = [...res.marcas].sort((a, b) => a.respondidas - b.respondidas).slice(0, 5);
+    lowMarcas.forEach(m => {
+        const item = document.createElement('li');
+        item.textContent = `${m.nome}: ${m.respondidas} respondidas`;
+        document.getElementById('lowBrands').appendChild(item);
     });
 
-    // 4. Top Vendedores
-    let topVendedores = [...res.vendedores].sort((a, b) => b.respostas - a.respostas);
-    topVendedores.forEach(v => {
-        document.getElementById('sellersGrid').innerHTML += `
-            <div class="seller-card">
-                <strong>${v.nome}</strong>
-                <p>${v.respostas} Respondidas de ${v.total}</p>
-            </div>`;
+    // 3. TOP VENDEDORES
+    res.vendedores.forEach(v => {
+        const card = document.createElement('div');
+        card.className = 'seller-card';
+        card.innerHTML = `<strong>${v.nome}</strong><br>${v.respostas} de ${v.total} respondidas`;
+        document.getElementById('sellersGrid').appendChild(card);
     });
-
-    // 5. Detalhamento por Marca (Tabela)
+    // 4. Detalhamento por Marca (Tabela)
     res.marcas.forEach(m => {
         const taxa = m.total > 0 ? ((m.respondidas / m.total) * 100).toFixed(1) : 0;
         document.getElementById('brandTableBody').innerHTML += `
@@ -600,30 +591,6 @@ socket.on("connect_error", (err) => {
         document.getElementById('statsGrid').innerHTML = '<h3 style="color:#fff; padding: 20px;">A extrair dados do Excel, aguarde...</h3>';
         socket.emit('pedir_dados_dashboard');
     }
-
-    // Quando o Python terminar de ler o Excel e responder:
-    socket.on('receber_dados_dashboard', (res) => {
-        if(!res.sucesso) {
-            document.getElementById('statsGrid').innerHTML = `<h3 style="color:#ff4c4c; padding: 20px;">Erro: ${res.erro}</h3>`;
-            return;
-        }
-
-        // Puxa os arrays reais do Python
-        dadosMarcas = res.marcas;
-        dadosVendedores = res.vendedores;
-
-        // Calcula Totais
-        totalCotacoes = dadosMarcas.reduce((acc, m) => acc + m.total, 0);
-        totalRespondidas = dadosMarcas.reduce((acc, m) => acc + m.respondidas, 0);
-        totalPendentes = dadosMarcas.reduce((acc, m) => acc + m.pendentes, 0);
-        totalNaoRespondidas = totalCotacoes - totalRespondidas - totalPendentes;
-
-        percRespondidas = totalCotacoes > 0 ? ((totalRespondidas / totalCotacoes) * 100).toFixed(1) : 0;
-        percNaoRespondidas = totalCotacoes > 0 ? ((totalNaoRespondidas / totalCotacoes) * 100).toFixed(1) : 0;
-        percPendentes = totalCotacoes > 0 ? ((totalPendentes / totalCotacoes) * 100).toFixed(1) : 0;
-
-        init(); // Roda as suas funções de desenho originais!
-    });
 
     // =========================================================================
     // AS SUAS FUNÇÕES ORIGINAIS DE GRÁFICO (MANTIDAS EXATAMENTE COMO VOCÊ FEZ)
