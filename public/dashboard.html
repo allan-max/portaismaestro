@@ -405,9 +405,14 @@
 </head>
 <body>
   <div class="container">
-    <header>
-      <h1>Dashboard de Cotacoes</h1>
-      <p>Monitoramento de respostas de cotacoes por marca e vendedor</p>
+    <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
+      <div>
+        <h1>Dashboard de Cotacoes</h1>
+        <p>Monitoramento de respostas de cotacoes por marca e vendedor</p>
+      </div>
+      <button onclick="atualizarDashboard()" style="background: #818cf8; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s;">
+        🔄 Atualizar Dados
+      </button>
     </header>
 
     <section class="stats-grid" id="statsGrid"></section>
@@ -748,6 +753,19 @@ socket.on("connect_error", (err) => {
     window.addEventListener("resize", () => {
       drawBarChart();
     });
+
+    function atualizarDashboard() {
+        // Mostra o aviso na tela e limpa os gráficos atuais
+        document.getElementById('statsGrid').innerHTML = '<h3 style="color:#fff; padding: 20px;">A extrair dados do Excel, aguarde...</h3>';
+        document.getElementById('donutLegend').innerHTML = '';
+        document.getElementById('topBrands').innerHTML = '';
+        document.getElementById('lowBrands').innerHTML = '';
+        document.getElementById('sellersGrid').innerHTML = '';
+        document.getElementById('brandTableBody').innerHTML = '';
+        
+        // Pede os dados novos
+        socket.emit('pedir_dados_dashboard');
+    }
 
   </script>
 </body>

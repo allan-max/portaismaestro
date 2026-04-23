@@ -398,6 +398,23 @@ socket.on('log_ponto', (dados) => {
             console.log("❌ Ligação com o Robô Local perdida.");
         }
     });
+
+    // Site pede os dados do Dashboard
+    socket.on('pedir_dados_dashboard', () => {
+        if (bot_socket_id) {
+            // Repassa para o Python, enviando o ID de quem pediu
+            io.to(bot_socket_id).emit('comando_ler_excel_dashboard', { clientId: socket.id });
+        } else {
+            socket.emit('receber_dados_dashboard', { sucesso: false, erro: "O Robô (Gerenciador Python) está offline." });
+        }
+    });
+
+    // Python devolve os dados prontos, o Node envia de volta para a aba exata do site
+    socket.on('retorno_dados_dashboard', (dados) => {
+        if (dados.clientId) {
+            io.to(dados.clientId).emit('receber_dados_dashboard', dados);
+        }
+    });
 });
 
 // 🛠️ GESTOR DE FILA MAESTRO 🛠️
@@ -461,12 +478,13 @@ app.post('/api/responder', upload.fields([{ name: 'datasheet' }, { name: 'dav' }
         const datasheets = processarArquivos(req.files['datasheet']);
         const davs = processarArquivos(req.files['dav']);
 
-        // 👇 AQUI COMEÇA A LÓGICA DA FILA QUE SUBSTITUI O ENVIO DIRETO 👇
-        
-        // 1. Cria o pacote com todos os dados (inclusive os arquivos já convertidos)
+        // 👇 AQUI: Extrai o portal que vem do site (se não vier, assume coupa por segurança)
+        const portal_origem = req.body.portal || 'coupa';
+
+        // 1. Cria o pacote com todos os dados
         const payload = {
             modo: 'responder', 
-            portal: 'coupa', 
+            portal: portal_origem, // 👈 Usa a variável dinâmica aqui!
             evento: evento,
             precos: precos, 
             prazos: prazos, 
