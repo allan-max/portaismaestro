@@ -406,14 +406,47 @@
 <body>
   <div class="container">
     <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
-      <div>
-        <h1>Dashboard de Cotacoes</h1>
-        <p>Monitoramento de respostas de cotacoes por marca e vendedor</p>
-      </div>
-      <button onclick="atualizarDashboard()" style="background: #818cf8; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s;">
-        🔄 Atualizar Dados
-      </button>
-    </header>
+  <div>
+    <h1>Dashboard de Cotações</h1>
+    <p>Monitoramento em tempo real da aba COTAÇÃO</p>
+  </div>
+  <button onclick="atualizarDashboard()" style="background: #818cf8; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; box-shadow: 0 4px 15px rgba(129, 140, 248, 0.2);">
+    🔄 Atualizar Planilha
+  </button>
+</header>
+
+<script>
+    function atualizarDashboard() {
+        socket.emit('pedir_dados_dashboard');
+    }
+
+    socket.on('receber_dados_dashboard', (res) => {
+        if(!res.sucesso) return;
+
+        // LIMPEZA PARA NÃO DUPLICAR
+        document.getElementById('statsGrid').innerHTML = '';
+        document.getElementById('topBrands').innerHTML = '';
+        document.getElementById('lowBrands').innerHTML = '';
+        document.getElementById('sellersGrid').innerHTML = '';
+        document.getElementById('brandTableBody').innerHTML = '';
+
+        dadosMarcas = res.marcas;
+        dadosVendedores = res.vendedores;
+
+        // Totais vindos prontos do Python
+        totalCotacoes = res.totais.total;
+        totalRespondidas = res.totais.respondidas;
+        totalPendentes = res.totais.pendentes;
+        totalNaoRespondidas = res.totais.nao_respondidas;
+
+        // Cálculos de porcentagem
+        percRespondidas = totalCotacoes > 0 ? ((totalRespondidas / totalCotacoes) * 100).toFixed(1) : 0;
+        percNaoRespondidas = totalCotacoes > 0 ? ((totalNaoRespondidas / totalCotacoes) * 100).toFixed(1) : 0;
+        percPendentes = totalCotacoes > 0 ? ((totalPendentes / totalCotacoes) * 100).toFixed(1) : 0;
+
+        init(); 
+    });
+</script>
 
     <section class="stats-grid" id="statsGrid"></section>
 
@@ -753,19 +786,6 @@ socket.on("connect_error", (err) => {
     window.addEventListener("resize", () => {
       drawBarChart();
     });
-
-    function atualizarDashboard() {
-        // Mostra o aviso na tela e limpa os gráficos atuais
-        document.getElementById('statsGrid').innerHTML = '<h3 style="color:#fff; padding: 20px;">A extrair dados do Excel, aguarde...</h3>';
-        document.getElementById('donutLegend').innerHTML = '';
-        document.getElementById('topBrands').innerHTML = '';
-        document.getElementById('lowBrands').innerHTML = '';
-        document.getElementById('sellersGrid').innerHTML = '';
-        document.getElementById('brandTableBody').innerHTML = '';
-        
-        // Pede os dados novos
-        socket.emit('pedir_dados_dashboard');
-    }
 
   </script>
 </body>
