@@ -416,52 +416,92 @@
 </header>
 
 <script>
-    function atualizarDashboard() {
-        socket.emit('pedir_dados_dashboard');
+   // Função para solicitar a atualização
+function atualizarDashboard() {
+    // Coloca a mensagem de espera
+    document.getElementById('statsGrid').innerHTML = '<h3 style="color:#fff; padding: 20px;">A extrair dados do Excel, aguarde...</h3>';
+    console.log("Solicitando dados ao servidor...");
+    socket.emit('pedir_dados_dashboard');
+}
+
+socket.on('receber_dados_dashboard', (res) => {
+    console.log("Dados recebidos:", res);
+    if (!res.sucesso) {
+        document.getElementById('statsGrid').innerHTML = '<h3 style="color:#ff4d4d; padding: 20px;">Erro: ' + res.erro + '</h3>';
+        return;
     }
 
-    socket.on('receber_dados_dashboard', (res) => {
-    if (!res.sucesso) return;
+    // 1. LIMPEZA TOTAL (Remove a mensagem de "Aguarde" e limpa gráficos antigos)
+    document.getElementById('statsGrid').innerHTML = '';
+    if(document.getElementById('topBrands')) document.getElementById('topBrands').innerHTML = '';
+    if(document.getElementById('lowBrands')) document.getElementById('lowBrands').innerHTML = '';
+    if(document.getElementById('sellersGrid')) document.getElementById('sellersGrid').innerHTML = '';
+    if(document.getElementById('brandTableBody')) document.getElementById('brandTableBody').innerHTML = '';
 
-    // Limpa os containers antes de preencher para não duplicar
-    document.getElementById('topBrands').innerHTML = '';
-    document.getElementById('lowBrands').innerHTML = '';
-    document.getElementById('sellersGrid').innerHTML = '';
+    // 2. ATUALIZAÇÃO DOS TOTAIS (CARDS SUPERIORES)
+    const t = res.totais || { total: 0, respondidas: 0, pendentes: 0, nao_respondidas: 0 };
+    
+    // Atualiza variáveis globais para o gráfico (se o seu init() as usar)
+    totalCotacoes = t.total;
+    totalRespondidas = t.respondidas;
+    totalPendentes = t.pendentes;
+    totalNaoRespondidas = t.nao_respondidas;
 
-    // 1. MARCAS MAIS RESPONDIDAS (Ordena do maior para o menor)
-    const topMarcas = [...res.marcas].sort((a, b) => b.respondidas - a.respondidas).slice(0, 5);
-    topMarcas.forEach(m => {
-        const item = document.createElement('li');
-        item.textContent = `${m.nome}: ${m.respondidas} respondidas`;
-        document.getElementById('topBrands').appendChild(item);
-    });
+    // 3. RECONSTRUÇÃO DOS CARDS DE ESTATÍSTICA
+    // Isso garante que a mensagem "Aguarde" suma e os cards voltem
+    const stats = [
+        { label: 'Total de Cotações', value: t.total, color: '#818cf8' },
+        { label: 'Respondidas', value: t.respondidas, color: '#34d399' },
+        { label: 'Pendentes', value: t.pendentes, color: '#fbbf24' },
+        { label: 'Não Respondidas', value: t.nao_respondidas, color: '#f87171' }
+    ];
 
-    // 2. MARCAS MENOS RESPONDIDAS (Ordena do menor para o maior)
-    const lowMarcas = [...res.marcas].sort((a, b) => a.respondidas - b.respondidas).slice(0, 5);
-    lowMarcas.forEach(m => {
-        const item = document.createElement('li');
-        item.textContent = `${m.nome}: ${m.respondidas} respondidas`;
-        document.getElementById('lowBrands').appendChild(item);
-    });
-
-    // 3. TOP VENDEDORES
-    res.vendedores.forEach(v => {
+    stats.forEach(s => {
         const card = document.createElement('div');
-        card.className = 'seller-card';
-        card.innerHTML = `<strong>${v.nome}</strong><br>${v.respostas} de ${v.total} respondidas`;
-        document.getElementById('sellersGrid').appendChild(card);
+        card.className = 'stat-card';
+        card.innerHTML = `<p>${s.label}</p><h3>${s.value}</h3>`;
+        document.getElementById('statsGrid').appendChild(card);
     });
-    // 4. Detalhamento por Marca (Tabela)
-    res.marcas.forEach(m => {
-        const taxa = m.total > 0 ? ((m.respondidas / m.total) * 100).toFixed(1) : 0;
-        document.getElementById('brandTableBody').innerHTML += `
-            <tr>
-                <td>${m.nome}</td>
-                <td>${m.total}</td>
-                <td>${m.respondidas}</td>
-                <td>${taxa}%</td>
-            </tr>`;
-    });
+
+    // 4. RANKING DE MARCAS (MAIS E MENOS)
+    if (res.marcas && res.marcas.length > 0) {
+        // Ordena por respondidas (descendente) para as TOP
+        const top = [...res.marcas].sort((a, b) => b.respondidas - a.respondidas).slice(0, 5);
+        top.forEach(m => {
+            const li = document.createElement('li');
+            li.innerHTML = `<span>${m.nome}</span><strong>${m.respondidas}</strong>`;
+            document.getElementById('topBrands').appendChild(li);
+        });
+
+        // Ordena por respondidas (ascendente) para as MENOS
+        const low = [...res.marcas].sort((a, b) => a.respondidas - b.respondidas).slice(0, 5);
+        low.forEach(m => {
+            const li = document.createElement('li');
+            li.innerHTML = `<span>${m.nome}</span><strong>${m.respondidas}</strong>`;
+            document.getElementById('lowBrands').appendChild(li);
+        });
+
+        // Detalhamento na Tabela
+        res.marcas.forEach(m => {
+            const perc = m.total > 0 ? ((m.respondidas / m.total) * 100).toFixed(1) : 0;
+            const row = `<tr><td>${m.nome}</td><td>${m.total}</td><td>${m.respondidas}</td><td>${perc}%</td></tr>`;
+            document.getElementById('brandTableBody').innerHTML += row;
+        });
+    }
+
+    // 5. RANKING DE VENDEDORES
+    if (res.vendedores && res.vendedores.length > 0) {
+        const topVendedores = [...res.vendedores].sort((a, b) => b.respostas - a.respostas);
+        topVendedores.forEach(v => {
+            const div = document.createElement('div');
+            div.className = 'seller-card';
+            div.innerHTML = `<strong>${v.nome}</strong><p>${v.respostas} respostas / ${v.total} total</p>`;
+            document.getElementById('sellersGrid').appendChild(div);
+        });
+    }
+
+    // 6. REINICIALIZA GRÁFICOS (Se você tiver a função init() do Chart.js)
+    if (typeof init === "function") init();
 });
 </script>
 
