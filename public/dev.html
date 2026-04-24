@@ -11,7 +11,10 @@
     <script>
         const isDev = localStorage.getItem('maestro_dev') === 'true';
         const isAdmin = localStorage.getItem('maestro_admin') === 'true';
-        const isMasterAdmin = localStorage.getItem('maestro_user') === 'admin@venturainformatica.com.br';
+        
+        // Pega o usuário do localStorage e força para minúsculas, evitando erros bobos de digitação
+        const usuarioAtual = (localStorage.getItem('maestro_user') || '').toLowerCase().trim();
+        const isMasterAdmin = usuarioAtual === 'admin@venturainformatica.com.br';
 
         // Só bloqueia se não for NENHUM dos três (nem dev, nem admin, nem o admin mestre)
         if (!isDev && !isAdmin && !isMasterAdmin) {
