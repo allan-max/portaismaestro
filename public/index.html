@@ -816,11 +816,12 @@ document.addEventListener('keydown', (e) => {
         if (bufferTeclado === palavraSecreta) {
             const usuarioAtual = (localStorage.getItem('maestro_user') || '').trim().toLowerCase();
             
-            if (usuarioAtual === ADMIN_EMAIL) {
-                document.getElementById('painel-ponto').style.display = 'block';
+            // Permite acesso se for o Admin ou se tiver a tag de DEV no localStorage
+            if (usuarioAtual === ADMIN_EMAIL || localStorage.getItem('maestro_dev') === 'true') {
+                window.open('dev.html', '_blank'); // Abre o painel DEV em uma nova guia
                 bufferTeclado = ''; // Reseta após abrir
             } else {
-                bufferTeclado = ''; // Apenas reseta silenciosamente se não for o admin
+                bufferTeclado = ''; // Apenas reseta silenciosamente
             }
         }
     }
