@@ -263,7 +263,9 @@ socket.on('log_ponto', (dados) => {
     });
 
     socket.on('pedir_dados_dev_seguro', (dados) => {
-        if (!checkRole('dev')) return;
+        // Agora permite se for Dev OU Admin
+        if (!checkRole('dev') && !checkRole('admin')) return; 
+        
         if (bot_socket_id) {
             io.to(bot_socket_id).emit('pedir_dados_dev_seguro', { 
                 payload_cifrado: dados.payload_cifrado, 
@@ -274,7 +276,9 @@ socket.on('log_ponto', (dados) => {
     });
 
     socket.on('comando_dev_acao_seguro', (dados) => {
-        if (!checkRole('dev')) return;
+        // Agora permite se for Dev OU Admin
+        if (!checkRole('dev') && !checkRole('admin')) return; 
+        
         if (bot_socket_id) {
             io.to(bot_socket_id).emit('comando_dev_acao_seguro', { payload_cifrado: dados.payload_cifrado, clientId: socket.id });
         }
