@@ -121,7 +121,7 @@
 
         <div class="page-header" style="margin-top: 50px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 30px;">
             <div>
-                <h2 class="page-title" style="font-size: 22px;"><i class="fa-solid fa-clock-rotate-left" style="color: #3b82f6;"></i> Controle de Ponto</h2>
+                <h2 class="page-title" style="font-size: 22px;"><i class="fa-solid fa-clock-rotate-left" style="color: #3b82f6;"></i> Controle </h2>
                 <p class="page-subtitle" style="color: #a1a1aa;">Gerenciamento de atividade das instâncias automatizadas</p>
             </div>
             <button onclick="enviarComandoPonto('TUDO', 'desligar')" class="btn-dev-action btn-ban" style="padding: 10px 15px; font-size: 13px;">
@@ -133,7 +133,7 @@
             <div class="dev-card">
                 <div class="info-section">
                     <div>
-                        <div class="user-email">ROBÔ: ALLAN</div>
+                        <div class="user-email">ALLAN</div>
                         <div class="tech-info">Instância de Automação Principal</div>
                     </div>
                 </div>
@@ -145,7 +145,7 @@
             <div class="dev-card">
                 <div class="info-section">
                     <div>
-                        <div class="user-email">ROBÔ: LUCAS</div>
+                        <div class="user-email">LUCAS</div>
                         <div class="tech-info">Instância de Automação Secundária</div>
                     </div>
                 </div>
@@ -215,6 +215,7 @@ socket.on("sessao_invalida", () => {
             document.getElementById('erro-token').style.display = 'none';
             
             pedirLista();
+            socket.emit('pedir_status_ponto'); // 👈 ADICIONE ESTA LINHA AQUI
         }
 
         function pedirLista() {
@@ -385,6 +386,19 @@ socket.on("sessao_invalida", () => {
         // ====================================================
         let statusPonto = { ALLAN: true, LUCAS: true };
 
+        socket.on('atualizar_botoes_ponto', (statusReal) => {
+            // Atualiza o Allan se existir no JSON
+            if (statusReal.ALLAN !== undefined) {
+                statusPonto.ALLAN = statusReal.ALLAN;
+                atualizarBotaoPonto('ALLAN', statusReal.ALLAN);
+            }
+            // Atualiza o Lucas se existir no JSON
+            if (statusReal.LUCAS !== undefined) {
+                statusPonto.LUCAS = statusReal.LUCAS;
+                atualizarBotaoPonto('LUCAS', statusReal.LUCAS);
+            }
+        });
+        
         function togglePontoIndiv(pessoa) {
             statusPonto[pessoa] = !statusPonto[pessoa];
             const ligado = statusPonto[pessoa];

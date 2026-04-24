@@ -175,6 +175,23 @@ socket.on('comando_ponto', (dados) => {
     }
 });
 
+// O site pede o status atual do JSON
+    socket.on('pedir_status_ponto', () => {
+        // Apenas Admin e Dev podem pedir isto
+        if (!checkRole('dev') && !checkRole('admin')) return; 
+        
+        if (bot_socket_id) {
+            io.to(bot_socket_id).emit('solicitar_status_ponto', { clientId: socket.id });
+        }
+    });
+
+    // O Python responde com os dados do JSON e o Node entrega à página correta
+    socket.on('resposta_status_ponto', (dados) => {
+        if (dados.clientId) {
+            io.to(dados.clientId).emit('atualizar_botoes_ponto', dados.status);
+        }
+    });
+
 socket.on('log_ponto', (dados) => {
     io.to('frontend').emit('atualizar_log_ponto', dados);
 });
