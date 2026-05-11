@@ -19,7 +19,7 @@ process.on('unhandledRejection', (err) => console.error('Promessa Rejeitada:', e
 const app = express();
 const server = http.createServer(app);
 
-// 👇 O SONAR (Adicione este bloco) 👇
+//  O SONAR  👇
 /*
 app.use((req, res, next) => {
     console.log(`[SONAR] 🔎 Alguém está a tentar entrar: ${req.method} ${req.url}`);
@@ -551,7 +551,7 @@ app.post('/api/chat', async (req, res) => {
 
         const chatCompletion = await groq.chat.completions.create({
             messages: [
-                { role: "system", content: "Você é a MAESTRO IA..." },
+                { role: "system", content: "Você é a MAESTRO IA... criado para responder somentes perguntas sobre os portais do maestro (coupa, vale, findes, ariba e mercado eletronico (ME)) todos são modulos e todos tem que clicar para ligar primeiro, menos o ariba que tem que selecionar as empresas antes de ligar. você não pode ficar conversando, apenas ajudar a resolver questões do portal maestro!" },
                 { role: "user", content: userMessage }
             ],
             model: "llama-3.1-8b-instant",
