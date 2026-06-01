@@ -203,11 +203,38 @@
         }
         .form-group input:focus { border-color: #3b82f6; background-color: rgba(0, 0, 0, 0.4); }
         
-        .arquivo-item { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 6px; margin-top: 4px; border-radius: 6px; font-size: 0.75rem; display: flex; justify-content: space-between; align-items: center; color: #cbd5e1;}
+        .arquivo-item { 
+            background: rgba(0,0,0,0.3); 
+            border: 1px solid rgba(255,255,255,0.05); 
+            padding: 6px; 
+            margin-top: 4px; 
+            border-radius: 6px; 
+            font-size: 0.75rem; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            color: #cbd5e1;
+            width: 100%; 
+            box-sizing: border-box;
+            overflow: hidden; /* Corta qualquer coisa que tente vazar */
+        }
         
-        .arquivo-item span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80%; display: inline-block; }
+        .arquivo-item span { 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; /* Adiciona os "..." no final */
+            display: inline-block;
+            max-width: calc(100% - 25px); /* Dá espaço exato para o botão de apagar (X) */
+        }
         
-        .btn-remover { background: none; border: none; color: #ef4444; cursor: pointer; font-weight: bold; flex-shrink: 0;} 
+        .btn-remover { 
+            background: none; 
+            border: none; 
+            color: #ef4444; 
+            cursor: pointer; 
+            font-weight: bold; 
+            flex-shrink: 0; /* Impede que o botão de fechar seja esmagado */
+        }
 
         /* CAPTCHA */
         #area-captcha { 
@@ -772,15 +799,15 @@ function solicitarParada(btnElement) {
                     
                     <div id="container-itens-${id}"></div>
 
-                    <div style="display:flex; gap:10px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.05);">
-                        <div class="form-group" style="flex:1; min-width: 0;">
+                    <div style="display:flex; gap:10px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.05); width: 100%;">
+                        <div class="form-group" style="flex:1; min-width: 0; overflow: hidden;">
                             <label><i class="fa-solid fa-paperclip" style="color: #94a3b8"></i> DATASHEET (.PDF)</label>
-                            <input type="file" accept=".pdf" multiple onchange="adicionarArquivosBloco(event, 'ds', ${id})" style="border:none; padding:0; background:transparent; max-width: 100%;">
+                            <input type="file" accept=".pdf" multiple onchange="adicionarArquivosBloco(event, 'ds', ${id})" style="border:none; padding:0; background:transparent; width: 100%; overflow: hidden; text-overflow: ellipsis;">
                             <div id="lista-ds-${id}"></div>
                         </div>
-                        <div class="form-group" style="flex:1; min-width: 0;">
+                        <div class="form-group" style="flex:1; min-width: 0; overflow: hidden;">
                             <label><i class="fa-solid fa-paperclip" style="color: #94a3b8"></i> DAV (.PDF)</label>
-                            <input type="file" accept=".pdf" multiple onchange="adicionarArquivosBloco(event, 'dav', ${id})" style="border:none; padding:0; background:transparent; max-width: 100%;">
+                            <input type="file" accept=".pdf" multiple onchange="adicionarArquivosBloco(event, 'dav', ${id})" style="border:none; padding:0; background:transparent; width: 100%; overflow: hidden; text-overflow: ellipsis;">
                             <div id="lista-dav-${id}"></div>
                         </div>
                     </div>
