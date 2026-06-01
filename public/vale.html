@@ -751,16 +751,16 @@
                     
                     <div id="container-itens-${id}"></div>
 
-                    <div style="display:flex; gap:10px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.2);">
-                        <div class="form-group" style="flex:1;">
+                    <div style="display:flex; flex-direction: column; gap:15px; margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.2); width: 100%; overflow: hidden; box-sizing: border-box;">
+                        <div class="form-group" style="margin:0; width: 100%; overflow: hidden; box-sizing: border-box;">
                             <label><i class="fa-solid fa-paperclip" style="color: #ccc"></i> DATASHEET (.PDF)</label>
-                            <input type="file" accept=".pdf" multiple onchange="adicionarArquivosBloco(event, 'ds', ${id})" style="border:none; padding:0; background:transparent;">
-                            <div id="lista-ds-${id}"></div>
+                            <input type="file" accept=".pdf" multiple onchange="adicionarArquivosBloco(event, 'ds', ${id})" style="border:none; padding:0; background:transparent; width: 100%; max-width: 100%; box-sizing: border-box;">
+                            <div id="lista-ds-${id}" style="width: 100%;"></div>
                         </div>
-                        <div class="form-group" style="flex:1;">
+                        <div class="form-group" style="margin:0; width: 100%; overflow: hidden; box-sizing: border-box;">
                             <label><i class="fa-solid fa-paperclip" style="color: #ccc"></i> DAV (.PDF)</label>
-                            <input type="file" accept=".pdf" multiple onchange="adicionarArquivosBloco(event, 'dav', ${id})" style="border:none; padding:0; background:transparent;">
-                            <div id="lista-dav-${id}"></div>
+                            <input type="file" accept=".pdf" multiple onchange="adicionarArquivosBloco(event, 'dav', ${id})" style="border:none; padding:0; background:transparent; width: 100%; max-width: 100%; box-sizing: border-box;">
+                            <div id="lista-dav-${id}" style="width: 100%;"></div>
                         </div>
                     </div>
                 </div>
@@ -825,9 +825,13 @@
             div.innerHTML = "";
             lista.forEach((arquivo, index) => {
                 div.innerHTML += `
-                    <div class="arquivo-item">
-                        <span><i class="fa-regular fa-file" style="color:#aaa;"></i> ${arquivo.name}</span> 
-                        <button type="button" class="btn-remover" onclick="removerArquivoBloco('${tipo}', ${index}, ${id})"><i class="fa-solid fa-xmark"></i></button>
+                    <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 8px; margin-top: 6px; border-radius: 6px; font-size: 0.75rem; display: flex; justify-content: space-between; align-items: center; color: #fff; width: 100%; box-sizing: border-box; overflow: hidden;">
+                        <span title="${arquivo.name}" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block; max-width: calc(100% - 35px);">
+                            <i class="fa-regular fa-file" style="color:#aaa;"></i> ${arquivo.name}
+                        </span> 
+                        <button type="button" onclick="removerArquivoBloco('${tipo}', ${index}, ${id})" style="background: none; border: none; color: #ff3d00; cursor: pointer; font-weight: bold; flex-shrink: 0; padding: 0 5px;">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
                     </div>`;
             });
         }
