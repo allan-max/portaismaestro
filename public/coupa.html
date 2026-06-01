@@ -203,8 +203,11 @@
         }
         .form-group input:focus { border-color: #3b82f6; background-color: rgba(0, 0, 0, 0.4); }
         
-        .arquivo-item { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 6px; margin-top: 4px; border-radius: 6px; font-size: 0.75rem; display: flex; justify-content: space-between; color: #cbd5e1;}
-        .btn-remover { background: none; border: none; color: #ef4444; cursor: pointer; font-weight: bold;} 
+        .arquivo-item { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 6px; margin-top: 4px; border-radius: 6px; font-size: 0.75rem; display: flex; justify-content: space-between; align-items: center; color: #cbd5e1;}
+        
+        .arquivo-item span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80%; display: inline-block; }
+        
+        .btn-remover { background: none; border: none; color: #ef4444; cursor: pointer; font-weight: bold; flex-shrink: 0;} 
 
         /* CAPTCHA */
         #area-captcha { 
@@ -588,9 +591,10 @@
                 setTimeout(() => { overlayLock.style.pointerEvents = 'none'; }, 400);
                 
                 if (estado.status === 'ocioso') {
-                    // 👇 Esconde a caixinha quando termina 👇
                     const painel = document.getElementById('painel-progresso');
-                    if (painel) painel.style.display = 'none';
+                    if (painel && localStorage.getItem('coupa_extracting') !== 'true') {
+                        painel.style.display = 'none';
+                    }
 
                     dot.classList.add("active");
                     txtStatus.innerHTML = '<i class="fa-solid fa-check"></i> PRONTO PARA OPERAR';
@@ -769,14 +773,14 @@ function solicitarParada(btnElement) {
                     <div id="container-itens-${id}"></div>
 
                     <div style="display:flex; gap:10px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.05);">
-                        <div class="form-group" style="flex:1;">
+                        <div class="form-group" style="flex:1; min-width: 0;">
                             <label><i class="fa-solid fa-paperclip" style="color: #94a3b8"></i> DATASHEET (.PDF)</label>
-                            <input type="file" accept=".pdf" multiple onchange="adicionarArquivosBloco(event, 'ds', ${id})" style="border:none; padding:0; background:transparent;">
+                            <input type="file" accept=".pdf" multiple onchange="adicionarArquivosBloco(event, 'ds', ${id})" style="border:none; padding:0; background:transparent; max-width: 100%;">
                             <div id="lista-ds-${id}"></div>
                         </div>
-                        <div class="form-group" style="flex:1;">
+                        <div class="form-group" style="flex:1; min-width: 0;">
                             <label><i class="fa-solid fa-paperclip" style="color: #94a3b8"></i> DAV (.PDF)</label>
-                            <input type="file" accept=".pdf" multiple onchange="adicionarArquivosBloco(event, 'dav', ${id})" style="border:none; padding:0; background:transparent;">
+                            <input type="file" accept=".pdf" multiple onchange="adicionarArquivosBloco(event, 'dav', ${id})" style="border:none; padding:0; background:transparent; max-width: 100%;">
                             <div id="lista-dav-${id}"></div>
                         </div>
                     </div>
@@ -921,6 +925,10 @@ function solicitarParada(btnElement) {
             if (dados.evento === 'Lote de Extração') {
                 localStorage.removeItem('coupa_extracting'); 
                 
+                // 👇 GARANTE QUE O PAINEL ESCONDE AO TERMINAR DE FATO 👇
+                const painel = document.getElementById('painel-progresso');
+                if (painel) painel.style.display = 'none';
+                
                 const btnExtrair = document.getElementById('btn-extrair');
                 if (btnExtrair) {
                     btnExtrair.className = 'btn-base'; 
@@ -930,7 +938,6 @@ function solicitarParada(btnElement) {
                 }
                 
                 if (dados.sucesso) {
-                    // 👇 DISPARA O MODAL DE EXTRAÇÃO AQUI 👇
                     mostrarModal("Extração Concluída!", "Todos os dados foram extraídos e a planilha do Excel foi atualizada e libertada com sucesso.", "sucesso");
                 }
             }
