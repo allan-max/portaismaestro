@@ -206,7 +206,7 @@
         .arquivo-item { 
             background: rgba(0,0,0,0.3); 
             border: 1px solid rgba(255,255,255,0.05); 
-            padding: 6px; 
+            padding: 8px; 
             margin-top: 4px; 
             border-radius: 6px; 
             font-size: 0.75rem; 
@@ -214,9 +214,7 @@
             justify-content: space-between; 
             align-items: center; 
             color: #cbd5e1;
-            width: 100%; 
-            box-sizing: border-box;
-            overflow: hidden; /* Corta qualquer coisa que tente vazar */
+            word-break: break-all; /* Força nomes gigantes a quebrarem de linha */
         }
         
         .arquivo-item span { 
@@ -799,15 +797,15 @@ function solicitarParada(btnElement) {
                     
                     <div id="container-itens-${id}"></div>
 
-                    <div style="display:flex; gap:10px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.05); width: 100%;">
-                        <div class="form-group" style="flex:1; min-width: 0; overflow: hidden;">
+                    <div style="display:flex; flex-direction: column; gap:12px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.05);">
+                        <div class="form-group" style="margin: 0;">
                             <label><i class="fa-solid fa-paperclip" style="color: #94a3b8"></i> DATASHEET (.PDF)</label>
-                            <input type="file" accept=".pdf" multiple onchange="adicionarArquivosBloco(event, 'ds', ${id})" style="border:none; padding:0; background:transparent; width: 100%; overflow: hidden; text-overflow: ellipsis;">
+                            <input type="file" accept=".pdf" multiple onchange="adicionarArquivosBloco(event, 'ds', ${id})" style="border:none; padding:0; background:transparent; width: 100%;">
                             <div id="lista-ds-${id}"></div>
                         </div>
-                        <div class="form-group" style="flex:1; min-width: 0; overflow: hidden;">
+                        <div class="form-group" style="margin: 0;">
                             <label><i class="fa-solid fa-paperclip" style="color: #94a3b8"></i> DAV (.PDF)</label>
-                            <input type="file" accept=".pdf" multiple onchange="adicionarArquivosBloco(event, 'dav', ${id})" style="border:none; padding:0; background:transparent; width: 100%; overflow: hidden; text-overflow: ellipsis;">
+                            <input type="file" accept=".pdf" multiple onchange="adicionarArquivosBloco(event, 'dav', ${id})" style="border:none; padding:0; background:transparent; width: 100%;">
                             <div id="lista-dav-${id}"></div>
                         </div>
                     </div>
