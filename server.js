@@ -474,6 +474,21 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Site pede para registrar vendedor na planilha
+    socket.on('solicitar_registro_vendedor_cotacao', (dados) => {
+        if (bot_socket_id) {
+            io.to(bot_socket_id).emit('comando_registrar_vendedor_cotacao', { clientId: socket.id, ...dados });
+        } else {
+            socket.emit('resposta_registro_vendedor_cotacao', { sucesso: false, erro: "O Robô (Gerenciador Python) está offline. Inicie o script no seu computador." });
+        }
+    });
+
+    socket.on('retorno_registro_vendedor_cotacao', (dados) => {
+        if (dados.clientId) {
+            io.to(dados.clientId).emit('resposta_registro_vendedor_cotacao', dados);
+        }
+    });
+
     // Python devolve os dados prontos, o Node envia de volta para a aba exata do site
     socket.on('retorno_dados_dashboard', (dados) => {
         if (dados.clientId) {
