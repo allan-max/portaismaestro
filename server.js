@@ -489,6 +489,12 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('status_registro_vendedor_cotacao', (dados) => {
+        if (dados.clientId) {
+            io.to(dados.clientId).emit('status_registro_vendedor', dados);
+        }
+    });
+
     // Python devolve os dados prontos, o Node envia de volta para a aba exata do site
     socket.on('retorno_dados_dashboard', (dados) => {
         if (dados.clientId) {
@@ -601,23 +607,35 @@ app.post('/api/responder', upload.fields([{ name: 'datasheet' }, { name: 'dav' }
 
 // === GROQ IA (SEGURANÇA) ===
 const Groq = require('groq-sdk');
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const groq = new Groq({ apiKey: "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" });
 
 app.post('/api/chat', async (req, res) => {
     try {
         const userMessage = req.body.message;
         if (!userMessage || userMessage.length > 500) return res.status(400).json({ error: "Mensagem inválida." });
 
+        const prompt = `Você é a MAESTRO IA, o assistente virtual exclusivo do portal MAESTRO. 
+Sua função é guiar os usuários no uso dos módulos do site (Coupa, Vale, Findes, Ariba, Mercado Eletrônico (ME) e Planilha Vale).
+Informações essenciais do sistema:
+- Todos os robôs/módulos precisam que o usuário clique em "Ligar" primeiro para funcionarem.
+- A exceção é o SAP Ariba, onde o usuário precisa obrigatoriamente selecionar as empresas ANTES de clicar em ligar.
+- A página "Planilha Vale" serve para registrar o vendedor para cotações específicas diretamente na planilha da rede, suportando separação por vírgula ou espaço e verificando bloqueios caso a planilha esteja aberta.
+Regras rígidas:
+1. Se o usuário tiver um problema que você não sabe resolver, peça para ele enviar um email para: suporte@venturainformatica.com.br
+2. NÃO FUJA DO ASSUNTO. Responda apenas sobre o portal Maestro.
+3. NUNCA mostre ou explique trechos de código, não fale de programação ou arquitetura.`;
+
         const chatCompletion = await groq.chat.completions.create({
             messages: [
-                { role: "system", content: "Você é a MAESTRO IA... criado para responder somentes perguntas sobre os portais do maestro (coupa, vale, findes, ariba e mercado eletronico (ME)) todos são modulos e todos tem que clicar para ligar primeiro, menos o ariba que tem que selecionar as empresas antes de ligar. você não pode ficar conversando, apenas ajudar a resolver questões do portal maestro! se por acaso a pessoa tenha algum problema complexo, fale para ela falar com o suporte:maestro.portais@tutamail.com. evite de inventar informações" },
+                { role: "system", content: prompt },
                 { role: "user", content: userMessage }
             ],
-            model: "llama-3.1-8b-instant",
+            model: "openai/gpt-oss-120b",
             temperature: 0.5,
         });
         res.json({ reply: chatCompletion.choices[0].message.content });
     } catch (error) {
+        console.error("Erro no chat:", error);
         res.status(500).json({ error: "Falha na comunicação com IA." });
     }
 });

@@ -134,6 +134,12 @@
             socket.emit('solicitar_registro_vendedor_cotacao', { vendedor, cotacoes });
         }
 
+        socket.on('status_registro_vendedor', (res) => {
+            const msg = document.getElementById('status-msg');
+            msg.style.color = '#fbbf24';
+            msg.innerHTML = '<i class="fa-solid fa-clock"></i> ' + res.mensagem;
+        });
+
         socket.on('resposta_registro_vendedor_cotacao', (res) => {
             const btn = document.getElementById('btn-registrar');
             const msg = document.getElementById('status-msg');
