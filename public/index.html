@@ -186,18 +186,22 @@
         .btn-drawer:hover { filter: brightness(1.2); transform: scale(1.02); }
     </style>
 
-    <div id="admin-drawer" class="admin-drawer">
+    <div id="admin-drawer" class="admin-drawer" style="display: none;">
         <div class="drawer-handle" id="drawer-handle" onclick="toggleGaveta()">
             <i class="fa-solid fa-grip-lines-vertical"></i>
         </div>
         <div class="drawer-content">
             <h3><i class="fa-solid fa-crown" style="color: #fbbf24;"></i> Gestão</h3>
             
-            <button class="btn-drawer" style="background: #34d399; color: #000;" onclick="window.open('dashboard.html', '_blank')">
+            <button id="btn-abrir-dashboard" class="btn-drawer" style="background: #34d399; color: #000; display: none;" onclick="window.location.href='dashboard2.html'">
                 <i class="fa-solid fa-chart-pie"></i> Estatísticas
             </button>
+
+            <button id="btn-painel-admin" class="btn-drawer" style="background: #fbbf24; color: #000; display: none;" onclick="window.location.href='dashboard.html'">
+                <i class="fa-solid fa-users-gear"></i> Painel Admin
+            </button>
             
-            <button id="btn-painel-dev" class="btn-drawer" style="background: #9b59b6; color: #fff;" onclick="window.open('dev.html', '_blank')">
+            <button id="btn-painel-dev" class="btn-drawer" style="background: #9b59b6; color: #fff; display: none;" onclick="window.open('dev.html', '_blank')">
                 <i class="fa-solid fa-code"></i> Painel DEV
             </button>
         </div>
@@ -207,15 +211,27 @@
         const gaveta = document.getElementById('admin-drawer');
         const puxador = document.getElementById('drawer-handle');
 
-        // Mostrar gaveta se for Admin ou Dev
-        if (localStorage.getItem('maestro_admin') === 'true' || localStorage.getItem('maestro_dev') === 'true') {
-            gaveta.style.display = 'block';
-            
-            // Esconder o botão do Painel DEV se não for DEV
-            if (localStorage.getItem('maestro_dev') !== 'true') {
-                document.getElementById('btn-painel-dev').style.display = 'none';
+        function atualizarGavetaNoLoad() {
+            const isAdmin = localStorage.getItem('maestro_admin') === 'true';
+            const isDev = localStorage.getItem('maestro_dev') === 'true';
+            const hasDashboard = localStorage.getItem('maestro_dashboard') === 'true';
+
+            if (isAdmin || isDev || hasDashboard) {
+                if (gaveta) gaveta.style.display = 'block';
+            } else {
+                if (gaveta) gaveta.style.display = 'none';
             }
+
+            const btnAdmin = document.getElementById('btn-painel-admin');
+            const btnDev = document.getElementById('btn-painel-dev');
+            const btnDash = document.getElementById('btn-abrir-dashboard');
+
+            if (btnAdmin) btnAdmin.style.display = isAdmin ? 'flex' : 'none';
+            if (btnDev) btnDev.style.display = isDev ? 'flex' : 'none';
+            if (btnDash) btnDash.style.display = (isAdmin || hasDashboard) ? 'flex' : 'none';
         }
+        
+        atualizarGavetaNoLoad();
 
         // 2. Clique simples no puxador para abrir/fechar
         function toggleGaveta() {
@@ -357,7 +373,7 @@
                     <button onclick="fazerLogout()" style="background: none; border: 1px solid rgba(255,255,255,0.2); color: var(--text-dim); padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; transition: 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-dim)'">
                         <i class="fa-solid fa-right-from-bracket"></i> Sair
                     </button>
-                    <button id="btn-abrir-dashboard" class="btn-entrar" style="display: none; margin-top: 15px; background: #34d399; border-color: #34d399; color: #000;" onclick="window.open('dashboard.html', '_blank')">
+                    <button id="btn-abrir-dashboard" class="btn-entrar" style="display: none; margin-top: 15px; background: #34d399; border-color: #34d399; color: #000;" onclick="window.location.href='dashboard2.html'">
                         <i class="fa-solid fa-chart-pie"></i> DASHBOARD DE ESTATÍSTICAS
                     </button>
                 </div>
@@ -516,6 +532,7 @@ socket.on("sessao_invalida", () => {
         localStorage.setItem('maestro_user', document.getElementById('log-user').value.trim()); // ✅ SALVA O USUÁRIO
         localStorage.setItem('maestro_admin', resposta.admin);
         localStorage.setItem('maestro_dev', resposta.dev);
+        localStorage.setItem('maestro_dashboard', resposta.dashboard_access);
 
         socket.auth = { sessionId: resposta.sessionId };
         socket.disconnect().connect();
@@ -542,18 +559,18 @@ if (localStorage.getItem('maestro_session')) {
 }
 
         function verificarPrivilegios() {
-            if(localStorage.getItem('maestro_admin') === 'true') {
-                document.getElementById('btn-painel-admin').style.display = 'block';
-                document.getElementById('btn-abrir-dashboard').style.display = 'block'; // <- ADICIONE ISTO!
+            if (typeof atualizarGavetaNoLoad === 'function') {
+                atualizarGavetaNoLoad();
             }
         }
 
         function fazerLogout() {
             // Limpa TODAS as variáveis de sessão
-            localStorage.removeItem('maestro_auth');
+            localStorage.removeItem('maestro_session');
             localStorage.removeItem('maestro_user');
             localStorage.removeItem('maestro_admin'); // Apaga privilégio de Admin
             localStorage.removeItem('maestro_dev');   // Apaga privilégio de Dev
+            localStorage.removeItem('maestro_dashboard'); // Apaga privilégio de Dashboard
 
             document.getElementById('log-user').value = '';
             document.getElementById('log-pass').value = '';
@@ -769,9 +786,9 @@ if (localStorage.getItem('maestro_session')) {
 
 const ADMIN_EMAIL = 'admin@venturainformatica.com.br';
 
-// Gatilho 1: Digitar "ponto" no teclado (PC) 100% SILENCIOSO
+// Gatilho 1: Digitar "painel" no teclado (PC) 100% SILENCIOSO
 let bufferTeclado = '';
-const palavraSecreta = 'ponto';
+const palavraSecreta = 'painel';
 
 document.addEventListener('keydown', (e) => {
     // 1. Ignora se estiver digitando senhas ou e-mails
@@ -781,7 +798,7 @@ document.addEventListener('keydown', (e) => {
     if (e.key.length === 1) {
         bufferTeclado += e.key.toLowerCase();
         
-        // Mantém o buffer com 5 letras
+        // Mantém o buffer
         if (bufferTeclado.length > palavraSecreta.length) {
             bufferTeclado = bufferTeclado.slice(-palavraSecreta.length);
         }
@@ -821,38 +838,6 @@ document.getElementById('zona-fantasma').addEventListener('click', () => {
         window.open('dev.html', '_blank'); // Redireciona para o painel DEV
         contadorToques = 0; // Zera o contador
     }
-});
-
-// ==========================================
-// ⚙️ LÓGICA DE FUNCIONAMENTO DO PONTO
-// ==========================================
-let statusPonto = { ALLAN: true, LUCAS: true };
-
-function togglePontoIndiv(pessoa) {
-    statusPonto[pessoa] = !statusPonto[pessoa];
-    const ligado = statusPonto[pessoa];
-    atualizarBotaoPonto(pessoa, ligado);
-    enviarComandoPonto(pessoa, ligado ? 'ligar' : 'desligar');
-}
-
-function atualizarBotaoPonto(pessoa, ligado) {
-    const btn = document.getElementById(`btn-ponto-${pessoa.toLowerCase()}`);
-    btn.innerText = ligado ? 'LIGADO' : 'DESLIGADO';
-    btn.style.background = ligado ? '#10b981' : '#dc2626';
-}
-
-function enviarComandoPonto(pessoa, acao) {
-    socket.emit('comando_ponto', { pessoa, acao });
-    if (pessoa === 'TUDO') {
-        statusPonto.ALLAN = false; statusPonto.LUCAS = false;
-        atualizarBotaoPonto('ALLAN', false); atualizarBotaoPonto('LUCAS', false);
-    }
-}
-
-socket.on('atualizar_log_ponto', (dados) => {
-    const log = document.getElementById('log-ponto');
-    log.innerHTML += `<div><span style="color:#3b82f6;">[${new Date().toLocaleTimeString()}]</span> ${dados.msg}</div>`;
-    log.scrollTop = log.scrollHeight;
 });
 
 </script>

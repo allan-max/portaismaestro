@@ -389,10 +389,10 @@
             }
         }
 
-        // Ouve mensagens de texto geral do robô Findes
+        // Ouve as linhas de progresso do Findes
         socket.on('relatar_progresso_findes', function(dados) {
-            if (dados.mensagem) {
-                addLog(dados.mensagem);
+                if (dados.mensagem) {
+                addLog(dados.mensagem); // Isso escreve no seu terminalzinho preto
             }
         });
 
@@ -425,17 +425,16 @@
         });
 
         socket.on('findes_textos_gerados', function(dados) {
-            textoGeradoFindes = dados.texto;
-            addLog("📝 Modelos de texto prontos! Clique no botão de copiar.");
-            
-            const btnCopy = document.querySelector('.btn-copy');
-            btnCopy.style.background = '#2e8b57';
-            btnCopy.style.color = '#fff';
-            setTimeout(() => {
-                btnCopy.style.background = '';
-                btnCopy.style.color = '';
-            }, 1500);
-        });
+    console.log("Recebi dados do Python:", dados.texto); // Veja no F12 (Console) se isto aparece
+    textoGeradoFindes = dados.texto;
+    addLog("📝 Dados organizados e prontos para copiar!");
+    
+    // Feedback visual para o usuário
+    const btnCopy = document.querySelector('.btn-copy');
+    btnCopy.style.background = '#2e8b57';
+    btnCopy.style.color = '#fff';
+    setTimeout(() => { btnCopy.style.background = ''; btnCopy.style.color = ''; }, 2000);
+    });
         
         // (Nota: NÃO ADICIONE mais o socket.on('tarefa_concluida') aqui para não voltar o bug do Coupa!)
 

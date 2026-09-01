@@ -119,45 +119,7 @@
         <div class="dev-grid" id="lista-usuarios-dev">
             </div>
 
-        <div class="page-header" style="margin-top: 50px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 30px;">
-            <div>
-                <h2 class="page-title" style="font-size: 22px;"><i class="fa-solid fa-clock-rotate-left" style="color: #3b82f6;"></i> Controle </h2>
-                <p class="page-subtitle" style="color: #a1a1aa;">Gerenciamento de atividade das instâncias automatizadas</p>
-            </div>
-            <button onclick="enviarComandoPonto('TUDO', 'desligar')" class="btn-dev-action btn-ban" style="padding: 10px 15px; font-size: 13px;">
-                <i class="fa-solid fa-power-off"></i> DESLIGAR TUDO
-            </button>
-        </div>
 
-        <div class="dev-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 20px;">
-            <div class="dev-card">
-                <div class="info-section">
-                    <div>
-                        <div class="user-email">ALLAN</div>
-                        <div class="tech-info">Instância de Automação Principal</div>
-                    </div>
-                </div>
-                <div>
-                    <button id="btn-ponto-allan" onclick="togglePontoIndiv('ALLAN')" class="btn-dev-action btn-unban">LIGADO</button>
-                </div>
-            </div>
-
-            <div class="dev-card">
-                <div class="info-section">
-                    <div>
-                        <div class="user-email">LUCAS</div>
-                        <div class="tech-info">Instância de Automação Secundária</div>
-                    </div>
-                </div>
-                <div>
-                    <button id="btn-ponto-lucas" onclick="togglePontoIndiv('LUCAS')" class="btn-dev-action btn-unban">LIGADO</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="log-ponto" style="height: 180px; background: rgba(0,0,0,0.5); border-radius: 12px; font-family: 'Roboto Mono', monospace; font-size: 12px; color: #34d399; padding: 15px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 40px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);">
-            <div style="color: #666;">> Terminal do gerenciador de instâncias iniciado...</div>
-        </div>
     </main>
 
     <script>
@@ -381,62 +343,7 @@ socket.on("sessao_invalida", () => {
 
         socket.on('resposta_dev_acao', (res) => { if(res.sucesso) pedirLista(); });
 
-        // ====================================================
-        // LÓGICA DE FUNCIONAMENTO DO PONTO (ROBÔS)
-        // ====================================================
-        let statusPonto = { ALLAN: true, LUCAS: true };
 
-        socket.on('atualizar_botoes_ponto', (statusReal) => {
-            // Atualiza o Allan se existir no JSON
-            if (statusReal.ALLAN !== undefined) {
-                statusPonto.ALLAN = statusReal.ALLAN;
-                atualizarBotaoPonto('ALLAN', statusReal.ALLAN);
-            }
-            // Atualiza o Lucas se existir no JSON
-            if (statusReal.LUCAS !== undefined) {
-                statusPonto.LUCAS = statusReal.LUCAS;
-                atualizarBotaoPonto('LUCAS', statusReal.LUCAS);
-            }
-        });
-        
-        function togglePontoIndiv(pessoa) {
-            statusPonto[pessoa] = !statusPonto[pessoa];
-            const ligado = statusPonto[pessoa];
-            atualizarBotaoPonto(pessoa, ligado);
-            enviarComandoPonto(pessoa, ligado ? 'ligar' : 'desligar');
-        }
-
-        function atualizarBotaoPonto(pessoa, ligado) {
-            const btn = document.getElementById(`btn-ponto-${pessoa.toLowerCase()}`);
-            btn.innerText = ligado ? 'LIGADO' : 'DESLIGADO';
-            
-            // Aproveitando as classes CSS do Painel DEV
-            if (ligado) {
-                btn.className = "btn-dev-action btn-unban"; // Fica verde
-            } else {
-                btn.className = "btn-dev-action btn-ban"; // Fica vermelho
-            }
-        }
-
-        function enviarComandoPonto(pessoa, acao) {
-            // Nota: Se o seu backend exige que o comando_ponto seja criptografado igual aos outros, 
-            // você precisará envelopá-lo na função 'cifra_dev'. Mas se ele já recebia 
-            // direto do index.html sem criptografia, este formato abaixo funcionará perfeitamente:
-            socket.emit('comando_ponto', { pessoa: pessoa, acao: acao });
-            
-            if (pessoa === 'TUDO') {
-                statusPonto.ALLAN = false; statusPonto.LUCAS = false;
-                atualizarBotaoPonto('ALLAN', false); 
-                atualizarBotaoPonto('LUCAS', false);
-            }
-        }
-
-        socket.on('atualizar_log_ponto', (dados) => {
-            const log = document.getElementById('log-ponto');
-            // Usando a cor roxa (#9b59b6) temática do painel DEV para a marcação de tempo
-            log.innerHTML += `<div><span style="color:#9b59b6; font-weight:bold;">[${new Date().toLocaleTimeString()}]</span> ${dados.msg}</div>`;
-            log.scrollTop = log.scrollHeight; // Rola automaticamente para o final
-        });
     </script>
 </body>
 </html>

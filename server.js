@@ -9,6 +9,7 @@ const cors = require('cors');
 const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
+const cron = require('node-cron');
 
 require('dotenv').config();
 
@@ -92,8 +93,8 @@ require('dns').setDefaultResultOrder('ipv4first');
 
 
 app.use(express.static(path.join(__dirname, 'public'), {
-    maxAge: '1d', // O navegador guarda imagens e CSS por 1 dia inteiro
-    etag: false
+    maxAge: 0,
+    etag: true
 }));
 app.use(express.json());
 
@@ -168,33 +169,6 @@ io.on('connection', (socket) => {
         io.to('frontend').emit('sincronizar_estado', { estado: estado_global, mensagem: "Robô operacional e conectado!" });
     });
 
-    // Dentro de io.on('connection', (socket) => { ... })
-socket.on('comando_ponto', (dados) => {
-    if (bot_socket_id) {
-        io.to(bot_socket_id).emit('comando_ponto_robo', dados);
-    }
-});
-
-// O site pede o status atual do JSON
-    socket.on('pedir_status_ponto', () => {
-        // Apenas Admin e Dev podem pedir isto
-        if (!checkRole('dev') && !checkRole('admin')) return; 
-        
-        if (bot_socket_id) {
-            io.to(bot_socket_id).emit('solicitar_status_ponto', { clientId: socket.id });
-        }
-    });
-
-    // O Python responde com os dados do JSON e o Node entrega à página correta
-    socket.on('resposta_status_ponto', (dados) => {
-        if (dados.clientId) {
-            io.to(dados.clientId).emit('atualizar_botoes_ponto', dados.status);
-        }
-    });
-
-socket.on('log_ponto', (dados) => {
-    io.to('frontend').emit('atualizar_log_ponto', dados);
-});
 
     // === PONTES DE CAPTCHA (ROBÔ <-> SITE) ===
     socket.on('imagem_captcha_do_robo', (dados) => {
@@ -250,16 +224,24 @@ socket.on('log_ponto', (dados) => {
 
         } else {
             // 👇 ROTINA ORIGINAL PARA AS OUTRAS TAREFAS 👇
-            if (dados.evento === 'Login do Robô') {
-                if (dados.sucesso) estado_global.status = 'ocioso';
-                else { estado_global.status = 'desligado'; estado_global.portal_atual = null; }
+            if (dados.portal === 'ariba') {
+                if (estado_ariba.status !== 'desligado') estado_ariba.status = 'ocioso';
+                io.to('frontend').emit('sincronizar_estado_ariba', estado_ariba);
+            } else if (dados.portal === 'me') {
+                if (estado_me.status !== 'desligado') estado_me.status = 'ocioso';
+                io.to('frontend').emit('sincronizar_estado_me', estado_me);
             } else {
-                if (estado_global.status !== 'desligado') {
-                    estado_global.status = 'ocioso';
+                if (dados.evento === 'Login do Robô') {
+                    if (dados.sucesso) estado_global.status = 'ocioso';
+                    else { estado_global.status = 'desligado'; estado_global.portal_atual = null; }
+                } else {
+                    if (estado_global.status !== 'desligado') {
+                        estado_global.status = 'ocioso';
+                    }
                 }
+                notificar_todos();
             }
             io.to('frontend').emit('tarefa_concluida', dados);
-            notificar_todos();
         }
     });
 
@@ -312,8 +294,16 @@ socket.on('log_ponto', (dados) => {
 
     socket.on('solicitar_impressao', (dados) => {
         if (!socket.autenticado) return;
-        estado_global.status = 'ocupado';
-        notificar_todos();
+        if (dados.portal === 'ariba') {
+            estado_ariba.status = 'ocupado';
+            io.to('frontend').emit('sincronizar_estado_ariba', estado_ariba);
+        } else if (dados.portal === 'me') {
+            estado_me.status = 'ocupado';
+            io.to('frontend').emit('sincronizar_estado_me', estado_me);
+        } else {
+            estado_global.status = 'ocupado';
+            notificar_todos();
+        }
         if (bot_socket_id) io.to(bot_socket_id).emit('comando_imprimir', dados);
     });
 
@@ -358,7 +348,8 @@ socket.on('log_ponto', (dados) => {
             cofreSessoes.set(sessionId, JSON.stringify({ 
                 email: dados.user, 
                 admin: dados.isAdmin, 
-                dev: dados.isDev, 
+                dev: dados.isDev,
+                dashboard_access: dados.hasDashboardAccess,
                 expires: expires 
             }));
             
@@ -367,7 +358,8 @@ socket.on('log_ponto', (dados) => {
                 sucesso: true, 
                 sessionId: sessionId,
                 admin: dados.isAdmin, 
-                dev: dados.isDev 
+                dev: dados.isDev,
+                dashboard_access: dados.hasDashboardAccess
             });
         } else {
             // ✅ CORREÇÃO: Envia o erro para o navegador (clientId)
@@ -382,6 +374,11 @@ socket.on('log_ponto', (dados) => {
             // 🛑 Avisa o usuário que o robô local está desligado
             socket.emit('resposta_cadastro', { sucesso: false, erro: "O Servidor Central Maestro está offline." });
         }
+    });
+
+    // ✅ NOVO: Repassa a resposta do robô de volta para o frontend
+    socket.on('resposta_cadastro', (dados) => {
+        io.to(dados.clientId).emit('resposta_cadastro', dados);
     });
 
 
@@ -420,11 +417,58 @@ socket.on('log_ponto', (dados) => {
         }
     });
 
+    // === PAINEL ADMIN (Controle de Acessos e Status) ===
+    socket.on('admin_pedir_usuarios', () => {
+        if (!checkRole('admin')) return;
+        const dbPath = path.join(__dirname, '..', 'banco_usuarios.json');
+        fs.readFile(dbPath, 'utf8', (err, data) => {
+            if (err) return;
+            try {
+                const db = JSON.parse(data);
+                const onlineUsers = Object.keys(usuarios_logados);
+                for (let email in db) {
+                    db[email].online = onlineUsers.includes(email);
+                }
+                socket.emit('admin_receber_usuarios', db);
+            } catch(e) {}
+        });
+    });
+
+    socket.on('admin_alterar_acesso_dashboard', (dados) => {
+        if (!checkRole('admin')) return;
+        const dbPath = path.join(__dirname, '..', 'banco_usuarios.json');
+        fs.readFile(dbPath, 'utf8', (err, data) => {
+            if (err) {
+                socket.emit('admin_acesso_alterado', { sucesso: false, erro: "Erro ao ler banco de dados" });
+                return;
+            }
+            try {
+                const db = JSON.parse(data);
+                if (db[dados.email]) {
+                    db[dados.email].dashboard_access = dados.acesso;
+                    fs.writeFile(dbPath, JSON.stringify(db, null, 4), () => {
+                        socket.emit('admin_acesso_alterado', { sucesso: true, email: dados.email, acesso: dados.acesso });
+                        
+                        // Atualizar sessão em tempo real se o usuário estiver logado
+                        const userSession = Array.from(cofreSessoes.values()).find(s => {
+                            const parsed = JSON.parse(s);
+                            return parsed.email === dados.email;
+                        });
+                        
+                        // Enviar atualização silenciosa para o cliente (opcional)
+                    });
+                }
+            } catch(e) {
+                socket.emit('admin_acesso_alterado', { sucesso: false, erro: "Erro ao salvar banco de dados" });
+            }
+        });
+    });
+
     // Site pede os dados do Dashboard
-    socket.on('pedir_dados_dashboard', () => {
+    socket.on('pedir_dados_dashboard', (filtros) => {
         if (bot_socket_id) {
-            // Repassa para o Python, enviando o ID de quem pediu
-            io.to(bot_socket_id).emit('comando_ler_excel_dashboard', { clientId: socket.id });
+            // Repassa para o Python, enviando o ID e os filtros
+            io.to(bot_socket_id).emit('comando_ler_excel_dashboard', { clientId: socket.id, filtros: filtros });
         } else {
             socket.emit('receber_dados_dashboard', { sucesso: false, erro: "O Robô (Gerenciador Python) está offline." });
         }
