@@ -95,6 +95,19 @@
         </div>
     </div>
 
+    <div id="modal-config" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15, 12, 41, 0.95); z-index:9999; justify-content:center; align-items:center; backdrop-filter:blur(10px);">
+        <div class="security-box" style="max-width: 600px; width: 90%; text-align:left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="color: #fff;"><i class="fa-solid fa-cogs"></i> Variáveis do Robô (CONFIG.json)</h2>
+                <button onclick="document.getElementById('modal-config').style.display='none'" style="background:transparent; border:none; color:#f87171; font-size:20px; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="config-form" style="max-height: 60vh; overflow-y: auto; padding-right: 10px;">
+                <!-- Inputs generated dynamically -->
+            </div>
+            <button class="btn-unlock" onclick="salvarConfiguracoes()" style="margin-top:20px; background:#34d399; color:#000;"><i class="fa-solid fa-floppy-disk"></i> SALVAR CONFIGURAÇÕES NO ROBÔ</button>
+        </div>
+    </div>
+
     <aside class="sidebar">
         <div class="sidebar-header">
             <img src="logo-maestro.png" alt="Logo">
@@ -102,6 +115,7 @@
         </div>
         <div class="nav-link active"><i class="fa-solid fa-users-gear"></i> Controle Criptografado</div>
         <div class="nav-link" onclick="pedirLista()"><i class="fa-solid fa-rotate-right"></i> Forçar Atualização</div>
+        <div class="nav-link" onclick="abrirConfiguracoes()"><i class="fa-solid fa-cogs"></i> Configurações do Robô</div>
         <div class="sidebar-footer">
             <a href="index.html" class="btn-logout"><i class="fa-solid fa-arrow-right-from-bracket"></i> Voltar ao Portal</a>
         </div>
@@ -342,8 +356,64 @@ socket.on("sessao_invalida", () => {
         }
 
         socket.on('resposta_dev_acao', (res) => { if(res.sucesso) pedirLista(); });
+        
+        // ====================================================
+        // CONFIGURAÇÕES DO ROBÔ
+        // ====================================================
+        function abrirConfiguracoes() {
+            socket.emit('pedir_config_admin');
+        }
 
+        socket.on('receber_config_admin', (dados) => {
+            let config = dados.config || dados;
+            // Trata pacote do Python
+            if (dados && dados.config) config = dados.config;
+            
+            if (dados.sucesso) {
+                alert("Configurações atualizadas no robô local com sucesso!");
+                document.getElementById('modal-config').style.display = 'none';
+                return;
+            }
 
+            const form = document.getElementById('config-form');
+            form.innerHTML = '';
+            for (let key in config) {
+                let div = document.createElement('div');
+                div.style.marginBottom = "15px";
+                let label = document.createElement('label');
+                label.style.color = "#a1a1aa";
+                label.style.fontSize = "12px";
+                label.style.display = "block";
+                label.style.marginBottom = "5px";
+                label.innerText = key;
+                let input = document.createElement('input');
+                input.className = "input-token";
+                input.style.marginBottom = "0";
+                input.style.textAlign = "left";
+                input.style.fontFamily = "'Roboto Mono', monospace";
+                input.style.fontSize = "13px";
+                input.id = "config_" + key;
+                input.value = config[key];
+                
+                div.appendChild(label);
+                div.appendChild(input);
+                form.appendChild(div);
+            }
+            document.getElementById('modal-config').style.display = 'flex';
+        });
+
+        function salvarConfiguracoes() {
+            if(!confirm("Certeza que deseja alterar as variáveis do robô? Ele usará os novos caminhos imediatamente.")) return;
+            
+            let form = document.getElementById('config-form');
+            let inputs = form.getElementsByTagName('input');
+            let nova_config = {};
+            for (let i = 0; i < inputs.length; i++) {
+                let key = inputs[i].id.replace('config_', '');
+                nova_config[key] = inputs[i].value;
+            }
+            socket.emit('salvar_config_admin', { config: nova_config });
+        }
     </script>
 </body>
 </html>

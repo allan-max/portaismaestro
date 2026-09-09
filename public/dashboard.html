@@ -176,10 +176,29 @@
           <p>Gerencie o acesso à Estatística (Dashboard) e monitore usuários</p>
         </div>
       </div>
-      <button onclick="carregarUsuarios()" style="background: #34d399; color: #000; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s;">
-        🔄 Atualizar Lista
-      </button>
+      <div style="display: flex; gap: 10px;">
+        <button onclick="carregarUsuarios()" style="background: #34d399; color: #000; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s;">
+          🔄 Atualizar Lista
+        </button>
+        <button onclick="abrirConfiguracoes()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+          ⚙️ CONFIGURAÇÕES
+        </button>
+      </div>
     </header>
+
+    <!-- MODAL CONFIGURACOES -->
+    <div id="modal-config" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15, 12, 41, 0.95); z-index:9999; justify-content:center; align-items:center; backdrop-filter:blur(10px);">
+      <div style="background: rgba(30, 30, 50, 0.95); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 30px; max-width: 600px; width: 90%; text-align:left;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h2 style="color: #fff;">⚙️ Variáveis do Robô (CONFIG.json)</h2>
+          <button onclick="document.getElementById('modal-config').style.display='none'" style="background:transparent; border:none; color:#f87171; font-size:24px; cursor:pointer;">&times;</button>
+        </div>
+        <div id="config-form" style="max-height: 60vh; overflow-y: auto; padding-right: 10px;">
+          <!-- Inputs generated dynamically -->
+        </div>
+        <button onclick="salvarConfiguracoes()" style="margin-top:20px; width:100%; background:#34d399; color:#000; border:none; padding:15px; border-radius:8px; font-weight:bold; cursor:pointer;">💾 SALVAR CONFIGURAÇÕES NO ROBÔ</button>
+      </div>
+    </div>
 
     <section class="card">
       <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -297,6 +316,65 @@
             carregarUsuarios(); // recarrega a tabela p/ voltar o estado real
         }
     });
+
+    // ====================================================
+    // CONFIGURAÇÕES DO ROBÔ
+    // ====================================================
+    function abrirConfiguracoes() {
+        socket.emit('pedir_config_admin');
+    }
+
+    socket.on('receber_config_admin', (dados) => {
+        let config = dados.config || dados;
+        if (dados && dados.config) config = dados.config;
+        
+        if (dados.sucesso) {
+            alert("Configurações atualizadas no robô local com sucesso!");
+            document.getElementById('modal-config').style.display = 'none';
+            return;
+        }
+
+        const form = document.getElementById('config-form');
+        form.innerHTML = '';
+        for (let key in config) {
+            let div = document.createElement('div');
+            div.style.marginBottom = "15px";
+            let label = document.createElement('label');
+            label.style.color = "#a1a1aa";
+            label.style.fontSize = "12px";
+            label.style.display = "block";
+            label.style.marginBottom = "5px";
+            label.innerText = key;
+            let input = document.createElement('input');
+            input.style.width = "100%";
+            input.style.padding = "10px";
+            input.style.background = "rgba(0,0,0,0.5)";
+            input.style.border = "1px solid rgba(255,255,255,0.2)";
+            input.style.color = "#fff";
+            input.style.borderRadius = "6px";
+            input.style.fontFamily = "monospace";
+            input.id = "config_" + key;
+            input.value = config[key];
+            
+            div.appendChild(label);
+            div.appendChild(input);
+            form.appendChild(div);
+        }
+        document.getElementById('modal-config').style.display = 'flex';
+    });
+
+    function salvarConfiguracoes() {
+        if(!confirm("Certeza que deseja alterar as variáveis do robô? Ele usará os novos caminhos imediatamente.")) return;
+        
+        let form = document.getElementById('config-form');
+        let inputs = form.getElementsByTagName('input');
+        let nova_config = {};
+        for (let i = 0; i < inputs.length; i++) {
+            let key = inputs[i].id.replace('config_', '');
+            nova_config[key] = inputs[i].value;
+        }
+        socket.emit('salvar_config_admin', { config: nova_config });
+    }
 
   </script>
 </body>

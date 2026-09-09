@@ -464,6 +464,20 @@ io.on('connection', (socket) => {
         });
     });
 
+    socket.on('pedir_config_admin', () => {
+        if (!checkRole('admin')) return;
+        if (bot_socket_id) io.to(bot_socket_id).emit('pedir_config_admin', { clientId: socket.id });
+    });
+
+    socket.on('salvar_config_admin', (dados) => {
+        if (!checkRole('admin')) return;
+        if (bot_socket_id) io.to(bot_socket_id).emit('salvar_config_admin', { ...dados, clientId: socket.id });
+    });
+
+    socket.on('receber_config_admin', (dados) => {
+        io.to(dados.clientId).emit('receber_config_admin', dados);
+    });
+
     // Site pede os dados do Dashboard
     socket.on('pedir_dados_dashboard', (filtros) => {
         if (bot_socket_id) {
