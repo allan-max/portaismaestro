@@ -109,6 +109,8 @@
         const sessionAtual = localStorage.getItem('maestro_session');
         const socket = io({ auth: { sessionId: sessionAtual }, transports: ['websocket'], upgrade: false });
 
+        socket.emit('sou_frontend', { sessionId: sessionAtual });
+
         socket.on("sessao_invalida", () => {
             localStorage.clear();
             window.location.href = "index.html"; 
@@ -157,6 +159,60 @@
                 msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + res.erro;
             }
         });
+
+        // Lógica da Fila de Extração
+        socket.emit('obter_fila_extracao', {clientId: socket.id});
+        
+        socket.on('atualizar_fila_extracao', (res) => {
+            const panel = document.getElementById('fila-extracao-panel');
+            const lista = document.getElementById('fila-lista');
+            const fila = res.fila || [];
+            
+            if (fila.length > 0) {
+                panel.style.display = 'flex';
+                let agrupado = {};
+                fila.forEach(item => {
+                    if (!agrupado[item.vendedor]) agrupado[item.vendedor] = [];
+                    agrupado[item.vendedor].push(item.cotacao);
+                });
+                
+                let html = '';
+                for (let vend in agrupado) {
+                    html += `<div style="background: #2d2d2d; padding: 10px; border-radius: 6px; margin-bottom: 10px;">
+                        <div style="color: #3b82f6; font-weight: bold; margin-bottom: 5px;"><i class="fa-solid fa-user"></i> ${vend}</div>
+                        <div style="color: #d1d5db; font-size: 13px; line-height: 1.4;">${agrupado[vend].join(', ')}</div>
+                    </div>`;
+                }
+                lista.innerHTML = html;
+                document.getElementById('btn-extrair-fila').disabled = false;
+                document.getElementById('btn-extrair-fila').style.background = '#2563eb';
+                document.getElementById('btn-extrair-fila').innerHTML = '<i class="fa-solid fa-play"></i> EXTRAIR TUDO AGORA';
+            } else {
+                panel.style.display = 'none';
+            }
+        });
+        
+        socket.on('progresso_fila_extracao', (res) => {
+            const msg = document.getElementById('fila-status');
+            msg.innerHTML = res.mensagem;
+        });
+
+        function iniciarExtracaoFila() {
+            document.getElementById('btn-extrair-fila').disabled = true;
+            document.getElementById('btn-extrair-fila').style.background = '#6b7280';
+            document.getElementById('btn-extrair-fila').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> PROCESSANDO...';
+            document.getElementById('fila-status').innerHTML = '<span style="color: #fbbf24;">Iniciando processo...</span>';
+            socket.emit('iniciar_extracao_fila', {clientId: socket.id});
+        }
     </script>
+    
+    <!-- Fila Panel UI -->
+    <div id="fila-extracao-panel" style="position: fixed; right: 20px; top: 100px; width: 320px; background: #1f2937; border: 1px solid #374151; border-radius: 12px; padding: 20px; display: none; flex-direction: column; z-index: 1000; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+        <h3 style="color: #fff; margin-top: 0; font-size: 16px; border-bottom: 1px solid #374151; padding-bottom: 15px; margin-bottom: 15px;"><i class="fa-solid fa-layer-group"></i> Fila de Extração Pendente</h3>
+        <p style="color: #9ca3af; font-size: 12px; margin-bottom: 15px;">Os vendedores e cotações abaixo não estavam na planilha. Clique no botão abaixo quando tiver terminado de registrar todos.</p>
+        <div id="fila-lista" style="flex: 1; max-height: 400px; overflow-y: auto; margin-bottom: 15px;"></div>
+        <div id="fila-status" style="font-size: 13px; margin-bottom: 15px; font-weight: bold;"></div>
+        <button id="btn-extrair-fila" onclick="iniciarExtracaoFila()" style="background: #2563eb; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.2s;"><i class="fa-solid fa-play"></i> EXTRAIR TUDO AGORA</button>
+    </div>
 </body>
 </html>
