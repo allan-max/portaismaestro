@@ -509,6 +509,16 @@ io.on('connection', (socket) => {
         }
     });
 
+    // FILA EXTRAÇÃO
+    socket.on('obter_fila_extracao', (dados) => io.to('backend').emit('obter_fila_extracao', dados));
+    socket.on('iniciar_extracao_fila', (dados) => io.to('backend').emit('iniciar_extracao_fila', dados));
+    socket.on('atualizar_fila_extracao', (dados) => {
+        io.emit('atualizar_fila_extracao', dados);
+    });
+    socket.on('progresso_fila_extracao', (dados) => {
+        io.emit('progresso_fila_extracao', dados);
+    });
+
     // Python devolve os dados prontos, o Node envia de volta para a aba exata do site
     socket.on('retorno_dados_dashboard', (dados) => {
         if (dados.clientId) {
