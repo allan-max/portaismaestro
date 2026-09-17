@@ -165,8 +165,9 @@ io.on('connection', (socket) => {
 
     socket.on('sou_o_robo', () => {
         bot_socket_id = socket.id;
+        socket.join('backend');
         console.log("🤖 Robô Local Conectado.");
-        io.to('frontend').emit('sincronizar_estado', { estado: estado_global, mensagem: "Robô operacional e conectado!" });
+        io.emit('sincronizar_estado', { estado: estado_global, mensagem: "Robô operacional e conectado!" });
     });
 
 
@@ -506,6 +507,21 @@ io.on('connection', (socket) => {
     socket.on('status_registro_vendedor_cotacao', (dados) => {
         if (dados.clientId) {
             io.to(dados.clientId).emit('status_registro_vendedor', dados);
+        }
+    });
+
+    // Site pede para registrar cotações manuais na planilha
+    socket.on('solicitar_registro_cotacao_manual', (dados) => {
+        if (bot_socket_id) {
+            io.to(bot_socket_id).emit('comando_registrar_cotacao_manual', { clientId: socket.id, ...dados });
+        } else {
+            socket.emit('resposta_registro_cotacao_manual', { sucesso: false, erro: "O Robô (Gerenciador Python) está offline." });
+        }
+    });
+
+    socket.on('retorno_registro_cotacao_manual', (dados) => {
+        if (dados.clientId) {
+            io.to(dados.clientId).emit('resposta_registro_cotacao_manual', dados);
         }
     });
 
