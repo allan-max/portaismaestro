@@ -23,48 +23,80 @@
         body {
             margin: 0; padding: 0;
             font-family: 'Inter', sans-serif;
-            background-color: #0f1115;
-            color: #fff;
+            background-color: #1c1917; /* stone-900: Fundo escuro quente e natural */
+            color: #f5f5f4; /* stone-100: Branco off-white aconchegante */
             display: flex;
             height: 100vh;
             width: 100%;
         }
         
-        /* ========================================== */
-        /* 🧭 NAVBAR FLUTUANTE GLOBAL                 */
-        /* ========================================== */
+        /* NAVBAR FLUTUANTE GLOBAL */
         .floating-navbar {
             position: fixed; top: 25px; left: 50%; transform: translateX(-50%);
-            background: rgba(15, 17, 21, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 40px; padding: 6px 10px;
-            display: flex; gap: 5px; z-index: 99999; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            background: #292524; /* stone-800 */
+            border: 1px solid #44403c; /* stone-700 */
+            border-radius: 40px; padding: 6px 10px;
+            display: flex; gap: 5px; z-index: 99999; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
         }
         .nav-item {
-            color: #9aa0a6; text-decoration: none; padding: 8px 12px; border-radius: 30px;
+            color: #a8a29e; /* stone-400 */
+            text-decoration: none; padding: 8px 12px; border-radius: 30px;
             font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600;
             text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s ease;
             display: flex; align-items: center; gap: 8px;
         }
-        .nav-item:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
-        .nav-item.active.nav-planilha { background: #21a366; color: #fff; box-shadow: 0 0 15px rgba(33, 163, 102, 0.5); }
+        .nav-item:hover { color: #f5f5f4; background: #44403c; }
+        .nav-item.active.nav-planilha { background: #059669; color: #fff; } /* emerald-600 */
         .nav-item.nav-voltar { color: #f87171; }
-        .nav-item.nav-voltar:hover { color: #ff3d00; background: rgba(248, 113, 113, 0.15); }
+        .nav-item.nav-voltar:hover { color: #fff; background: #dc2626; }
 
-        .nav-voltar { background: rgba(255, 255, 255, 0.1); }
-        .nav-voltar:hover { background: rgba(255, 255, 255, 0.2); }
+        .form-box {
+            background: #292524; /* stone-800 */
+            border: 1px solid #44403c; /* stone-700 */
+            border-radius: 12px; 
+            padding: 30px; 
+            width: 100%; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        
+        .form-label {
+            display: block; font-size: 0.85rem; color: #a8a29e; margin-bottom: 6px; font-weight: 500;
+        }
+        
+        .form-input {
+            width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #44403c; 
+            background: #1c1917; color: #f5f5f4; font-size: 0.95rem; outline: none; transition: 0.3s; box-sizing: border-box;
+        }
+        .form-input:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15); }
+        
+        .btn-primary {
+            padding: 12px; border-radius: 8px; border: none; background: #059669; color: #fff; 
+            font-size: 1rem; font-weight: 600; cursor: pointer; transition: 0.3s;
+            text-align: center;
+        }
+        .btn-primary:hover { background: #047857; }
+        
+        .btn-outline {
+            padding: 12px; border-radius: 8px; border: 1px dashed #78716c; background: transparent; color: #a8a29e; 
+            font-size: 1rem; cursor: pointer; transition: 0.3s;
+        }
+        .btn-outline:hover { background: #44403c; border-color: #a8a29e; color: #fff; }
 
-        /* ========================================== */
-        /* 📱 RESPONSIVIDADE MOBILE                     */
-        /* ========================================== */
+        table { width: 100%; border-collapse: collapse; }
+        th { padding: 12px 10px; background: #1c1917; color: #a8a29e; font-size: 0.8rem; border-bottom: 1px solid #44403c; text-align: left; text-transform: uppercase; font-weight: 600; }
+        td { padding: 8px; border-bottom: 1px solid #44403c; }
+
         @media (max-width: 850px) {
-            .floating-navbar {
-                top: auto;
-                bottom: 20px;
-                width: max-content;
-                max-width: 90%;
-            }
+            .floating-navbar { top: auto; bottom: 20px; width: max-content; max-width: 90%; }
             .nav-item span { display: none; } 
             .nav-item { padding: 12px; font-size: 16px; border-radius: 50%; }
+            .main-container { padding: 40px 15px 100px 15px !important; }
+        }
+
+        @media (max-width: 600px) {
+            .form-box { padding: 20px 15px; }
+            .btn-container { flex-direction: column; }
+            .btn-outline { width: 100% !important; }
         }
     </style>
 </head>
@@ -78,27 +110,67 @@
         <a href="javascript:void(0)" onclick="irPara('ariba.html')" class="nav-item"><i class="fa-solid fa-cloud"></i> <span>Ariba</span></a>
         <a href="index.html" class="nav-item nav-voltar"><i class="fa-solid fa-arrow-left"></i> <span>Voltar</span></a>
     </nav>
-    <!-- CONTEÚDO PRINCIPAL -->
-    <div style="flex: 1; display: flex; justify-content: center; align-items: center; padding: 20px;">
-        <div class="glass-box" style="background: rgba(30, 30, 50, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 30px; width: 100%; max-width: 450px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-            <div style="font-size: 3rem; color: #21a366; margin-bottom: 10px;">
+
+    <div class="main-container" style="flex: 1; display: flex; flex-direction: column; gap: 30px; align-items: center; padding: 100px 20px 40px 20px; overflow-y: auto; box-sizing: border-box;">
+        
+        <!-- Bloco 1: Registrar Cotação Manual (Agora em cima) -->
+        <div class="form-box" style="max-width: 950px; box-sizing: border-box;">
+            <div style="font-size: 2.2rem; color: #10b981; margin-bottom: 5px;">
+                <i class="fa-solid fa-list-check"></i>
+            </div>
+            <h2 style="font-size: 1.4rem; margin-bottom: 5px; font-weight: 700; color: #f3f4f6;">Registrar Cotações Manuais</h2>
+            <p style="font-size: 0.9rem; color: #9ca3af; margin-bottom: 25px;">Adicione cotações manualmente na planilha.</p>
+            
+            <div style="overflow-x: auto; max-height: 400px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #44403c; border-radius: 6px;">
+                <table id="tabela-cotacoes-manuais">
+                    <thead>
+                        <tr>
+                            <th>Cotação</th>
+                            <th>Vencimento</th>
+                            <th>Item</th>
+                            <th>Qtd</th>
+                            <th>Localidade</th>
+                            <th>Vendedor</th>
+                            <th>Modelos</th>
+                            <th>Marcas</th>
+                            <th style="width: 30px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-cotacoes-manuais">
+                        <!-- Linhas inseridas por JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="btn-container" style="display: flex; gap: 10px;">
+                <button onclick="adicionarLinhaCotacaoManual()" class="btn-outline" style="width: 60px;">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+                <button id="btn-registrar-manuais" onclick="registrarCotacoesManuais()" class="btn-primary" style="flex: 1;">
+                    REGISTRAR COTAÇÕES NA PLANILHA
+                </button>
+            </div>
+            <div id="status-msg-manual" style="margin-top: 15px; font-size: 0.9rem; min-height: 20px; font-weight: 500;"></div>
+        </div>
+
+        <!-- Bloco 2: Atribuir Vendedor (Agora em baixo) -->
+        <div class="form-box" style="max-width: 950px; box-sizing: border-box;">
+            <div style="font-size: 2.2rem; color: #10b981; margin-bottom: 5px;">
                 <i class="fa-solid fa-file-excel"></i>
             </div>
-            <h2 style="font-size: 1.5rem; margin-bottom: 5px; font-weight: 700;">Atribuir Vendedor</h2>
-            <p style="font-size: 0.9rem; color: #a1a1aa; margin-bottom: 25px;">Registre o vendedor para as cotações na planilha da Vale.</p>
+            <h2 style="font-size: 1.4rem; margin-bottom: 5px; font-weight: 700; color: #f3f4f6;">Atribuir Vendedor</h2>
+            <p style="font-size: 0.9rem; color: #9ca3af; margin-bottom: 25px;">Registre o vendedor para as cotações na planilha da Vale.</p>
             
-            <div style="text-align: left; margin-bottom: 15px;">
-                <label style="display: block; font-size: 0.8rem; color: #cbd5e1; margin-bottom: 6px; font-weight: 600; text-transform: uppercase;">Nome do Vendedor</label>
-                <input type="text" id="input-vendedor" placeholder="Ex: João Silva" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.2); color: #fff; font-size: 0.95rem; outline: none; transition: 0.3s; box-sizing: border-box;" onfocus="this.style.borderColor='#21a366'" onblur="this.style.borderColor='rgba(255,255,255,0.15)'">
+            <div style="margin-bottom: 15px;">
+                <input type="text" id="input-vendedor" class="form-input" placeholder="Ex: João Silva">
             </div>
 
-            <div style="text-align: left; margin-bottom: 25px;">
-                <label style="display: block; font-size: 0.8rem; color: #cbd5e1; margin-bottom: 6px; font-weight: 600; text-transform: uppercase;">Números das Cotações</label>
-                <textarea id="input-cotacoes" placeholder="Ex: 22222, 33333, 44444&#10;Pode separar por vírgula ou espaço" rows="3" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.2); color: #fff; font-size: 0.95rem; outline: none; transition: 0.3s; box-sizing: border-box; resize: none; font-family: 'Roboto Mono', monospace;" onfocus="this.style.borderColor='#21a366'" onblur="this.style.borderColor='rgba(255,255,255,0.15)'"></textarea>
+            <div style="margin-bottom: 25px;">
+                <textarea id="input-cotacoes" class="form-input" placeholder="Ex: 22222, 33333, 44444&#10;Pode separar por vírgula ou espaço" rows="3" style="resize: none; font-family: 'Roboto Mono', monospace;"></textarea>
             </div>
 
-            <button id="btn-registrar" onclick="registrarVendedor()" style="width: 100%; padding: 14px; border-radius: 8px; border: none; background: #21a366; color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(33, 163, 102, 0.4);">
-                REGISTRAR NA PLANILHA
+            <button id="btn-registrar" onclick="registrarVendedor()" class="btn-primary" style="width: 100%;">
+                ATRIBUIR VENDEDOR NA PLANILHA
             </button>
 
             <div id="status-msg" style="margin-top: 15px; font-size: 0.9rem; min-height: 20px; font-weight: 500;"></div>
@@ -154,6 +226,90 @@
                 msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + res.mensagem;
                 document.getElementById('input-vendedor').value = '';
                 document.getElementById('input-cotacoes').value = '';
+            } else {
+                msg.style.color = '#f87171';
+                msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + res.erro;
+            }
+        });
+
+        // --- LOGICA DE COTAÇÕES MANUAIS ---
+        function criarTextareaAutoResize(classe, placeholder = "") {
+            return `<textarea class="${classe} form-input" placeholder="${placeholder}" rows="1" style="padding: 8px; resize: both; overflow: hidden; line-height: 1.4; min-height: 38px; min-width: 50px; width: 100%; box-sizing: border-box; field-sizing: content;" oninput="this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; this.style.width = 'auto'; this.style.width = (this.scrollWidth + 5) + 'px';"></textarea>`;
+        }
+        
+        function templateLinhaManual() {
+            return `
+                <tr style="vertical-align: top;">
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-cotacao')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-vencimento', 'DD/MM/AAAA')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-item')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-qtd')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-localidade')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-vendedor')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-modelos')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-marcas')}</td>
+                    <td style="padding: 4px; text-align: center; vertical-align: middle;"><button onclick="this.closest('tr').remove()" style="background: transparent; border: none; color: #ef4444; cursor: pointer; padding: 5px;"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>
+            `;
+        }
+
+        function adicionarLinhaCotacaoManual() {
+            const tbody = document.getElementById('tbody-cotacoes-manuais');
+            tbody.insertAdjacentHTML('beforeend', templateLinhaManual());
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            adicionarLinhaCotacaoManual();
+        });
+
+        function registrarCotacoesManuais() {
+            const rows = document.querySelectorAll('#tbody-cotacoes-manuais tr');
+            const cotacoes = [];
+            rows.forEach(tr => {
+                const cota = tr.querySelector('.c-cotacao').value.trim();
+                if (cota) {
+                    cotacoes.push({
+                        cotacao: cota,
+                        vencimento: tr.querySelector('.c-vencimento').value.trim(),
+                        item: tr.querySelector('.c-item').value.trim(),
+                        quantidade: tr.querySelector('.c-qtd').value.trim(),
+                        localidade: tr.querySelector('.c-localidade').value.trim(),
+                        vendedor: tr.querySelector('.c-vendedor').value.trim(),
+                        modelos: tr.querySelector('.c-modelos').value.trim(),
+                        marcas: tr.querySelector('.c-marcas').value.trim()
+                    });
+                }
+            });
+
+            const btn = document.getElementById('btn-registrar-manuais');
+            const msg = document.getElementById('status-msg-manual');
+
+            if (cotacoes.length === 0) {
+                msg.style.color = '#f87171';
+                msg.innerText = "⚠️ Preencha pelo menos uma cotação.";
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> REGISTRANDO...';
+            msg.style.color = '#fbbf24';
+            msg.innerText = "⏳ Enviando para o Robô...";
+
+            socket.emit('solicitar_registro_cotacao_manual', { cotacoes });
+        }
+
+        socket.on('resposta_registro_cotacao_manual', (res) => {
+            const btn = document.getElementById('btn-registrar-manuais');
+            const msg = document.getElementById('status-msg-manual');
+            
+            btn.disabled = false;
+            btn.innerHTML = 'REGISTRAR COTAÇÕES NA PLANILHA';
+
+            if (res.sucesso) {
+                msg.style.color = '#34d399';
+                msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + res.mensagem;
+                document.getElementById('tbody-cotacoes-manuais').innerHTML = '';
+                adicionarLinhaCotacaoManual();
             } else {
                 msg.style.color = '#f87171';
                 msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + res.erro;
