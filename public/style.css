@@ -557,6 +557,7 @@ body.pagina-painel select {
 .nav-item.active.nav-coupa { background: #4da8da; color: #000; box-shadow: 0 0 15px rgba(77, 168, 218, 0.4); }
 .nav-item.active.nav-vale { background: #00e676; color: #000; box-shadow: 0 0 15px rgba(0, 230, 118, 0.4); }
 .nav-item.active.nav-me { background: #1a36c4; color: #fff; box-shadow: 0 0 15px rgba(26, 54, 196, 0.5); }
+.nav-item.active.nav-planilha { background: #10b981; color: #fff; box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); }
 .nav-item.active.nav-findes { background: #ff8c00; color: #000; box-shadow: 0 0 15px rgba(255, 140, 0, 0.4); }
 
 /* ========================================== */

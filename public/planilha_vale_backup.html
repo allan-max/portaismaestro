@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAESTRO | Planilha Vale</title>
+    <link rel="icon" type="image/png" href="favicon-32x32.png">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+
+    </div>
+        <!-- Bloco 4: Visualizador JSON -->
+        <div class="form-box" style="max-width: 100%; width: 100%; box-sizing: border-box; margin-top: 20px; padding: 15px;">
+            
+            <div style="display: flex; gap: 8px; margin-bottom: 15px; align-items: center;">
+                <!-- Botão Dropdown Opções -->
+                <div style="position: relative; font-family: 'Inter', sans-serif;">
+                    <button onclick="document.getElementById('dropdown-menu').style.display = document.getElementById('dropdown-menu').style.display === 'flex' ? 'none' : 'flex';" style="transition: all 0.2s; background: #47515e; color: #ffffff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 8px; font-size: 0.85rem;">
+                        <i class="fa-solid fa-bars"></i> OPÇÕES
+                    </button>
+                    <div id="dropdown-menu" style="display: none; position: absolute; top: 100%; left: 0; margin-top: 5px; background: #373e47; border: 1px solid #444c56; border-radius: 6px; flex-direction: column; min-width: 220px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); z-index: 99999;">
+                        <a href="#" onclick="abrirForm('vendedor'); return false;" style="padding: 12px 15px; color: #adbac7; text-decoration: none; border-bottom: 1px solid #444c56; display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-user-tag" style="width: 20px; text-align: center;"></i> Registro de Vendedor</a>
+                        <a href="#" onclick="abrirForm('cotacao'); return false;" style="padding: 12px 15px; color: #adbac7; text-decoration: none; border-bottom: 1px solid #444c56; display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-list-check" style="width: 20px; text-align: center;"></i> Registro de Cotação</a>
+                        <a href="#" onclick="abrirForm('pedido'); return false;" style="padding: 12px 15px; color: #adbac7; text-decoration: none; display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-cart-shopping" style="width: 20px; text-align: center;"></i> Registro de Pedido</a>
+                    </div>
+                </div>
+
+                <button onclick="carregarBancoDados()" class="btn-primary" style="width: auto; padding: 6px 12px; font-size: 0.85rem; border-radius: 4px;">
+                    <i class="fa-solid fa-sync"></i> ATUALIZAR
+                </button>
+                <div style="display: flex; background: #444c56; border-radius: 4px; overflow: hidden; border: 1px solid #444c56;">
+                    <button id="tab-cota" onclick="mudarTabBanco('cota')" style="padding: 6px 15px; border: none; background: #539bf5; color: #2d333b; cursor: pointer; font-weight: bold; font-size: 0.8rem;">COTAÇÕES</button>
+                    <button id="tab-pedi" onclick="mudarTabBanco('pedi')" style="padding: 6px 15px; border: none; background: transparent; color: #768390; cursor: pointer; font-weight: bold; font-size: 0.8rem;">PEDIDOS</button>
+                </div>
+            </div>
+
+            
+            <!-- Tabela Cotações -->
+            <div id="view-cota" style="overflow-x: auto; max-height: 700px; overflow-y: auto; border: 1px solid #444c56; background: #2d333b;">
+                <table style="width: 100%; table-layout: fixed; text-align: left; border-collapse: collapse; font-size: 0.8rem; font-family: 'Inter', sans-serif;">
+                    <thead style="background: #373e47; position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 0 #444c56;">
+                        <tr>
+                            <th style="width: 12%; padding: 4px 8px; border: 1px solid #444c56; color: #adbac7; white-space: nowrap; font-weight: 600;; cursor: pointer; position: relative;" class="col-header-filter" onclick="abrirFiltroColuna(event)" title="Clique para filtrar">Cotação</th>
+                            <th style="width: 12%; padding: 4px 8px; border: 1px solid #444c56; color: #adbac7; white-space: nowrap; font-weight: 600;; cursor: pointer; position: relative;" class="col-header-filter" onclick="abrirFiltroColuna(event)" title="Clique para filtrar">Vencimento</th>
+                            <th style="width: 20%; padding: 4px 8px; border: 1px solid #444c56; color: #adbac7; white-space: nowrap; font-weight: 600;; cursor: pointer; position: relative;" class="col-header-filter" onclick="abrirFiltroColuna(event)" title="Clique para filtrar">Vendedor</th>
+                            <th style="width: 20%; padding: 4px 8px; border: 1px solid #444c56; color: #adbac7; white-space: nowrap; font-weight: 600;; cursor: pointer; position: relative;" class="col-header-filter" onclick="abrirFiltroColuna(event)" title="Clique para filtrar">Localidade</th>
+                            <th style="width: 20%; padding: 4px 8px; border: 1px solid #444c56; color: #adbac7; white-space: nowrap; font-weight: 600;; cursor: pointer; position: relative;" class="col-header-filter" onclick="abrirFiltroColuna(event)" title="Clique para filtrar">Resposta</th>
+                            <th style="width: 60px; padding: 4px 8px; border: 1px solid #444c56; color: #adbac7; white-space: nowrap; font-weight: 600; text-align: center;">Ações</th>
+                            
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-bd-cota">
+                        <tr><td colspan="6" style="padding: 20px; text-align: center; color: #78716c; border: 1px solid #444c56;">Clique em ATUALIZAR para carregar os dados</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Tabela Pedidos -->
+            <div id="view-pedi" style="overflow-x: auto; max-height: 700px; overflow-y: auto; border: 1px solid #444c56; background: #2d333b; display: none;">
+                <table style="width: 100%; table-layout: fixed; text-align: left; border-collapse: collapse; font-size: 0.8rem; font-family: 'Inter', sans-serif;">
+                    <thead style="background: #373e47; position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 0 #444c56;">
+                        <tr>
+                            <th style="width: 15%; padding: 4px 8px; border: 1px solid #444c56; color: #adbac7; white-space: nowrap; font-weight: 600;; cursor: pointer; position: relative;" class="col-header-filter" onclick="abrirFiltroColuna(event)" title="Clique para filtrar">Pedido</th>
+                            <th style="width: 15%; padding: 4px 8px; border: 1px solid #444c56; color: #adbac7; white-space: nowrap; font-weight: 600;; cursor: pointer; position: relative;" class="col-header-filter" onclick="abrirFiltroColuna(event)" title="Clique para filtrar">Valor</th>
+                            <th style="width: 15%; padding: 4px 8px; border: 1px solid #444c56; color: #adbac7; white-space: nowrap; font-weight: 600;; cursor: pointer; position: relative;" class="col-header-filter" onclick="abrirFiltroColuna(event)" title="Clique para filtrar">Entrega</th>
+                            <th style="width: 20%; padding: 4px 8px; border: 1px solid #444c56; color: #adbac7; white-space: nowrap; font-weight: 600;; cursor: pointer; position: relative;" class="col-header-filter" onclick="abrirFiltroColuna(event)" title="Clique para filtrar">Requisitante</th>
+                            <th style="width: 20%; padding: 4px 8px; border: 1px solid #444c56; color: #adbac7; white-space: nowrap; font-weight: 600;; cursor: pointer; position: relative;" class="col-header-filter" onclick="abrirFiltroColuna(event)" title="Clique para filtrar">Cidade</th>
+                            <th style="width: 60px; padding: 4px 8px; border: 1px solid #444c56; color: #adbac7; white-space: nowrap; font-weight: 600; text-align: center;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-bd-pedi">
+                        <tr><td colspan="6" style="padding: 20px; text-align: center; color: #78716c; border: 1px solid #444c56;">Clique em ATUALIZAR para carregar os dados</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+    <script>
+
+
+
+    if (!localStorage.getItem('maestro_session')) {
+        window.location.href = 'index.html';
+    }
+    
+    
+        // JS adicionado para menu de Opções e Modais
+        window.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('container-forms-modal');
+            const fCotacao = document.getElementById('form-cotacao');
+            const fVendedor = document.getElementById('form-vendedor');
+            const fPedido = document.getElementById('form-pedido');
+            if (fCotacao) container.appendChild(fCotacao);
+            if (fVendedor) container.appendChild(fVendedor);
+            if (fPedido) container.appendChild(fPedido);
+            
+            // Fechar dropdown ao clicar fora
+            document.addEventListener('click', (e) => {
+                const menu = document.getElementById('dropdown-menu');
+                if (menu.style.display === 'flex' && !e.target.closest('#dropdown-menu') && !e.target.closest('button[onclick*="toggleDropdown"]')) {
+                    // if it wasn't the button itself, wait, we used inline onclick. Let's just check closest
+                    if (!e.target.closest('div[style*="position: relative;"]')) {
+                        menu.style.display = 'none';
+                    }
+                }
+            });
+        });
+
+        function abrirForm(tipo) {
+            document.getElementById('dropdown-menu').style.display = 'none';
+            document.getElementById('form-cotacao').style.display = 'none';
+            document.getElementById('form-vendedor').style.display = 'none';
+            document.getElementById('form-pedido').style.display = 'none';
+            
+            if (tipo === 'cotacao') document.getElementById('form-cotacao').style.display = 'block';
+            if (tipo === 'vendedor') document.getElementById('form-vendedor').style.display = 'block';
+            if (tipo === 'pedido') document.getElementById('form-pedido').style.display = 'block';
+            
+            document.getElementById('modal-forms-overlay').style.display = 'flex';
+        }
+
+
+      function irPara(url) {
+        window.location.href = url;
+    }
+    </script>
+    <link rel="stylesheet" href="style.css">
+    
+
+
+    <style>
+        body { background-color: #22272e !important; color: #adbac7 !important; }
+        .form-box { background: #2d333b !important; border: 1px solid #444c56 !important; box-shadow: 0 8px 24px rgba(28,33,40,0.5) !important; border-radius: 12px; }
+        
+        /* Smooth Scrollbars */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #22272e; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #444c56; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #768390; }
+        
+        
+        /* Input Fields / Textareas */
+        .form-input {
+            background-color: #22272e;
+            border: 1px solid #444c56;
+            color: #adbac7;
+            border-radius: 6px;
+            padding: 10px 12px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .form-input::placeholder {
+            color: #768390;
+        }
+
+        /* Modern Inputs */
+        input:focus, select:focus, textarea:focus { outline: 2px solid #539bf5; outline-offset: -1px; }
+        
+        /* Table Row Hover */
+        tbody tr { transition: background-color 0.15s ease; }
+        tbody tr:hover { background-color: #373e47 !important; }
+        
+    
+        /* Links for Tables */
+        td a { color: #539bf5; text-decoration: none; }
+        td a:hover { text-decoration: underline; }
+
+    </style>
+
+</head>
+<body>
+
+    <!-- Menu Excel-like Filter -->
+    <div id="menu-filtro-coluna" style="display: none; position: absolute; background: #373e47; border: 1px solid #444c56; border-radius: 6px; padding: 10px; width: 220px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); z-index: 100001; font-family: 'Inter', sans-serif;">
+        <input type="text" id="input-filtro-col" placeholder="Buscar..." onkeyup="aplicarFiltroColuna()" style="width: 100%; box-sizing: border-box; background: #2d333b; border: 1px solid #444c56; color: #adbac7; padding: 6px; border-radius: 4px; font-size: 0.8rem; margin-bottom: 10px;">
+        <div style="margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;">
+            <label style="font-size: 0.8rem; color: #adbac7; display: flex; gap: 5px; align-items: center;"><input type="checkbox" id="chk-todas-col" onchange="toggleTodasFiltroCol(this.checked)"> (Selecionar Tudo)</label>
+            <button onclick="limparFiltroColuna()" style="background: transparent; border: none; color: #e5534b; cursor: pointer; font-size: 0.75rem;"><i class="fa-solid fa-eraser"></i> Limpar</button>
+        </div>
+        <div id="lista-filtro-col" style="max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; border-top: 1px solid #444c56; padding-top: 5px;">
+            <!-- Checkboxes preenchidos via JS -->
+        </div>
+        <button onclick="document.getElementById('menu-filtro-coluna').style.display='none'" style="width: 100%; background: #539bf5; color: #2d333b; border: none; padding: 6px; border-radius: 4px; margin-top: 10px; cursor: pointer; font-weight: bold; font-size: 0.8rem;">OK</button>
+    </div>
+
+    
+
+    <!-- Modal para os forms -->
+    <div id="modal-forms-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 99999;">
+        <div style="position: relative; width: 95%; max-width: 1000px; max-height: 90vh; overflow-y: auto; background: transparent;">
+            <button onclick="document.getElementById('modal-forms-overlay').style.display='none';" style="position: absolute; top: 15px; right: 15px; background: #e5534b; color: #2d333b; border: none; border-radius: 50%; width: 35px; height: 35px; cursor: pointer; font-size: 1.2rem; font-weight: bold; z-index: 10; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">&times;</button>
+            <div id="container-forms-modal" style="width: 100%;">
+                <!-- Forms will be moved here by JS -->
+            </div>
+        </div>
+    </div>
+
+    <nav class="floating-navbar">
+        <a href="javascript:void(0)" onclick="irPara('coupa.html')" class="nav-item"><i class="fa-solid fa-cube"></i> <span>Coupa</span></a>
+        <a href="javascript:void(0)" onclick="irPara('vale.html')" class="nav-item"><i class="fa-solid fa-helmet-safety"></i> <span>Vale</span></a>
+        <a href="javascript:void(0)" onclick="irPara('planilha_vale.html')" class="nav-item active nav-planilha"><i class="fa-solid fa-file-excel"></i> <span>Planilha</span></a>
+        <a href="javascript:void(0)" onclick="irPara('me.html')" class="nav-item"><i class="fa-solid fa-shopping-cart"></i> <span>ME</span></a>
+        <a href="javascript:void(0)" onclick="irPara('findes.html')" class="nav-item"><i class="fa-solid fa-industry"></i> <span>Findes</span></a>
+        <a href="javascript:void(0)" onclick="irPara('ariba.html')" class="nav-item"><i class="fa-solid fa-cloud"></i> <span>Ariba</span></a>
+        <a href="index.html" class="nav-item nav-voltar"><i class="fa-solid fa-arrow-left"></i> <span>Voltar</span></a>
+    </nav>
+
+    <div class="main-container" style="flex: 1; display: flex; flex-direction: column; gap: 30px; align-items: center; padding: 100px 20px 40px 20px; overflow-y: auto; box-sizing: border-box;">
+        
+        <!-- Bloco 1: Registrar Cotação Manual --><div id="form-cotacao" class="form-box" style="width: 100%; box-sizing: border-box; display: none; position: relative;">
+            <div style="font-size: 2.2rem; color: #57ab5a; margin-bottom: 5px;">
+                <i class="fa-solid fa-list-check"></i>
+            </div>
+            <h2 style="font-size: 1.4rem; margin-bottom: 5px; font-weight: 700; color: #cdd9e5;">Registrar Cotações Manuais</h2>
+            <p style="font-size: 0.9rem; color: #768390; margin-bottom: 25px;">Adicione cotações manualmente na planilha.</p>
+            
+            <div style="overflow-x: auto; max-height: 400px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #444c56; border-radius: 6px;">
+                <table id="tabela-cotacoes-manuais">
+                    <thead>
+                        <tr>
+                            <th>Cotação</th>
+                            <th>Vencimento</th>
+                            <th>Item</th>
+                            <th>Qtd</th>
+                            <th>Localidade</th>
+                            <th>Vendedor</th>
+                            <th>Modelos</th>
+                            <th>Marcas</th>
+                            <th style="width: 30px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-cotacoes-manuais">
+                        <!-- Linhas inseridas por JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="btn-container" style="display: flex; gap: 10px;">
+                <button onclick="adicionarLinhaCotacaoManual()" class="btn-outline" style="width: 60px;">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+                <button id="btn-registrar-manuais" onclick="registrarCotacoesManuais()" class="btn-primary" style="flex: 1;">
+                    REGISTRAR COTAÇÕES NA PLANILHA
+                </button>
+            </div>
+            <div id="status-msg-manual" style="margin-top: 15px; font-size: 0.9rem; min-height: 20px; font-weight: 500;"></div>
+        </div>
+
+        <!-- Bloco 2 --><div id="form-vendedor" class="form-box" style="width: 100%; box-sizing: border-box; display: none; position: relative;">
+            <div style="font-size: 2.2rem; color: #57ab5a; margin-bottom: 5px;">
+                <i class="fa-solid fa-file-excel"></i>
+            </div>
+            <h2 style="font-size: 1.4rem; margin-bottom: 5px; font-weight: 700; color: #cdd9e5;">Atribuir Vendedor</h2>
+            <p style="font-size: 0.9rem; color: #768390; margin-bottom: 25px;">Registre o vendedor para as cotações na planilha da Vale.</p>
+            
+            <div style="margin-bottom: 15px;">
+                <input type="text" id="input-vendedor" class="form-input" placeholder="Ex: João Silva">
+            </div>
+
+            <div style="margin-bottom: 25px;">
+                <textarea id="input-cotacoes" class="form-input" placeholder="Ex: 22222, 33333, 44444&#10;Pode separar por vírgula ou espaço" rows="3" style="resize: none; font-family: 'Roboto Mono', monospace;"></textarea>
+            </div>
+
+            <button id="btn-registrar" onclick="registrarVendedor()" class="btn-primary" style="width: 100%;">
+                ATRIBUIR VENDEDOR NA PLANILHA
+            </button>
+
+            <div id="status-msg" style="margin-top: 15px; font-size: 0.9rem; min-height: 20px; font-weight: 500;"></div>
+        </div>
+
+        <!-- Bloco 3 --><div id="form-pedido" class="form-box" style="width: 100%; box-sizing: border-box; display: none; position: relative;">
+            <div style="font-size: 2.2rem; color: #57ab5a; margin-bottom: 5px;">
+                <i class="fa-solid fa-cart-shopping"></i>
+            </div>
+            <h2 style="font-size: 1.4rem; margin-bottom: 5px; font-weight: 700; color: #cdd9e5;">Registrar Pedido Manual</h2>
+            <p style="font-size: 0.9rem; color: #768390; margin-bottom: 25px;">Adicione novos pedidos manualmente na aba de pedidos da planilha.</p>
+            
+            <div style="overflow-x: auto; max-height: 400px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #444c56; border-radius: 6px;">
+                <table id="tabela-pedidos-manuais">
+                    <thead>
+                        <tr>
+                            <th>Cidade</th>
+                            <th>Frete</th>
+                            <th>Pedido</th>
+                            <th>Valor</th>
+                            <th>Produto</th>
+                            <th>Entrega</th>
+                            <th>RFQ</th>
+                            <th>Requisitante</th>
+                            <th>Email Requisitante</th>
+                            <th style="width: 30px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-pedidos-manuais">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="btn-container" style="display: flex; gap: 10px;">
+                <button onclick="adicionarLinhaPedidoManual()" class="btn-outline" style="width: 60px;">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+                <button id="btn-registrar-pedidos" onclick="registrarPedidosManuais()" class="btn-primary" style="flex: 1;">
+                    REGISTRAR PEDIDOS NA PLANILHA
+                </button>
+            </div>
+            <div id="status-msg-pedido" style="margin-top: 15px; font-size: 0.9rem; min-height: 20px; font-weight: 500;"></div>
+        </div>
+
+    </div>
+
+
+    </div>
+
+
+
+
+    <script>
+        const sessionAtual = localStorage.getItem('maestro_session');
+        const socket = io({ auth: { sessionId: sessionAtual }, transports: ['websocket'], upgrade: false });
+
+        socket.emit('sou_frontend', { sessionId: sessionAtual });
+
+        socket.on("sessao_invalida", () => {
+            localStorage.clear();
+            window.location.href = "index.html"; 
+        });
+
+        function registrarVendedor() {
+            const vendedor = document.getElementById('input-vendedor').value.trim();
+            const cotacoes = document.getElementById('input-cotacoes').value.trim();
+            const btn = document.getElementById('btn-registrar');
+            const msg = document.getElementById('status-msg');
+
+            if (!vendedor || !cotacoes) {
+                msg.style.color = '#e5534b';
+                msg.innerText = "⚠️ Preencha o vendedor e as cotações.";
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> REGISTRANDO...';
+            msg.style.color = '#e3b341';
+            msg.innerText = "⏳ Enviando para o Robô...";
+
+            socket.emit('solicitar_registro_vendedor_cotacao', { vendedor, cotacoes });
+        }
+
+        socket.on('status_registro_vendedor', (res) => {
+            const msg = document.getElementById('status-msg');
+            msg.style.color = '#e3b341';
+            msg.innerHTML = '<i class="fa-solid fa-clock"></i> ' + res.mensagem;
+        });
+
+        socket.on('resposta_registro_vendedor_cotacao', (res) => {
+            const btn = document.getElementById('btn-registrar');
+            const msg = document.getElementById('status-msg');
+            
+            btn.disabled = false;
+            btn.innerHTML = 'REGISTRAR NA PLANILHA';
+
+            if (res.sucesso) {
+                msg.style.color = '#34d399';
+                msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + res.mensagem;
+                document.getElementById('input-vendedor').value = '';
+                document.getElementById('input-cotacoes').value = '';
+            } else {
+                msg.style.color = '#e5534b';
+                msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + res.erro;
+            }
+        });
+
+        // --- LOGICA DE COTAÇÕES MANUAIS ---
+        function criarTextareaAutoResize(classe, placeholder = "") {
+            return `<textarea class="${classe} form-input" placeholder="${placeholder}" rows="1" style="padding: 8px; resize: both; overflow: hidden; line-height: 1.4; min-height: 38px; min-width: 50px; width: 100%; box-sizing: border-box; field-sizing: content;" oninput="this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; this.style.width = 'auto'; this.style.width = (this.scrollWidth + 5) + 'px';"></textarea>`;
+        }
+        
+        function templateLinhaManual() {
+            return `
+                <tr style="vertical-align: top;">
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-cotacao')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-vencimento', 'DD/MM/AAAA')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-item')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-qtd')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-localidade')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-vendedor')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-modelos')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-marcas')}</td>
+                    <td style="padding: 4px; text-align: center; vertical-align: middle;"><button onclick="this.closest('tr').remove()" style="background: transparent; border: none; color: #e5534b; cursor: pointer; padding: 5px;"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>
+            `;
+        }
+
+        function adicionarLinhaCotacaoManual() {
+            const tbody = document.getElementById('tbody-cotacoes-manuais');
+            tbody.insertAdjacentHTML('beforeend', templateLinhaManual());
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            adicionarLinhaCotacaoManual();
+        });
+
+        function registrarCotacoesManuais() {
+            const rows = document.querySelectorAll('#tbody-cotacoes-manuais tr');
+            const cotacoes = [];
+            rows.forEach(tr => {
+                const cota = tr.querySelector('.c-cotacao').value.trim();
+                if (cota) {
+                    cotacoes.push({
+                        cotacao: cota,
+                        vencimento: tr.querySelector('.c-vencimento').value.trim(),
+                        item: tr.querySelector('.c-item').value.trim(),
+                        quantidade: tr.querySelector('.c-qtd').value.trim(),
+                        localidade: tr.querySelector('.c-localidade').value.trim(),
+                        vendedor: tr.querySelector('.c-vendedor').value.trim(),
+                        modelos: tr.querySelector('.c-modelos').value.trim(),
+                        marcas: tr.querySelector('.c-marcas').value.trim()
+                    });
+                }
+            });
+
+            const btn = document.getElementById('btn-registrar-manuais');
+            const msg = document.getElementById('status-msg-manual');
+
+            if (cotacoes.length === 0) {
+                msg.style.color = '#e5534b';
+                msg.innerText = "⚠️ Preencha pelo menos uma cotação.";
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> REGISTRANDO...';
+            msg.style.color = '#e3b341';
+            msg.innerText = "⏳ Enviando para o Robô...";
+
+            socket.emit('solicitar_registro_cotacao_manual', { cotacoes });
+        }
+
+        
+        function adicionarLinhaPedidoManual() {
+            const tbody = document.getElementById('tbody-pedidos-manuais');
+            const tr = document.createElement('tr');
+            tr.style.verticalAlign = 'top';
+            tr.innerHTML = `
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-cidade')}</td>
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-frete')}</td>
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-pedido')}</td>
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-valor')}</td>
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-produto')}</td>
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-entrega', 'DD/MM/AAAA')}</td>
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-rfq')}</td>
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-requisitante')}</td>
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-email')}</td>
+                <td style="padding: 4px; vertical-align: middle;">
+                    <button onclick="this.closest('tr').remove()" style="background: none; border: none; color: #e5534b; cursor: pointer; padding: 5px;"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            adicionarLinhaPedidoManual();
+        });
+
+        function registrarPedidosManuais() {
+            const rows = document.querySelectorAll('#tbody-pedidos-manuais tr');
+            const pedidos = [];
+            rows.forEach(tr => {
+                const pedidoNum = tr.querySelector('.p-pedido').value.trim();
+                const produto = tr.querySelector('.p-produto').value.trim();
+                if (pedidoNum || produto) {
+                    pedidos.push({
+                        cidade_estado: tr.querySelector('.p-cidade').value.trim(),
+                        frete: tr.querySelector('.p-frete').value.trim(),
+                        pedido: pedidoNum,
+                        total: tr.querySelector('.p-valor').value.trim(),
+                        itens: [{
+                            texto: produto,
+                            prazo: tr.querySelector('.p-entrega').value.trim(),
+                            email: tr.querySelector('.p-email').value.trim()
+                        }],
+                        evento: tr.querySelector('.p-rfq').value.trim(),
+                        vendedor: tr.querySelector('.p-requisitante').value.trim()
+                    });
+                }
+            });
+
+            const btn = document.getElementById('btn-registrar-pedidos');
+            const msg = document.getElementById('status-msg-pedido');
+
+            if (pedidos.length === 0) {
+                msg.style.color = '#e5534b';
+                msg.innerText = "⚠️ Preencha pelo menos um pedido.";
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> REGISTRANDO...';
+            msg.style.color = '#e3b341';
+            msg.innerText = "⏳ Enviando para o Robô...";
+
+            socket.emit('solicitar_registro_pedido_manual', { pedidos });
+        }
+
+        socket.on('resposta_registro_pedido_manual', (res) => {
+            const btn = document.getElementById('btn-registrar-pedidos');
+            const msg = document.getElementById('status-msg-pedido');
+            
+            btn.disabled = false;
+            btn.innerHTML = 'REGISTRAR PEDIDOS NA PLANILHA';
+
+            if (res.sucesso) {
+                msg.style.color = '#34d399';
+                msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + res.mensagem;
+                document.getElementById('tbody-pedidos-manuais').innerHTML = '';
+                adicionarLinhaPedidoManual();
+            } else {
+                msg.style.color = '#e5534b';
+                msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + res.erro;
+            }
+        });
+
+        socket.on('resposta_registro_cotacao_manual', (res) => {
+            const btn = document.getElementById('btn-registrar-manuais');
+            const msg = document.getElementById('status-msg-manual');
+            
+            btn.disabled = false;
+            btn.innerHTML = 'REGISTRAR COTAÇÕES NA PLANILHA';
+
+            if (res.sucesso) {
+                msg.style.color = '#34d399';
+                msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + res.mensagem;
+                document.getElementById('tbody-cotacoes-manuais').innerHTML = '';
+                adicionarLinhaCotacaoManual();
+            } else {
+                msg.style.color = '#e5534b';
+                msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + res.erro;
+            }
+        });
+
+        // Lógica da Fila de Extração
+        socket.emit('obter_fila_extracao', {clientId: socket.id});
+        
+        socket.on('atualizar_fila_extracao', (res) => {
+            const panel = document.getElementById('fila-extracao-panel');
+            const lista = document.getElementById('fila-lista');
+            const fila = res.fila || [];
+            
+            if (fila.length > 0) {
+                panel.style.display = 'flex';
+                let agrupado = {};
+                fila.forEach(item => {
+                    if (!agrupado[item.vendedor]) agrupado[item.vendedor] = [];
+                    agrupado[item.vendedor].push(item.cotacao);
+                });
+                
+                let html = '';
+                for (let vend in agrupado) {
+                    html += `<div style="background: #2d2d2d; padding: 10px; border-radius: 6px; margin-bottom: 10px;">
+                        <div style="color: #3b82f6; font-weight: bold; margin-bottom: 5px;"><i class="fa-solid fa-user"></i> ${vend}</div>
+                        <div style="color: #adbac7; font-size: 13px; line-height: 1.4;">${agrupado[vend].join(', ')}</div>
+                    </div>`;
+                }
+                lista.innerHTML = html;
+                document.getElementById('btn-extrair-fila').disabled = false;
+                document.getElementById('btn-extrair-fila').style.background = '#539bf5';
+                document.getElementById('btn-extrair-fila').innerHTML = '<i class="fa-solid fa-play"></i> EXTRAIR TUDO AGORA';
+            } else {
+                panel.style.display = 'none';
+            }
+        });
+        
+        socket.on('progresso_fila_extracao', (res) => {
+            const msg = document.getElementById('fila-status');
+            msg.innerHTML = res.mensagem;
+        });
+
+        function iniciarExtracaoFila() {
+            document.getElementById('btn-extrair-fila').disabled = true;
+            document.getElementById('btn-extrair-fila').style.background = '#6b7280';
+            document.getElementById('btn-extrair-fila').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> PROCESSANDO...';
+            document.getElementById('fila-status').innerHTML = '<span style="color: #e3b341;">Iniciando processo...</span>';
+            socket.emit('iniciar_extracao_fila', {clientId: socket.id});
+        }
+    
+
+        // --- LOGICA BANCO DE DADOS VISUALIZADOR ---
+        function mudarTabBanco(tab) {
+            if (tab === 'cota') {
+                document.getElementById('view-cota').style.display = 'block';
+                document.getElementById('view-pedi').style.display = 'none';
+                
+                
+                document.getElementById('tab-cota').style.background = '#539bf5';
+                document.getElementById('tab-cota').style.color = 'white';
+                document.getElementById('tab-pedi').style.background = 'transparent';
+                document.getElementById('tab-pedi').style.color = '#768390';
+            } else {
+                document.getElementById('view-cota').style.display = 'none';
+                document.getElementById('view-pedi').style.display = 'block';
+                
+                
+                document.getElementById('tab-pedi').style.background = '#539bf5';
+                document.getElementById('tab-pedi').style.color = 'white';
+                document.getElementById('tab-cota').style.background = 'transparent';
+                document.getElementById('tab-cota').style.color = '#768390';
+            }
+        }
+
+        // --- LOGICA FILTROS TIPO EXCEL ---
+        let filtrosColuna = { cota: {}, pedi: {} };
+        let estadoFiltroAtual = { tipo: null, colIndex: null, tbodyId: null };
+
+        function abrirFiltroColuna(e) {
+            const th = e.currentTarget;
+            const tr = th.parentElement;
+            const thead = tr.parentElement;
+            const table = thead.parentElement;
+            const isCota = table.parentElement.id === 'view-cota';
+            
+            const tipo = isCota ? 'cota' : 'pedi';
+            const tbodyId = isCota ? 'tbody-bd-cota' : 'tbody-bd-pedi';
+            const colIndex = Array.from(tr.children).indexOf(th);
+            
+            if (colIndex === tr.children.length - 1) return; // ignore empty filler column
+
+            estadoFiltroAtual = { tipo, colIndex, tbodyId };
+            
+            // Popula os unicos
+            const linhas = document.querySelectorAll(`#${tbodyId} tr`);
+            const unicos = new Set();
+            linhas.forEach(linha => {
+                if (linha.children.length === 1) return;
+                const val = linha.children[colIndex].innerText.trim();
+                if (val) unicos.add(val);
+            });
+
+            const estadoCol = filtrosColuna[tipo][colIndex] || { texto: '', selecionados: new Set() };
+            document.getElementById('input-filtro-col').value = estadoCol.texto;
+            
+            let html = '';
+            let todasMarcadas = true;
+            Array.from(unicos).sort().forEach(val => {
+                const isChecked = estadoCol.selecionados.size === 0 || estadoCol.selecionados.has(val);
+                if (!isChecked) todasMarcadas = false;
+                
+                html += `<label style="display:flex; gap:5px; font-size:0.8rem; color:#adbac7; word-break: break-all;"><input type="checkbox" value="${val.replace(/"/g, '&quot;')}" class="chk-filtro-item" ${isChecked ? 'checked' : ''} onchange="aplicarFiltroColuna()"> ${val}</label>`;
+            });
+            document.getElementById('lista-filtro-col').innerHTML = html;
+            document.getElementById('chk-todas-col').checked = todasMarcadas;
+
+            // Posicionar o menu
+            const rect = th.getBoundingClientRect();
+            const menu = document.getElementById('menu-filtro-coluna');
+            menu.style.display = 'block';
+            menu.style.top = (rect.bottom + window.scrollY) + 'px';
+            menu.style.left = (rect.left + window.scrollX) + 'px';
+            
+            // Previne propagacao para nao fechar na mesma hora
+            e.stopPropagation();
+        }
+
+        function toggleTodasFiltroCol(checked) {
+            document.querySelectorAll('.chk-filtro-item').forEach(chk => chk.checked = checked);
+            aplicarFiltroColuna();
+        }
+
+        function limparFiltroColuna() {
+            document.getElementById('input-filtro-col').value = '';
+            document.getElementById('chk-todas-col').checked = true;
+            document.querySelectorAll('.chk-filtro-item').forEach(chk => chk.checked = true);
+            aplicarFiltroColuna();
+        }
+
+        function aplicarFiltroColuna() {
+            const { tipo, colIndex, tbodyId } = estadoFiltroAtual;
+            if (!tipo) return;
+
+            if (!filtrosColuna[tipo][colIndex]) {
+                filtrosColuna[tipo][colIndex] = { texto: '', selecionados: new Set() };
+            }
+            
+            filtrosColuna[tipo][colIndex].texto = document.getElementById('input-filtro-col').value.toLowerCase();
+            
+            const checkboxes = document.querySelectorAll('.chk-filtro-item');
+            const selecionados = new Set();
+            let todasMarcadas = true;
+            checkboxes.forEach(chk => {
+                if (chk.checked) selecionados.add(chk.value);
+                else todasMarcadas = false;
+            });
+            
+            document.getElementById('chk-todas-col').checked = todasMarcadas;
+            filtrosColuna[tipo][colIndex].selecionados = todasMarcadas ? new Set() : selecionados;
+            
+            // Adicionar icone visual no Header
+            const th = document.querySelector(`#${tipo === 'cota' ? 'view-cota' : 'view-pedi'} thead tr`).children[colIndex];
+            if (filtrosColuna[tipo][colIndex].texto || !todasMarcadas) {
+                if (!th.querySelector('.icone-filtro-ativo')) th.innerHTML += ' <i class="fa-solid fa-filter icone-filtro-ativo" style="color: #539bf5; margin-left: 5px;"></i>';
+            } else {
+                const icone = th.querySelector('.icone-filtro-ativo');
+                if (icone) icone.remove();
+            }
+
+            processarLinhasTabelaFiltro(tipo, tbodyId);
+        }
+
+        function processarLinhasTabelaFiltro(tipo, tbodyId) {
+            const linhas = document.querySelectorAll(`#${tbodyId} tr`);
+            const filtros = filtrosColuna[tipo];
+            
+            linhas.forEach(tr => {
+                if (tr.children.length === 1) return;
+                let mostrar = true;
+                
+                for (let col in filtros) {
+                    const f = filtros[col];
+                    const val = tr.children[col].innerText.trim();
+                    const valLower = val.toLowerCase();
+                    
+                    if (f.texto && !valLower.includes(f.texto)) mostrar = false;
+                    if (f.selecionados.size > 0 && !f.selecionados.has(val)) mostrar = false;
+                }
+                
+                tr.style.display = mostrar ? '' : 'none';
+            });
+        }
+        
+        // Fechar o menu filtro ao clicar fora
+        window.addEventListener('DOMContentLoaded', () => {
+            document.addEventListener('click', (e) => {
+                const menu = document.getElementById('menu-filtro-coluna');
+                if (menu && menu.style.display === 'block' && !e.target.closest('#menu-filtro-coluna') && !e.target.closest('.col-header-filter')) {
+                    menu.style.display = 'none';
+                }
+            });
+        });
+
+        function carregarBancoDados() {
+            document.getElementById('tbody-bd-cota').innerHTML = `<tr><td colspan="6" style="padding: 20px; text-align: center; color: #e3b341;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>`;
+            document.getElementById('tbody-bd-pedi').innerHTML = `<tr><td colspan="6" style="padding: 20px; text-align: center; color: #e3b341;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>`;
+            
+            socket.emit('solicitar_planilha_json', { origem: 'todas' });
+        }
+
+
+        window.dadosBanco = { cotacoes: [], pedidos: [] };
+
+        let itemEmEdicao = null;
+
+        function apagarLinha(tipo, index) {
+            const item = window.dadosBanco[tipo][index];
+            const chave = tipo === 'cotacoes' ? item['COTAÇÃO'] : item['PEDIDO'];
+            if (confirm(`Tem certeza que deseja apagar a linha (${chave})?`)) {
+                socket.emit('comando_apagar_linha', { tipo, chave });
+            }
+        }
+
+        function editarLinha(tipo, index) {
+            const item = window.dadosBanco[tipo][index];
+            itemEmEdicao = { tipo, chave: tipo === 'cotacoes' ? item['COTAÇÃO'] : item['PEDIDO'] };
+            
+            let html = '';
+            for (let key in item) {
+                let val = item[key] || '';
+                html += `
+                    <div style="margin-bottom: 10px;">
+                        <label style="display: block; font-size: 0.75rem; color: #768390; text-transform: uppercase; margin-bottom: 4px; font-weight: bold;">${key}</label>
+                        <textarea id="edit-input-${key}" style="width: 100%; box-sizing: border-box; background: #2d333b; border: 1px solid #444c56; color: #cdd9e5; padding: 8px; border-radius: 4px; font-size: 0.85rem; font-family: 'Inter'; resize: vertical; min-height: 35px;">${val}</textarea>
+                    </div>
+                `;
+            }
+            document.getElementById('modal-editar-corpo').innerHTML = html;
+            document.getElementById('modal-editar-titulo').innerText = `Editar ${tipo === 'cotacoes' ? 'Cotação' : 'Pedido'} ${itemEmEdicao.chave}`;
+            document.getElementById('modal-editar').style.display = 'flex';
+        }
+
+        function salvarEdicaoLinha() {
+            if (!itemEmEdicao) return;
+            const inputs = document.querySelectorAll('#modal-editar-corpo textarea');
+            const novos_dados = {};
+            inputs.forEach(input => {
+                const key = input.id.replace('edit-input-', '');
+                novos_dados[key] = input.value;
+            });
+            
+            socket.emit('comando_editar_linha', { tipo: itemEmEdicao.tipo, chave: itemEmEdicao.chave, novos_dados });
+            document.getElementById('modal-editar').style.display = 'none';
+        }
+
+        socket.on('resposta_acao_linha', (res) => {
+            if (res.sucesso) {
+                carregarBancoDados();
+            } else {
+                alert("Erro: " + res.erro);
+            }
+        });
+
+        
+        function abrirModalDetalhes(tipo, index) {
+            const item = window.dadosBanco[tipo][index];
+            if (!item) return;
+            
+            const titulo = tipo === 'cotacoes' ? `Cotação ${item['COTAÇÃO'] || ''}` : `Pedido ${item['PEDIDO'] || ''}`;
+            document.getElementById('modal-detalhes-titulo').innerText = titulo;
+            
+            let html = '';
+            for (let key in item) {
+                let val = item[key];
+                if (val === null || val === undefined) val = '-';
+                if (typeof val === 'string') {
+                    val = val.replace(/\\n/g, '<br>');
+                }
+                html += `
+                    <div style="background: #444c56; padding: 12px; border-radius: 6px;">
+                        <span style="display: block; font-size: 0.75rem; color: #768390; text-transform: uppercase; margin-bottom: 4px; font-weight: bold;">${key}</span>
+                        <span style="color: #cdd9e5; font-size: 0.95rem; word-break: break-word;">${val}</span>
+                    </div>
+                `;
+            }
+            
+            document.getElementById('modal-detalhes-corpo').innerHTML = html;
+            document.getElementById('modal-detalhes').style.display = 'flex';
+        }
+
+        socket.on('retorno_planilha_json', (res) => {
+            if (!res.sucesso) {
+                document.getElementById('tbody-bd-cota').innerHTML = `<tr><td colspan="6" style="padding: 20px; text-align: center; color: #e5534b;">Erro: ${res.erro}</td></tr>`;
+                document.getElementById('tbody-bd-pedi').innerHTML = `<tr><td colspan="6" style="padding: 20px; text-align: center; color: #e5534b;">Erro: ${res.erro}</td></tr>`;
+                return;
+            }
+
+            window.dadosBanco.cotacoes = res.cotacoes || [];
+            window.dadosBanco.pedidos = res.pedidos || [];
+
+            const cotaHTML = window.dadosBanco.cotacoes.map((c, index) => `
+                <tr style="border-bottom: 1px solid #444c56; background: #2d333b; transition: background 0.2s;"  >
+                    <td style="padding: 3px 6px; border: 1px solid #444c56; font-weight: 600;"><a href="#" onclick="abrirModalDetalhes('cotacoes', ${index}); return false;" style="color: #539bf5; text-decoration: none;">${c['COTAÇÃO'] || '-'}</a></td>
+                    <td style="padding: 3px 6px; border: 1px solid #444c56; color: #adbac7;">${c['VENCIMENTO'] || '-'}</td>
+                    <td style="padding: 3px 6px; border: 1px solid #444c56; color: #539bf5;">${c['VENDEDOR'] || '-'}</td>
+                    <td style="padding: 3px 6px; border: 1px solid #444c56; color: #adbac7;">${c['LOCALIDADE'] || '-'}</td>
+                    <td style="padding: 3px 6px; border: 1px solid #444c56; font-weight: 500; color: ${(c['RESPOSTA']||'').includes('NÃO') ? '#e5534b' : '#57ab5a'};">${c['RESPOSTA'] || '-'}</td>
+                    <td style="padding: 3px 6px; border: 1px solid #444c56; text-align: center;">
+                        <button onclick="editarLinha('cotacoes', ${index}); event.stopPropagation();" style="background: none; border: none; color: #e3b341; cursor: pointer; margin-right: 8px;" title="Editar"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="apagarLinha('cotacoes', ${index}); event.stopPropagation();" style="background: none; border: none; color: #e5534b; cursor: pointer;" title="Apagar"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+            
+            document.getElementById('tbody-bd-cota').innerHTML = cotaHTML || `<tr><td colspan="6" style="padding: 20px; text-align: center; color: #768390;">Nenhum registro encontrado.</td></tr>`;
+            // reset filters
+            filtrosColuna.cota = {};
+            document.querySelectorAll("#view-cota thead th .icone-filtro-ativo").forEach(i => i.remove());
+
+            const pediHTML = window.dadosBanco.pedidos.map((p, index) => `
+                <tr style="border-bottom: 1px solid #444c56; background: #2d333b; transition: background 0.2s;"  >
+                    <td style="padding: 3px 6px; border: 1px solid #444c56; font-weight: 600;"><a href="#" onclick="abrirModalDetalhes('pedidos', ${index}); return false;" style="color: #539bf5; text-decoration: none;">${p['PEDIDO'] || '-'}</a></td>
+                    <td style="padding: 3px 6px; border: 1px solid #444c56; color: #57ab5a; font-weight: 500;">R$ ${p['VALOR ']?.toLocaleString('pt-BR') || p['VALOR'] || '-'}</td>
+                    <td style="padding: 3px 6px; border: 1px solid #444c56; color: #adbac7;">${p['DATA DE ENTREGA'] || '-'}</td>
+                    <td style="padding: 3px 6px; border: 1px solid #444c56; color: #adbac7;">${p['REQUISITANTE '] || p['REQUISITANTE'] || '-'}</td>
+                    <td style="padding: 3px 6px; border: 1px solid #444c56; color: #adbac7;">${p['CIDADE'] || '-'}</td>
+                    <td style="padding: 3px 6px; border: 1px solid #444c56; text-align: center;">
+                        <button onclick="editarLinha('pedidos', ${index}); event.stopPropagation();" style="background: none; border: none; color: #e3b341; cursor: pointer; margin-right: 8px;" title="Editar"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="apagarLinha('pedidos', ${index}); event.stopPropagation();" style="background: none; border: none; color: #e5534b; cursor: pointer;" title="Apagar"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                    
+                </tr>
+            `).join('');
+
+            document.getElementById('tbody-bd-pedi').innerHTML = pediHTML || `<tr><td colspan="6" style="padding: 20px; text-align: center; color: #768390;">Nenhum registro encontrado.</td></tr>`;
+            // reset filters
+            filtrosColuna.pedi = {};
+            document.querySelectorAll("#view-pedi thead th .icone-filtro-ativo").forEach(i => i.remove());
+        });
+
+    </script>
+    
+    <!-- Fila Panel UI -->
+    <div id="fila-extracao-panel" style="position: fixed; right: 20px; top: 100px; width: 320px; background: #2d333b; border: 1px solid #444c56; border-radius: 12px; padding: 20px; display: none; flex-direction: column; z-index: 1000; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+        <h3 style="color: #cdd9e5; margin-top: 0; font-size: 16px; border-bottom: 1px solid #444c56; padding-bottom: 15px; margin-bottom: 15px;"><i class="fa-solid fa-layer-group"></i> Fila de Extração Pendente</h3>
+        <p style="color: #768390; font-size: 12px; margin-bottom: 15px;">Os vendedores e cotações abaixo não estavam na planilha. Clique no botão abaixo quando tiver terminado de registrar todos.</p>
+        <div id="fila-lista" style="flex: 1; max-height: 400px; overflow-y: auto; margin-bottom: 15px;"></div>
+        <div id="fila-status" style="font-size: 13px; margin-bottom: 15px; font-weight: bold;"></div>
+        <button id="btn-extrair-fila" onclick="iniciarExtracaoFila()" style="background: #539bf5; color: #2d333b; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.2s;"><i class="fa-solid fa-play"></i> EXTRAIR TUDO AGORA</button>
+    </div>
+
+    <!-- Modal Detalhes -->
+    <div id="modal-detalhes" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100000;">
+        <div style="background: #2d333b; border: 1px solid #444c56; border-radius: 12px; padding: 25px; width: 90%; max-width: 600px; max-height: 85vh; overflow-y: auto; position: relative; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+            <button onclick="document.getElementById('modal-detalhes').style.display='none'" style="position: absolute; top: 15px; right: 15px; background: none; border: none; color: #768390; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            <h2 id="modal-detalhes-titulo" style="margin-top: 0; margin-bottom: 20px; color: #cdd9e5; font-size: 1.5rem; border-bottom: 1px solid #444c56; padding-bottom: 10px;">Detalhes</h2>
+            <div id="modal-detalhes-corpo" style="display: flex; flex-direction: column; gap: 10px;">
+                <!-- Preenchido via JS -->
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Modal Editar -->
+    <div id="modal-editar" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100000;">
+        <div style="background: #2d333b; border: 1px solid #444c56; border-radius: 12px; padding: 25px; width: 90%; max-width: 600px; max-height: 85vh; overflow-y: auto; position: relative; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+            <button onclick="document.getElementById('modal-editar').style.display='none'" style="position: absolute; top: 15px; right: 15px; background: none; border: none; color: #768390; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            <h2 id="modal-editar-titulo" style="margin-top: 0; margin-bottom: 20px; color: #cdd9e5; font-size: 1.5rem; border-bottom: 1px solid #444c56; padding-bottom: 10px;">Editar</h2>
+            <div id="modal-editar-corpo" style="display: flex; flex-direction: column; gap: 5px; margin-bottom: 20px;">
+                <!-- Preenchido via JS -->
+            </div>
+            <button onclick="salvarEdicaoLinha()" style="width: 100%; background: #539bf5; color: #2d333b; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer;"><i class="fa-solid fa-save"></i> SALVAR ALTERAÇÕES</button>
+        </div>
+    </div>
+
+</body>
+</html>

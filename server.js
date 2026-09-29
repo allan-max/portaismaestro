@@ -37,7 +37,7 @@ app.use(cors({
     methods: ["GET", "POST"]
 }));
 
-const io = new Server(server, { 
+const io = new Server(server, { maxHttpBufferSize: 1e8, 
     cors: { 
         origin: process.env.ALLOWED_ORIGIN || '*',
         methods: ["GET", "POST"]
@@ -480,6 +480,46 @@ io.on('connection', (socket) => {
     });
 
     // Site pede os dados do Dashboard
+    
+    // Site pede para visualizar JSON
+    
+    socket.on('comando_apagar_linha', (dados = {}) => {
+        if (bot_socket_id) {
+            dados.clientId = socket.id;
+            io.to(bot_socket_id).emit('comando_apagar_linha', dados);
+        }
+    });
+
+    socket.on('comando_editar_linha', (dados = {}) => {
+        if (bot_socket_id) {
+            dados.clientId = socket.id;
+            io.to(bot_socket_id).emit('comando_editar_linha', dados);
+        }
+    });
+
+    socket.on('resposta_acao_linha', (dados) => {
+        if (dados.sucesso) io.emit('planilha_atualizada');
+        if (dados.clientId) {
+            io.to(dados.clientId).emit('resposta_acao_linha', dados);
+        }
+    });
+
+    socket.on('solicitar_planilha_json', (dados = {}) => {
+        if (bot_socket_id) {
+            dados.clientId = socket.id;
+            io.to(bot_socket_id).emit('comando_carregar_planilha_json', dados);
+        } else {
+            socket.emit('retorno_planilha_json', { sucesso: false, erro: "O Robô está offline." });
+        }
+    });
+
+    // Python devolve os dados JSON
+    socket.on('retorno_planilha_json', (dados) => {
+        if (dados.clientId) {
+            io.to(dados.clientId).emit('retorno_planilha_json', dados);
+        }
+    });
+
     socket.on('pedir_dados_dashboard', (filtros) => {
         if (bot_socket_id) {
             // Repassa para o Python, enviando o ID e os filtros
@@ -499,6 +539,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('retorno_registro_vendedor_cotacao', (dados) => {
+        if (dados.sucesso) io.emit('planilha_atualizada');
         if (dados.clientId) {
             io.to(dados.clientId).emit('resposta_registro_vendedor_cotacao', dados);
         }
@@ -511,6 +552,23 @@ io.on('connection', (socket) => {
     });
 
     // Site pede para registrar cotações manuais na planilha
+    
+    socket.on('solicitar_registro_pedido_manual', (dados) => {
+        if (bot_socket_id) {
+            dados.clientId = socket.id;
+            io.to(bot_socket_id).emit('solicitar_registro_pedido_manual', dados);
+        } else {
+            socket.emit('resposta_registro_pedido_manual', { sucesso: false, erro: "Robô desconectado." });
+        }
+    });
+
+    socket.on('resposta_registro_pedido_manual', (dados) => {
+        if (dados.sucesso) io.emit('planilha_atualizada');
+        if (dados.clientId) {
+            io.to(dados.clientId).emit('resposta_registro_pedido_manual', dados);
+        }
+    });
+
     socket.on('solicitar_registro_cotacao_manual', (dados) => {
         if (bot_socket_id) {
             io.to(bot_socket_id).emit('comando_registrar_cotacao_manual', { clientId: socket.id, ...dados });
@@ -520,6 +578,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('retorno_registro_cotacao_manual', (dados) => {
+        if (dados.sucesso) io.emit('planilha_atualizada');
         if (dados.clientId) {
             io.to(dados.clientId).emit('resposta_registro_cotacao_manual', dados);
         }
