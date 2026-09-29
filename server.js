@@ -706,7 +706,7 @@ app.post('/api/responder', upload.fields([{ name: 'datasheet' }, { name: 'dav' }
 
 // === GROQ IA (SEGURANÇA) ===
 const Groq = require('groq-sdk');
-const groq = new Groq({ apiKey: "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" });
+const groq = new Groq({ apiKey: "tirei a api" });
 
 app.post('/api/chat', async (req, res) => {
     try {
