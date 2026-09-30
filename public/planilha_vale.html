@@ -1372,10 +1372,10 @@
                         <div class="cell-content">
                             <div>
                                 <div class="cell-main-text" style="display: flex; align-items: center; gap: 8px;">
-                                    <div class="status-dot ${(c['RESPOSTA']||'').toUpperCase().includes('NÃO') ? 'red' : 'green'}"></div>
+                                    <div class="status-dot ${!c['RESPOSTA'] || (c['RESPOSTA']||'').toUpperCase().includes('NÃO') ? 'red' : 'green'}"></div>
                                     ${c['RESPOSTA'] || '-'}
                                 </div>
-                                <div class="cell-sub-text">${(c['RESPOSTA']||'').toUpperCase().includes('NÃO') ? 'Aguardando' : 'Respondido'}</div>
+                                
                             </div>
                         </div>
                     </td>
