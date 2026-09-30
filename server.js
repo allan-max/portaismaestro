@@ -165,7 +165,7 @@ io.on('connection', (socket) => {
 
     socket.on('sou_o_robo', () => {
         bot_socket_id = socket.id;
-        socket.join('backend');
+        socket.autenticado = true; socket.join('backend');
         console.log("🤖 Robô Local Conectado.");
         io.emit('sincronizar_estado', { estado: estado_global, mensagem: "Robô operacional e conectado!" });
     });
