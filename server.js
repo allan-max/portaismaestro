@@ -520,6 +520,39 @@ io.on('connection', (socket) => {
         }
     });
 
+    // SINCRONIZAÇÃO DE NF (HSE -> pedidos): tela -> robô -> tela
+    socket.on('solicitar_sync_nf_estado', () => {
+        if (!socket.rooms.has('frontend')) return;
+        if (!bot_socket_id) return socket.emit('retorno_sync_nf_estado', { sucesso: false, erro: "O Robô está offline." });
+        io.to(bot_socket_id).emit('comando_sync_nf_estado', { clientId: socket.id });
+    });
+
+    socket.on('solicitar_sync_nf', (dados = {}) => {
+        if (!socket.rooms.has('frontend')) return;
+        if (!bot_socket_id) return socket.emit('retorno_sync_nf', { sucesso: false, erro: "O Robô está offline." });
+        io.to(bot_socket_id).emit('comando_sync_nf', {
+            clientId: socket.id, de: dados.de || null, ate: dados.ate || null, gravar: dados.gravar !== false
+        });
+    });
+
+    socket.on('retorno_sync_nf_estado', (dados = {}) => {
+        if (socket.id === bot_socket_id && dados.clientId) io.to(dados.clientId).emit('retorno_sync_nf_estado', dados);
+    });
+
+    // progresso e resultado vão para todas as telas: a rodada das 07:30 não tem clientId
+    socket.on('progresso_sync_nf', (dados = {}) => {
+        if (socket.id === bot_socket_id) io.to('frontend').emit('progresso_sync_nf', dados);
+    });
+
+    socket.on('retorno_sync_nf', (dados = {}) => {
+        if (socket.id === bot_socket_id) io.to('frontend').emit('retorno_sync_nf', dados);
+    });
+
+    // O robô avisa que a planilha mudou (sincronização de NF, Auto-Pilot): as telas recarregam
+    socket.on('planilha_atualizada', () => {
+        if (socket.id === bot_socket_id) io.to('frontend').emit('planilha_atualizada');
+    });
+
     socket.on('pedir_dados_dashboard', (filtros) => {
         if (bot_socket_id) {
             // Repassa para o Python, enviando o ID e os filtros
