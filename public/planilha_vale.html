@@ -450,7 +450,8 @@
             <div id="dropdown-menu" style="display: none; position: absolute; left: 20px; top: 55px; z-index: 999999; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; flex-direction: column; min-width: 220px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 100;">
                 <a href="#" onclick="abrirForm('vendedor'); return false;" style="padding: 12px 15px; color: var(--text-main); text-decoration: none; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-user-tag" style="width: 20px; text-align: center;"></i> Registro de Vendedor</a>
                 <a href="#" onclick="abrirForm('cotacao'); return false;" style="padding: 12px 15px; color: var(--text-main); text-decoration: none; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-list-check" style="width: 20px; text-align: center;"></i> Registro de Cotação</a>
-                <a href="#" onclick="abrirForm('pedido'); return false;" style="padding: 12px 15px; color: var(--text-main); text-decoration: none; display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-cart-shopping" style="width: 20px; text-align: center;"></i> Registro de Pedido</a>
+                <a href="#" onclick="abrirForm('pedido'); return false;" style="padding: 12px 15px; color: var(--text-main); text-decoration: none; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-cart-shopping" style="width: 20px; text-align: center;"></i> Registro de Pedido</a>
+                <a href="#" onclick="abrirSyncNF(); return false;" style="padding: 12px 15px; color: var(--text-main); text-decoration: none; display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-file-invoice" style="width: 20px; text-align: center;"></i> Sincronizar NFs (HSE)</a>
                 <button onclick="carregarBancoDados()" style="width: 100%; background: var(--accent-blue); color: white; border: none; padding: 12px; cursor: pointer; font-weight: bold; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;"><i class="fa-solid fa-rotate"></i> ATUALIZAR DADOS</button>
             </div>
 
@@ -510,8 +511,9 @@
                         <th style="width: 15%;"><i class="fa-solid fa-dollar-sign" style="margin-right:8px;"></i>Valor</th>
                         <th style="width: 12%;"><i class="fa-regular fa-calendar" style="margin-right:8px;"></i>Entrega</th>
                         <th style="width: 20%;"><i class="fa-regular fa-user" style="margin-right:8px;"></i>Requisitante</th>
-                        <th style="width: 20%;"><i class="fa-solid fa-location-dot" style="margin-right:8px;"></i>Cidade</th>
-                        <th style="width: 13%; text-align: right;"><i class="fa-solid fa-gear" style="margin-right:8px;"></i>Ações</th>
+                        <th style="width: 15%;"><i class="fa-solid fa-location-dot" style="margin-right:8px;"></i>Cidade</th>
+                        <th style="width: 10%;"><i class="fa-solid fa-file-invoice" style="margin-right:8px;"></i>NF</th>
+                        <th style="width: 8%; text-align: right;"><i class="fa-solid fa-gear" style="margin-right:8px;"></i>Ações</th>
                     </tr>
                 </thead>
                 <tbody id="tbody-bd-pedi">
@@ -560,6 +562,26 @@
             <!-- Checkboxes preenchidos via JS -->
         </div>
         <button onclick="aplicarFiltroVendedor()" style="width: 100%; background: #539bf5; color: #2d333b; border: none; padding: 6px; border-radius: 4px; margin-top: 10px; cursor: pointer; font-weight: bold; font-size: 0.8rem;">OK</button>
+    </div>
+
+    <!-- Modal: sincronização de NF (HSE -> pedidos) -->
+    <div id="modal-sync-nf" style="position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 9999999;">
+        <div style="background: #2d333b; border: 1px solid #444c56; border-radius: 12px; padding: 25px; width: min(900px, 94vw); max-height: 88vh; overflow: auto; position: relative; color: #adbac7;">
+            <button onclick="document.getElementById('modal-sync-nf').style.display='none'" style="position: absolute; top: 15px; right: 15px; background: none; border: none; color: #768390; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            <h2 style="margin-top: 0; color: #cdd9e5; border-bottom: 1px solid #444c56; padding-bottom: 10px;"><i class="fa-solid fa-file-invoice"></i> Sincronizar NFs com o HSE</h2>
+            <div id="sync-nf-estado" style="margin-bottom: 15px;">Carregando...</div>
+            <div style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 15px;">
+                <label style="display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem;">Emissão de
+                    <input type="date" id="sync-nf-de" style="background: #22272e; color: #cdd9e5; border: 1px solid #444c56; border-radius: 6px; padding: 6px;"></label>
+                <label style="display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem;">até
+                    <input type="date" id="sync-nf-ate" style="background: #22272e; color: #cdd9e5; border: 1px solid #444c56; border-radius: 6px; padding: 6px;"></label>
+                <button id="btn-sync-nf" onclick="executarSyncNF(true)" style="background: #57ab5a; color: #fff; border: none; padding: 9px 16px; border-radius: 6px; font-weight: bold; cursor: pointer;"><i class="fa-solid fa-rotate"></i> Sincronizar</button>
+                <button id="btn-sync-nf-previa" onclick="executarSyncNF(false)" style="background: #444c56; color: #cdd9e5; border: none; padding: 9px 16px; border-radius: 6px; cursor: pointer;">Só prévia</button>
+            </div>
+            <p style="font-size: 0.8rem; color: #768390; margin: 0 0 15px;">O robô entra no HSE, exporta as vendas do período, junta na base e grava a NF <b>só nos pedidos sem NF</b>. NF diferente da que já está no pedido não é trocada: aparece no resultado para conferir.</p>
+            <div id="sync-nf-progresso" style="background: #22272e; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 0.8rem; max-height: 160px; overflow: auto; display: none;"></div>
+            <div id="sync-nf-resultado" style="margin-top: 15px;"></div>
+        </div>
     </div>
 
     <!-- Modal para os forms -->
@@ -813,6 +835,101 @@
         socket.emit('sou_frontend', { sessionId: sessionAtual });
 
         socket.on('planilha_atualizada', () => { carregarBancoDados(true); });
+
+        // ---------- SINCRONIZAÇÃO DE NF (HSE -> pedidos) ----------
+        function escHtml(v) {
+            return String(v ?? '-').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+        const brParaIso = d => { const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(d || ''); return m ? `${m[3]}-${m[2]}-${m[1]}` : ''; };
+        const quandoBR = iso => iso ? new Date(iso).toLocaleString('pt-BR') : '-';
+
+        function abrirSyncNF() {
+            document.getElementById('dropdown-menu').style.display = 'none';
+            document.getElementById('modal-sync-nf').style.display = 'flex';
+            document.getElementById('sync-nf-estado').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Consultando o robô...';
+            socket.emit('solicitar_sync_nf_estado');
+        }
+
+        function botoesSyncNF(rodando) {
+            ['btn-sync-nf', 'btn-sync-nf-previa'].forEach(id => {
+                const b = document.getElementById(id);
+                b.disabled = rodando; b.style.opacity = rodando ? 0.5 : 1; b.style.cursor = rodando ? 'not-allowed' : 'pointer';
+            });
+        }
+
+        function executarSyncNF(gravar) {
+            const de = document.getElementById('sync-nf-de').value, ate = document.getElementById('sync-nf-ate').value;
+            if (de && ate && de > ate) return alert('A data inicial é depois da final.');
+            if (gravar && !confirm(`Sincronizar as NFs de ${de || '(padrão)'} até ${ate || 'hoje'} e gravar nos pedidos sem NF?`)) return;
+            const log = document.getElementById('sync-nf-progresso');
+            log.style.display = 'block';
+            log.innerHTML = '';
+            document.getElementById('sync-nf-resultado').innerHTML = '';
+            botoesSyncNF(true);
+            socket.emit('solicitar_sync_nf', { de, ate, gravar });
+        }
+
+        socket.on('retorno_sync_nf_estado', (res) => {
+            const el = document.getElementById('sync-nf-estado');
+            if (!res.sucesso) { el.innerHTML = `<span style="color:#e5534b;">Erro: ${escHtml(res.erro)}</span>`; return; }
+            const e = res.estado, u = e.ultima;
+            const cob = (e.cobertura || []).map(c => `${escHtml(c[0])} a ${escHtml(c[1])}`).join(', ') || 'nenhum ainda';
+            el.innerHTML = `
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px;">
+                    <div style="background:#373e47; border-radius:8px; padding:12px; border-left:4px solid #539bf5;">
+                        <div style="font-size:0.75rem;">Última sincronização</div>
+                        <div style="font-size:1.1rem; color:#cdd9e5; font-weight:bold;">${u ? `${escHtml(u.de)} a ${escHtml(u.ate)}` : 'nunca'}</div>
+                        <div style="font-size:0.75rem;">${u ? `em ${escHtml(quandoBR(u.rodou_em))} · ${escHtml(u.nfs_gravadas)} NF(s) gravada(s)` : ''}</div>
+                    </div>
+                    <div style="background:#373e47; border-radius:8px; padding:12px; border-left:4px solid #57ab5a;">
+                        <div style="font-size:0.75rem;">Pedidos com NF</div>
+                        <div style="font-size:1.1rem; color:#cdd9e5; font-weight:bold;">${u ? `${escHtml(u.pedidos_com_nf)} de ${escHtml(u.pedidos)}` : '-'}</div>
+                        <div style="font-size:0.75rem;">${u ? `${escHtml(u.sem_nf)} sem NF · ${escHtml(u.divergencias)} divergência(s)` : ''}</div>
+                    </div>
+                    <div style="background:#373e47; border-radius:8px; padding:12px; border-left:4px solid #c69026;">
+                        <div style="font-size:0.75rem;">Período já sincronizado</div>
+                        <div style="font-size:0.9rem; color:#cdd9e5;">${cob}</div>
+                    </div>
+                </div>
+                ${(e.historico || []).length ? `<details style="margin-top:10px;"><summary style="cursor:pointer; font-size:0.8rem;">Últimas rodadas</summary>
+                    <table style="width:100%; font-size:0.78rem; border-collapse:collapse; margin-top:6px;">${e.historico.map(h => `<tr>
+                        <td style="padding:4px;">${escHtml(quandoBR(h.rodou_em))}</td><td>${escHtml(h.origem)}</td>
+                        <td>${escHtml(h.de)} a ${escHtml(h.ate)}</td>
+                        <td>${h.sucesso === false ? `<span style="color:#e5534b;">falhou: ${escHtml(h.erro)}</span>` : (h.gravou ? `${escHtml(h.nfs_gravadas)} NF gravada(s)` : `prévia: ${escHtml(h.nfs_a_gravar)}`)}</td></tr>`).join('')}</table></details>` : ''}`;
+            const j = e.proxima_janela || {};
+            if (!document.getElementById('sync-nf-de').value) document.getElementById('sync-nf-de').value = brParaIso(j.de);
+            if (!document.getElementById('sync-nf-ate').value) document.getElementById('sync-nf-ate').value = brParaIso(j.ate);
+            botoesSyncNF(!!e.rodando);
+        });
+
+        socket.on('progresso_sync_nf', (res) => {
+            const log = document.getElementById('sync-nf-progresso');
+            log.style.display = 'block';
+            log.insertAdjacentHTML('beforeend', `<div>${escHtml(new Date().toLocaleTimeString('pt-BR'))} · ${escHtml(res.mensagem)}</div>`);
+            log.scrollTop = log.scrollHeight;
+        });
+
+        socket.on('retorno_sync_nf', (res) => {
+            botoesSyncNF(false);
+            const el = document.getElementById('sync-nf-resultado');
+            if (!res.sucesso) {
+                if (res.clientId === socket.id || document.getElementById('modal-sync-nf').style.display === 'flex')
+                    el.innerHTML = `<p style="color:#e5534b;"><b>Falhou:</b> ${escHtml(res.erro)}</p>`;
+                return;
+            }
+            const r = res.resultado;
+            const div = (r.divergencia_valor || []).map(d => `<tr><td style="padding:4px;">${escHtml(d.oc)}</td><td>${escHtml(d.nf_gravada)}</td>
+                <td>${escHtml(d.valor_planilha)}</td><td>${escHtml(d.valor_erp)}</td><td>${escHtml(d.diferenca_valor)}</td></tr>`).join('');
+            el.innerHTML = `
+                ${r.aviso ? `<p style="color:#c69026;"><i class="fa-solid fa-triangle-exclamation"></i> ${escHtml(r.aviso)}</p>` : ''}
+                <p style="color:#57ab5a; font-weight:bold;">${r.gravou ? `${escHtml(r.nfs_gravadas)} NF(s) gravada(s) nos pedidos.` : `Prévia: ${escHtml(r.nfs_a_gravar)} NF(s) seriam gravadas.`}</p>
+                <p style="font-size:0.85rem;">Período ${escHtml(r.de)} a ${escHtml(r.ate)} · Excel: ${escHtml(r.excel && r.excel.vendas)} vendas (tela do HSE: ${escHtml(r.linhas_tela)}) ·
+                   base: ${escHtml(r.base.novas)} novas, ${escHtml(r.base.alteradas)} alteradas, ${escHtml(r.base.removidas)} removidas, ${escHtml(r.base.total_na_base)} no total.</p>
+                <p style="font-size:0.85rem;">Pedidos com NF: <b>${escHtml(r.pedidos_com_nf)}</b> de ${escHtml(r.pedidos)} (${escHtml(String(r.percentual_com_nf).replace('.', ','))}%) · sem NF: ${escHtml(r.sem_nf)} · mais de uma NF: ${escHtml(r.mais_de_uma_nf)}</p>
+                ${div ? `<details><summary style="cursor:pointer;">Divergências de valor (${escHtml(r.divergencias)})</summary>
+                    <table style="width:100%; font-size:0.8rem; border-collapse:collapse; margin-top:6px;"><tr><th style="text-align:left;">Pedido</th><th style="text-align:left;">NF</th><th style="text-align:left;">Planilha</th><th style="text-align:left;">HSE</th><th style="text-align:left;">Diferença</th></tr>${div}</table></details>` : ''}`;
+            if (document.getElementById('modal-sync-nf').style.display === 'flex') socket.emit('solicitar_sync_nf_estado');
+        });
 
         socket.on("sessao_invalida", () => {
             localStorage.clear();
@@ -1230,7 +1347,7 @@
         function carregarBancoDados(silencioso = false) {
             if (!silencioso) {
                 document.getElementById('tbody-bd-cota').innerHTML = `<tr><td colspan="6" style="padding: 20px; text-align: center; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>`;
-                document.getElementById('tbody-bd-pedi').innerHTML = `<tr><td colspan="6" style="padding: 20px; text-align: center; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>`;
+                document.getElementById('tbody-bd-pedi').innerHTML = `<tr><td colspan="7" style="padding: 20px; text-align: center; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>`;
             }
             socket.emit('solicitar_planilha_json', { origem: 'todas' });
         }
@@ -1464,6 +1581,13 @@
                             </div>
                         </div>
                     </td>
+                    <td>
+                        <div class="cell-content">
+                            <div>
+                                <div class="cell-main-text">${escHtml(p['NF'] || '-')}</div>
+                            </div>
+                        </div>
+                    </td>
                     <td style="text-align: right;">
                         <div class="row-actions-wrapper" style="position: relative; display: inline-block;">
                             <button class="action-btn" onclick="toggleRowActions(event, 'actions-pedidos-${index}')" title="Mais opções"><i class="fa-solid fa-ellipsis-vertical"></i></button>
@@ -1507,7 +1631,7 @@
             if (!append) tbody.innerHTML = '';
             
             if (window.filteredPedidos.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" style="padding: 20px; text-align: center; color: #768390;">Nenhum registro encontrado.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" style="padding: 20px; text-align: center; color: #768390;">Nenhum registro encontrado.</td></tr>`;
                 return;
             }
             
@@ -1522,7 +1646,7 @@
         socket.on('retorno_planilha_json', (res) => {
             if (!res.sucesso) {
                 document.getElementById('tbody-bd-cota').innerHTML = `<tr><td colspan="6" style="padding: 20px; text-align: center; color: #e5534b;">Erro: ${res.erro}</td></tr>`;
-                document.getElementById('tbody-bd-pedi').innerHTML = `<tr><td colspan="6" style="padding: 20px; text-align: center; color: #e5534b;">Erro: ${res.erro}</td></tr>`;
+                document.getElementById('tbody-bd-pedi').innerHTML = `<tr><td colspan="7" style="padding: 20px; text-align: center; color: #e5534b;">Erro: ${res.erro}</td></tr>`;
                 return;
             }
 
