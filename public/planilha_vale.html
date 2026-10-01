@@ -487,8 +487,8 @@
                 <thead>
                     <tr>
                         <th style="width: 20%;">Cotação</th>
-                        <th style="width: 15%; cursor: pointer;" onclick="ordenarPorVencimento()" title="Clique para ordenar por data"><i class="fa-regular fa-calendar" style="margin-right:8px;"></i>Vencimento <i id="icone-sort-venc" class="fa-solid fa-sort" style="margin-left:5px; font-size: 0.8em; color: #768390;"></i></th>
-                        <th style="width: 20%;"><i class="fa-regular fa-user" style="margin-right:8px;"></i>Vendedor</th>
+                        <th style="width: 15%; cursor: pointer;" onclick="abrirFiltroPeriodo(event)" title="Clique para filtrar por período de vencimento"><i class="fa-regular fa-calendar" style="margin-right:8px;"></i>Vencimento <i class="fa-solid fa-filter" style="margin-left:5px; font-size: 0.8em; color: #768390;"></i></th>
+                        <th style="width: 20%; cursor: pointer;" onclick="abrirFiltroVendedor(event)" title="Clique para filtrar por Vendedor"><i class="fa-regular fa-user" style="margin-right:8px;"></i>Vendedor <i class="fa-solid fa-filter" style="margin-left:5px; font-size: 0.8em; color: #768390;"></i></th>
                         <th style="width: 20%;"><i class="fa-solid fa-location-dot" style="margin-right:8px;"></i>Localidade</th>
                         <th style="width: 15%;"><i class="fa-regular fa-comment-dots" style="margin-right:8px;"></i>Resposta</th>
                           <th style="width: 15%;"><i class="fa-solid fa-box" style="margin-right:8px;"></i>Itens</th>
@@ -532,8 +532,35 @@
         </div>
         <button onclick="document.getElementById('menu-filtro-coluna').style.display='none'" style="width: 100%; background: #539bf5; color: #2d333b; border: none; padding: 6px; border-radius: 4px; margin-top: 10px; cursor: pointer; font-weight: bold; font-size: 0.8rem;">OK</button>
     </div>
+    
+    <div id="menu-filtro-periodo" style="display: none; position: absolute; background: #373e47; border: 1px solid #444c56; border-radius: 6px; padding: 15px; width: 250px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); z-index: 100001; font-family: 'Inter', sans-serif;">
+        <h4 style="color: #cdd9e5; margin: 0 0 10px 0; font-size: 0.9rem;">Filtrar Vencimento</h4>
+        <label style="display: block; font-size: 0.8rem; color: #768390; margin-bottom: 5px;">Data Inicial:</label>
+        <input type="date" id="filtro-data-inicio" style="width: 100%; box-sizing: border-box; background: #2d333b; border: 1px solid #444c56; color: #adbac7; padding: 6px; border-radius: 4px; font-size: 0.85rem; margin-bottom: 10px;">
+        
+        <label style="display: block; font-size: 0.8rem; color: #768390; margin-bottom: 5px;">Data Final:</label>
+        <input type="date" id="filtro-data-fim" style="width: 100%; box-sizing: border-box; background: #2d333b; border: 1px solid #444c56; color: #adbac7; padding: 6px; border-radius: 4px; font-size: 0.85rem; margin-bottom: 15px;">
+        
+        <div style="display: flex; gap: 10px;">
+            <button onclick="limparFiltroPeriodo()" style="flex: 1; background: transparent; border: 1px solid #444c56; color: #adbac7; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">Limpar</button>
+            <button onclick="aplicarFiltroPeriodo()" style="flex: 1; background: #539bf5; color: #2d333b; border: none; padding: 6px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8rem;">Aplicar</button>
+        </div>
+    </div>
 
     
+
+    <div id="menu-filtro-vendedor" style="display: none; position: absolute; background: #373e47; border: 1px solid #444c56; border-radius: 6px; padding: 10px; width: 220px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); z-index: 100001; font-family: 'Inter', sans-serif;">
+        <h4 style="color: #cdd9e5; margin: 0 0 10px 0; font-size: 0.9rem;">Filtrar Vendedor</h4>
+        <input type="text" id="input-busca-vendedor" placeholder="Buscar vendedor..." onkeyup="filtrarListaVendedores()" style="width: 100%; box-sizing: border-box; background: #2d333b; border: 1px solid #444c56; color: #adbac7; padding: 6px; border-radius: 4px; font-size: 0.8rem; margin-bottom: 10px;">
+        <div style="margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;">
+            <label style="font-size: 0.8rem; color: #adbac7; display: flex; gap: 5px; align-items: center;"><input type="checkbox" id="chk-todos-vendedores" onchange="toggleTodosVendedores(this.checked)"> (Selecionar Tudo)</label>
+            <button onclick="limparFiltroVendedor()" style="background: transparent; border: none; color: #e5534b; cursor: pointer; font-size: 0.75rem;"><i class="fa-solid fa-eraser"></i> Limpar</button>
+        </div>
+        <div id="lista-filtro-vendedor" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; border-top: 1px solid #444c56; padding-top: 5px;">
+            <!-- Checkboxes preenchidos via JS -->
+        </div>
+        <button onclick="aplicarFiltroVendedor()" style="width: 100%; background: #539bf5; color: #2d333b; border: none; padding: 6px; border-radius: 4px; margin-top: 10px; cursor: pointer; font-weight: bold; font-size: 0.8rem;">OK</button>
+    </div>
 
     <!-- Modal para os forms -->
     <div id="modal-forms-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 9999999;">
@@ -1355,7 +1382,7 @@
                     <td>
                         <div class="cell-content">
                             <div>
-                                <div class="cell-main-text">${c['VENDEDOR'] || '-'}</div>
+                                <div class="cell-main-text">${(c['VENDEDOR'] || '-').toUpperCase()}</div>
                                 <div class="cell-sub-text">${c['VENDEDOR'] ? 'Atribuído' : 'Não informado'}</div>
                             </div>
                         </div>
@@ -1382,7 +1409,7 @@
                       <td>
                           <div class="cell-content">
                               <div>
-                                  <div class="cell-main-text" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${c['ITEM'] || c['ITENS'] || '-'}">${c['ITEM'] || c['ITENS'] || '-'}</div>
+                                  <div class="cell-main-text" style="max-width: 250px; font-size: 0.75rem; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; color: #adbac7;" title="${(c['ITEM'] || c['ITENS'] || '-').replace(/"/g, '&quot;')}">${(c['ITEM'] || c['ITENS'] || '-').replace(/\n/g, '<br>')}</div>
                               </div>
                           </div>
                       </td>
@@ -1532,36 +1559,211 @@
     
     <script>
     // Add logic for global search if it doesn't exist
+    window.filtroPeriodoAtivo = { inicio: null, fim: null };
+
+    function abrirFiltroPeriodo(e) {
+        e.stopPropagation();
+        const rect = e.currentTarget.getBoundingClientRect();
+        const menu = document.getElementById('menu-filtro-periodo');
+        menu.style.display = 'block';
+        menu.style.top = (rect.bottom + window.scrollY) + 'px';
+        menu.style.left = (rect.left + window.scrollX) + 'px';
+    }
+
+    function limparFiltroPeriodo() {
+        document.getElementById('filtro-data-inicio').value = '';
+        document.getElementById('filtro-data-fim').value = '';
+        window.filtroPeriodoAtivo = { inicio: null, fim: null };
+        document.getElementById('menu-filtro-periodo').style.display = 'none';
+        aplicarFiltroGlobal();
+    }
+
+    function aplicarFiltroPeriodo() {
+        const inicio = document.getElementById('filtro-data-inicio').value;
+        const fim = document.getElementById('filtro-data-fim').value;
+        
+        window.filtroPeriodoAtivo.inicio = inicio ? new Date(inicio + 'T00:00:00').getTime() : null;
+        window.filtroPeriodoAtivo.fim = fim ? new Date(fim + 'T23:59:59').getTime() : null;
+        
+        document.getElementById('menu-filtro-periodo').style.display = 'none';
+        aplicarFiltroGlobal();
+    }
+
+    window.filtroVendedorAtivo = new Set();
+    window.vendedoresUnicos = [];
+
+    function abrirFiltroVendedor(e) {
+        e.stopPropagation();
+        
+        const unicos = new Set();
+        window.dadosBanco.cotacoes.forEach(c => {
+            const v = (c['VENDEDOR'] || '').trim().toUpperCase();
+            unicos.add(v ? v : 'SEM VENDEDOR');
+        });
+        window.vendedoresUnicos = Array.from(unicos).sort();
+
+        if (window.filtroVendedorAtivo.size === 0 && !document.getElementById('input-busca-vendedor').dataset.iniciado) {
+            window.vendedoresUnicos.forEach(v => window.filtroVendedorAtivo.add(v));
+            document.getElementById('input-busca-vendedor').dataset.iniciado = "true";
+        }
+
+        document.getElementById('input-busca-vendedor').value = '';
+        renderizarListaVendedores();
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        const menu = document.getElementById('menu-filtro-vendedor');
+        menu.style.display = 'block';
+        menu.style.top = (rect.bottom + window.scrollY) + 'px';
+        menu.style.left = (rect.left + window.scrollX) + 'px';
+    }
+
+    function renderizarListaVendedores(termoBusca = '') {
+        const lista = document.getElementById('lista-filtro-vendedor');
+        let html = '';
+        let todosMarcados = true;
+        let countFiltrados = 0;
+
+        window.vendedoresUnicos.forEach(v => {
+            if (termoBusca && !v.toLowerCase().includes(termoBusca.toLowerCase())) return;
+            countFiltrados++;
+            
+            const isChecked = window.filtroVendedorAtivo.has(v);
+            if (!isChecked) todosMarcados = false;
+            
+            html += `<label style="display:flex; gap:5px; font-size:0.8rem; color:#adbac7; word-break: break-all; cursor:pointer; padding: 2px 0;">
+                <input type="checkbox" value="${v.replace(/"/g, '&quot;')}" class="chk-filtro-vendedor" ${isChecked ? 'checked' : ''} onchange="atualizarFiltroVendedorState(this)"> ${v}
+            </label>`;
+        });
+
+        lista.innerHTML = html;
+        document.getElementById('chk-todos-vendedores').checked = (countFiltrados > 0 && todosMarcados);
+    }
+
+    function filtrarListaVendedores() {
+        const termo = document.getElementById('input-busca-vendedor').value;
+        renderizarListaVendedores(termo);
+    }
+
+    function atualizarFiltroVendedorState(chk) {
+        if (chk.checked) {
+            window.filtroVendedorAtivo.add(chk.value);
+        } else {
+            window.filtroVendedorAtivo.delete(chk.value);
+        }
+        
+        let todosMarcados = true;
+        document.querySelectorAll('.chk-filtro-vendedor').forEach(c => {
+            if (!c.checked) todosMarcados = false;
+        });
+        document.getElementById('chk-todos-vendedores').checked = todosMarcados;
+    }
+
+    function toggleTodosVendedores(checked) {
+        document.querySelectorAll('.chk-filtro-vendedor').forEach(chk => {
+            chk.checked = checked;
+            if (checked) {
+                window.filtroVendedorAtivo.add(chk.value);
+            } else {
+                window.filtroVendedorAtivo.delete(chk.value);
+            }
+        });
+    }
+
+    function limparFiltroVendedor() {
+        window.filtroVendedorAtivo.clear();
+        window.vendedoresUnicos.forEach(v => window.filtroVendedorAtivo.add(v));
+        renderizarListaVendedores();
+        document.getElementById('menu-filtro-vendedor').style.display = 'none';
+        aplicarFiltroGlobal();
+    }
+
+    function aplicarFiltroVendedor() {
+        document.getElementById('menu-filtro-vendedor').style.display = 'none';
+        aplicarFiltroGlobal();
+    }
+
+    document.addEventListener('click', (e) => {
+        const menuFiltroPeriodo = document.getElementById('menu-filtro-periodo');
+        if (menuFiltroPeriodo && menuFiltroPeriodo.style.display === 'block' && !e.target.closest('#menu-filtro-periodo') && !e.target.closest('th')) {
+            menuFiltroPeriodo.style.display = 'none';
+        }
+        
+        const menuFiltroVendedor = document.getElementById('menu-filtro-vendedor');
+        if (menuFiltroVendedor && menuFiltroVendedor.style.display === 'block' && !e.target.closest('#menu-filtro-vendedor') && !e.target.closest('th')) {
+            menuFiltroVendedor.style.display = 'none';
+        }
+    });
+
     function aplicarFiltroGlobal() {
         const searchInput = document.getElementById('global-search').value.toLowerCase();
         
-        if (!searchInput) {
-            window.filteredCotacoes = [...window.dadosBanco.cotacoes];
-            window.filteredPedidos = [...window.dadosBanco.pedidos];
-        } else {
-            window.filteredCotacoes = window.dadosBanco.cotacoes.filter(c => {
+        window.filteredCotacoes = window.dadosBanco.cotacoes.filter(c => {
+            // Filtro de Data
+            if (window.filtroPeriodoAtivo && (window.filtroPeriodoAtivo.inicio || window.filtroPeriodoAtivo.fim)) {
+                let d = c['VENCIMENTO'];
+                if (!d || d === '-') return false;
+                
+                const match = String(d).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+                if (!match) return false;
+                
+                let p1 = parseInt(match[1], 10);
+                let p2 = parseInt(match[2], 10);
+                let year = parseInt(match[3], 10);
+                
+                let day, month;
+                if (p2 > 12) {
+                    month = p1;
+                    day = p2;
+                } else if (p1 > 12) {
+                    day = p1;
+                    month = p2;
+                } else {
+                    day = p1;
+                    month = p2;
+                }
+                
+                const timeC = new Date(year, month - 1, day).getTime();
+                if (isNaN(timeC)) return false;
+                
+                if (window.filtroPeriodoAtivo.inicio && timeC < window.filtroPeriodoAtivo.inicio) return false;
+                if (window.filtroPeriodoAtivo.fim && timeC > window.filtroPeriodoAtivo.fim) return false;
+            }
+            
+            // Filtro Vendedor
+            if (window.filtroVendedorAtivo && window.filtroVendedorAtivo.size > 0) {
+                // Se nem todos estiverem selecionados
+                if (window.filtroVendedorAtivo.size !== window.vendedoresUnicos.length) {
+                    const v = (c['VENDEDOR'] || '').trim().toUpperCase();
+                    const vNome = v ? v : 'SEM VENDEDOR';
+                    if (!window.filtroVendedorAtivo.has(vNome)) return false;
+                }
+            }
+
+            // Filtro Global
+            if (searchInput) {
                 return Object.values(c).some(val => String(val || '').toLowerCase().includes(searchInput));
-            });
-            window.filteredPedidos = window.dadosBanco.pedidos.filter(p => {
+            }
+            return true;
+        });
+
+        window.filteredPedidos = window.dadosBanco.pedidos.filter(p => {
+            if (searchInput) {
                 return Object.values(p).some(val => String(val || '').toLowerCase().includes(searchInput));
-            });
-        }
+            }
+            return true;
+        });
         
-        
-        if (window.sortVencimentoDir && window.sortVencimentoDir !== 0) {
+        // Regra de ordenação
+        if (window.filtroPeriodoAtivo.inicio || window.filtroPeriodoAtivo.fim) {
+            // Se o filtro de Vencimento estiver ativado: Ordem Crescente de Cotação (menor no topo)
             window.filteredCotacoes.sort((a, b) => {
-                const parseDate = (d) => {
-                    if (!d || d === '-') return 0;
-                    const parts = d.split('/');
-                    if (parts.length === 3) {
-                        return new Date(parts[2], parts[1]-1, parts[0]).getTime();
-                    }
-                    return 0;
-                };
-                const timeA = parseDate(a['VENCIMENTO']);
-                const timeB = parseDate(b['VENCIMENTO']);
-                return window.sortVencimentoDir === 1 ? timeA - timeB : timeB - timeA;
+                const numA = parseInt((a['COTAÇÃO'] || '').toString().replace(/\D/g, '')) || 0;
+                const numB = parseInt((b['COTAÇÃO'] || '').toString().replace(/\D/g, '')) || 0;
+                return numA - numB;
             });
+        } else {
+            // Sem filtro: Segue a ordem original da planilha
+            // window.filteredCotacoes.reverse(); (Removido para seguir a planilha fielmente)
         }
         
         window.pageCota = 0;
