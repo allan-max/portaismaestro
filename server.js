@@ -11,7 +11,6 @@ const fs = require('fs');
 const os = require('os');
 const cron = require('node-cron');
 
-require('dotenv').config();
 
 // 🛡️ AIRBAG ANTI-CRASH (Impede o servidor de morrer por erros invisíveis)
 process.on('uncaughtException', (err) => console.error('Erro Crítico (Não tratado):', err));

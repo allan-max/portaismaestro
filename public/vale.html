@@ -337,6 +337,7 @@
                 </span>
             </div>
 
+            <button id="btn-imprimir" class="btn-base" style="width: 100%; margin-bottom: 15px; background: rgba(245, 166, 35, 0.1); border-color: #f5a623; color: #f5a623;" onclick="solicitarImpressao()"><i class="fa-solid fa-print"></i> Imprimir Arquivos</button>
             <div id="area-captcha">
                 <h4 style="color: #ffffff; margin: 0 0 10px 0;"><i class="fa-solid fa-shield-halved"></i> INTERVENÇÃO DE SEGURANÇA</h4>
                 <p style="font-size: 0.75rem; margin-bottom: 10px; color: #ccc;">Clique na imagem para resolver o desafio da Vale.</p>
@@ -356,7 +357,7 @@
                     <div class="grid-botoes">
                         <button id="btn-extrair" class="btn-base" onclick="executarTarefa('extrair')"><i class="fa-solid fa-download"></i> Extrair</button>
                         <button id="btn-verificar" class="btn-base" onclick="executarTarefa('verificar')"><i class="fa-solid fa-check-double"></i> Verificar</button>
-                        <button id="btn-imprimir" class="btn-base" style="grid-column: span 2;" onclick="solicitarImpressao()"><i class="fa-solid fa-print"></i> Imprimir Arquivos</button>
+                        
                         <button id="btn-abrir-res" class="btn-base" style="grid-column: span 2; background: rgba(253, 185, 19, 0.2); border-color: #FDB913; color: #FDB913;" onclick="mostrarFormResposta()"><i class="fa-solid fa-bolt"></i> Responder Eventos</button>
                     </div>
 
@@ -606,22 +607,22 @@
                     dot.classList.add("running");
                     txtStatus.innerHTML = '<i class="fa-solid fa-gear fa-spin"></i> A EXTRAIR DADOS...';
                     btnExtrair.className = 'btn-base btn-stop'; btnExtrair.innerHTML = '<i class="fa-solid fa-hand"></i> PARAR EXTRAÇÃO'; btnExtrair.onclick = function() { solicitarParada(this); };
-                    btnVerificar.disabled = true; btnAbrirRes.disabled = true; btnImprimir.disabled = true;
+                    btnVerificar.disabled = true; btnAbrirRes.disabled = true; 
                     document.getElementById('area-resposta').style.display = 'none';
                 } else if (estado.status === 'verificando' || estado.status === 'verificar') {
                     dot.classList.add("running");
                     txtStatus.innerHTML = '<i class="fa-solid fa-gear fa-spin"></i> A VERIFICAR DADOS...';
                     btnVerificar.className = 'btn-base btn-stop'; btnVerificar.innerHTML = '<i class="fa-solid fa-hand"></i> PARAR VERIFICAÇÃO'; btnVerificar.onclick = function() { solicitarParada(this); };
-                    btnExtrair.disabled = true; btnAbrirRes.disabled = true; btnImprimir.disabled = true;
+                    btnExtrair.disabled = true; btnAbrirRes.disabled = true; 
                     document.getElementById('area-resposta').style.display = 'none';
                 } else if (estado.status === 'respondendo' || estado.status === 'ocupado') {
                     dot.classList.add("running");
                     txtStatus.innerHTML = '<i class="fa-solid fa-database fa-spin"></i> ROBÔ OCUPADO (FILA)';
-                    btnExtrair.disabled = true; btnVerificar.disabled = true; btnAbrirRes.disabled = true; btnImprimir.disabled = true;
+                    btnExtrair.disabled = true; btnVerificar.disabled = true; btnAbrirRes.disabled = true; 
                 } else if (estado.status === 'respondendo' || estado.status === 'ocupado') {
                     dot.classList.add("running");
                     txtStatus.innerHTML = '<i class="fa-solid fa-database fa-spin"></i> ROBÔ OCUPADO (FILA)';
-                    btnExtrair.disabled = true; btnVerificar.disabled = true; btnAbrirRes.disabled = true; btnImprimir.disabled = true;
+                    btnExtrair.disabled = true; btnVerificar.disabled = true; btnAbrirRes.disabled = true; 
                 
                 // 👇 ADICIONE ESTE BLOCO AQUI 👇
                 } else if (estado.status === 'parando') {
@@ -630,7 +631,7 @@
                     btnExtrair.className = 'btn-base'; 
                     btnExtrair.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> AGUARDE...'; 
                     btnExtrair.disabled = true;
-                    btnVerificar.disabled = true; btnAbrirRes.disabled = true; btnImprimir.disabled = true;
+                    btnVerificar.disabled = true; btnAbrirRes.disabled = true; 
                 }
 
             } 
