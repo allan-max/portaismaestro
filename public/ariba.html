@@ -196,7 +196,7 @@
             </span>
         </div>
 
-        
+        <button id="btn-imprimir" class="btn-imprimir" onclick="solicitarImpressao()"><i class="fa-solid fa-print"></i> Imprimir Arquivos</button>
 
         <a href="index.html" class="btn-link">
             <i class="fa-solid fa-arrow-left"></i> Voltar ao Maestro
@@ -302,6 +302,17 @@
         });
 
         // Escuta o estado independente do Ariba
+        
+        socket.on('atualizar_contagem_ariba', function(dados) {
+            const painel = document.getElementById('painel-contador-arquivos');
+            const spanQtd = document.getElementById('qtd-arquivos-imprimir');
+            if(spanQtd && painel) {
+                const qtd = parseInt(dados.quantidade) || 0;
+                spanQtd.innerText = qtd;
+                painel.style.display = qtd > 0 ? 'block' : 'none';
+            }
+        });
+
         socket.on('sincronizar_estado_ariba', (estado) => {
             const btnLigar = document.getElementById('btn-iniciar');
             const led = document.getElementById('led-status');
