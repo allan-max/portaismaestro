@@ -847,7 +847,20 @@
         function abrirSyncNF() {
             document.getElementById('dropdown-menu').style.display = 'none';
             document.getElementById('modal-sync-nf').style.display = 'flex';
-            document.getElementById('sync-nf-estado').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Consultando o robô...';
+            consultarEstadoSyncNF();
+        }
+
+        // O pedido de estado vai uma vez só: se cair num serviço que está reiniciando ou
+        // reconectando, a resposta se perde. Depois de 15 s, avisa e deixa tentar de novo.
+        let esperaEstadoSyncNF = null;
+        function consultarEstadoSyncNF() {
+            const el = document.getElementById('sync-nf-estado');
+            el.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Consultando o robô...';
+            clearTimeout(esperaEstadoSyncNF);
+            esperaEstadoSyncNF = setTimeout(() => {
+                el.innerHTML = '<span style="color:#e5534b;">O robô de NF não respondeu (pode estar reiniciando).</span> ' +
+                    '<a href="#" onclick="consultarEstadoSyncNF(); return false;" style="color:#539bf5;">Tentar de novo</a>';
+            }, 15000);
             socket.emit('solicitar_sync_nf_estado');
         }
 
@@ -908,6 +921,7 @@
         }
 
         socket.on('retorno_sync_nf_estado', (res) => {
+            clearTimeout(esperaEstadoSyncNF);
             const el = document.getElementById('sync-nf-estado');
             if (!res.sucesso) { el.innerHTML = `<span style="color:#e5534b;">Erro: ${escHtml(res.erro)}</span>`; return; }
             const e = res.estado, u = e.ultima;
