@@ -422,6 +422,8 @@
     <div class="page-content">
         
         <!-- Header -->
+        <!-- Avisos dos robôs (cadastro automático e NF): aparece só quando há problema -->
+        <div id="aviso-robos" onclick="abrirSyncNF()" title="Ver detalhes" style="display: none; cursor: pointer; background: rgba(229,83,75,0.12); border: 1px solid #e5534b; color: #f47067; border-radius: 8px; padding: 10px 14px; margin-bottom: 15px; font-size: 0.85rem;"></div>
         <div class="page-header">
             <div class="header-left">
                 <div class="header-icon">
@@ -582,6 +584,16 @@
             <p style="font-size: 0.8rem; color: #768390; margin: 0 0 15px;">O robô entra no HSE, exporta as vendas do período, junta na base e grava a NF <b>só nos pedidos sem NF</b>. NF diferente da que já está no pedido não é trocada: aparece no resultado para conferir.</p>
             <div id="sync-nf-progresso" style="background: #22272e; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 0.8rem; max-height: 160px; overflow: auto; display: none;"></div>
             <div id="sync-nf-resultado" style="margin-top: 15px;"></div>
+            <!-- Planilha dos estagiários: conferência com o portal e NF na coluna N -->
+            <h3 style="color: #cdd9e5; border-top: 1px solid #444c56; padding-top: 15px; margin: 20px 0 10px;"><i class="fa-solid fa-table"></i> Planilha dos estagiários</h3>
+            <div id="conferencia-planilha" style="margin-bottom: 15px; font-size: 0.85rem;">Conferência ainda não feita hoje.</div>
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;">
+                <button id="btn-nf-planilha" onclick="executarNfPlanilha(true)" style="background: #2563EB; color: #fff; border: none; padding: 9px 16px; border-radius: 6px; font-weight: bold; cursor: pointer;"><i class="fa-solid fa-file-excel"></i> Gravar NF na planilha</button>
+                <button id="btn-nf-planilha-previa" onclick="executarNfPlanilha(false)" style="background: #444c56; color: #cdd9e5; border: none; padding: 9px 16px; border-radius: 6px; cursor: pointer;">Só prévia</button>
+            </div>
+            <p style="font-size: 0.8rem; color: #768390; margin: 0 0 15px;">Grava a NF do portal na coluna <b>N "NF (MAESTRO)"</b> da planilha, sem mexer em nenhuma outra célula. <b>Não grava se alguém estiver com a planilha aberta</b> ou se ela mudar no meio; faz backup antes e confere depois.</p>
+            <div id="nf-planilha-progresso" style="background: #22272e; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 0.8rem; max-height: 160px; overflow: auto; display: none;"></div>
+            <div id="nf-planilha-resultado" style="margin-top: 15px;"></div>
         </div>
     </div>
 
@@ -869,6 +881,103 @@
             botoesSyncNF(true);
             socket.emit('solicitar_sync_nf', { de, ate, gravar });
         }
+
+        // ---------- NF NA PLANILHA DOS ESTAGIÁRIOS (coluna N "NF (MAESTRO)") ----------
+        function botoesNfPlanilha(rodando) {
+            ['btn-nf-planilha', 'btn-nf-planilha-previa'].forEach(id => {
+                const b = document.getElementById(id);
+                b.disabled = rodando; b.style.opacity = rodando ? 0.5 : 1; b.style.cursor = rodando ? 'not-allowed' : 'pointer';
+            });
+        }
+
+        function executarNfPlanilha(gravar) {
+            if (gravar && !confirm('Gravar as NFs do portal na coluna N "NF (MAESTRO)" da planilha dos estagiários?\n\n' +
+                'Peça para todos salvarem e FECHAREM a planilha antes: com ela aberta, nada é gravado.')) return;
+            const log = document.getElementById('nf-planilha-progresso');
+            log.style.display = 'block';
+            log.innerHTML = '';
+            document.getElementById('nf-planilha-resultado').innerHTML = '';
+            botoesNfPlanilha(true);
+            socket.emit('solicitar_nf_planilha', { gravar });
+        }
+
+        socket.on('progresso_nf_planilha', (res) => {
+            if (res.clientId && res.clientId !== socket.id) return;
+            const log = document.getElementById('nf-planilha-progresso');
+            log.innerHTML += `<div>${escHtml(res.mensagem)}</div>`;
+            log.scrollTop = log.scrollHeight;
+        });
+
+        socket.on('retorno_nf_planilha', (res) => {
+            if (res.clientId && res.clientId !== socket.id) return;
+            botoesNfPlanilha(false);
+            const el = document.getElementById('nf-planilha-resultado');
+            if (!res.sucesso) {
+                el.innerHTML = `<div style="color:#e5534b; font-weight:bold;"><i class="fa-solid fa-triangle-exclamation"></i> ${escHtml(res.erro)}</div>`;
+                return;
+            }
+            const r = res.resultado;
+            const titulo = r.gravou ? `<span style="color:#57ab5a;">${escHtml(r.gravadas)} NF(s) gravada(s) na planilha.</span>`
+                : (r.a_gravar ? `Prévia: ${escHtml(r.a_gravar)} NF(s) seriam gravadas.` : 'Nada a gravar: a coluna N já está em dia.');
+            const amb = (r.ambiguas || []).map(a => `<li>linha ${escHtml(a.linha)} (pedido ${escHtml(a.pedido)}): ${a.nfs.map(escHtml).join(' ou ')}</li>`).join('');
+            el.innerHTML = `<div style="font-weight:bold;">${titulo}</div>
+                <div style="font-size:0.8rem; margin-top:4px;">${escHtml(r.iguais)} já estavam certas · ${escHtml(r.sem_nf)} ainda sem NF no portal · ${escHtml(r.sem_par)} sem pedido no portal${r.atualizadas ? ` · ${escHtml(r.atualizadas)} atualizada(s)` : ''}</div>
+                ${r.aviso ? `<div style="color:#c69026; font-size:0.8rem; margin-top:4px;">${escHtml(r.aviso)}</div>` : ''}
+                ${r.backup ? `<div style="font-size:0.75rem; color:#768390; margin-top:4px;">Backup: ${escHtml(r.backup)}</div>` : ''}
+                ${amb ? `<details style="margin-top:8px;"><summary style="cursor:pointer; font-size:0.8rem;">${(r.ambiguas || []).length} linha(s) não gravada(s): NF diferente em mais de um pedido</summary><ul style="font-size:0.78rem;">${amb}</ul></details>` : ''}`;
+        });
+
+        // ---------- CONFERÊNCIA PLANILHA x PORTAL (uma vez por dia, pelo robô de cadastro) ----------
+        function mostrarConferencia(c) {
+            const el = document.getElementById('conferencia-planilha');
+            if (!c) { el.innerHTML = 'Conferência ainda não feita (roda uma vez por dia com o cadastro automático).'; return; }
+            if (c.erro) { el.innerHTML = `<span style="color:#e5534b;">${escHtml(c.erro)}</span>`; return; }
+            const lista = (itens, f) => itens.length ? `<ul style="margin:4px 0 0; font-size:0.78rem;">${itens.map(f).join('')}</ul>` : '';
+            const item = (titulo, n, itens, f) => n ? `<details style="margin-top:6px;"><summary style="cursor:pointer;">${titulo}: <b>${escHtml(n)}</b></summary>${lista(itens, f)}</details>` : '';
+            const L = c.listas || {};
+            el.innerHTML = `<div style="font-size:0.75rem; color:#768390;">Conferida em ${escHtml(c.gerado_em)}${c.ignoradas ? ` · ${escHtml(c.ignoradas)} linha(s) cancelada(s) ignorada(s)` : ''}</div>
+                ${!c.planilha_sem_portal && !c.portal_sem_planilha && !c.nf_divergente ? '<div style="color:#57ab5a;">Planilha e portal batem.</div>' : ''}
+                ${item('Só na planilha (não estão no portal)', c.planilha_sem_portal, L.planilha_sem_portal || [], x => `<li>linha ${escHtml(x.linha)}: ${escHtml(x.pedido)} - ${escHtml(x.produto)}</li>`)}
+                ${item('Só no portal (não estão na planilha)', c.portal_sem_planilha, L.portal_sem_planilha || [], x => `<li>${escHtml(x.pedido)} - ${escHtml(x.produto)}</li>`)}
+                ${item('NF diferente entre planilha e portal', c.nf_divergente, L.nf_divergente || [], x => `<li>linha ${escHtml(x.linha)} (${escHtml(x.pedido)}): planilha ${escHtml(x.nf_planilha)} · portal ${escHtml(x.nf_portal)}</li>`)}
+                <div style="font-size:0.78rem; margin-top:6px;">${escHtml(c.nf_so_no_portal)} pedido(s) com NF no portal e a coluna de NF da planilha vazia.</div>`;
+        }
+
+        // ---------- AVISOS DOS ROBÔS (banner no topo; consulta a cada 5 min) ----------
+        const AVISOS_A_CADA_MS = 5 * 60 * 1000;
+        function horasDesde(d) { return d ? (Date.now() - d) / 3600000 : Infinity; }
+        function avisosDosRobos(res) {
+            if (!res.sucesso) return [`Robôs de NF e cadastro: ${res.erro || 'sem resposta'}`];
+            const e = res.estado || {}, avisos = [];
+            const c = e.cadastro_pedidos;
+            if (c && c.erro) avisos.push(`Cadastro automático de pedidos com erro: ${c.erro.mensagem}`);
+            else if (c && c.ativo && horasDesde(dataHoraBR(c.verificado_em)) * 60 > CADASTRO_PARADO_MIN)
+                avisos.push(`Cadastro automático de pedidos parado: última verificação em ${c.verificado_em}`);
+            const h = (e.historico || [])[0];
+            if (h && h.sucesso === false) avisos.push(`A última sincronização de NF falhou (${quandoBR(h.rodou_em)}): ${h.erro || 'erro'}`);
+            const dia = new Date().getDay();
+            const limite = (dia === 0 || dia === 1 || dia === 6) ? 74 : 26;   // fim de semana não sincroniza
+            if (e.ultima && horasDesde(new Date(e.ultima.rodou_em)) > limite)
+                avisos.push(`NF sem sincronizar desde ${quandoBR(e.ultima.rodou_em)}`);
+            return avisos;
+        }
+        function mostrarAvisosDosRobos(avisos) {
+            const el = document.getElementById('aviso-robos');
+            el.style.display = avisos.length ? 'block' : 'none';
+            el.innerHTML = avisos.map(a => `<div><i class="fa-solid fa-triangle-exclamation"></i> ${escHtml(a)}</div>`).join('') +
+                '<div style="font-size:0.75rem; color:#adbac7; margin-top:4px;">Clique para ver os detalhes.</div>';
+        }
+        socket.on('retorno_sync_nf_estado', (res) => {
+            mostrarAvisosDosRobos(avisosDosRobos(res));
+            if (res.sucesso) mostrarConferencia((res.estado || {}).conferencia_planilha);
+        });
+        let avisosPedidos = false;
+        socket.on('sincronizar_estado', () => {          // primeira mensagem depois de entrar na sala do portal
+            if (avisosPedidos) return;
+            avisosPedidos = true;
+            socket.emit('solicitar_sync_nf_estado');
+            setInterval(() => socket.emit('solicitar_sync_nf_estado'), AVISOS_A_CADA_MS);
+        });
 
         // Cadastro automático: planilha dos estagiários -> pedidos (CadastrarPedidos.bat no servidor)
         const CADASTRO_PARADO_MIN = 30;   // o robô roda a cada 10 min
