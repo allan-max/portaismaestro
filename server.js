@@ -102,6 +102,7 @@ let estado_me = { status: 'desligado' };
 let estado_ariba = { status: 'desligado' };
 let fila_respostas = [];
 let bot_socket_id = null;
+let sync_socket_id = null;   // serviço de NF (cruzar_nf/servico.py)
 let usuarios_logados = {};
 
 function notificar_todos(mensagem = null) {
@@ -415,6 +416,10 @@ io.on('connection', (socket) => {
             bot_socket_id = null;
             console.log("❌ Ligação com o Robô Local perdida.");
         }
+        if (socket.id === sync_socket_id) {
+            sync_socket_id = null;
+            console.log("❌ Serviço de NF desconectado.");
+        }
     });
 
     // === PAINEL ADMIN (Controle de Acessos e Status) ===
@@ -517,6 +522,55 @@ io.on('connection', (socket) => {
         if (dados.clientId) {
             io.to(dados.clientId).emit('retorno_planilha_json', dados);
         }
+    });
+
+    // SINCRONIZAÇÃO DE NF (HSE -> pedidos): tela -> serviço de NF -> tela
+    // O serviço de NF é um processo separado do gerenciador (cruzar_nf/servico.py);
+    // ele se identifica com o token SYNC_NF_TOKEN, configurado aqui e no .env do servidor.
+    socket.on('sou_o_sync_nf', (dados = {}) => {
+        const esperado = String(process.env.SYNC_NF_TOKEN || '');
+        const recebido = String(dados.token || '');
+        const ok = esperado.length > 0 && esperado.length === recebido.length &&
+            crypto.timingSafeEqual(Buffer.from(esperado), Buffer.from(recebido));
+        if (!ok) {
+            console.log("⛔ Serviço de NF recusado (SYNC_NF_TOKEN ausente ou diferente).");
+            socket.emit('sync_nf_recusado', {});
+            return socket.disconnect(true);
+        }
+        sync_socket_id = socket.id;
+        console.log("🧾 Serviço de NF conectado.");
+    });
+
+    socket.on('solicitar_sync_nf_estado', () => {
+        if (!socket.rooms.has('frontend')) return;
+        if (!sync_socket_id) return socket.emit('retorno_sync_nf_estado', { sucesso: false, erro: "O serviço de NF está offline." });
+        io.to(sync_socket_id).emit('comando_sync_nf_estado', { clientId: socket.id });
+    });
+
+    socket.on('solicitar_sync_nf', (dados = {}) => {
+        if (!socket.rooms.has('frontend')) return;
+        if (!sync_socket_id) return socket.emit('retorno_sync_nf', { sucesso: false, erro: "O serviço de NF está offline." });
+        io.to(sync_socket_id).emit('comando_sync_nf', {
+            clientId: socket.id, de: dados.de || null, ate: dados.ate || null, gravar: dados.gravar !== false
+        });
+    });
+
+    socket.on('retorno_sync_nf_estado', (dados = {}) => {
+        if (socket.id === sync_socket_id && dados.clientId) io.to(dados.clientId).emit('retorno_sync_nf_estado', dados);
+    });
+
+    // progresso e resultado vão para todas as telas: a rodada das 07:30 não tem clientId
+    socket.on('progresso_sync_nf', (dados = {}) => {
+        if (socket.id === sync_socket_id) io.to('frontend').emit('progresso_sync_nf', dados);
+    });
+
+    socket.on('retorno_sync_nf', (dados = {}) => {
+        if (socket.id === sync_socket_id) io.to('frontend').emit('retorno_sync_nf', dados);
+    });
+
+    // O robô (Auto-Pilot) ou o serviço de NF avisam que a planilha mudou: as telas recarregam
+    socket.on('planilha_atualizada', () => {
+        if (socket.id === bot_socket_id || socket.id === sync_socket_id) io.to('frontend').emit('planilha_atualizada');
     });
 
     socket.on('pedir_dados_dashboard', (filtros) => {
