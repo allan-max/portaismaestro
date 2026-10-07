@@ -451,7 +451,7 @@
                 <a href="#" onclick="abrirForm('vendedor'); return false;" style="padding: 12px 15px; color: var(--text-main); text-decoration: none; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-user-tag" style="width: 20px; text-align: center;"></i> Registro de Vendedor</a>
                 <a href="#" onclick="abrirForm('cotacao'); return false;" style="padding: 12px 15px; color: var(--text-main); text-decoration: none; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-list-check" style="width: 20px; text-align: center;"></i> Registro de Cotação</a>
                 <a href="#" onclick="abrirForm('pedido'); return false;" style="padding: 12px 15px; color: var(--text-main); text-decoration: none; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-cart-shopping" style="width: 20px; text-align: center;"></i> Registro de Pedido</a>
-                <a href="#" onclick="abrirSyncNF(); return false;" style="padding: 12px 15px; color: var(--text-main); text-decoration: none; display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-file-invoice" style="width: 20px; text-align: center;"></i> Sincronizar NFs (HSE)</a>
+                <a href="#" onclick="abrirSyncNF(); return false;" style="padding: 12px 15px; color: var(--text-main); text-decoration: none; display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-file-invoice" style="width: 20px; text-align: center;"></i> NFs (HSE) e cadastro automático</a>
                 <button onclick="carregarBancoDados()" style="width: 100%; background: var(--accent-blue); color: white; border: none; padding: 12px; cursor: pointer; font-weight: bold; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;"><i class="fa-solid fa-rotate"></i> ATUALIZAR DADOS</button>
             </div>
 
@@ -568,7 +568,8 @@
     <div id="modal-sync-nf" style="position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 9999999;">
         <div style="background: #2d333b; border: 1px solid #444c56; border-radius: 12px; padding: 25px; width: min(900px, 94vw); max-height: 88vh; overflow: auto; position: relative; color: #adbac7;">
             <button onclick="document.getElementById('modal-sync-nf').style.display='none'" style="position: absolute; top: 15px; right: 15px; background: none; border: none; color: #768390; font-size: 1.5rem; cursor: pointer;">&times;</button>
-            <h2 style="margin-top: 0; color: #cdd9e5; border-bottom: 1px solid #444c56; padding-bottom: 10px;"><i class="fa-solid fa-file-invoice"></i> Sincronizar NFs com o HSE</h2>
+            <h2 style="margin-top: 0; color: #cdd9e5; border-bottom: 1px solid #444c56; padding-bottom: 10px;"><i class="fa-solid fa-file-invoice"></i> NFs do HSE e cadastro automático de pedidos</h2>
+            <div id="cadastro-pedidos-estado" style="margin-bottom: 15px;"></div>
             <div id="sync-nf-estado" style="margin-bottom: 15px;">Carregando...</div>
             <div style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 15px;">
                 <label style="display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem;">Emissão de
@@ -869,6 +870,43 @@
             socket.emit('solicitar_sync_nf', { de, ate, gravar });
         }
 
+        // Cadastro automático: planilha dos estagiários -> pedidos (CadastrarPedidos.bat no servidor)
+        const CADASTRO_PARADO_MIN = 30;   // o robô roda a cada 10 min
+        function dataHoraBR(t) {
+            const m = /^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2})/.exec(t || '');
+            return m ? new Date(+m[3], m[2] - 1, +m[1], +m[4], +m[5]) : null;
+        }
+        function mostrarCadastroPedidos(c) {
+            const el = document.getElementById('cadastro-pedidos-estado');
+            if (!c) { el.innerHTML = ''; return; }
+            const titulo = '<div style="font-size:0.8rem; margin-bottom:6px; color:#cdd9e5;"><i class="fa-solid fa-robot"></i> Cadastro automático de pedidos (planilha dos estagiários)</div>';
+            if (!c.ativo) {
+                el.innerHTML = titulo + `<div style="font-size:0.8rem;">${c.erro ? `<span style="color:#e5534b;">${escHtml(c.erro.mensagem)}</span>` : 'Ainda não ligado no servidor.'}</div>`;
+                return;
+            }
+            const verif = dataHoraBR(c.verificado_em);
+            const parado = !verif || (Date.now() - verif) / 60000 > CADASTRO_PARADO_MIN;
+            const u = c.ultimo_cadastro;
+            const cor = c.erro || parado ? '#e5534b' : '#57ab5a';
+            el.innerHTML = titulo + `
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px;">
+                    <div style="background:#373e47; border-radius:8px; padding:12px; border-left:4px solid ${cor};">
+                        <div style="font-size:0.75rem;">Última verificação da planilha</div>
+                        <div style="font-size:1.1rem; color:#cdd9e5; font-weight:bold;">${escHtml(c.verificado_em)}</div>
+                        <div style="font-size:0.75rem;">${c.erro ? `<span style="color:#e5534b;">erro: ${escHtml(c.erro.mensagem)}</span>` : (parado ? `<span style="color:#e5534b;">mais de ${CADASTRO_PARADO_MIN} min sem verificar: o robô está parado?</span>` : 'funcionando')}</div>
+                    </div>
+                    <div style="background:#373e47; border-radius:8px; padding:12px; border-left:4px solid #539bf5;">
+                        <div style="font-size:0.75rem;">Último cadastro automático</div>
+                        <div style="font-size:1.1rem; color:#cdd9e5; font-weight:bold;">${u ? `${escHtml(u.rodou_em.slice(0, 16))} · ${escHtml(u.gravados)} pedido(s)` : 'nenhum ainda'}</div>
+                        <div style="font-size:0.75rem;">${escHtml(c.cadastrados_hoje)} pedido(s) cadastrado(s) hoje</div>
+                    </div>
+                </div>
+                ${(c.historico || []).length ? `<details style="margin-top:10px;"><summary style="cursor:pointer; font-size:0.8rem;">Últimos cadastros</summary>
+                    <table style="width:100%; font-size:0.78rem; border-collapse:collapse; margin-top:6px;">${c.historico.map(h => `<tr>
+                        <td style="padding:4px; white-space:nowrap; vertical-align:top;">${escHtml(h.rodou_em.slice(0, 16))}</td>
+                        <td>${(h.pedidos || []).map(escHtml).join('<br>')}${(h.repetidas || []).map(r => `<br><span style="color:#c69026;">repetida na planilha, não cadastrada: ${escHtml(r)}</span>`).join('')}</td></tr>`).join('')}</table></details>` : ''}`;
+        }
+
         socket.on('retorno_sync_nf_estado', (res) => {
             const el = document.getElementById('sync-nf-estado');
             if (!res.sucesso) { el.innerHTML = `<span style="color:#e5534b;">Erro: ${escHtml(res.erro)}</span>`; return; }
@@ -900,6 +938,7 @@
             if (!document.getElementById('sync-nf-de').value) document.getElementById('sync-nf-de').value = brParaIso(j.de);
             if (!document.getElementById('sync-nf-ate').value) document.getElementById('sync-nf-ate').value = brParaIso(j.ate);
             botoesSyncNF(!!e.rodando);
+            mostrarCadastroPedidos(e.cadastro_pedidos);
         });
 
         socket.on('progresso_sync_nf', (res) => {
