@@ -555,6 +555,19 @@ io.on('connection', (socket) => {
         });
     });
 
+    // NF NA PLANILHA DOS ESTAGIÁRIOS (botão "Gravar NF na planilha"): tela -> serviço de NF -> só quem pediu
+    socket.on('solicitar_nf_planilha', (dados = {}) => {
+        if (!socket.rooms.has('frontend')) return;
+        if (!sync_socket_id) return socket.emit('retorno_nf_planilha', { sucesso: false, erro: "O serviço de NF está offline." });
+        io.to(sync_socket_id).emit('comando_nf_planilha', { clientId: socket.id, gravar: dados.gravar === true });
+    });
+    socket.on('progresso_nf_planilha', (dados = {}) => {
+        if (socket.id === sync_socket_id && dados.clientId) io.to(dados.clientId).emit('progresso_nf_planilha', dados);
+    });
+    socket.on('retorno_nf_planilha', (dados = {}) => {
+        if (socket.id === sync_socket_id && dados.clientId) io.to(dados.clientId).emit('retorno_nf_planilha', dados);
+    });
+
     socket.on('retorno_sync_nf_estado', (dados = {}) => {
         if (socket.id === sync_socket_id && dados.clientId) io.to(dados.clientId).emit('retorno_sync_nf_estado', dados);
     });
