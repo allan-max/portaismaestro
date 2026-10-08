@@ -838,6 +838,11 @@
         socket.on('planilha_atualizada', () => { carregarBancoDados(true); });
 
         // ---------- SINCRONIZAÇÃO DE NF (HSE -> pedidos) ----------
+        // A NF fica no campo da planilha antiga, "Nº NOTA FISCAL" (é o que o sync de NF grava)
+        function nfDoPedido(p) {
+            const k = Object.keys(p).find(c => /NOTA\s*FISCAL/i.test(c)) || (p['NF'] !== undefined ? 'NF' : null);
+            return k ? p[k] : '';
+        }
         function escHtml(v) {
             return String(v ?? '-').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
         }
@@ -1637,7 +1642,7 @@
                     <td>
                         <div class="cell-content">
                             <div>
-                                <div class="cell-main-text">${escHtml(p['NF'] || '-')}</div>
+                                <div class="cell-main-text">${escHtml(nfDoPedido(p) || '-')}</div>
                             </div>
                         </div>
                     </td>
