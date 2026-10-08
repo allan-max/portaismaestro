@@ -969,6 +969,9 @@
             const e = res.estado || {}, avisos = [];
             const c = e.cadastro_pedidos;
             if (c && c.erro) avisos.push(`Cadastro automático de pedidos com erro: ${c.erro.mensagem}`);
+            const pend = (c && c.pendentes) || [];
+            if (pend.length) avisos.push(`${pend.length} linha(s) da planilha não entram no portal por falta de dado: ` +
+                pend.slice(0, 3).map(textoPendente).join('; ') + (pend.length > 3 ? '...' : ''));
             else if (c && c.ativo && horasDesde(dataHoraBR(c.verificado_em)) * 60 > CADASTRO_PARADO_MIN)
                 avisos.push(`Cadastro automático de pedidos parado: última verificação em ${c.verificado_em}`);
             const h = (e.historico || [])[0];
@@ -1003,10 +1006,19 @@
             const m = /^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2})/.exec(t || '');
             return m ? new Date(+m[3], m[2] - 1, +m[1], +m[4], +m[5]) : null;
         }
+        // Linhas da planilha que não entram no portal porque falta um campo obrigatório
+        function textoPendente(p) { return `linha ${p.linha} (${p.pedido || 'sem pedido'}) sem ${p.falta.join(', ')}`; }
+        function pendentesCadastro(c) {
+            const pend = c.pendentes || [];
+            if (!pend.length) return '';
+            return `<div style="background:rgba(198,144,38,0.12); border:1px solid #c69026; color:#daaa3f; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:0.8rem;">
+                <b>${pend.length} linha(s) da planilha esperando para entrar no portal</b> (preencha e salve a planilha):
+                <ul style="margin:4px 0 0;">${pend.map(p => `<li>${escHtml(textoPendente(p))}: ${escHtml(p.produto)}</li>`).join('')}</ul></div>`;
+        }
         function mostrarCadastroPedidos(c) {
             const el = document.getElementById('cadastro-pedidos-estado');
             if (!c) { el.innerHTML = ''; return; }
-            const titulo = '<div style="font-size:0.8rem; margin-bottom:6px; color:#cdd9e5;"><i class="fa-solid fa-robot"></i> Cadastro automático de pedidos (planilha dos estagiários)</div>';
+            const titulo = '<div style="font-size:0.8rem; margin-bottom:6px; color:#cdd9e5;"><i class="fa-solid fa-robot"></i> Cadastro automático de pedidos (planilha dos estagiários)</div>' + pendentesCadastro(c);
             if (!c.ativo) {
                 el.innerHTML = titulo + `<div style="font-size:0.8rem;">${c.erro ? `<span style="color:#e5534b;">${escHtml(c.erro.mensagem)}</span>` : 'Ainda não ligado no servidor.'}</div>`;
                 return;
