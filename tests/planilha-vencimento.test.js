@@ -40,8 +40,8 @@ test('scripts inline têm sintaxe válida', () => {
 });
 
 test('preserva menu, painel, robôs e coluna NF da versão boa 43b6c21', () => {
-    const source = html.replace(/\r\n/g, '\n');
-    // Blocos de 43b6c21; o terceiro inclui a conferência e o painel de sync novos.
+    const source = html.replace(/\r\n/g, '\n').replace(/            <button id="btn-exportar-excel"[\s\S]*?<\/button>\n/, '');
+    // Hashes dos blocos originais em 43b6c21:public/planilha_vale.html.
     const blocks = [
         ['<body>', '    <div id="menu-filtro-periodo"', 'd9e3c23fc9521315b50a2ea5ea4bf17a6499bb30d046950d6204cf99e198128c'],
         ['    <div id="modal-sync-nf"', '    <script src=', 'bd4b84956e4f8194c6c8f43c5276dbdb781323bf3720486823cf27fe05d7a639'],
