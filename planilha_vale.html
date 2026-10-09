@@ -1,0 +1,2102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAESTRO | Planilha Vale</title>
+    <link rel="icon" type="image/png" href="favicon-32x32.png">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    
+    <style>
+        :root {
+            --bg-body: #10141b;
+            --bg-navbar: #161b22;
+            --bg-card: #1c2433;
+            --bg-card-hover: #212b3d;
+            --bg-search: #161b22;
+            --text-main: #f8fafc;
+            --text-muted: #8b9eb3;
+            --accent-blue: #2563eb;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --border-color: #2a3441;
+        }
+        
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            background-color: var(--bg-body) !important;
+            color: var(--text-main) !important;
+            overflow-y: scroll;
+        }
+
+        /* Top Navbar */
+        .top-navbar {
+            display: flex;
+            align-items: center;
+            background-color: var(--bg-navbar);
+            padding: 0 20px;
+            height: 60px;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .menu-icon {
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            margin-right: 20px;
+            cursor: pointer;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-right: auto;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background-color: var(--accent-blue);
+            color: #ffffff;
+        }
+        
+        .tab-btn:not(.active) {
+            background-color: rgba(255,255,255,0.03);
+            border-color: rgba(255,255,255,0.05);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .nav-link-item {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .nav-link-item:hover {
+            color: var(--text-main);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .nav-link-item.active-green {
+            background-color: var(--accent-green);
+            color: #ffffff;
+        }
+
+        .nav-link-item.text-red {
+            color: var(--accent-red);
+        }
+
+        /* Page Content */
+        .page-content {
+            padding: 30px 40px 100px 40px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header-icon {
+            width: 48px;
+            height: 48px;
+            background-color: #38bdf8;
+            color: #ffffff;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 15px rgba(56, 189, 248, 0.3);
+        }
+
+        .header-text h1 {
+            margin: 0 0 5px 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .header-text p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Search & Filters */
+        .toolbar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            align-items: center;
+        }
+
+        .search-box {
+            flex: 1;
+            background: var(--bg-search);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .search-box i {
+            color: var(--text-muted);
+        }
+
+        .search-box input {
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            width: 100%;
+            outline: none;
+        }
+        
+        .search-box input::placeholder {
+            color: #4b5563;
+        }
+
+        .btn-filter {
+            background: var(--bg-navbar);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .total-records {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-left: 10px;
+        }
+        .total-records span {
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        /* Table */
+        .modern-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 10px;
+        }
+
+        .modern-table th {
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 0.85rem;
+            padding: 0 20px 5px 20px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modern-table td {
+            background: var(--bg-card);
+            padding: 16px 20px;
+            vertical-align: middle;
+            transition: background 0.15s ease;
+        }
+
+        .modern-table tr td:first-child {
+            border-top-left-radius: 12px;
+            border-bottom-left-radius: 12px;
+            position: relative;
+        }
+
+        .modern-table tr td:last-child {
+            border-top-right-radius: 12px;
+            border-bottom-right-radius: 12px;
+        }
+
+        .modern-table tr:hover td {
+            background: var(--bg-card-hover);
+        }
+
+        /* Left Blue Accent on Row */
+        .row-accent td:first-child::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: #38bdf8;
+            border-top-left-radius: 12px;
+            border-bottom-left-radius: 12px;
+        }
+
+        /* Cell Content Styles */
+        .cell-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .cell-icon {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        .doc-icon {
+            background: rgba(255,255,255,0.05);
+            color: var(--text-main);
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .cell-main-text {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-main);
+            line-height: 1.4;
+        }
+
+        .cell-sub-text {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            line-height: 1.4;
+        }
+
+        .blue-pill {
+            background: rgba(56, 189, 248, 0.15);
+            color: #38bdf8;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .status-dot.green { background: #10b981; }
+        .status-dot.red { background: #ef4444; }
+
+        .action-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.05);
+            color: var(--text-muted);
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: var(--text-main);
+        }
+
+        .action-btn.red {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+        
+        .action-btn.red:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        /* Scrollbars */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-body); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+        .form-box { background: var(--bg-card) !important; border: 1px solid var(--border-color) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important; border-radius: 12px; }
+        .form-input { background-color: var(--bg-body); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 10px 12px; font-family: 'Inter', sans-serif; font-size: 0.9rem; transition: border-color 0.2s, box-shadow 0.2s; width: 100%; box-sizing: border-box; }
+        .form-input::placeholder { color: var(--text-muted); }
+        
+        /* Floating Navbar hide */
+        
+    
+        /* FORCED FLOATING NAVBAR CSS */
+        .floating-navbar {
+            position: fixed !important; top: 25px !important; left: 50% !important; transform: translateX(-50%) !important;
+            background: rgba(15, 17, 21, 0.85) !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important; border-radius: 40px !important; padding: 6px 10px !important;
+            display: flex !important; gap: 5px !important; z-index: 999999 !important; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6) !important;
+        }
+        .nav-item {
+            color: #9aa0a6 !important; text-decoration: none !important; padding: 8px 12px !important;
+            border-radius: 30px !important; font-family: 'Inter', sans-serif !important; gap: 8px !important;
+            display: flex !important; align-items: center !important;
+        }
+        .nav-item:hover { color: #fff !important; background: rgba(255, 255, 255, 0.1) !important; }
+        .nav-item.active.nav-planilha { background: #10b981 !important; color: #fff !important; box-shadow: 0 0 15px rgba(16, 185, 129, 0.4) !important; }
+        .nav-item.nav-voltar { color: #f87171 !important; }
+
+    </style>
+
+    <style>
+        #view-cota.hide-col-0 th:nth-child(1), #view-cota.hide-col-0 td:nth-child(1) { display: none !important; }
+        #view-cota.hide-col-1 th:nth-child(2), #view-cota.hide-col-1 td:nth-child(2) { display: none !important; }
+        #view-cota.hide-col-2 th:nth-child(3), #view-cota.hide-col-2 td:nth-child(3) { display: none !important; }
+        #view-cota.hide-col-3 th:nth-child(4), #view-cota.hide-col-3 td:nth-child(4) { display: none !important; }
+        #view-cota.hide-col-4 th:nth-child(5), #view-cota.hide-col-4 td:nth-child(5) { display: none !important; }
+        #view-cota.hide-col-5 th:nth-child(6), #view-cota.hide-col-5 td:nth-child(6) { display: none !important; }
+        #view-cota.hide-col-6 th:nth-child(7), #view-cota.hide-col-6 td:nth-child(7) { display: none !important; }
+    </style>
+</head>
+
+<body>
+
+    <!-- Top Navbar -->
+    <nav class="top-navbar">
+        <i class="fa-solid fa-bars menu-icon" onclick="document.getElementById('dropdown-menu').style.display = document.getElementById('dropdown-menu').style.display === 'flex' ? 'none' : 'flex';" title="Opções"></i>
+        
+        <div class="nav-tabs">
+            <button class="tab-btn active" id="tab-cota" onclick="mudarTabBanco('cota')"><i class="fa-solid fa-file-lines"></i> Cotações</button>
+            <button class="tab-btn" id="tab-pedi" onclick="mudarTabBanco('pedi')"><i class="fa-solid fa-cart-shopping"></i> Pedidos</button>
+        </div>
+
+        
+    </nav>
+
+    <!-- Main Content -->
+    <div class="page-content">
+        
+        <!-- Header -->
+        <!-- Avisos dos robôs (cadastro automático e NF): aparece só quando há problema -->
+        <div id="aviso-robos" onclick="abrirSyncNF()" title="Ver detalhes" style="display: none; cursor: pointer; background: rgba(229,83,75,0.12); border: 1px solid #e5534b; color: #f47067; border-radius: 8px; padding: 10px 14px; margin-bottom: 15px; font-size: 0.85rem;"></div>
+        <div class="page-header">
+            <div class="header-left">
+                <div class="header-icon">
+                    <i class="fa-solid fa-file-lines"></i>
+                </div>
+                <div class="header-text">
+                    <h1 id="page-title">Cotações</h1>
+                    <p id="page-subtitle">Controle de cotações por fornecedor, com filtros e ações rápidas.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search & Toolbar -->
+        <div class="toolbar">
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="global-search" placeholder="Buscar por cotação, vendedor ou localidade..." onkeyup="aplicarFiltroGlobal()">
+            </div>
+            
+            <button class="btn-filter" onclick="document.getElementById('dropdown-vis').style.display = document.getElementById('dropdown-vis').style.display === 'flex' ? 'none' : 'flex';">
+                <i class="fa-solid fa-eye"></i> Visualização <i class="fa-solid fa-chevron-down" style="font-size: 0.7rem;"></i>
+            </button>
+            <div class="total-records">Total de registros: <span id="total-count">0</span></div>
+            
+            <!-- Botão Dropdown Opções -->
+            <div id="dropdown-menu" style="display: none; position: absolute; left: 20px; top: 55px; z-index: 999999; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; flex-direction: column; min-width: 220px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 100;">
+                <a href="#" onclick="abrirForm('vendedor'); return false;" style="padding: 12px 15px; color: var(--text-main); text-decoration: none; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-user-tag" style="width: 20px; text-align: center;"></i> Registro de Vendedor</a>
+                <a href="#" onclick="abrirForm('cotacao'); return false;" style="padding: 12px 15px; color: var(--text-main); text-decoration: none; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-list-check" style="width: 20px; text-align: center;"></i> Registro de Cotação</a>
+                <a href="#" onclick="abrirForm('pedido'); return false;" style="padding: 12px 15px; color: var(--text-main); text-decoration: none; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-cart-shopping" style="width: 20px; text-align: center;"></i> Registro de Pedido</a>
+                <a href="#" onclick="abrirSyncNF(); return false;" style="padding: 12px 15px; color: var(--text-main); text-decoration: none; display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-file-invoice" style="width: 20px; text-align: center;"></i> NFs (HSE) e cadastro automático</a>
+                <button onclick="carregarBancoDados()" style="width: 100%; background: var(--accent-blue); color: white; border: none; padding: 12px; cursor: pointer; font-weight: bold; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;"><i class="fa-solid fa-rotate"></i> ATUALIZAR DADOS</button>
+            </div>
+
+            <div id="dropdown-vis" style="display: none; position: absolute; right: 40px; top: 220px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; flex-direction: column; min-width: 220px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 9999999; padding: 10px;">
+                <h4 style="color: #cdd9e5; margin: 0 0 10px 0; padding-bottom: 5px; border-bottom: 1px solid var(--border-color); font-size: 0.9rem;">Colunas (Cotações)</h4>
+                <label style="color: #adbac7; display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 0.85rem; cursor: pointer;">
+                    <input type="checkbox" checked onchange="toggleColuna(0, this.checked)"> Cotação
+                </label>
+                <label style="color: #adbac7; display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 0.85rem; cursor: pointer;">
+                    <input type="checkbox" checked onchange="toggleColuna(1, this.checked)"> Vencimento
+                </label>
+                <label style="color: #adbac7; display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 0.85rem; cursor: pointer;">
+                    <input type="checkbox" checked onchange="toggleColuna(2, this.checked)"> Vendedor
+                </label>
+                <label style="color: #adbac7; display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 0.85rem; cursor: pointer;">
+                    <input type="checkbox" checked onchange="toggleColuna(3, this.checked)"> Localidade
+                </label>
+                <label style="color: #adbac7; display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 0.85rem; cursor: pointer;">
+                    <input type="checkbox" checked onchange="toggleColuna(4, this.checked)"> Resposta
+                </label>
+                <label style="color: #adbac7; display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 0.85rem; cursor: pointer;">
+                    <input type="checkbox" onchange="toggleColuna(5, this.checked)"> Itens
+                </label>
+                <label style="color: #768390; display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 0.85rem; cursor: not-allowed;" title="Ações são obrigatórias">
+                    <input type="checkbox" checked disabled> Ações
+                </label>
+            </div>
+
+        </div>
+
+        <!-- Cotações Table -->
+        <div id="view-cota">
+            <table class="modern-table">
+                <thead>
+                    <tr>
+                        <th style="width: 20%;">Cotação</th>
+                        <th style="width: 15%; cursor: pointer;" onclick="abrirFiltroPeriodo(event)" title="Clique para filtrar por período de vencimento"><i class="fa-regular fa-calendar" style="margin-right:8px;"></i>Vencimento <i class="fa-solid fa-filter" style="margin-left:5px; font-size: 0.8em; color: #768390;"></i></th>
+                        <th style="width: 20%; cursor: pointer;" onclick="abrirFiltroVendedor(event)" title="Clique para filtrar por Vendedor"><i class="fa-regular fa-user" style="margin-right:8px;"></i>Vendedor <i class="fa-solid fa-filter" style="margin-left:5px; font-size: 0.8em; color: #768390;"></i></th>
+                        <th style="width: 20%;"><i class="fa-solid fa-location-dot" style="margin-right:8px;"></i>Localidade</th>
+                        <th style="width: 15%;"><i class="fa-regular fa-comment-dots" style="margin-right:8px;"></i>Resposta</th>
+                          <th style="width: 15%;"><i class="fa-solid fa-box" style="margin-right:8px;"></i>Itens</th>
+                          <th style="width: 10%; text-align: right;"><i class="fa-solid fa-gear" style="margin-right:8px;"></i>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-bd-cota">
+                    <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 40px;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pedidos Table -->
+        <div id="view-pedi" style="display: none;">
+            <table class="modern-table">
+                <thead>
+                    <tr>
+                        <th style="width: 20%;">Pedido</th>
+                        <th style="width: 15%;"><i class="fa-solid fa-dollar-sign" style="margin-right:8px;"></i>Valor</th>
+                        <th style="width: 12%;"><i class="fa-regular fa-calendar" style="margin-right:8px;"></i>Entrega</th>
+                        <th style="width: 20%;"><i class="fa-regular fa-user" style="margin-right:8px;"></i>Requisitante</th>
+                        <th style="width: 15%;"><i class="fa-solid fa-location-dot" style="margin-right:8px;"></i>Cidade</th>
+                        <th style="width: 10%;"><i class="fa-solid fa-file-invoice" style="margin-right:8px;"></i>NF</th>
+                        <th style="width: 8%; text-align: right;"><i class="fa-solid fa-gear" style="margin-right:8px;"></i>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-bd-pedi">
+                </tbody>
+            </table>
+        </div>
+        
+    </div>
+
+    <div id="menu-filtro-coluna" style="display: none; position: absolute; background: #373e47; border: 1px solid #444c56; border-radius: 6px; padding: 10px; width: 220px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); z-index: 100001; font-family: 'Inter', sans-serif;">
+        <input type="text" id="input-filtro-col" placeholder="Buscar..." onkeyup="aplicarFiltroColuna()" style="width: 100%; box-sizing: border-box; background: #2d333b; border: 1px solid #444c56; color: #adbac7; padding: 6px; border-radius: 4px; font-size: 0.8rem; margin-bottom: 10px;">
+        <div style="margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;">
+            <label style="font-size: 0.8rem; color: #adbac7; display: flex; gap: 5px; align-items: center;"><input type="checkbox" id="chk-todas-col" onchange="toggleTodasFiltroCol(this.checked)"> (Selecionar Tudo)</label>
+            <button onclick="limparFiltroColuna()" style="background: transparent; border: none; color: #e5534b; cursor: pointer; font-size: 0.75rem;"><i class="fa-solid fa-eraser"></i> Limpar</button>
+        </div>
+        <div id="lista-filtro-col" style="max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; border-top: 1px solid #444c56; padding-top: 5px;">
+            <!-- Checkboxes preenchidos via JS -->
+        </div>
+        <button onclick="document.getElementById('menu-filtro-coluna').style.display='none'" style="width: 100%; background: #539bf5; color: #2d333b; border: none; padding: 6px; border-radius: 4px; margin-top: 10px; cursor: pointer; font-weight: bold; font-size: 0.8rem;">OK</button>
+    </div>
+    
+    <div id="menu-filtro-periodo" style="display: none; position: absolute; background: #373e47; border: 1px solid #444c56; border-radius: 6px; padding: 15px; width: 250px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); z-index: 100001; font-family: 'Inter', sans-serif;">
+        <h4 style="color: #cdd9e5; margin: 0 0 10px 0; font-size: 0.9rem;">Filtrar Vencimento</h4>
+        <label style="display: block; font-size: 0.8rem; color: #768390; margin-bottom: 5px;">Data Inicial:</label>
+        <input type="date" id="filtro-data-inicio" style="width: 100%; box-sizing: border-box; background: #2d333b; border: 1px solid #444c56; color: #adbac7; padding: 6px; border-radius: 4px; font-size: 0.85rem; margin-bottom: 10px;">
+        
+        <label style="display: block; font-size: 0.8rem; color: #768390; margin-bottom: 5px;">Data Final:</label>
+        <input type="date" id="filtro-data-fim" style="width: 100%; box-sizing: border-box; background: #2d333b; border: 1px solid #444c56; color: #adbac7; padding: 6px; border-radius: 4px; font-size: 0.85rem; margin-bottom: 15px;">
+        
+        <div style="display: flex; gap: 10px;">
+            <button onclick="limparFiltroPeriodo()" style="flex: 1; background: transparent; border: 1px solid #444c56; color: #adbac7; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">Limpar</button>
+            <button onclick="aplicarFiltroPeriodo()" style="flex: 1; background: #539bf5; color: #2d333b; border: none; padding: 6px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8rem;">Aplicar</button>
+        </div>
+    </div>
+
+    
+
+    <div id="menu-filtro-vendedor" style="display: none; position: absolute; background: #373e47; border: 1px solid #444c56; border-radius: 6px; padding: 10px; width: 220px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); z-index: 100001; font-family: 'Inter', sans-serif;">
+        <h4 style="color: #cdd9e5; margin: 0 0 10px 0; font-size: 0.9rem;">Filtrar Vendedor</h4>
+        <input type="text" id="input-busca-vendedor" placeholder="Buscar vendedor..." onkeyup="filtrarListaVendedores()" style="width: 100%; box-sizing: border-box; background: #2d333b; border: 1px solid #444c56; color: #adbac7; padding: 6px; border-radius: 4px; font-size: 0.8rem; margin-bottom: 10px;">
+        <div style="margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;">
+            <label style="font-size: 0.8rem; color: #adbac7; display: flex; gap: 5px; align-items: center;"><input type="checkbox" id="chk-todos-vendedores" onchange="toggleTodosVendedores(this.checked)"> (Selecionar Tudo)</label>
+            <button onclick="limparFiltroVendedor()" style="background: transparent; border: none; color: #e5534b; cursor: pointer; font-size: 0.75rem;"><i class="fa-solid fa-eraser"></i> Limpar</button>
+        </div>
+        <div id="lista-filtro-vendedor" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; border-top: 1px solid #444c56; padding-top: 5px;">
+            <!-- Checkboxes preenchidos via JS -->
+        </div>
+        <button onclick="aplicarFiltroVendedor()" style="width: 100%; background: #539bf5; color: #2d333b; border: none; padding: 6px; border-radius: 4px; margin-top: 10px; cursor: pointer; font-weight: bold; font-size: 0.8rem;">OK</button>
+    </div>
+
+    <!-- Modal: sincronização de NF (HSE -> pedidos) -->
+    <div id="modal-sync-nf" style="position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 9999999;">
+        <div style="background: #2d333b; border: 1px solid #444c56; border-radius: 12px; padding: 25px; width: min(900px, 94vw); max-height: 88vh; overflow: auto; position: relative; color: #adbac7;">
+            <button onclick="document.getElementById('modal-sync-nf').style.display='none'" style="position: absolute; top: 15px; right: 15px; background: none; border: none; color: #768390; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            <h2 style="margin-top: 0; color: #cdd9e5; border-bottom: 1px solid #444c56; padding-bottom: 10px;"><i class="fa-solid fa-file-invoice"></i> NFs do HSE e cadastro automático de pedidos</h2>
+            <div id="cadastro-pedidos-estado" style="margin-bottom: 15px;"></div>
+            <div id="sync-nf-estado" style="margin-bottom: 15px;">Carregando...</div>
+            <div style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 15px;">
+                <label style="display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem;">Emissão de
+                    <input type="date" id="sync-nf-de" style="background: #22272e; color: #cdd9e5; border: 1px solid #444c56; border-radius: 6px; padding: 6px;"></label>
+                <label style="display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem;">até
+                    <input type="date" id="sync-nf-ate" style="background: #22272e; color: #cdd9e5; border: 1px solid #444c56; border-radius: 6px; padding: 6px;"></label>
+                <button id="btn-sync-nf" onclick="executarSyncNF(true)" style="background: #2563EB; color: #fff; border: none; padding: 9px 16px; border-radius: 6px; font-weight: bold; cursor: pointer;"><i class="fa-solid fa-rotate"></i> Sincronizar</button>
+                <button id="btn-sync-nf-previa" onclick="executarSyncNF(false)" style="background: #444c56; color: #cdd9e5; border: none; padding: 9px 16px; border-radius: 6px; cursor: pointer;">Só prévia</button>
+            </div>
+            <p style="font-size: 0.8rem; color: #768390; margin: 0 0 15px;">O robô entra no HSE, exporta as vendas do período, junta na base e grava a NF <b>só nos pedidos sem NF</b>. NF diferente da que já está no pedido não é trocada: aparece no resultado para conferir.</p>
+            <div id="sync-nf-progresso" style="background: #22272e; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 0.8rem; max-height: 160px; overflow: auto; display: none;"></div>
+            <div id="sync-nf-resultado" style="margin-top: 15px;"></div>
+            <!-- Planilha dos estagiários: conferência com o portal e NF na coluna N -->
+            <h3 style="color: #cdd9e5; border-top: 1px solid #444c56; padding-top: 15px; margin: 20px 0 10px;"><i class="fa-solid fa-table"></i> Planilha dos estagiários</h3>
+            <div id="conferencia-planilha" style="margin-bottom: 15px; font-size: 0.85rem;">Conferência ainda não feita hoje.</div>
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;">
+                <button id="btn-nf-planilha" onclick="executarNfPlanilha(true)" style="background: #2563EB; color: #fff; border: none; padding: 9px 16px; border-radius: 6px; font-weight: bold; cursor: pointer;"><i class="fa-solid fa-file-excel"></i> Gravar NF na planilha</button>
+                <button id="btn-nf-planilha-previa" onclick="executarNfPlanilha(false)" style="background: #444c56; color: #cdd9e5; border: none; padding: 9px 16px; border-radius: 6px; cursor: pointer;">Só prévia</button>
+            </div>
+            <p style="font-size: 0.8rem; color: #768390; margin: 0 0 15px;">Grava a NF do portal na coluna <b>N "NF (MAESTRO)"</b> da planilha, sem mexer em nenhuma outra célula. <b>Não grava se alguém estiver com a planilha aberta</b> ou se ela mudar no meio; faz backup antes e confere depois.</p>
+            <div id="nf-planilha-progresso" style="background: #22272e; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 0.8rem; max-height: 160px; overflow: auto; display: none;"></div>
+            <div id="nf-planilha-resultado" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <!-- Modal para os forms -->
+    <div id="modal-forms-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 9999999;">
+        <div style="position: relative; background: var(--bg-card); padding: 30px; border-radius: 12px; width: 90%; max-width: 900px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
+            <button onclick="document.getElementById('modal-forms-overlay').style.display='none';" style="position: absolute; top: 15px; right: 15px; background: #e5534b; color: #2d333b; border: none; border-radius: 50%; width: 35px; height: 35px; cursor: pointer; font-size: 1.2rem; font-weight: bold; z-index: 10; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">&times;</button>
+            <div id="container-forms-modal" style="width: 100%; display: flex; flex-direction: column; gap: 20px;">
+                <!-- Forms will be moved here by JS -->
+            </div>
+        </div>
+
+    </div>    <div id="fila-extracao-panel" style="position: fixed; right: 20px; top: 100px; width: 320px; background: #2d333b; border: 1px solid #444c56; border-radius: 12px; padding: 20px; display: none; flex-direction: column; z-index: 1000; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+        <h3 style="color: #cdd9e5; margin-top: 0; font-size: 16px; border-bottom: 1px solid #444c56; padding-bottom: 15px; margin-bottom: 15px;"><i class="fa-solid fa-layer-group"></i> Fila de Extração Pendente</h3>
+        <p style="color: #768390; font-size: 12px; margin-bottom: 15px;">Os vendedores e cotações abaixo não estavam na planilha. Clique no botão abaixo quando tiver terminado de registrar todos.</p>
+        <div id="fila-lista" style="flex: 1; max-height: 400px; overflow-y: auto; margin-bottom: 15px;"></div>
+    </div>
+    <div id="modal-detalhes" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 9999999;">
+        <div style="background: #2d333b; border: 1px solid #444c56; border-radius: 12px; padding: 25px; width: 90%; max-width: 900px; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+            <button onclick="document.getElementById('modal-detalhes').style.display='none'" style="position: absolute; top: 15px; right: 15px; background: none; border: none; color: #768390; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            <h2 id="modal-detalhes-titulo" style="margin-top: 0; margin-bottom: 20px; color: #cdd9e5; font-size: 1.5rem; border-bottom: 1px solid #444c56; padding-bottom: 10px;">Detalhes</h2>
+            <div id="modal-detalhes-corpo" style="display: flex; flex-direction: column; gap: 10px;">
+                <!-- Preenchido via JS -->
+            </div>
+        </div>
+    </div>
+    <div id="modal-editar" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 9999999;">
+        <div style="background: #2d333b; border: 1px solid #444c56; border-radius: 12px; padding: 25px; width: 90%; max-width: 900px; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+            <button onclick="document.getElementById('modal-editar').style.display='none'" style="position: absolute; top: 15px; right: 15px; background: none; border: none; color: #768390; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            <h2 id="modal-editar-titulo" style="margin-top: 0; margin-bottom: 20px; color: #cdd9e5; font-size: 1.5rem; border-bottom: 1px solid #444c56; padding-bottom: 10px;">Editar</h2>
+            <div id="modal-editar-corpo" style="display: flex; flex-direction: column; gap: 5px; margin-bottom: 20px;">
+                <!-- Preenchido via JS -->
+            </div>
+            <button onclick="salvarEdicaoLinha()" style="width: 100%; background: #539bf5; color: #2d333b; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer;"><i class="fa-solid fa-save"></i> SALVAR ALTERAÇÕES</button>
+        </div>
+    </div>
+
+    <!-- Container para injetar os formulários (Modais) -->
+    <div id="container-forms-modal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 9999999; overflow-y: auto;">
+        <div style="background: var(--bg-card); padding: 30px; border-radius: 12px; width: 90%; max-width: 900px; display: flex; flex-direction: column; gap: 20px;">
+            <div id="form-cotacao" style="position: relative;" class="form-box" style="width: 100%; box-sizing: border-box; display: none; position: relative;">
+            <div style="font-size: 2.2rem; color: #57ab5a; margin-bottom: 5px;">
+                <i class="fa-solid fa-list-check"></i>
+            </div>
+            <h2 style="font-size: 1.4rem; margin-bottom: 5px; font-weight: 700; color: #cdd9e5;">Registrar Cotações Manuais</h2>
+            <p style="font-size: 0.9rem; color: #768390; margin-bottom: 25px;">Adicione cotações manualmente na planilha.</p>
+            
+            <div style="overflow-x: auto; max-height: 400px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #444c56; border-radius: 6px;">
+                <table id="tabela-cotacoes-manuais">
+                    <thead>
+                        <tr>
+                            <th>Cotação</th>
+                            <th>Vencimento</th>
+                            <th>Item</th>
+                            <th>Qtd</th>
+                            <th>Localidade</th>
+                            <th>Vendedor</th>
+                            <th>Modelos</th>
+                            <th>Marcas</th>
+                            <th style="width: 30px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-cotacoes-manuais">
+                        <!-- Linhas inseridas por JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="btn-container" style="display: flex; gap: 10px;">
+                <button onclick="adicionarLinhaCotacaoManual()" class="btn btn-verify" style="width: 60px;">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+                <button id="btn-registrar-manuais" onclick="registrarCotacoesManuais()" class="btn btn-respond" style="flex: 1;">
+                    REGISTRAR COTAÇÕES NA PLANILHA
+                </button>
+            </div>
+            <div id="status-msg-manual" style="margin-top: 15px; font-size: 0.9rem; min-height: 20px; font-weight: 500;"></div>
+        </div>
+            <div id="form-vendedor" style="position: relative;" class="form-box" style="width: 100%; box-sizing: border-box; display: none; position: relative;">
+            <div style="font-size: 2.2rem; color: #57ab5a; margin-bottom: 5px;">
+                <i class="fa-solid fa-file-excel"></i>
+            </div>
+            <h2 style="font-size: 1.4rem; margin-bottom: 5px; font-weight: 700; color: #cdd9e5;">Atribuir Vendedor</h2>
+            <p style="font-size: 0.9rem; color: #768390; margin-bottom: 25px;">Registre o vendedor para as cotações na planilha da Vale.</p>
+            
+            <div style="margin-bottom: 15px;">
+                <input type="text" id="input-vendedor" class="form-input" placeholder="Ex: João Silva">
+            </div>
+
+            <div style="margin-bottom: 25px;">
+                <textarea id="input-cotacoes" class="form-input" placeholder="Ex: 22222, 33333, 44444&#10;Pode separar por vírgula ou espaço" rows="3" style="resize: none; font-family: 'Roboto Mono', monospace;"></textarea>
+            </div>
+
+            <button id="btn-registrar" onclick="registrarVendedor()" class="btn btn-respond" style="width: 100%;">
+                ATRIBUIR VENDEDOR NA PLANILHA
+            </button>
+
+            <div id="status-msg" style="margin-top: 15px; font-size: 0.9rem; min-height: 20px; font-weight: 500;"></div>
+        </div>
+            <div id="form-pedido" style="position: relative;" class="form-box" style="width: 100%; box-sizing: border-box; display: none; position: relative;">
+            <div style="font-size: 2.2rem; color: #57ab5a; margin-bottom: 5px;">
+                <i class="fa-solid fa-cart-shopping"></i>
+            </div>
+            <h2 style="font-size: 1.4rem; margin-bottom: 5px; font-weight: 700; color: #cdd9e5;">Registrar Pedido Manual</h2>
+            <p style="font-size: 0.9rem; color: #768390; margin-bottom: 25px;">Adicione novos pedidos manualmente na aba de pedidos da planilha.</p>
+            
+            <div style="overflow-x: auto; max-height: 400px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #444c56; border-radius: 6px;">
+                <table id="tabela-pedidos-manuais">
+                    <thead>
+                        <tr>
+                            <th>Cidade</th>
+                            <th>Frete</th>
+                            <th>Pedido</th>
+                            <th>Valor</th>
+                            <th>Produto</th>
+                            <th>Entrega</th>
+                            <th>RFQ</th>
+                            <th>Requisitante</th>
+                            <th>Email Requisitante</th>
+                            <th style="width: 30px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-pedidos-manuais">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="btn-container" style="display: flex; gap: 10px;">
+                <button onclick="adicionarLinhaPedidoManual()" class="btn btn-verify" style="width: 60px;">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+                <button id="btn-registrar-pedidos" onclick="registrarPedidosManuais()" class="btn btn-respond" style="flex: 1;">
+                    REGISTRAR PEDIDOS NA PLANILHA
+                </button>
+            </div>
+            <div id="status-msg-pedido" style="margin-top: 15px; font-size: 0.9rem; min-height: 20px; font-weight: 500;"></div>
+        </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js">
+    window.sortVencimentoDir = 0;
+    function ordenarPorVencimento() {
+        window.sortVencimentoDir = window.sortVencimentoDir === 1 ? -1 : (window.sortVencimentoDir === -1 ? 0 : 1);
+        
+        const icone = document.getElementById('icone-sort-venc');
+        if (window.sortVencimentoDir === 1) {
+            icone.className = 'fa-solid fa-sort-up';
+            icone.style.color = 'var(--accent-blue)';
+        } else if (window.sortVencimentoDir === -1) {
+            icone.className = 'fa-solid fa-sort-down';
+            icone.style.color = 'var(--accent-blue)';
+        } else {
+            icone.className = 'fa-solid fa-sort';
+            icone.style.color = '#768390';
+        }
+        
+        aplicarFiltroGlobal();
+    }
+
+</script>
+<script>
+
+
+
+    if (!localStorage.getItem('maestro_session')) {
+        window.location.href = 'index.html';
+    }
+    
+    
+        // JS adicionado para menu de Opções e Modais
+        window.addEventListener('DOMContentLoaded', () => { carregarBancoDados(true); 
+            const container = document.getElementById('container-forms-modal');
+            const fCotacao = document.getElementById('form-cotacao');
+            const fVendedor = document.getElementById('form-vendedor');
+            const fPedido = document.getElementById('form-pedido');
+            if (fCotacao) container.appendChild(fCotacao);
+            if (fVendedor) container.appendChild(fVendedor);
+            if (fPedido) container.appendChild(fPedido);
+            
+                        // Fechar dropdown ao clicar fora
+            document.addEventListener('click', (e) => {
+                const menu = document.getElementById('dropdown-menu');
+                const vis = document.getElementById('dropdown-vis');
+                if (menu && menu.style.display === 'flex' && !e.target.closest('#dropdown-menu') && !e.target.closest('.menu-icon')) {
+                    menu.style.display = 'none';
+                }
+                if (vis && vis.style.display === 'flex' && !e.target.closest('#dropdown-vis') && !e.target.closest('.btn-filter')) {
+                    vis.style.display = 'none';
+                }
+                
+                // Hide all row actions menus if clicked outside
+                if (!e.target.closest('.row-actions-wrapper')) {
+                    document.querySelectorAll('.row-actions-menu').forEach(m => m.style.display = 'none');
+                }
+            });
+            
+            window.toggleRowActions = function(e, id) {
+                e.stopPropagation();
+                document.querySelectorAll('.row-actions-menu').forEach(m => { if(m.id !== id) m.style.display = 'none'; });
+                const menu = document.getElementById(id);
+                if (menu) {
+                    menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+                }
+            }
+        });
+
+        
+        function fecharFormsModal() {
+            document.getElementById('container-forms-modal').style.display = 'none';
+            if (document.getElementById('modal-forms-overlay')) document.getElementById('modal-forms-overlay').style.display = 'none';
+        }
+
+        
+        function toggleColuna(colIndex, isVisible) {
+            const tableContainer = document.getElementById('view-cota');
+            const className = 'hide-col-' + colIndex;
+            if (isVisible) {
+                tableContainer.classList.remove(className);
+            } else {
+                tableContainer.classList.add(className);
+            }
+        }
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            toggleColuna(5, false); // Index 5 is Itens
+        });
+
+
+        function abrirForm(tipo) {
+            document.getElementById('dropdown-menu').style.display = 'none';
+            document.getElementById('form-cotacao').style.display = 'none';
+            document.getElementById('form-vendedor').style.display = 'none';
+            document.getElementById('form-pedido').style.display = 'none';
+            document.getElementById('container-forms-modal').style.display = 'flex';
+            if (document.getElementById('modal-forms-overlay')) document.getElementById('modal-forms-overlay').style.display = 'flex';
+            
+            if (tipo === 'cotacao') document.getElementById('form-cotacao').style.display = 'block';
+            if (tipo === 'vendedor') document.getElementById('form-vendedor').style.display = 'block';
+            if (tipo === 'pedido') document.getElementById('form-pedido').style.display = 'block';
+        }
+
+
+      function irPara(url) {
+        window.location.href = url;
+    }
+    </script>
+<script>
+        const sessionAtual = localStorage.getItem('maestro_session');
+        const socket = io({ auth: { sessionId: sessionAtual }, transports: ['websocket'], upgrade: false });
+
+        socket.emit('sou_frontend', { sessionId: sessionAtual });
+
+        socket.on('planilha_atualizada', () => { carregarBancoDados(true); });
+
+        // ---------- SINCRONIZAÇÃO DE NF (HSE -> pedidos) ----------
+        // A NF fica no campo da planilha antiga, "Nº NOTA FISCAL" (é o que o sync de NF grava)
+        function nfDoPedido(p) {
+            const k = Object.keys(p).find(c => /NOTA\s*FISCAL/i.test(c)) || (p['NF'] !== undefined ? 'NF' : null);
+            return k ? p[k] : '';
+        }
+        function escHtml(v) {
+            return String(v ?? '-').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+        const brParaIso = d => { const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(d || ''); return m ? `${m[3]}-${m[2]}-${m[1]}` : ''; };
+        const quandoBR = iso => iso ? new Date(iso).toLocaleString('pt-BR') : '-';
+
+        function abrirSyncNF() {
+            document.getElementById('dropdown-menu').style.display = 'none';
+            document.getElementById('modal-sync-nf').style.display = 'flex';
+            consultarEstadoSyncNF();
+        }
+
+        // O pedido de estado vai uma vez só: se cair num serviço que está reiniciando ou
+        // reconectando, a resposta se perde. Depois de 15 s, avisa e deixa tentar de novo.
+        let esperaEstadoSyncNF = null;
+        function consultarEstadoSyncNF() {
+            const el = document.getElementById('sync-nf-estado');
+            el.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Consultando o robô...';
+            clearTimeout(esperaEstadoSyncNF);
+            esperaEstadoSyncNF = setTimeout(() => {
+                el.innerHTML = '<span style="color:#e5534b;">O robô de NF não respondeu (pode estar reiniciando).</span> ' +
+                    '<a href="#" onclick="consultarEstadoSyncNF(); return false;" style="color:#539bf5;">Tentar de novo</a>';
+            }, 15000);
+            socket.emit('solicitar_sync_nf_estado');
+        }
+
+        function botoesSyncNF(rodando) {
+            ['btn-sync-nf', 'btn-sync-nf-previa'].forEach(id => {
+                const b = document.getElementById(id);
+                b.disabled = rodando; b.style.opacity = rodando ? 0.5 : 1; b.style.cursor = rodando ? 'not-allowed' : 'pointer';
+            });
+        }
+
+        function executarSyncNF(gravar) {
+            const de = document.getElementById('sync-nf-de').value, ate = document.getElementById('sync-nf-ate').value;
+            if (de && ate && de > ate) return alert('A data inicial é depois da final.');
+            if (gravar && !confirm(`Sincronizar as NFs de ${de || '(padrão)'} até ${ate || 'hoje'} e gravar nos pedidos sem NF?`)) return;
+            const log = document.getElementById('sync-nf-progresso');
+            log.style.display = 'block';
+            log.innerHTML = '';
+            document.getElementById('sync-nf-resultado').innerHTML = '';
+            botoesSyncNF(true);
+            socket.emit('solicitar_sync_nf', { de, ate, gravar });
+        }
+
+        // ---------- NF NA PLANILHA DOS ESTAGIÁRIOS (coluna N "NF (MAESTRO)") ----------
+        function botoesNfPlanilha(rodando) {
+            ['btn-nf-planilha', 'btn-nf-planilha-previa'].forEach(id => {
+                const b = document.getElementById(id);
+                b.disabled = rodando; b.style.opacity = rodando ? 0.5 : 1; b.style.cursor = rodando ? 'not-allowed' : 'pointer';
+            });
+        }
+
+        function executarNfPlanilha(gravar) {
+            if (gravar && !confirm('Gravar as NFs do portal na coluna N "NF (MAESTRO)" da planilha dos estagiários?\n\n' +
+                'Peça para todos salvarem e FECHAREM a planilha antes: com ela aberta, nada é gravado.')) return;
+            const log = document.getElementById('nf-planilha-progresso');
+            log.style.display = 'block';
+            log.innerHTML = '';
+            document.getElementById('nf-planilha-resultado').innerHTML = '';
+            botoesNfPlanilha(true);
+            socket.emit('solicitar_nf_planilha', { gravar });
+        }
+
+        socket.on('progresso_nf_planilha', (res) => {
+            if (res.clientId && res.clientId !== socket.id) return;
+            const log = document.getElementById('nf-planilha-progresso');
+            log.innerHTML += `<div>${escHtml(res.mensagem)}</div>`;
+            log.scrollTop = log.scrollHeight;
+        });
+
+        socket.on('retorno_nf_planilha', (res) => {
+            if (res.clientId && res.clientId !== socket.id) return;
+            botoesNfPlanilha(false);
+            const el = document.getElementById('nf-planilha-resultado');
+            if (!res.sucesso) {
+                el.innerHTML = `<div style="color:#e5534b; font-weight:bold;"><i class="fa-solid fa-triangle-exclamation"></i> ${escHtml(res.erro)}</div>`;
+                return;
+            }
+            const r = res.resultado;
+            const titulo = r.gravou ? `<span style="color:#57ab5a;">${escHtml(r.gravadas)} NF(s) gravada(s) na planilha.</span>`
+                : (r.a_gravar ? `Prévia: ${escHtml(r.a_gravar)} NF(s) seriam gravadas.` : 'Nada a gravar: a coluna N já está em dia.');
+            const amb = (r.ambiguas || []).map(a => `<li>linha ${escHtml(a.linha)} (pedido ${escHtml(a.pedido)}): ${a.nfs.map(escHtml).join(' ou ')}</li>`).join('');
+            el.innerHTML = `<div style="font-weight:bold;">${titulo}</div>
+                <div style="font-size:0.8rem; margin-top:4px;">${escHtml(r.iguais)} já estavam certas · ${escHtml(r.sem_nf)} ainda sem NF no portal · ${escHtml(r.sem_par)} sem pedido no portal${r.atualizadas ? ` · ${escHtml(r.atualizadas)} atualizada(s)` : ''}</div>
+                ${r.aviso ? `<div style="color:#c69026; font-size:0.8rem; margin-top:4px;">${escHtml(r.aviso)}</div>` : ''}
+                ${r.backup ? `<div style="font-size:0.75rem; color:#768390; margin-top:4px;">Backup: ${escHtml(r.backup)}</div>` : ''}
+                ${amb ? `<details style="margin-top:8px;"><summary style="cursor:pointer; font-size:0.8rem;">${(r.ambiguas || []).length} linha(s) não gravada(s): NF diferente em mais de um pedido</summary><ul style="font-size:0.78rem;">${amb}</ul></details>` : ''}`;
+        });
+
+        // ---------- CONFERÊNCIA PLANILHA x PORTAL (uma vez por dia, pelo robô de cadastro) ----------
+        function mostrarConferencia(c) {
+            const el = document.getElementById('conferencia-planilha');
+            if (!c) { el.innerHTML = 'Conferência ainda não feita (roda uma vez por dia com o cadastro automático).'; return; }
+            if (c.erro) { el.innerHTML = `<span style="color:#e5534b;">${escHtml(c.erro)}</span>`; return; }
+            const lista = (itens, f) => itens.length ? `<ul style="margin:4px 0 0; font-size:0.78rem;">${itens.map(f).join('')}</ul>` : '';
+            const item = (titulo, n, itens, f) => n ? `<details style="margin-top:6px;"><summary style="cursor:pointer;">${titulo}: <b>${escHtml(n)}</b></summary>${lista(itens, f)}</details>` : '';
+            const L = c.listas || {};
+            el.innerHTML = `<div style="font-size:0.75rem; color:#768390;">Conferida em ${escHtml(c.gerado_em)}${c.ignoradas ? ` · ${escHtml(c.ignoradas)} linha(s) cancelada(s) ignorada(s)` : ''}</div>
+                ${!c.planilha_sem_portal && !c.portal_sem_planilha && !c.nf_divergente ? '<div style="color:#57ab5a;">Planilha e portal batem.</div>' : ''}
+                ${item('Só na planilha (não estão no portal)', c.planilha_sem_portal, L.planilha_sem_portal || [], x => `<li>linha ${escHtml(x.linha)}: ${escHtml(x.pedido)} - ${escHtml(x.produto)}</li>`)}
+                ${item('Só no portal (não estão na planilha)', c.portal_sem_planilha, L.portal_sem_planilha || [], x => `<li>${escHtml(x.pedido)} - ${escHtml(x.produto)}</li>`)}
+                ${item('NF diferente entre planilha e portal', c.nf_divergente, L.nf_divergente || [], x => `<li>linha ${escHtml(x.linha)} (${escHtml(x.pedido)}): planilha ${escHtml(x.nf_planilha)} · portal ${escHtml(x.nf_portal)}</li>`)}
+                <div style="font-size:0.78rem; margin-top:6px;">${escHtml(c.nf_so_no_portal)} pedido(s) com NF no portal e a coluna de NF da planilha vazia.</div>`;
+        }
+
+        // ---------- AVISOS DOS ROBÔS (banner no topo; consulta a cada 5 min) ----------
+        const AVISOS_A_CADA_MS = 5 * 60 * 1000;
+        function horasDesde(d) { return d ? (Date.now() - d) / 3600000 : Infinity; }
+        function avisosDosRobos(res) {
+            if (!res.sucesso) return [`Robôs de NF e cadastro: ${res.erro || 'sem resposta'}`];
+            const e = res.estado || {}, avisos = [];
+            const c = e.cadastro_pedidos;
+            if (c && c.erro) avisos.push(`Cadastro automático de pedidos com erro: ${c.erro.mensagem}`);
+            const pend = (c && c.pendentes) || [];
+            if (pend.length) avisos.push(`${pend.length} linha(s) da planilha não entram no portal por falta de dado: ` +
+                pend.slice(0, 3).map(textoPendente).join('; ') + (pend.length > 3 ? '...' : ''));
+            else if (c && c.ativo && horasDesde(dataHoraBR(c.verificado_em)) * 60 > CADASTRO_PARADO_MIN)
+                avisos.push(`Cadastro automático de pedidos parado: última verificação em ${c.verificado_em}`);
+            const h = (e.historico || [])[0];
+            if (h && h.sucesso === false) avisos.push(`A última sincronização de NF falhou (${quandoBR(h.rodou_em)}): ${h.erro || 'erro'}`);
+            const dia = new Date().getDay();
+            const limite = (dia === 0 || dia === 1 || dia === 6) ? 74 : 26;   // fim de semana não sincroniza
+            if (e.ultima && horasDesde(new Date(e.ultima.rodou_em)) > limite)
+                avisos.push(`NF sem sincronizar desde ${quandoBR(e.ultima.rodou_em)}`);
+            return avisos;
+        }
+        function mostrarAvisosDosRobos(avisos) {
+            const el = document.getElementById('aviso-robos');
+            el.style.display = avisos.length ? 'block' : 'none';
+            el.innerHTML = avisos.map(a => `<div><i class="fa-solid fa-triangle-exclamation"></i> ${escHtml(a)}</div>`).join('') +
+                '<div style="font-size:0.75rem; color:#adbac7; margin-top:4px;">Clique para ver os detalhes.</div>';
+        }
+        socket.on('retorno_sync_nf_estado', (res) => {
+            mostrarAvisosDosRobos(avisosDosRobos(res));
+            if (res.sucesso) mostrarConferencia((res.estado || {}).conferencia_planilha);
+        });
+        let avisosPedidos = false;
+        socket.on('sincronizar_estado', () => {          // primeira mensagem depois de entrar na sala do portal
+            if (avisosPedidos) return;
+            avisosPedidos = true;
+            socket.emit('solicitar_sync_nf_estado');
+            setInterval(() => socket.emit('solicitar_sync_nf_estado'), AVISOS_A_CADA_MS);
+        });
+
+        // Cadastro automático: planilha dos estagiários -> pedidos (CadastrarPedidos.bat no servidor)
+        const CADASTRO_PARADO_MIN = 30;   // o robô roda a cada 10 min
+        function dataHoraBR(t) {
+            const m = /^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2})/.exec(t || '');
+            return m ? new Date(+m[3], m[2] - 1, +m[1], +m[4], +m[5]) : null;
+        }
+        // Linhas da planilha que não entram no portal porque falta um campo obrigatório
+        function textoPendente(p) { return `linha ${p.linha} (${p.pedido || 'sem pedido'}) sem ${p.falta.join(', ')}`; }
+        function pendentesCadastro(c) {
+            const pend = c.pendentes || [];
+            if (!pend.length) return '';
+            return `<div style="background:rgba(198,144,38,0.12); border:1px solid #c69026; color:#daaa3f; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:0.8rem;">
+                <b>${pend.length} linha(s) da planilha esperando para entrar no portal</b> (preencha e salve a planilha):
+                <ul style="margin:4px 0 0;">${pend.map(p => `<li>${escHtml(textoPendente(p))}: ${escHtml(p.produto)}</li>`).join('')}</ul></div>`;
+        }
+        function mostrarCadastroPedidos(c) {
+            const el = document.getElementById('cadastro-pedidos-estado');
+            if (!c) { el.innerHTML = ''; return; }
+            const titulo = '<div style="font-size:0.8rem; margin-bottom:6px; color:#cdd9e5;"><i class="fa-solid fa-robot"></i> Cadastro automático de pedidos (planilha dos estagiários)</div>' + pendentesCadastro(c);
+            if (!c.ativo) {
+                el.innerHTML = titulo + `<div style="font-size:0.8rem;">${c.erro ? `<span style="color:#e5534b;">${escHtml(c.erro.mensagem)}</span>` : 'Ainda não ligado no servidor.'}</div>`;
+                return;
+            }
+            const verif = dataHoraBR(c.verificado_em);
+            const parado = !verif || (Date.now() - verif) / 60000 > CADASTRO_PARADO_MIN;
+            const u = c.ultimo_cadastro;
+            const cor = c.erro || parado ? '#e5534b' : '#57ab5a';
+            el.innerHTML = titulo + `
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px;">
+                    <div style="background:#373e47; border-radius:8px; padding:12px; border-left:4px solid ${cor};">
+                        <div style="font-size:0.75rem;">Última verificação da planilha</div>
+                        <div style="font-size:1.1rem; color:#cdd9e5; font-weight:bold;">${escHtml(c.verificado_em)}</div>
+                        <div style="font-size:0.75rem;">${c.erro ? `<span style="color:#e5534b;">erro: ${escHtml(c.erro.mensagem)}</span>` : (parado ? `<span style="color:#e5534b;">mais de ${CADASTRO_PARADO_MIN} min sem verificar: o robô está parado?</span>` : 'funcionando')}</div>
+                    </div>
+                    <div style="background:#373e47; border-radius:8px; padding:12px; border-left:4px solid #539bf5;">
+                        <div style="font-size:0.75rem;">Último cadastro automático</div>
+                        <div style="font-size:1.1rem; color:#cdd9e5; font-weight:bold;">${u ? `${escHtml(u.rodou_em.slice(0, 16))} · ${escHtml(u.gravados)} pedido(s)` : 'nenhum ainda'}</div>
+                        <div style="font-size:0.75rem;">${escHtml(c.cadastrados_hoje)} pedido(s) cadastrado(s) hoje</div>
+                    </div>
+                </div>
+                ${(c.historico || []).length ? `<details style="margin-top:10px;"><summary style="cursor:pointer; font-size:0.8rem;">Últimos cadastros</summary>
+                    <table style="width:100%; font-size:0.78rem; border-collapse:collapse; margin-top:6px;">${c.historico.map(h => `<tr>
+                        <td style="padding:4px; white-space:nowrap; vertical-align:top;">${escHtml(h.rodou_em.slice(0, 16))}</td>
+                        <td>${(h.pedidos || []).map(escHtml).join('<br>')}${(h.repetidas || []).map(r => `<br><span style="color:#c69026;">repetida na planilha, não cadastrada: ${escHtml(r)}</span>`).join('')}</td></tr>`).join('')}</table></details>` : ''}`;
+        }
+
+        socket.on('retorno_sync_nf_estado', (res) => {
+            clearTimeout(esperaEstadoSyncNF);
+            const el = document.getElementById('sync-nf-estado');
+            if (!res.sucesso) { el.innerHTML = `<span style="color:#e5534b;">Erro: ${escHtml(res.erro)}</span>`; return; }
+            const e = res.estado, u = e.ultima;
+            const cob = (e.cobertura || []).map(c => `${escHtml(c[0])} a ${escHtml(c[1])}`).join(', ') || 'nenhum ainda';
+            el.innerHTML = `
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px;">
+                    <div style="background:#373e47; border-radius:8px; padding:12px; border-left:4px solid #539bf5;">
+                        <div style="font-size:0.75rem;">Última sincronização</div>
+                        <div style="font-size:1.1rem; color:#cdd9e5; font-weight:bold;">${u ? `${escHtml(u.de)} a ${escHtml(u.ate)}` : 'nunca'}</div>
+                        <div style="font-size:0.75rem;">${u ? `em ${escHtml(quandoBR(u.rodou_em))} · ${escHtml(u.nfs_gravadas)} NF(s) gravada(s)` : ''}</div>
+                    </div>
+                    <div style="background:#373e47; border-radius:8px; padding:12px; border-left:4px solid #57ab5a;">
+                        <div style="font-size:0.75rem;">Pedidos com NF</div>
+                        <div style="font-size:1.1rem; color:#cdd9e5; font-weight:bold;">${u ? `${escHtml(u.pedidos_com_nf)} de ${escHtml(u.pedidos)}` : '-'}</div>
+                        <div style="font-size:0.75rem;">${u ? `${escHtml(u.sem_nf)} sem NF · ${escHtml(u.divergencias)} divergência(s)` : ''}</div>
+                    </div>
+                    <div style="background:#373e47; border-radius:8px; padding:12px; border-left:4px solid #c69026;">
+                        <div style="font-size:0.75rem;">Período já sincronizado</div>
+                        <div style="font-size:0.9rem; color:#cdd9e5;">${cob}</div>
+                    </div>
+                </div>
+                ${(e.historico || []).length ? `<details style="margin-top:10px;"><summary style="cursor:pointer; font-size:0.8rem;">Últimas rodadas</summary>
+                    <table style="width:100%; font-size:0.78rem; border-collapse:collapse; margin-top:6px;">${e.historico.map(h => `<tr>
+                        <td style="padding:4px;">${escHtml(quandoBR(h.rodou_em))}</td><td>${escHtml(h.origem)}</td>
+                        <td>${escHtml(h.de)} a ${escHtml(h.ate)}</td>
+                        <td>${h.sucesso === false ? `<span style="color:#e5534b;">falhou: ${escHtml(h.erro)}</span>` : (h.gravou ? `${escHtml(h.nfs_gravadas)} NF gravada(s)` : `prévia: ${escHtml(h.nfs_a_gravar)}`)}</td></tr>`).join('')}</table></details>` : ''}`;
+            const j = e.proxima_janela || {};
+            if (!document.getElementById('sync-nf-de').value) document.getElementById('sync-nf-de').value = brParaIso(j.de);
+            if (!document.getElementById('sync-nf-ate').value) document.getElementById('sync-nf-ate').value = brParaIso(j.ate);
+            botoesSyncNF(!!e.rodando);
+            mostrarCadastroPedidos(e.cadastro_pedidos);
+        });
+
+        socket.on('progresso_sync_nf', (res) => {
+            const log = document.getElementById('sync-nf-progresso');
+            log.style.display = 'block';
+            log.insertAdjacentHTML('beforeend', `<div>${escHtml(new Date().toLocaleTimeString('pt-BR'))} · ${escHtml(res.mensagem)}</div>`);
+            log.scrollTop = log.scrollHeight;
+        });
+
+        socket.on('retorno_sync_nf', (res) => {
+            botoesSyncNF(false);
+            const el = document.getElementById('sync-nf-resultado');
+            if (!res.sucesso) {
+                if (res.clientId === socket.id || document.getElementById('modal-sync-nf').style.display === 'flex')
+                    el.innerHTML = `<p style="color:#e5534b;"><b>Falhou:</b> ${escHtml(res.erro)}</p>`;
+                return;
+            }
+            const r = res.resultado;
+            const div = (r.divergencia_valor || []).map(d => `<tr><td style="padding:4px;">${escHtml(d.oc)}</td><td>${escHtml(d.nf_gravada)}</td>
+                <td>${escHtml(d.valor_planilha)}</td><td>${escHtml(d.valor_erp)}</td><td>${escHtml(d.diferenca_valor)}</td></tr>`).join('');
+            el.innerHTML = `
+                ${r.aviso ? `<p style="color:#c69026;"><i class="fa-solid fa-triangle-exclamation"></i> ${escHtml(r.aviso)}</p>` : ''}
+                <p style="color:#57ab5a; font-weight:bold;">${r.gravou ? `${escHtml(r.nfs_gravadas)} NF(s) gravada(s) nos pedidos.` : `Prévia: ${escHtml(r.nfs_a_gravar)} NF(s) seriam gravadas.`}</p>
+                <p style="font-size:0.85rem;">Período ${escHtml(r.de)} a ${escHtml(r.ate)} · Excel: ${escHtml(r.excel && r.excel.vendas)} vendas (tela do HSE: ${escHtml(r.linhas_tela)}) ·
+                   base: ${escHtml(r.base.novas)} novas, ${escHtml(r.base.alteradas)} alteradas, ${escHtml(r.base.removidas)} removidas, ${escHtml(r.base.total_na_base)} no total.</p>
+                <p style="font-size:0.85rem;">Pedidos com NF: <b>${escHtml(r.pedidos_com_nf)}</b> de ${escHtml(r.pedidos)} (${escHtml(String(r.percentual_com_nf).replace('.', ','))}%) · sem NF: ${escHtml(r.sem_nf)} · mais de uma NF: ${escHtml(r.mais_de_uma_nf)}</p>
+                ${div ? `<details><summary style="cursor:pointer;">Divergências de valor (${escHtml(r.divergencias)})</summary>
+                    <table style="width:100%; font-size:0.8rem; border-collapse:collapse; margin-top:6px;"><tr><th style="text-align:left;">Pedido</th><th style="text-align:left;">NF</th><th style="text-align:left;">Planilha</th><th style="text-align:left;">HSE</th><th style="text-align:left;">Diferença</th></tr>${div}</table></details>` : ''}`;
+            if (document.getElementById('modal-sync-nf').style.display === 'flex') socket.emit('solicitar_sync_nf_estado');
+        });
+
+        socket.on("sessao_invalida", () => {
+            localStorage.clear();
+            window.location.href = "index.html"; 
+        });
+
+        function registrarVendedor() {
+            const vendedor = document.getElementById('input-vendedor').value.trim();
+            const cotacoes = document.getElementById('input-cotacoes').value.trim();
+            const btn = document.getElementById('btn-registrar');
+            const msg = document.getElementById('status-msg');
+
+            if (!vendedor || !cotacoes) {
+                msg.style.color = '#e5534b';
+                msg.innerText = "⚠️ Preencha o vendedor e as cotações.";
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> REGISTRANDO...';
+            msg.style.color = '#e3b341';
+            msg.innerText = "⏳ Enviando para o Robô...";
+
+            socket.emit('solicitar_registro_vendedor_cotacao', { vendedor, cotacoes });
+        }
+
+        socket.on('status_registro_vendedor', (res) => {
+            const msg = document.getElementById('status-msg');
+            msg.style.color = '#e3b341';
+            msg.innerHTML = '<i class="fa-solid fa-clock"></i> ' + res.mensagem;
+        });
+
+        socket.on('resposta_registro_vendedor_cotacao', (res) => {
+            const btn = document.getElementById('btn-registrar');
+            const msg = document.getElementById('status-msg');
+            
+            btn.disabled = false;
+            btn.innerHTML = 'REGISTRAR NA PLANILHA';
+
+            if (res.sucesso) {
+                msg.style.color = '#34d399';
+                msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + res.mensagem;
+                document.getElementById('input-vendedor').value = '';
+                document.getElementById('input-cotacoes').value = '';
+            } else {
+                msg.style.color = '#e5534b';
+                msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + res.erro;
+            }
+        });
+
+        // --- LOGICA DE COTAÇÕES MANUAIS ---
+        function criarTextareaAutoResize(classe, placeholder = "") {
+            return `<textarea class="${classe} form-input" placeholder="${placeholder}" rows="1" style="padding: 8px; resize: both; overflow: hidden; line-height: 1.4; min-height: 38px; min-width: 50px; width: 100%; box-sizing: border-box; field-sizing: content;" oninput="this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; this.style.width = 'auto'; this.style.width = (this.scrollWidth + 5) + 'px';"></textarea>`;
+        }
+        
+        function templateLinhaManual() {
+            return `
+                <tr style="vertical-align: top;">
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-cotacao')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-vencimento', 'DD/MM/AAAA')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-item')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-qtd')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-localidade')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-vendedor')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-modelos')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-marcas')}</td>
+                    <td style="padding: 4px; text-align: center; vertical-align: middle;"><button onclick="this.closest('tr').remove()" style="background: transparent; border: none; color: #e5534b; cursor: pointer; padding: 5px;"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>
+            `;
+        }
+
+        function adicionarLinhaCotacaoManual() {
+            const tbody = document.getElementById('tbody-cotacoes-manuais');
+            tbody.insertAdjacentHTML('beforeend', templateLinhaManual());
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            adicionarLinhaCotacaoManual();
+        });
+
+        function registrarCotacoesManuais() {
+            const rows = document.querySelectorAll('#tbody-cotacoes-manuais tr');
+            const cotacoes = [];
+            rows.forEach(tr => {
+                const cota = tr.querySelector('.c-cotacao').value.trim();
+                if (cota) {
+                    cotacoes.push({
+                        cotacao: cota,
+                        vencimento: tr.querySelector('.c-vencimento').value.trim(),
+                        item: tr.querySelector('.c-item').value.trim(),
+                        quantidade: tr.querySelector('.c-qtd').value.trim(),
+                        localidade: tr.querySelector('.c-localidade').value.trim(),
+                        vendedor: tr.querySelector('.c-vendedor').value.trim(),
+                        modelos: tr.querySelector('.c-modelos').value.trim(),
+                        marcas: tr.querySelector('.c-marcas').value.trim()
+                    });
+                }
+            });
+
+            const btn = document.getElementById('btn-registrar-manuais');
+            const msg = document.getElementById('status-msg-manual');
+
+            if (cotacoes.length === 0) {
+                msg.style.color = '#e5534b';
+                msg.innerText = "⚠️ Preencha pelo menos uma cotação.";
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> REGISTRANDO...';
+            msg.style.color = '#e3b341';
+            msg.innerText = "⏳ Enviando para o Robô...";
+
+            socket.emit('solicitar_registro_cotacao_manual', { cotacoes });
+        }
+
+        
+        function adicionarLinhaPedidoManual() {
+            const tbody = document.getElementById('tbody-pedidos-manuais');
+            const tr = document.createElement('tr');
+            tr.style.verticalAlign = 'top';
+            tr.innerHTML = `
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-cidade')}</td>
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-frete')}</td>
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-pedido')}</td>
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-valor')}</td>
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-produto')}</td>
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-entrega', 'DD/MM/AAAA')}</td>
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-rfq')}</td>
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-requisitante')}</td>
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-email')}</td>
+                <td style="padding: 4px; vertical-align: middle;">
+                    <button onclick="this.closest('tr').remove()" style="background: none; border: none; color: #e5534b; cursor: pointer; padding: 5px;"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => { carregarBancoDados(true); 
+            adicionarLinhaPedidoManual();
+        });
+
+        function registrarPedidosManuais() {
+            const rows = document.querySelectorAll('#tbody-pedidos-manuais tr');
+            const pedidos = [];
+            rows.forEach(tr => {
+                const pedidoNum = tr.querySelector('.p-pedido').value.trim();
+                const produto = tr.querySelector('.p-produto').value.trim();
+                if (pedidoNum || produto) {
+                    pedidos.push({
+                        cidade_estado: tr.querySelector('.p-cidade').value.trim(),
+                        frete: tr.querySelector('.p-frete').value.trim(),
+                        pedido: pedidoNum,
+                        total: tr.querySelector('.p-valor').value.trim(),
+                        itens: [{
+                            texto: produto,
+                            prazo: tr.querySelector('.p-entrega').value.trim(),
+                            email: tr.querySelector('.p-email').value.trim()
+                        }],
+                        evento: tr.querySelector('.p-rfq').value.trim(),
+                        vendedor: tr.querySelector('.p-requisitante').value.trim()
+                    });
+                }
+            });
+
+            const btn = document.getElementById('btn-registrar-pedidos');
+            const msg = document.getElementById('status-msg-pedido');
+
+            if (pedidos.length === 0) {
+                msg.style.color = '#e5534b';
+                msg.innerText = "⚠️ Preencha pelo menos um pedido.";
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> REGISTRANDO...';
+            msg.style.color = '#e3b341';
+            msg.innerText = "⏳ Enviando para o Robô...";
+
+            socket.emit('solicitar_registro_pedido_manual', { pedidos });
+        }
+
+        socket.on('resposta_registro_pedido_manual', (res) => {
+            const btn = document.getElementById('btn-registrar-pedidos');
+            const msg = document.getElementById('status-msg-pedido');
+            
+            btn.disabled = false;
+            btn.innerHTML = 'REGISTRAR PEDIDOS NA PLANILHA';
+
+            if (res.sucesso) {
+                msg.style.color = '#34d399';
+                msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + res.mensagem;
+                document.getElementById('tbody-pedidos-manuais').innerHTML = '';
+                adicionarLinhaPedidoManual();
+            } else {
+                msg.style.color = '#e5534b';
+                msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + res.erro;
+            }
+        });
+
+        socket.on('resposta_registro_cotacao_manual', (res) => {
+            const btn = document.getElementById('btn-registrar-manuais');
+            const msg = document.getElementById('status-msg-manual');
+            
+            btn.disabled = false;
+            btn.innerHTML = 'REGISTRAR COTAÇÕES NA PLANILHA';
+
+            if (res.sucesso) {
+                msg.style.color = '#34d399';
+                msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + res.mensagem;
+                document.getElementById('tbody-cotacoes-manuais').innerHTML = '';
+                adicionarLinhaCotacaoManual();
+            } else {
+                msg.style.color = '#e5534b';
+                msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + res.erro;
+            }
+        });
+
+        // Lógica da Fila de Extração
+        socket.emit('obter_fila_extracao', {clientId: socket.id});
+        
+        socket.on('atualizar_fila_extracao', (res) => {
+            const panel = document.getElementById('fila-extracao-panel');
+            const lista = document.getElementById('fila-lista');
+            const fila = res.fila || [];
+            
+            if (fila.length > 0) {
+                panel.style.display = 'flex';
+                let agrupado = {};
+                fila.forEach(item => {
+                    if (!agrupado[item.vendedor]) agrupado[item.vendedor] = [];
+                    agrupado[item.vendedor].push(item.cotacao);
+                });
+                
+                let html = '';
+                for (let vend in agrupado) {
+                    html += `<div style="background: #2d2d2d; padding: 10px; border-radius: 6px; margin-bottom: 10px;">
+                        <div style="color: #3b82f6; font-weight: bold; margin-bottom: 5px;"><i class="fa-solid fa-user"></i> ${vend}</div>
+                        <div style="color: #adbac7; font-size: 13px; line-height: 1.4;">${agrupado[vend].join(', ')}</div>
+                    </div>`;
+                }
+                lista.innerHTML = html;
+                document.getElementById('btn-extrair-fila').disabled = false;
+                document.getElementById('btn-extrair-fila').style.background = '#539bf5';
+                document.getElementById('btn-extrair-fila').innerHTML = '<i class="fa-solid fa-play"></i> EXTRAIR TUDO AGORA';
+            } else {
+                panel.style.display = 'none';
+            }
+        });
+        
+        socket.on('progresso_fila_extracao', (res) => {
+            const msg = document.getElementById('fila-status');
+            msg.innerHTML = res.mensagem;
+        });
+
+        function iniciarExtracaoFila() {
+            document.getElementById('btn-extrair-fila').disabled = true;
+            document.getElementById('btn-extrair-fila').style.background = '#6b7280';
+            document.getElementById('btn-extrair-fila').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> PROCESSANDO...';
+            document.getElementById('fila-status').innerHTML = '<span style="color: #e3b341;">Iniciando processo...</span>';
+            socket.emit('iniciar_extracao_fila', {clientId: socket.id});
+        }
+    
+
+        // --- LOGICA BANCO DE DADOS VISUALIZADOR ---
+        function mudarTabBanco(tab) {
+            if (tab === 'cota') {
+                document.getElementById('view-cota').style.display = 'block';
+                document.getElementById('view-pedi').style.display = 'none';
+                document.getElementById('tab-cota').classList.add('active');
+                document.getElementById('tab-pedi').classList.remove('active');
+                document.getElementById('page-title').innerText = 'Cotações';
+                document.getElementById('page-subtitle').innerText = 'Controle de cotações por fornecedor, com filtros e ações rápidas.';
+                if (window.filteredCotacoes) document.getElementById('total-count').innerText = window.filteredCotacoes.length;
+            } else {
+                document.getElementById('view-cota').style.display = 'none';
+                document.getElementById('view-pedi').style.display = 'block';
+                document.getElementById('tab-pedi').classList.add('active');
+                document.getElementById('tab-cota').classList.remove('active');
+                document.getElementById('page-title').innerText = 'Pedidos';
+                document.getElementById('page-subtitle').innerText = 'Controle de pedidos e requisições, com filtros e ações rápidas.';
+                if (window.filteredPedidos) document.getElementById('total-count').innerText = window.filteredPedidos.length;
+            }
+        }
+
+        // --- LOGICA FILTROS TIPO EXCEL ---
+        let filtrosColuna = { cota: {}, pedi: {} };
+        let estadoFiltroAtual = { tipo: null, colIndex: null, tbodyId: null };
+
+        function abrirFiltroColuna(e) {
+            const th = e.currentTarget;
+            const tr = th.parentElement;
+            const thead = tr.parentElement;
+            const table = thead.parentElement;
+            const isCota = table.parentElement.id === 'view-cota';
+            
+            const tipo = isCota ? 'cota' : 'pedi';
+            const tbodyId = isCota ? 'tbody-bd-cota' : 'tbody-bd-pedi';
+            const colIndex = Array.from(tr.children).indexOf(th);
+            
+            if (colIndex === tr.children.length - 1) return; // ignore empty filler column
+
+            estadoFiltroAtual = { tipo, colIndex, tbodyId };
+            
+            // Popula os unicos
+            const linhas = document.querySelectorAll(`#${tbodyId} tr`);
+            const unicos = new Set();
+            linhas.forEach(linha => {
+                if (linha.children.length === 1) return;
+                const val = linha.children[colIndex].innerText.trim();
+                if (val) unicos.add(val);
+            });
+
+            const estadoCol = filtrosColuna[tipo][colIndex] || { texto: '', selecionados: new Set() };
+            document.getElementById('input-filtro-col').value = estadoCol.texto;
+            
+            let html = '';
+            let todasMarcadas = true;
+            Array.from(unicos).sort().forEach(val => {
+                const isChecked = estadoCol.selecionados.size === 0 || estadoCol.selecionados.has(val);
+                if (!isChecked) todasMarcadas = false;
+                
+                html += `<label style="display:flex; gap:5px; font-size:0.8rem; color:#adbac7; word-break: break-all;"><input type="checkbox" value="${val.replace(/"/g, '&quot;')}" class="chk-filtro-item" ${isChecked ? 'checked' : ''} onchange="aplicarFiltroColuna()"> ${val}</label>`;
+            });
+            document.getElementById('lista-filtro-col').innerHTML = html;
+            document.getElementById('chk-todas-col').checked = todasMarcadas;
+
+            // Posicionar o menu
+            const rect = th.getBoundingClientRect();
+            const menu = document.getElementById('menu-filtro-coluna');
+            menu.style.display = 'block';
+            menu.style.top = (rect.bottom + window.scrollY) + 'px';
+            menu.style.left = (rect.left + window.scrollX) + 'px';
+            
+            // Previne propagacao para nao fechar na mesma hora
+            e.stopPropagation();
+        }
+
+        function toggleTodasFiltroCol(checked) {
+            document.querySelectorAll('.chk-filtro-item').forEach(chk => chk.checked = checked);
+            aplicarFiltroColuna();
+        }
+
+        function limparFiltroColuna() {
+            document.getElementById('input-filtro-col').value = '';
+            document.getElementById('chk-todas-col').checked = true;
+            document.querySelectorAll('.chk-filtro-item').forEach(chk => chk.checked = true);
+            aplicarFiltroColuna();
+        }
+
+        function aplicarFiltroColuna() {
+            const { tipo, colIndex, tbodyId } = estadoFiltroAtual;
+            if (!tipo) return;
+
+            if (!filtrosColuna[tipo][colIndex]) {
+                filtrosColuna[tipo][colIndex] = { texto: '', selecionados: new Set() };
+            }
+            
+            filtrosColuna[tipo][colIndex].texto = document.getElementById('input-filtro-col').value.toLowerCase();
+            
+            const checkboxes = document.querySelectorAll('.chk-filtro-item');
+            const selecionados = new Set();
+            let todasMarcadas = true;
+            checkboxes.forEach(chk => {
+                if (chk.checked) selecionados.add(chk.value);
+                else todasMarcadas = false;
+            });
+            
+            document.getElementById('chk-todas-col').checked = todasMarcadas;
+            filtrosColuna[tipo][colIndex].selecionados = todasMarcadas ? new Set() : selecionados;
+            
+            // Adicionar icone visual no Header
+            const th = document.querySelector(`#${tipo === 'cota' ? 'view-cota' : 'view-pedi'} thead tr`).children[colIndex];
+            if (filtrosColuna[tipo][colIndex].texto || !todasMarcadas) {
+                if (!th.querySelector('.icone-filtro-ativo')) th.innerHTML += ' <i class="fa-solid fa-filter icone-filtro-ativo" style="color: #539bf5; margin-left: 5px;"></i>';
+            } else {
+                const icone = th.querySelector('.icone-filtro-ativo');
+                if (icone) icone.remove();
+            }
+
+            processarLinhasTabelaFiltro(tipo, tbodyId);
+        }
+
+        function processarLinhasTabelaFiltro(tipo, tbodyId) {
+            const linhas = document.querySelectorAll(`#${tbodyId} tr`);
+            const filtros = filtrosColuna[tipo];
+            
+            linhas.forEach(tr => {
+                if (tr.children.length === 1) return;
+                let mostrar = true;
+                
+                for (let col in filtros) {
+                    const f = filtros[col];
+                    const val = tr.children[col].innerText.trim();
+                    const valLower = val.toLowerCase();
+                    
+                    if (f.texto && !valLower.includes(f.texto)) mostrar = false;
+                    if (f.selecionados.size > 0 && !f.selecionados.has(val)) mostrar = false;
+                }
+                
+                tr.style.display = mostrar ? '' : 'none';
+            });
+        }
+        
+        // Fechar o menu filtro ao clicar fora
+        window.addEventListener('DOMContentLoaded', () => { carregarBancoDados(true); 
+            document.addEventListener('click', (e) => {
+                const menu = document.getElementById('menu-filtro-coluna');
+                if (menu && menu.style.display === 'block' && !e.target.closest('#menu-filtro-coluna') && !e.target.closest('.col-header-filter')) {
+                    menu.style.display = 'none';
+                }
+            });
+        });
+
+        function carregarBancoDados(silencioso = false) {
+            if (!silencioso) {
+                document.getElementById('tbody-bd-cota').innerHTML = `<tr><td colspan="6" style="padding: 20px; text-align: center; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>`;
+                document.getElementById('tbody-bd-pedi').innerHTML = `<tr><td colspan="7" style="padding: 20px; text-align: center; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>`;
+            }
+            socket.emit('solicitar_planilha_json', { origem: 'todas' });
+        }
+
+        setInterval(() => { carregarBancoDados(true); }, 10000);
+
+
+        window.dadosBanco = { cotacoes: [], pedidos: [] };
+
+        let itemEmEdicao = null;
+
+        function apagarLinha(tipo, index) {
+            const item = (tipo === 'cotacoes' ? window.filteredCotacoes : window.filteredPedidos)[index];
+            const chave = tipo === 'cotacoes' ? item['COTAÇÃO'] : item['PEDIDO'];
+            if (confirm(`Tem certeza que deseja apagar a linha (${chave})?`)) {
+                socket.emit('comando_apagar_linha', { tipo, chave });
+            }
+        }
+
+        function editarLinha(tipo, index) {
+            const item = (tipo === 'cotacoes' ? window.filteredCotacoes : window.filteredPedidos)[index];
+            itemEmEdicao = { tipo, chave: tipo === 'cotacoes' ? item['COTAÇÃO'] : item['PEDIDO'] };
+            
+            let html = '';
+            for (let key in item) {
+                let val = item[key] || '';
+                html += `
+                    <div style="margin-bottom: 10px;">
+                        <label style="display: block; font-size: 0.75rem; color: #768390; text-transform: uppercase; margin-bottom: 4px; font-weight: bold;">${key}</label>
+                        <textarea id="edit-input-${key}" style="width: 100%; box-sizing: border-box; background: #2d333b; border: 1px solid #444c56; color: #cdd9e5; padding: 8px; border-radius: 4px; font-size: 0.85rem; font-family: 'Inter'; resize: vertical; min-height: 35px;">${val}</textarea>
+                    </div>
+                `;
+            }
+            document.getElementById('modal-editar-corpo').innerHTML = html;
+            document.getElementById('modal-editar-titulo').innerText = `Editar ${tipo === 'cotacoes' ? 'Cotação' : 'Pedido'} ${itemEmEdicao.chave}`;
+            document.getElementById('modal-editar').style.display = 'flex';
+        }
+
+        function salvarEdicaoLinha() {
+            if (!itemEmEdicao) return;
+            const inputs = document.querySelectorAll('#modal-editar-corpo textarea');
+            const novos_dados = {};
+            inputs.forEach(input => {
+                const key = input.id.replace('edit-input-', '');
+                novos_dados[key] = input.value;
+            });
+            
+            socket.emit('comando_editar_linha', { tipo: itemEmEdicao.tipo, chave: itemEmEdicao.chave, novos_dados });
+            document.getElementById('modal-editar').style.display = 'none';
+        }
+
+        socket.on('resposta_acao_linha', (res) => {
+            if (res.sucesso) {
+                carregarBancoDados();
+            } else {
+                alert("Erro: " + res.erro);
+            }
+        });
+
+        
+        function abrirModalDetalhes(tipo, index) {
+            const item = (tipo === 'cotacoes' ? window.filteredCotacoes : window.filteredPedidos)[index];
+            if (!item) return;
+            
+            const titulo = tipo === 'cotacoes' ? `Cotação ${item['COTAÇÃO'] || ''}` : `Pedido ${item['PEDIDO'] || ''}`;
+            document.getElementById('modal-detalhes-titulo').innerText = titulo;
+            
+            let htmlLeft = '';
+            let htmlRight = '';
+            
+            for (let key in item) {
+                let val = item[key];
+                if (val === null || val === undefined) val = '-';
+                if (typeof val === 'string') {
+                    val = val.replace(/\n/g, '<br>');
+                }
+                
+                const boxHtml = `
+                    <div style="background: #444c56; padding: 12px; border-radius: 6px;">
+                        <span style="display: block; font-size: 0.75rem; color: #768390; text-transform: uppercase; margin-bottom: 4px; font-weight: bold;">${key}</span>
+                        <span style="color: #cdd9e5; font-size: 0.95rem; word-break: break-word;">${val}</span>
+                    </div>
+                `;
+                
+                const kLower = key.toLowerCase();
+                if (kLower === 'item' || kLower === 'itens' || kLower.includes('descri')) {
+                    htmlLeft += boxHtml;
+                } else {
+                    htmlRight += boxHtml;
+                }
+            }
+            
+            const finalHtml = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;">
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        ${htmlLeft || '<div style="color: #768390; font-size: 0.9rem;">Sem descrição disponível para este item.</div>'}
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        ${htmlRight}
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('modal-detalhes-corpo').innerHTML = finalHtml;
+            document.getElementById('modal-detalhes').style.display = 'flex';
+        }
+
+        
+        window.filteredCotacoes = [];
+        window.filteredPedidos = [];
+        
+        if (window.sortVencimentoDir && window.sortVencimentoDir !== 0) {
+            window.filteredCotacoes.sort((a, b) => {
+                const parseDate = (d) => {
+                    if (!d || d === '-') return 0;
+                    const parts = d.split('/');
+                    if (parts.length === 3) {
+                        return new Date(parts[2], parts[1]-1, parts[0]).getTime();
+                    }
+                    return 0;
+                };
+                const timeA = parseDate(a['VENCIMENTO']);
+                const timeB = parseDate(b['VENCIMENTO']);
+                return window.sortVencimentoDir === 1 ? timeA - timeB : timeB - timeA;
+            });
+        }
+        
+        window.pageCota = 0;
+        window.pagePedi = 0;
+        const PAGE_SIZE = 50;
+
+        function renderCotaRow(c, index) {
+            return `
+                  <tr class="${index === 0 ? 'row-accent' : ''}" onclick="abrirModalDetalhes('cotacoes', ${index})" style="cursor: pointer;">
+                    <td>
+                        <div class="cell-content">
+                            <div class="doc-icon"><i class="fa-solid fa-file-lines"></i></div>
+                            <div>
+                                <div class="cell-main-text"><a href="#"  style="color: inherit; text-decoration: none;">${c['COTAÇÃO'] || '-'}</a></div>
+                                <div class="cell-sub-text">${c['LOCALIDADE'] || 'Não informada'}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="cell-content">
+                            <span class="blue-pill">${c['VENCIMENTO'] || '-'}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="cell-content">
+                            <div>
+                                <div class="cell-main-text">${(c['VENDEDOR'] || '-').toUpperCase()}</div>
+                                <div class="cell-sub-text">${c['VENDEDOR'] ? 'Atribuído' : 'Não informado'}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="cell-content">
+                            <div>
+                                <div class="cell-main-text">${c['LOCALIDADE'] || '-'}</div>
+                                <div class="cell-sub-text">Brasil</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="cell-content">
+                            <div>
+                                <div class="cell-main-text" style="display: flex; align-items: center; gap: 8px;">
+                                    <div class="status-dot ${!c['RESPOSTA'] || (c['RESPOSTA']||'').toUpperCase().includes('NÃO') ? 'red' : 'green'}"></div>
+                                    ${c['RESPOSTA'] || '-'}
+                                </div>
+                                
+                            </div>
+                        </div>
+                    </td>
+                      <td>
+                          <div class="cell-content">
+                              <div>
+                                  <div class="cell-main-text" style="max-width: 250px; font-size: 0.75rem; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; color: #adbac7;" title="${(c['ITEM'] || c['ITENS'] || '-').replace(/"/g, '&quot;')}">${(c['ITEM'] || c['ITENS'] || '-').replace(/\n/g, '<br>')}</div>
+                              </div>
+                          </div>
+                      </td>
+                      <td style="text-align: right;">
+                        <div class="row-actions-wrapper" style="position: relative; display: inline-block;">
+                            <button class="action-btn" onclick="toggleRowActions(event, 'actions-cotacoes-${index}')" title="Mais opções"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                            <div id="actions-cotacoes-${index}" class="row-actions-menu" style="display: none; position: absolute; right: 0; top: 100%; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 5px; flex-direction: column; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.5); min-width: 120px;">
+                                <button onclick="editarLinha('cotacoes', ${index}); event.stopPropagation(); toggleRowActions(event, 'actions-cotacoes-${index}');" style="background:transparent; border:none; color:var(--text-main); text-align:left; padding:8px 12px; width: 100%; cursor: pointer; font-size: 0.85rem; border-radius: 4px;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'"><i class="fa-solid fa-pen" style="margin-right:8px; width:15px;"></i> Editar</button>
+                                <button onclick="apagarLinha('cotacoes', ${index}); event.stopPropagation(); toggleRowActions(event, 'actions-cotacoes-${index}');" style="background:transparent; border:none; color:#f87171; text-align:left; padding:8px 12px; width: 100%; cursor: pointer; font-size: 0.85rem; border-radius: 4px;" onmouseover="this.style.background='rgba(255,0,0,0.1)'" onmouseout="this.style.background='transparent'"><i class="fa-solid fa-trash" style="margin-right:8px; width:15px;"></i> Apagar</button>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function renderPediRow(p, index) {
+            return `
+                  <tr class="${index === 0 ? 'row-accent' : ''}" onclick="abrirModalDetalhes('pedidos', ${index})" style="cursor: pointer;">
+                    <td>
+                        <div class="cell-content">
+                            <div class="doc-icon"><i class="fa-solid fa-cart-shopping"></i></div>
+                            <div>
+                                <div class="cell-main-text"><a href="#"  style="color: inherit; text-decoration: none;">${p['PEDIDO'] || '-'}</a></div>
+                                <div class="cell-sub-text">${p['CIDADE'] || 'Não informada'}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="cell-content">
+                            <span class="blue-pill">R$ ${p['VALOR ']?.toLocaleString('pt-BR') || p['VALOR'] || '-'}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="cell-content">
+                            <div>
+                                <div class="cell-main-text">${p['DATA DE ENTREGA'] || '-'}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="cell-content">
+                            <div>
+                                <div class="cell-main-text">${p['REQUISITANTE '] || p['REQUISITANTE'] || '-'}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="cell-content">
+                            <div>
+                                <div class="cell-main-text">${p['CIDADE'] || '-'}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="cell-content">
+                            <div>
+                                <div class="cell-main-text">${escHtml(nfDoPedido(p) || '-')}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="text-align: right;">
+                        <div class="row-actions-wrapper" style="position: relative; display: inline-block;">
+                            <button class="action-btn" onclick="toggleRowActions(event, 'actions-pedidos-${index}')" title="Mais opções"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                            <div id="actions-pedidos-${index}" class="row-actions-menu" style="display: none; position: absolute; right: 0; top: 100%; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 5px; flex-direction: column; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.5); min-width: 120px;">
+                                <button onclick="editarLinha('pedidos', ${index}); event.stopPropagation(); toggleRowActions(event, 'actions-pedidos-${index}');" style="background:transparent; border:none; color:var(--text-main); text-align:left; padding:8px 12px; width: 100%; cursor: pointer; font-size: 0.85rem; border-radius: 4px;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'"><i class="fa-solid fa-pen" style="margin-right:8px; width:15px;"></i> Editar</button>
+                                <button onclick="apagarLinha('pedidos', ${index}); event.stopPropagation(); toggleRowActions(event, 'actions-pedidos-${index}');" style="background:transparent; border:none; color:#f87171; text-align:left; padding:8px 12px; width: 100%; cursor: pointer; font-size: 0.85rem; border-radius: 4px;" onmouseover="this.style.background='rgba(255,0,0,0.1)'" onmouseout="this.style.background='transparent'"><i class="fa-solid fa-trash" style="margin-right:8px; width:15px;"></i> Apagar</button>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function renderizarCotacoes(append = false) {
+            const tbody = document.getElementById('tbody-bd-cota');
+            const start = append ? window.pageCota * PAGE_SIZE : 0;
+            const end = (window.pageCota + 1) * PAGE_SIZE;
+            const slice = window.filteredCotacoes.slice(start, end);
+            
+            if (!append) tbody.innerHTML = '';
+            
+            if (window.filteredCotacoes.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="padding: 20px; text-align: center; color: #768390;">Nenhum registro encontrado.</td></tr>`;
+                return;
+            }
+            
+            const html = slice.map((c, i) => renderCotaRow(c, start + i)).join('');
+            if (append) {
+                tbody.insertAdjacentHTML('beforeend', html);
+            } else {
+                tbody.innerHTML = html;
+            }
+        }
+
+        function renderizarPedidos(append = false) {
+            const tbody = document.getElementById('tbody-bd-pedi');
+            const start = append ? window.pagePedi * PAGE_SIZE : 0;
+            const end = (window.pagePedi + 1) * PAGE_SIZE;
+            const slice = window.filteredPedidos.slice(start, end);
+            
+            if (!append) tbody.innerHTML = '';
+            
+            if (window.filteredPedidos.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="padding: 20px; text-align: center; color: #768390;">Nenhum registro encontrado.</td></tr>`;
+                return;
+            }
+            
+            const html = slice.map((p, i) => renderPediRow(p, start + i)).join('');
+            if (append) {
+                tbody.insertAdjacentHTML('beforeend', html);
+            } else {
+                tbody.innerHTML = html;
+            }
+        }
+
+        socket.on('retorno_planilha_json', (res) => {
+            if (!res.sucesso) {
+                document.getElementById('tbody-bd-cota').innerHTML = `<tr><td colspan="6" style="padding: 20px; text-align: center; color: #e5534b;">Erro: ${res.erro}</td></tr>`;
+                document.getElementById('tbody-bd-pedi').innerHTML = `<tr><td colspan="7" style="padding: 20px; text-align: center; color: #e5534b;">Erro: ${res.erro}</td></tr>`;
+                return;
+            }
+
+            window.dadosBanco.cotacoes = res.cotacoes || [];
+            window.dadosBanco.pedidos = res.pedidos || [];
+            
+            aplicarFiltroGlobal();
+
+            filtrosColuna.cota = {};
+            filtrosColuna.pedi = {};
+            document.querySelectorAll("#view-cota thead th .icone-filtro-ativo").forEach(i => i.remove());
+            document.querySelectorAll("#view-pedi thead th .icone-filtro-ativo").forEach(i => i.remove());
+        });
+
+        window.addEventListener('scroll', () => {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 200) {
+                const activeTab = document.getElementById('view-cota').style.display !== 'none' ? 'cota' : 'pedi';
+                if (activeTab === 'cota') {
+                    if ((window.pageCota + 1) * PAGE_SIZE < window.filteredCotacoes.length) {
+                        window.pageCota++;
+                        renderizarCotacoes(true);
+                    }
+                } else {
+                    if ((window.pagePedi + 1) * PAGE_SIZE < window.filteredPedidos.length) {
+                        window.pagePedi++;
+                        renderizarPedidos(true);
+                    }
+                }
+            }
+        });
+
+
+    </script>
+    
+    <script>
+    // Add logic for global search if it doesn't exist
+    window.filtroPeriodoAtivo = { inicio: null, fim: null };
+
+    function abrirFiltroPeriodo(e) {
+        e.stopPropagation();
+        const rect = e.currentTarget.getBoundingClientRect();
+        const menu = document.getElementById('menu-filtro-periodo');
+        menu.style.display = 'block';
+        menu.style.top = (rect.bottom + window.scrollY) + 'px';
+        menu.style.left = (rect.left + window.scrollX) + 'px';
+    }
+
+    function limparFiltroPeriodo() {
+        document.getElementById('filtro-data-inicio').value = '';
+        document.getElementById('filtro-data-fim').value = '';
+        window.filtroPeriodoAtivo = { inicio: null, fim: null };
+        document.getElementById('menu-filtro-periodo').style.display = 'none';
+        aplicarFiltroGlobal();
+    }
+
+    function aplicarFiltroPeriodo() {
+        const inicio = document.getElementById('filtro-data-inicio').value;
+        const fim = document.getElementById('filtro-data-fim').value;
+        
+        window.filtroPeriodoAtivo.inicio = inicio ? new Date(inicio + 'T00:00:00').getTime() : null;
+        window.filtroPeriodoAtivo.fim = fim ? new Date(fim + 'T23:59:59').getTime() : null;
+        
+        document.getElementById('menu-filtro-periodo').style.display = 'none';
+        aplicarFiltroGlobal();
+    }
+
+    window.filtroVendedorAtivo = new Set();
+    window.vendedoresUnicos = [];
+
+    function abrirFiltroVendedor(e) {
+        e.stopPropagation();
+        
+        const unicos = new Set();
+        window.dadosBanco.cotacoes.forEach(c => {
+            const v = (c['VENDEDOR'] || '').trim().toUpperCase();
+            unicos.add(v ? v : 'SEM VENDEDOR');
+        });
+        window.vendedoresUnicos = Array.from(unicos).sort();
+
+        if (window.filtroVendedorAtivo.size === 0 && !document.getElementById('input-busca-vendedor').dataset.iniciado) {
+            window.vendedoresUnicos.forEach(v => window.filtroVendedorAtivo.add(v));
+            document.getElementById('input-busca-vendedor').dataset.iniciado = "true";
+        }
+
+        document.getElementById('input-busca-vendedor').value = '';
+        renderizarListaVendedores();
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        const menu = document.getElementById('menu-filtro-vendedor');
+        menu.style.display = 'block';
+        menu.style.top = (rect.bottom + window.scrollY) + 'px';
+        menu.style.left = (rect.left + window.scrollX) + 'px';
+    }
+
+    function renderizarListaVendedores(termoBusca = '') {
+        const lista = document.getElementById('lista-filtro-vendedor');
+        let html = '';
+        let todosMarcados = true;
+        let countFiltrados = 0;
+
+        window.vendedoresUnicos.forEach(v => {
+            if (termoBusca && !v.toLowerCase().includes(termoBusca.toLowerCase())) return;
+            countFiltrados++;
+            
+            const isChecked = window.filtroVendedorAtivo.has(v);
+            if (!isChecked) todosMarcados = false;
+            
+            html += `<label style="display:flex; gap:5px; font-size:0.8rem; color:#adbac7; word-break: break-all; cursor:pointer; padding: 2px 0;">
+                <input type="checkbox" value="${v.replace(/"/g, '&quot;')}" class="chk-filtro-vendedor" ${isChecked ? 'checked' : ''} onchange="atualizarFiltroVendedorState(this)"> ${v}
+            </label>`;
+        });
+
+        lista.innerHTML = html;
+        document.getElementById('chk-todos-vendedores').checked = (countFiltrados > 0 && todosMarcados);
+    }
+
+    function filtrarListaVendedores() {
+        const termo = document.getElementById('input-busca-vendedor').value;
+        renderizarListaVendedores(termo);
+    }
+
+    function atualizarFiltroVendedorState(chk) {
+        if (chk.checked) {
+            window.filtroVendedorAtivo.add(chk.value);
+        } else {
+            window.filtroVendedorAtivo.delete(chk.value);
+        }
+        
+        let todosMarcados = true;
+        document.querySelectorAll('.chk-filtro-vendedor').forEach(c => {
+            if (!c.checked) todosMarcados = false;
+        });
+        document.getElementById('chk-todos-vendedores').checked = todosMarcados;
+    }
+
+    function toggleTodosVendedores(checked) {
+        document.querySelectorAll('.chk-filtro-vendedor').forEach(chk => {
+            chk.checked = checked;
+            if (checked) {
+                window.filtroVendedorAtivo.add(chk.value);
+            } else {
+                window.filtroVendedorAtivo.delete(chk.value);
+            }
+        });
+    }
+
+    function limparFiltroVendedor() {
+        window.filtroVendedorAtivo.clear();
+        window.vendedoresUnicos.forEach(v => window.filtroVendedorAtivo.add(v));
+        renderizarListaVendedores();
+        document.getElementById('menu-filtro-vendedor').style.display = 'none';
+        aplicarFiltroGlobal();
+    }
+
+    function aplicarFiltroVendedor() {
+        document.getElementById('menu-filtro-vendedor').style.display = 'none';
+        aplicarFiltroGlobal();
+    }
+
+    document.addEventListener('click', (e) => {
+        const menuFiltroPeriodo = document.getElementById('menu-filtro-periodo');
+        if (menuFiltroPeriodo && menuFiltroPeriodo.style.display === 'block' && !e.target.closest('#menu-filtro-periodo') && !e.target.closest('th')) {
+            menuFiltroPeriodo.style.display = 'none';
+        }
+        
+        const menuFiltroVendedor = document.getElementById('menu-filtro-vendedor');
+        if (menuFiltroVendedor && menuFiltroVendedor.style.display === 'block' && !e.target.closest('#menu-filtro-vendedor') && !e.target.closest('th')) {
+            menuFiltroVendedor.style.display = 'none';
+        }
+    });
+
+    function aplicarFiltroGlobal() {
+        const searchInput = document.getElementById('global-search').value.toLowerCase();
+        
+        window.filteredCotacoes = window.dadosBanco.cotacoes.filter(c => {
+            // Filtro de Data
+            if (window.filtroPeriodoAtivo && (window.filtroPeriodoAtivo.inicio || window.filtroPeriodoAtivo.fim)) {
+                let d = c['VENCIMENTO'];
+                if (!d || d === '-') return false;
+                
+                const match = String(d).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+                if (!match) return false;
+                
+                let p1 = parseInt(match[1], 10);
+                let p2 = parseInt(match[2], 10);
+                let year = parseInt(match[3], 10);
+                
+                let day, month;
+                if (p2 > 12) {
+                    month = p1;
+                    day = p2;
+                } else if (p1 > 12) {
+                    day = p1;
+                    month = p2;
+                } else {
+                    day = p1;
+                    month = p2;
+                }
+                
+                const timeC = new Date(year, month - 1, day).getTime();
+                if (isNaN(timeC)) return false;
+                
+                if (window.filtroPeriodoAtivo.inicio && timeC < window.filtroPeriodoAtivo.inicio) return false;
+                if (window.filtroPeriodoAtivo.fim && timeC > window.filtroPeriodoAtivo.fim) return false;
+            }
+            
+            // Filtro Vendedor
+            if (window.filtroVendedorAtivo && window.filtroVendedorAtivo.size > 0) {
+                // Se nem todos estiverem selecionados
+                if (window.filtroVendedorAtivo.size !== window.vendedoresUnicos.length) {
+                    const v = (c['VENDEDOR'] || '').trim().toUpperCase();
+                    const vNome = v ? v : 'SEM VENDEDOR';
+                    if (!window.filtroVendedorAtivo.has(vNome)) return false;
+                }
+            }
+
+            // Filtro Global
+            if (searchInput) {
+                return Object.values(c).some(val => String(val || '').toLowerCase().includes(searchInput));
+            }
+            return true;
+        });
+
+        window.filteredPedidos = window.dadosBanco.pedidos.filter(p => {
+            if (searchInput) {
+                return Object.values(p).some(val => String(val || '').toLowerCase().includes(searchInput));
+            }
+            return true;
+        });
+        
+        // Regra de ordenação
+        if (window.filtroPeriodoAtivo.inicio || window.filtroPeriodoAtivo.fim) {
+            // Se o filtro de Vencimento estiver ativado: Ordem Crescente de Cotação (menor no topo)
+            window.filteredCotacoes.sort((a, b) => {
+                const numA = parseInt((a['COTAÇÃO'] || '').toString().replace(/\D/g, '')) || 0;
+                const numB = parseInt((b['COTAÇÃO'] || '').toString().replace(/\D/g, '')) || 0;
+                return numA - numB;
+            });
+        } else {
+            // Sem filtro: Segue a ordem original da planilha
+            // window.filteredCotacoes.reverse(); (Removido para seguir a planilha fielmente)
+        }
+        
+        window.pageCota = 0;
+        window.pagePedi = 0;
+        
+        renderizarCotacoes(false);
+        renderizarPedidos(false);
+        
+        const activeTab = document.getElementById('view-cota').style.display !== 'none' ? 'cota' : 'pedi';
+        document.getElementById('total-count').innerText = activeTab === 'cota' ? window.filteredCotacoes.length : window.filteredPedidos.length;
+    }
+    
+    </script>
+
+    
+
+
+    
+</div>
+<!-- Floating Navbar -->
+    <nav class="floating-navbar" style="z-index: 999999 !important; display: flex !important;">
+        <a href="javascript:void(0)" onclick="irPara('coupa.html')" class="nav-item"><i class="fa-solid fa-cube"></i> <span>Coupa</span></a>
+        <a href="javascript:void(0)" onclick="irPara('vale.html')" class="nav-item"><i class="fa-solid fa-helmet-safety"></i> <span>Vale</span></a>
+        <a href="javascript:void(0)" onclick="irPara('planilha_vale.html')" class="nav-item active nav-planilha"><i class="fa-solid fa-file-excel"></i> <span>Planilha</span></a>
+        <a href="javascript:void(0)" onclick="irPara('me.html')" class="nav-item"><i class="fa-solid fa-shopping-cart"></i> <span>ME</span></a>
+        <a href="javascript:void(0)" onclick="irPara('findes.html')" class="nav-item"><i class="fa-solid fa-industry"></i> <span>Findes</span></a>
+        <a href="javascript:void(0)" onclick="irPara('ariba.html')" class="nav-item"><i class="fa-solid fa-cloud"></i> <span>Ariba</span></a>
+        <a href="index.html" class="nav-item nav-voltar"><i class="fa-solid fa-arrow-left"></i> <span>Voltar</span></a>
+    </nav>
+
+
+</body>
+</html>
