@@ -940,11 +940,35 @@
             const item = (titulo, n, itens, f) => n ? `<details style="margin-top:6px;"><summary style="cursor:pointer;">${titulo}: <b>${escHtml(n)}</b></summary>${lista(itens, f)}</details>` : '';
             const L = c.listas || {};
             el.innerHTML = `<div style="font-size:0.75rem; color:#768390;">Conferida em ${escHtml(c.gerado_em)}${c.ignoradas ? ` · ${escHtml(c.ignoradas)} linha(s) cancelada(s) ignorada(s)` : ''}</div>
-                ${!c.planilha_sem_portal && !c.portal_sem_planilha && !c.nf_divergente ? '<div style="color:#57ab5a;">Planilha e portal batem.</div>' : ''}
+                ${!c.planilha_sem_portal && !c.portal_sem_planilha && !c.nf_divergente && !c.nf_so_no_portal && !c.campos_divergentes && !c.ambiguas ? '<div style="color:#57ab5a;">Planilha e portal batem.</div>' : ''}
                 ${item('Só na planilha (não estão no portal)', c.planilha_sem_portal, L.planilha_sem_portal || [], x => `<li>linha ${escHtml(x.linha)}: ${escHtml(x.pedido)} - ${escHtml(x.produto)}</li>`)}
                 ${item('Só no portal (não estão na planilha)', c.portal_sem_planilha, L.portal_sem_planilha || [], x => `<li>${escHtml(x.pedido)} - ${escHtml(x.produto)}</li>`)}
                 ${item('NF diferente entre planilha e portal', c.nf_divergente, L.nf_divergente || [], x => `<li>linha ${escHtml(x.linha)} (${escHtml(x.pedido)}): planilha ${escHtml(x.nf_planilha)} · portal ${escHtml(x.nf_portal)}</li>`)}
+                ${item('Campos diferentes', c.campos_divergentes, L.campos_divergentes || [], x => `<li>linha ${escHtml(x.linha)} (${escHtml(x.pedido)}), ${escHtml(x.campo)}: Excel ${escHtml(x.planilha ?? '')} · portal ${escHtml(x.portal ?? '')}</li>`)}
+                ${item('Pareamento ambíguo — sem escrita automática', c.ambiguas, L.ambiguas || [], x => `<li>linha ${escHtml(x.linha)} (${escHtml(x.pedido)})</li>`)}
                 <div style="font-size:0.78rem; margin-top:6px;">${escHtml(c.nf_so_no_portal)} pedido(s) com NF no portal e a coluna de NF da planilha vazia.</div>`;
+        }
+
+        function mostrarSyncPlanilha(s) {
+            let el = document.getElementById('sync-planilha-portal');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'sync-planilha-portal';
+                el.style.cssText = 'margin:12px 0;font-size:0.85rem;';
+                document.getElementById('conferencia-planilha').after(el);
+            }
+            if (!s) { el.textContent = 'Sincronização das duas pontas ainda não inicializada.'; return; }
+            const listas = s.listas || {};
+            const grupo = (nome, titulo) => s[nome] ? `<details><summary>${escHtml(titulo)}: ${escHtml(s[nome])}</summary><ul>${(listas[nome] || []).map(x => `<li>${escHtml(x.chave || '')}${x.campo ? ` · ${escHtml(x.campo)}: Excel ${escHtml(x.excel ?? '')} · portal ${escHtml(x.portal ?? '')}` : ''}${x.destino ? ` → ${escHtml(x.destino)}` : ''}${x.lado ? ` · ${escHtml(x.lado)}` : ''}${x.erro ? ` · ${escHtml(x.erro)}` : ''}</li>`).join('')}</ul></details>` : '';
+            el.innerHTML = `<b>Sincronização Excel ⇄ portal</b><div>Verificada em ${escHtml(s.gerado_em || '')}</div>
+                ${s.primeira_vez ? '<div>Foto inicial registrada; pedidos e planilha não foram alterados.</div>' : ''}
+                ${s.adiado || s.erro ? `<div style="color:#c69026;">Pendente: ${escHtml(s.erro || s.aviso || 'aguardando próxima tentativa')}</div>` : ''}
+                ${grupo('acoes', s.gravou ? 'Alterações realizadas' : 'Alterações previstas')}
+                ${grupo('conflitos', 'Conflitos — revisão necessária')}
+                ${grupo('ambiguas', 'Correspondências ambíguas')}
+                ${grupo('removidos', 'Exclusões preservadas')}
+                ${grupo('historico', 'Histórico não importado')}
+                ${grupo('pendentes', 'Pendências')}`;
         }
 
         // ---------- AVISOS DOS ROBÔS (banner no topo; consulta a cada 5 min) ----------
@@ -976,7 +1000,10 @@
         }
         socket.on('retorno_sync_nf_estado', (res) => {
             mostrarAvisosDosRobos(avisosDosRobos(res));
-            if (res.sucesso) mostrarConferencia((res.estado || {}).conferencia_planilha);
+            if (res.sucesso) {
+                mostrarConferencia((res.estado || {}).conferencia_planilha);
+                mostrarSyncPlanilha((res.estado || {}).sync_planilha_portal);
+            }
         });
         let avisosPedidos = false;
         socket.on('sincronizar_estado', () => {          // primeira mensagem depois de entrar na sala do portal
