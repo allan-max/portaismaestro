@@ -40,7 +40,7 @@ test('scripts inline têm sintaxe válida', () => {
 });
 
 test('preserva menu, painel, robôs e coluna NF da versão boa 43b6c21', () => {
-    const source = html.replace(/\r\n/g, '\n');
+    const source = html.replace(/\r\n/g, '\n').replace(/            <button id="btn-exportar-excel"[\s\S]*?<\/button>\n/, '');
     // Hashes dos blocos originais em 43b6c21:public/planilha_vale.html.
     const blocks = [
         ['<body>', '    <div id="menu-filtro-periodo"', 'd9e3c23fc9521315b50a2ea5ea4bf17a6499bb30d046950d6204cf99e198128c'],

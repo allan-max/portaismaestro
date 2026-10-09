@@ -446,6 +446,9 @@
             <button class="btn-filter" onclick="document.getElementById('dropdown-vis').style.display = document.getElementById('dropdown-vis').style.display === 'flex' ? 'none' : 'flex';">
                 <i class="fa-solid fa-eye"></i> Visualização <i class="fa-solid fa-chevron-down" style="font-size: 0.7rem;"></i>
             </button>
+            <button id="btn-exportar-excel" class="btn-filter" onclick="exportarPlanilhaFiltrada()" title="Baixar todos os registros da aba atual que passaram pelos filtros">
+                <i class="fa-solid fa-file-excel" aria-hidden="true"></i> Exportar Excel
+            </button>
             <div class="total-records">Total de registros: <span id="total-count">0</span></div>
             
             <!-- Botão Dropdown Opções -->
@@ -2072,5 +2075,7 @@
     </nav>
 
 
+<script src="vendor/exceljs-4.4.0.min.js"></script>
+<script src="planilha-exportar.js"></script>
 </body>
 </html>
