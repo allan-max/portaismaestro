@@ -501,7 +501,24 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('marcar_cotacao_respondida', (dados = {}) => {
+        if (!socket.autenticado) return socket.emit('sessao_invalida');
+        const campos = ['COTAÇÃO', 'VENDEDOR', 'LOCALIDADE', 'ITEM', 'VENCIMENTO'];
+        const identidade = dados?.identidade;
+        if (!identidade || !campos.every(c => typeof identidade[c] === 'string' && identidade[c].length <= 50000) ||
+            !identidade['COTAÇÃO'].trim() || !identidade.VENDEDOR.trim()) {
+            return socket.emit('resposta_acao_linha', { sucesso: false, erro: 'Cotação inválida.' });
+        }
+        if (!bot_socket_id) return socket.emit('resposta_acao_linha', { sucesso: false, erro: 'O Robô está offline.' });
+        io.to(bot_socket_id).emit('comando_marcar_cotacao_respondida', {
+            tipo: 'cotacoes', chave: identidade['COTAÇÃO'],
+            identidade: Object.fromEntries(campos.map(c => [c, identidade[c]])),
+            novos_dados: { RESPOSTA: 'RESPONDIDO' }, clientId: socket.id
+        });
+    });
+
     socket.on('resposta_acao_linha', (dados) => {
+        if (socket.id !== bot_socket_id) return;
         if (dados.sucesso) io.emit('planilha_atualizada');
         if (dados.clientId) {
             io.to(dados.clientId).emit('resposta_acao_linha', dados);
@@ -509,6 +526,10 @@ io.on('connection', (socket) => {
     });
 
     socket.on('solicitar_planilha_json', (dados = {}) => {
+        if (!socket.autenticado) {
+            socket.emit('sessao_invalida');
+            return;
+        }
         if (bot_socket_id) {
             dados.clientId = socket.id;
             io.to(bot_socket_id).emit('comando_carregar_planilha_json', dados);
