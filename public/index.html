@@ -193,7 +193,7 @@
         <div class="drawer-content">
             <h3><i class="fa-solid fa-crown" style="color: #fbbf24;"></i> Gestão</h3>
             
-            <button id="btn-abrir-dashboard" class="btn-drawer" style="background: #34d399; color: #000; display: none;" onclick="window.location.href='dashboard2.html'">
+            <button id="btn-abrir-dashboard" data-estatisticas class="btn-drawer" style="background: #34d399; color: #000; display: none;" onclick="window.location.href='dashboard2.html'">
                 <i class="fa-solid fa-chart-pie"></i> Estatísticas
             </button>
 
@@ -214,7 +214,7 @@
         function atualizarGavetaNoLoad() {
             const isAdmin = localStorage.getItem('maestro_admin') === 'true';
             const isDev = localStorage.getItem('maestro_dev') === 'true';
-            const hasDashboard = localStorage.getItem('maestro_dashboard') === 'true';
+            const hasDashboard = window.maestroEstatisticasPermitidas === true;
 
             if (isAdmin || isDev || hasDashboard) {
                 if (gaveta) gaveta.style.display = 'block';
@@ -224,11 +224,12 @@
 
             const btnAdmin = document.getElementById('btn-painel-admin');
             const btnDev = document.getElementById('btn-painel-dev');
-            const btnDash = document.getElementById('btn-abrir-dashboard');
 
             if (btnAdmin) btnAdmin.style.display = isAdmin ? 'flex' : 'none';
             if (btnDev) btnDev.style.display = isDev ? 'flex' : 'none';
-            if (btnDash) btnDash.style.display = (isAdmin || hasDashboard) ? 'flex' : 'none';
+            document.querySelectorAll('[data-estatisticas]').forEach(btn => {
+                btn.style.display = hasDashboard ? 'flex' : 'none';
+            });
         }
         
         atualizarGavetaNoLoad();
@@ -373,9 +374,6 @@
                     <button onclick="fazerLogout()" style="background: none; border: 1px solid rgba(255,255,255,0.2); color: var(--text-dim); padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; transition: 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-dim)'">
                         <i class="fa-solid fa-right-from-bracket"></i> Sair
                     </button>
-                    <button id="btn-abrir-dashboard" class="btn-entrar" style="display: none; margin-top: 15px; background: #34d399; border-color: #34d399; color: #000;" onclick="window.location.href='dashboard2.html'">
-                        <i class="fa-solid fa-chart-pie"></i> DASHBOARD DE ESTATÍSTICAS
-                    </button>
                 </div>
                 
                 <div class="form-box" style="margin-top: 20px;">
@@ -407,6 +405,20 @@
     auth: { sessionId: sessionAtual },
     transports: ['websocket'],
     upgrade: false
+});
+
+socket.on('connect', () => {
+    window.maestroEstatisticasPermitidas = false;
+    atualizarGavetaNoLoad();
+    if (socket.auth?.sessionId) socket.emit('solicitar_acesso_estatisticas');
+});
+socket.on('acesso_estatisticas', resposta => {
+    window.maestroEstatisticasPermitidas = resposta?.sucesso === true && resposta.admin === true;
+    atualizarGavetaNoLoad();
+});
+socket.on('disconnect', () => {
+    window.maestroEstatisticasPermitidas = false;
+    atualizarGavetaNoLoad();
 });
 
         // Removemos o 'connect_error'. Agora ouvimos a expulsão amigável do servidor:

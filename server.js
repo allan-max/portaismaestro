@@ -10,6 +10,11 @@ const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const cron = require('node-cron');
+// Só a nova credencial vem do .env; as demais opções mantêm a configuração existente do processo/PM2.
+const arquivoEnvMaestro = path.join(__dirname, '.env');
+const segredoRoboConfigurado = process.env.ROBO_SECRET ?? (fs.existsSync(arquivoEnvMaestro)
+    ? require('dotenv').parse(fs.readFileSync(arquivoEnvMaestro)).ROBO_SECRET : '');
+const { criarDashboardCotacoes } = require('./lib/dashboard-cotacoes');
 
 
 // 🛡️ AIRBAG ANTI-CRASH (Impede o servidor de morrer por erros invisíveis)
@@ -104,6 +109,10 @@ let fila_respostas = [];
 let bot_socket_id = null;
 let sync_socket_id = null;   // serviço de NF (cruzar_nf/servico.py)
 let usuarios_logados = {};
+const dashboardCotacoes = criarDashboardCotacoes({
+    sessoes: cofreSessoes, io, obterRobo: () => bot_socket_id,
+    obterSocket: id => io.sockets.sockets.get(id)
+});
 
 function notificar_todos(mensagem = null) {
     estado_global.tamanho_fila = fila_respostas.length;
@@ -111,8 +120,12 @@ function notificar_todos(mensagem = null) {
 }
 
 io.use((socket, next) => {
-    const authData = socket.handshake.auth;
-    if (authData.robo_secret === (process.env.ROBO_SECRET || "VEMKAUAN")) {
+    const authData = socket.handshake.auth || {};
+    const segredoRobo = segredoRoboConfigurado;
+    if (typeof segredoRobo === 'string' && segredoRobo.length >= 32 &&
+        typeof authData.robo_secret === 'string' &&
+        Buffer.byteLength(authData.robo_secret) === Buffer.byteLength(segredoRobo) &&
+        crypto.timingSafeEqual(Buffer.from(authData.robo_secret), Buffer.from(segredoRobo))) {
         socket.isBot = true;
         return next();
     }
@@ -139,6 +152,7 @@ io.use((socket, next) => {
 });
 
 io.on('connection', (socket) => {
+    dashboardCotacoes.conectar(socket);
 
     // Cancelar Evento da Fila
     socket.on('remover_da_fila', (dados) => {
@@ -164,6 +178,7 @@ io.on('connection', (socket) => {
     };
 
     socket.on('sou_o_robo', () => {
+        if (!socket.isBot) return socket.emit('robo_recusado', { erro: 'Identificação de serviço inválida.' });
         bot_socket_id = socket.id;
         socket.autenticado = true; socket.join('backend');
         console.log("🤖 Robô Local Conectado.");
@@ -343,6 +358,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('resultado_login', (dados) => {
+        if (!socket.isBot || socket.id !== bot_socket_id) return;
         if (dados.sucesso) {
             const sessionId = uuidv4();
             const expires = Date.now() + (28800 * 1000); 
@@ -634,6 +650,8 @@ io.on('connection', (socket) => {
 
     // Python devolve os dados JSON
     socket.on('retorno_planilha_json', (dados) => {
+        if (socket.id !== bot_socket_id) return;
+        if (dashboardCotacoes.receber(socket.id, dados)) return;
         if (dados.clientId) {
             io.to(dados.clientId).emit('retorno_planilha_json', dados);
         }
@@ -702,6 +720,9 @@ io.on('connection', (socket) => {
     });
 
     socket.on('pedir_dados_dashboard', (filtros) => {
+        if (!dashboardCotacoes.administrador(socket)) {
+            return socket.emit('receber_dados_dashboard', { sucesso: false, erro: 'Acesso exclusivo de administradores.' });
+        }
         if (bot_socket_id) {
             // Repassa para o Python, enviando o ID e os filtros
             io.to(bot_socket_id).emit('comando_ler_excel_dashboard', { clientId: socket.id, filtros: filtros });
@@ -777,6 +798,7 @@ io.on('connection', (socket) => {
 
     // Python devolve os dados prontos, o Node envia de volta para a aba exata do site
     socket.on('retorno_dados_dashboard', (dados) => {
+        if (socket.id !== bot_socket_id || !dashboardCotacoes.administrador(io.sockets.sockets.get(dados.clientId))) return;
         if (dados.clientId) {
             io.to(dados.clientId).emit('receber_dados_dashboard', dados);
         }
@@ -929,6 +951,6 @@ app.get('/health', (req, res) => {
 const PORT = process.env.PORT || 8000;
 
 // 👇 O '0.0.0.0' AQUI É A CHAVE MÁGICA PARA O RENDER FUNCIONAR 👇
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, process.env.HOST || '0.0.0.0', () => {
     console.log(`🛡️ Servidor Protegido rodando na porta ${PORT}`);
 });

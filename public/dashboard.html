@@ -263,7 +263,6 @@
 
         let html = '';
         lista.forEach((user, idx) => {
-            const hasDash = user.dashboard_access || user.admin;
             const hasPlanilha = user.planilha_access || user.admin;
             const hasPortais = user.portais_access || user.admin;
             const disabledAttr = user.admin ? 'disabled title="Administradores sempre têm acesso total"' : '';
@@ -288,10 +287,7 @@
                   </div>
                 </td>
                 <td>
-                  <label class="toggle-switch">
-                    <input type="checkbox" onchange="toggleAccess('${email}', 'dashboard_access', this.checked)" ${hasDash ? 'checked' : ''} ${disabledAttr}>
-                    <span class="slider"></span>
-                  </label>
+                  <span title="Estatísticas é exclusiva de administradores">${user.admin === true ? 'Administrador' : 'Restrito'}</span>
                 </td>
                 <td>
                   <label class="toggle-switch">
