@@ -351,7 +351,9 @@ io.on('connection', (socket) => {
                 admin: dados.isAdmin, 
                 dev: dados.isDev,
                 dashboard_access: dados.hasDashboardAccess,
-                vendedor: dados.vendedor || '', // <-- NOVO
+                planilha_access: dados.hasPlanilhaAccess, // <-- NOVO
+                portais_access: dados.hasPortaisAccess,   // <-- NOVO
+                vendedor: dados.vendedor || '',
                 expires: expires 
             }));
             
@@ -361,7 +363,9 @@ io.on('connection', (socket) => {
                 admin: dados.isAdmin, 
                 dev: dados.isDev,
                 dashboard_access: dados.hasDashboardAccess,
-                vendedor: dados.vendedor || '' // <-- NOVO
+                planilha_access: dados.hasPlanilhaAccess, // <-- NOVO
+                portais_access: dados.hasPortaisAccess,   // <-- NOVO
+                vendedor: dados.vendedor || ''
             });
         } else {
             io.to(dados.clientId).emit('resposta_login', dados);
@@ -426,47 +430,83 @@ io.on('connection', (socket) => {
     });
 
     // === PAINEL ADMIN (Contas e Privilégios) ===
-    socket.on('admin_pedir_usuarios', () => {
-        if (!checkRole('admin')) return;
-        if (bot_socket_id) {
-            io.to(bot_socket_id).emit('admin_listar_usuarios', { clientId: socket.id });
-        } else {
-            // Fallback: lê localmente se o gerenciador não estiver conectado
-            const possiveisCaminhos = [
-                path.join(__dirname, '..', 'senhas gerenciador', 'banco_usuarios.json'),
-                path.join(__dirname, '..', 'gerenciador', 'banco_usuarios.json')
-            ];
-            let db = null;
-            for (const p of possiveisCaminhos) {
-                if (fs.existsSync(p)) {
-                    try {
-                        db = JSON.parse(fs.readFileSync(p, 'utf8'));
-                        break;
-                    } catch(e) {}
-                }
+    function lerUsuariosLocais() {
+        const possiveisCaminhos = [
+            path.join(__dirname, '..', 'senhas gerenciador', 'banco_usuarios.json'),
+            path.join(__dirname, '..', 'gerenciador', 'banco_usuarios.json')
+        ];
+        let db = null;
+        for (const p of possiveisCaminhos) {
+            if (fs.existsSync(p)) {
+                try {
+                    db = JSON.parse(fs.readFileSync(p, 'utf8'));
+                    break;
+                } catch(e) {}
             }
-            if (db) {
-                const onlineUsers = Object.keys(usuarios_logados);
-                const lista = {};
-                for (let email in db) {
-                    lista[email] = {
-                        verificado: db[email].verificado !== false,
-                        admin: !!db[email].admin,
-                        dev: !!db[email].dev,
-                        dashboard_access: !!db[email].dashboard_access,
-                        bloqueado: !!db[email].bloqueado,
-                        online: onlineUsers.includes(email)
-                    };
+        }
+        if (!db) return null;
+        const onlineUsers = Object.keys(usuarios_logados);
+        const lista = {};
+        for (let email in db) {
+            lista[email] = {
+                verificado: db[email].verificado !== false,
+                admin: !!db[email].admin,
+                dev: !!db[email].dev,
+                dashboard_access: !!db[email].dashboard_access,
+                planilha_access: !!db[email].planilha_access,
+                portais_access: !!db[email].portais_access,
+                bloqueado: !!db[email].bloqueado,
+                vendedor: db[email].vendedor || '',
+                online: onlineUsers.includes(email)
+            };
+        }
+        return lista;
+    }
+
+    const pedidosPendentes = new Set();
+
+    socket.on('admin_pedir_usuarios', () => {
+        if (!socket.autenticado) {
+            socket.emit('sessao_invalida');
+            return;
+        }
+        if (!checkRole('admin')) {
+            socket.emit('admin_receber_usuarios', { 
+                sucesso: false, 
+                erro: "Sua conta não possui permissão de Administrador (admin: true) na sessão atual. Saia e faça login novamente." 
+            });
+            return;
+        }
+        if (bot_socket_id) {
+            pedidosPendentes.add(socket.id);
+            io.to(bot_socket_id).emit('admin_listar_usuarios', { clientId: socket.id });
+
+            // Se o robô não responder em 2.5s, usa o fallback local para não travar a tela
+            setTimeout(() => {
+                if (pedidosPendentes.has(socket.id)) {
+                    pedidosPendentes.delete(socket.id);
+                    const locais = lerUsuariosLocais();
+                    if (locais) {
+                        socket.emit('admin_receber_usuarios', { sucesso: true, usuarios: locais });
+                    }
                 }
-                socket.emit('admin_receber_usuarios', { sucesso: true, usuarios: lista });
+            }, 2500);
+        } else {
+            const locais = lerUsuariosLocais();
+            if (locais) {
+                socket.emit('admin_receber_usuarios', { sucesso: true, usuarios: locais });
             } else {
-                socket.emit('admin_receber_usuarios', { sucesso: false, erro: "O Servidor Central Maestro (gerenciador) está offline." });
+                socket.emit('admin_receber_usuarios', { 
+                    sucesso: false, 
+                    erro: "O Servidor Central Maestro (gerenciador.py) está desconectado e o banco local não foi encontrado." 
+                });
             }
         }
     });
 
     socket.on('admin_resposta_usuarios', (dados) => {
         if (socket.id !== bot_socket_id) return; // só o gerenciador responde
+        pedidosPendentes.delete(dados.clientId);
         if (dados.sucesso && dados.usuarios) {
             const onlineUsers = Object.keys(usuarios_logados);
             for (let email in dados.usuarios) dados.usuarios[email].online = onlineUsers.includes(email);
@@ -476,31 +516,19 @@ io.on('connection', (socket) => {
 
     socket.on('admin_alterar_acesso_dashboard', (dados) => {
         if (!checkRole('admin')) return;
+        const campo = ['dashboard_access', 'planilha_access', 'portais_access'].includes(dados.campo)
+            ? dados.campo
+            : 'dashboard_access';
+
         if (bot_socket_id) {
-            io.to(bot_socket_id).emit('admin_alterar_acesso_dashboard', { email: dados.email, acesso: dados.acesso, clientId: socket.id });
+            io.to(bot_socket_id).emit('admin_alterar_acesso_dashboard', { 
+                email: dados.email, 
+                campo: campo,
+                acesso: dados.acesso, 
+                clientId: socket.id 
+            });
         } else {
-            const possiveisCaminhos = [
-                path.join(__dirname, '..', 'senhas gerenciador', 'banco_usuarios.json'),
-                path.join(__dirname, '..', 'gerenciador', 'banco_usuarios.json')
-            ];
-            let alterou = false;
-            for (const p of possiveisCaminhos) {
-                if (fs.existsSync(p)) {
-                    try {
-                        const db = JSON.parse(fs.readFileSync(p, 'utf8'));
-                        if (db[dados.email]) {
-                            db[dados.email].dashboard_access = dados.acesso;
-                            fs.writeFileSync(p, JSON.stringify(db, null, 4), 'utf8');
-                            alterou = true;
-                        }
-                    } catch(e) {}
-                }
-            }
-            if (alterou) {
-                socket.emit('admin_acesso_alterado', { sucesso: true, email: dados.email, acesso: dados.acesso });
-            } else {
-                socket.emit('admin_acesso_alterado', { sucesso: false, erro: "Usuário não encontrado ou falha ao salvar." });
-            }
+            socket.emit('admin_acesso_alterado', { sucesso: false, erro: "O Servidor Central Maestro está offline." });
         }
     });
 
@@ -590,10 +618,12 @@ io.on('connection', (socket) => {
         }
         if (bot_socket_id) {
             dados.clientId = socket.id;
-            const vendSessao = (socket.usuarioLogado && socket.usuarioLogado.vendedor) ? socket.usuarioLogado.vendedor.trim() : '';
-            
-            // Se pediu apenas o vendedor dele (tela minhas_cotacoes.html), filtra pelo vendedor da sessão
-            if (dados.apenas_meu_vendedor) {
+            const user = socket.usuarioLogado || {};
+            const vendSessao = (user.vendedor || '').trim();
+            const podeVerPlanilhaGeral = !!(user.admin || user.planilha_access);
+
+            // Se pediu apenas o vendedor dele OU se não tem permissão de ver a Planilha Geral, trava no vendedor dele
+            if (dados.apenas_meu_vendedor || (vendSessao && !podeVerPlanilhaGeral)) {
                 dados.vendedor_filtro = vendSessao || '__NENHUM__';
             }
             io.to(bot_socket_id).emit('comando_carregar_planilha_json', dados);

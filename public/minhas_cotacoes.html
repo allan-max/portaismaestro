@@ -249,10 +249,10 @@
             <button class="btn-top" onclick="carregarMinhasCotacoes()">
                 <i class="fa-solid fa-rotate"></i> Atualizar
             </button>
-            <a href="planilha_vale.html" class="btn-top" title="Ver Planilha Geral">
+            <a id="btn-nav-planilha" href="planilha_vale.html" class="btn-top" style="display: none;" title="Ver Planilha Geral">
                 <i class="fa-solid fa-table"></i> Planilha Geral
             </a>
-            <a href="index.html?portais=1" class="btn-top" title="Ir para os Robôs / Portais">
+            <a id="btn-nav-portais" href="index.html?portais=1" class="btn-top" style="display: none;" title="Ir para os Robôs / Portais">
                 <i class="fa-solid fa-robot"></i> Portais
             </a>
             <button class="btn-top logout" onclick="fazerLogout()">
@@ -294,9 +294,10 @@
                 <input type="text" id="input-busca" placeholder="Buscar por número da cotação, item, marca, modelo ou localidade..." oninput="aplicarFiltros()">
             </div>
             <select id="select-ordem" class="filter-select" onchange="aplicarFiltros()">
-                <option value="padrao">Ordem: Mais recentes na planilha</option>
+                <option value="prioridade" selected>Ordem: Prioridade (Hoje → Semana → Futuras)</option>
                 <option value="venc_asc">Vencimento: Mais próximas primeiro</option>
                 <option value="venc_desc">Vencimento: Mais distantes primeiro</option>
+                <option value="padrao">Ordem: Mais recentes na planilha</option>
             </select>
         </div>
 
@@ -338,6 +339,16 @@
 
         if (!sessionAtual) {
             window.location.href = 'index.html';
+        }
+        const isAdmin = localStorage.getItem('maestro_admin') === 'true';
+        const temAcessoPlanilha = isAdmin || localStorage.getItem('maestro_planilha') === 'true';
+        const temAcessoPortais = isAdmin || localStorage.getItem('maestro_portais') === 'true';
+
+        if (temAcessoPlanilha) {
+            document.getElementById('btn-nav-planilha').style.display = 'flex';
+        }
+        if (temAcessoPortais) {
+            document.getElementById('btn-nav-portais').style.display = 'flex';
         }
 
         document.getElementById('badge-vendedor').innerText = vendedorLogado 
@@ -384,9 +395,40 @@
             const p1 = Number(match[1]), p2 = Number(match[2]), yr = Number(match[3]);
             const d = p2 > 12 ? p2 : p1;
             const m = p2 > 12 ? p1 : p2;
-            return new Date(yr, m - 1, d).getTime();
+            const dt = new Date(yr, m - 1, d);
+            dt.setHours(0, 0, 0, 0);
+            if (dt.getFullYear() !== yr || dt.getMonth() !== m - 1 || dt.getDate() !== d) return null;
+            return dt.getTime();
         }
 
+        function getHojeMeiaNoite() {
+            const h = new Date();
+            h.setHours(0, 0, 0, 0);
+            return h.getTime();
+        }
+
+        // Calcula o peso de prioridade (apenas de hoje em diante)
+        function calcularPrioridadeVencimento(c) {
+            const tVenc = parseDataVenc(c['VENCIMENTO']);
+            if (tVenc === null) return { grupo: 4, ordem: Infinity, diffDias: null };
+
+            const hoje = getHojeMeiaNoite();
+            const umDia = 24 * 60 * 60 * 1000;
+            const diffDias = Math.round((tVenc - hoje) / umDia);
+
+            if (diffDias === 0) {
+                // 1º: Vence HOJE
+                return { grupo: 1, ordem: 0, diffDias };
+            } else if (diffDias > 0 && diffDias <= 7) {
+                // 2º: Vence ao longo da semana (próximos 7 dias, da mais próxima p/ mais distante)
+                return { grupo: 2, ordem: tVenc, diffDias };
+            } else {
+                // 3º: Vence após 7 dias (da mais próxima p/ mais distante)
+                return { grupo: 3, ordem: tVenc, diffDias };
+            }
+        }
+
+        // AQUI ESTÁ A CHAVE: Descarta todas as cotações antigas (anteriores a hoje) logo na chegada
         socket.on('retorno_planilha_json', (res) => {
             if (!res.sucesso) {
                 document.getElementById('tbody-cotacoes').innerHTML = `
@@ -395,7 +437,13 @@
                     </td></tr>`;
                 return;
             }
-            todasCotacoes = res.cotacoes || [];
+
+            const hoje = getHojeMeiaNoite();
+            todasCotacoes = (res.cotacoes || []).filter(c => {
+                const tVenc = parseDataVenc(c['VENCIMENTO']);
+                return tVenc !== null && tVenc >= hoje;
+            });
+
             atualizarContadores();
             aplicarFiltros();
         });
@@ -431,18 +479,47 @@
                 return true;
             });
 
-            if (ordem === 'venc_asc' || ordem === 'venc_desc') {
+            if (ordem === 'prioridade') {
+                cotacoesFiltradas.sort((a, b) => {
+                    const pA = calcularPrioridadeVencimento(a);
+                    const pB = calcularPrioridadeVencimento(b);
+                    if (pA.grupo !== pB.grupo) return pA.grupo - pB.grupo;
+                    if (pA.ordem !== pB.ordem) return pA.ordem - pB.ordem;
+                    // Dentro do mesmo dia, Pendentes ficam acima das Respondidas
+                    return Number(isRespondida(a)) - Number(isRespondida(b));
+                });
+            } else if (ordem === 'venc_asc' || ordem === 'venc_desc') {
                 const dir = ordem === 'venc_asc' ? 1 : -1;
                 cotacoesFiltradas.sort((a, b) => {
                     const tA = parseDataVenc(a['VENCIMENTO']);
                     const tB = parseDataVenc(b['VENCIMENTO']);
-                    if (tA === null) return 1;
-                    if (tB === null) return -1;
                     return (tA - tB) * dir;
                 });
             }
 
             renderizarTabela();
+        }
+
+        function renderizarBadgeVencimento(c) {
+            const textoData = escHtml(c['VENCIMENTO'] || '-');
+            const info = calcularPrioridadeVencimento(c);
+
+            if (info.diffDias === 0) {
+                return `<span class="blue-pill" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4);">
+                    🔥 ${textoData} (HOJE)
+                </span>`;
+            }
+            if (info.diffDias === 1) {
+                return `<span class="blue-pill" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8;">
+                    ⚡ ${textoData} (Amanhã)
+                </span>`;
+            }
+            if (info.diffDias > 1 && info.diffDias <= 7) {
+                return `<span class="blue-pill">
+                    📅 ${textoData} (Em ${info.diffDias}d)
+                </span>`;
+            }
+            return `<span class="blue-pill">${textoData}</span>`;
         }
 
         function renderizarTabela() {
@@ -460,14 +537,16 @@
                 const respTexto = String(c['RESPOSTA'] || '').trim() || 'PENDENTE';
                 const classeBadge = respondida ? 'ok' : (respTexto.toUpperCase().includes('NÃO') ? 'nok' : 'pend');
                 const itemResumo = String(c['ITEM'] || c['ITENS'] || '-');
+                const infoVenc = calcularPrioridadeVencimento(c);
+                const bordaHoje = (infoVenc.diffDias === 0 && !respondida) ? 'border-left: 4px solid #f59e0b;' : '';
 
                 return `
                     <tr onclick="abrirDetalhes(${idx})" style="cursor: pointer;">
-                        <td>
+                        <td style="${bordaHoje}">
                             <div style="font-weight: 700; font-size: 1rem;">#${escHtml(c['COTAÇÃO'] || '-')}</div>
                             <div style="font-size: 0.75rem; color: var(--text-muted);">Qtd: ${escHtml(c['QUANTIDADE'] || '-')}</div>
                         </td>
-                        <td><span class="blue-pill">${escHtml(c['VENCIMENTO'] || '-')}</span></td>
+                        <td>${renderizarBadgeVencimento(c)}</td>
                         <td>${escHtml(c['LOCALIDADE'] || '-')}</td>
                         <td>
                             <div style="max-width: 420px; font-size: 0.82rem; color: #cbd5e1; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">

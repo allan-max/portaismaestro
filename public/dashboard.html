@@ -93,36 +93,6 @@
       background: rgba(255, 255, 255, 0.08);
     }
 
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 500;
-    }
-
-    .status-badge.online {
-      background: rgba(52, 211, 153, 0.2);
-      color: #34d399;
-    }
-
-    .status-badge.offline {
-      background: rgba(248, 113, 113, 0.2);
-      color: #f87171;
-    }
-
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-    }
-
-    .status-dot.online { background-color: #34d399; }
-    .status-dot.offline { background-color: #f87171; }
-
-    /* Estilo para o Toggle (Checkbox como botão liga/desliga) */
     .toggle-switch {
       position: relative;
       display: inline-block;
@@ -159,21 +129,20 @@
     input:checked + .slider:before {
       transform: translateX(20px);
     }
-
   </style>
 </head>
 <body>
   <div class="container">
     <header>
       <div style="display: flex; align-items: center; gap: 16px;">
-        <button onclick="window.location.href='index.html'" style="background: rgba(255,255,255,0.1); color: white; border: none; padding: 10px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; transition: 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.2);" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'" title="Voltar">
+        <button onclick="window.location.href='index.html?portais=1'" style="background: rgba(255,255,255,0.1); color: white; border: none; padding: 10px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; transition: 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.2);" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'" title="Voltar">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
             <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
           </svg>
         </button>
         <div>
           <h1>Painel de Controle Admin</h1>
-          <p>Gerencie as contas cadastradas e seus privilégios</p>
+          <p>Gerencie as contas cadastradas, vendedores vinculados e privilégios</p>
         </div>
       </div>
       <div style="display: flex; gap: 10px;">
@@ -190,15 +159,13 @@
           <h2 style="color: #fff;">⚙️ Variáveis do Robô (CONFIG.json)</h2>
           <button onclick="document.getElementById('modal-config').style.display='none'" style="background:transparent; border:none; color:#f87171; font-size:24px; cursor:pointer;">&times;</button>
         </div>
-        <div id="config-form" style="max-height: 60vh; overflow-y: auto; padding-right: 10px;">
-          <!-- Inputs generated dynamically -->
-        </div>
+        <div id="config-form" style="max-height: 60vh; overflow-y: auto; padding-right: 10px;"></div>
         <button onclick="salvarConfiguracoes()" style="margin-top:20px; width:100%; background:#34d399; color:#000; border:none; padding:15px; border-radius:8px; font-weight:bold; cursor:pointer;">💾 SALVAR CONFIGURAÇÕES NO ROBÔ</button>
       </div>
     </div>
 
     <section class="card">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
         <h2 style="font-size: 18px;">Contas e Permissões</h2>
         <input type="text" id="pesquisaUsuario" placeholder="🔍 Buscar usuário..." oninput="filtrarUsuarios()" style="background: rgba(15,15,26,0.8); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 8px 12px; border-radius: 6px; outline: none; width: 100%; max-width: 300px;">
       </div>
@@ -209,11 +176,13 @@
             <tr>
               <th>Usuário (E-mail)</th>
               <th>Vendedor Vinculado (Planilha)</th>
-              <th>Acesso Estatísticas</th>
+              <th>Estatísticas</th>
+              <th>Planilha Geral</th>
+              <th>Portais (Robôs)</th>
             </tr>
           </thead>
           <tbody id="usersTableBody">
-            <tr><td colspan="2" style="text-align:center; padding: 20px;">Carregando dados...</td></tr>
+            <tr><td colspan="5" style="text-align:center; padding: 20px;">Carregando dados...</td></tr>
           </tbody>
         </table>
       </div>
@@ -222,7 +191,6 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
   <script>
-    // 🔒 BARREIRA DE SEGURANÇA: Só entra quem for Admin!
     if (localStorage.getItem('maestro_admin') !== 'true') {
         window.location.href = 'index.html';
     }
@@ -234,27 +202,48 @@
         upgrade: false
     });
 
-    socket.on("connect_error", (err) => {
-        console.error("Conexão recusada:", err.message);
-        window.location.href = "index.html"; 
-    });
-
     let todosUsuarios = [];
-
-    window.onload = () => carregarUsuarios();
 
     function carregarUsuarios() {
         socket.emit('admin_pedir_usuarios');
     }
 
+    socket.on("connect", () => {
+        socket.emit('sou_frontend', { usuario: localStorage.getItem('maestro_user') });
+        carregarUsuarios();
+    });
+
+    window.addEventListener('load', () => {
+        carregarUsuarios();
+        setTimeout(() => {
+            const tbody = document.getElementById("usersTableBody");
+            if (todosUsuarios.length === 0 && tbody && tbody.innerText.includes("Carregando")) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px; color: #facc15;">
+                    O servidor está demorando para responder.
+                    <button onclick="carregarUsuarios()" style="background:#3b82f6; color:#fff; border:none; padding:6px 14px; border-radius:6px; cursor:pointer; font-weight:bold; margin-left:10px;">Tentar novamente</button>
+                </td></tr>`;
+            }
+        }, 5000);
+    });
+
+    socket.on("sessao_invalida", () => {
+        alert("Sua sessão expirou. Faça login novamente.");
+        localStorage.clear();
+        window.location.href = "index.html";
+    });
+
+    socket.on("connect_error", (err) => {
+        console.error("Conexão recusada:", err.message);
+        window.location.href = "index.html"; 
+    });
+
     socket.on('admin_receber_usuarios', (resposta) => {
         const tbody = document.getElementById("usersTableBody");
         if (resposta && resposta.sucesso === false) {
-            tbody.innerHTML = `<tr><td colspan="2" style="text-align:center; padding: 20px; color: #f87171;">${escapeHtml(resposta.erro || 'Erro ao carregar usuários.')}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px; color: #f87171;">${escapeHtml(resposta.erro || 'Erro ao carregar usuários.')}</td></tr>`;
             return;
         }
         const usuariosJson = (resposta && resposta.usuarios) ? resposta.usuarios : (resposta || {});
-        // Converte o objeto em um array (ordenado por e-mail)
         todosUsuarios = Object.entries(usuariosJson)
             .map(([email, dados]) => ({ email, ...dados }))
             .sort((a, b) => a.email.localeCompare(b.email));
@@ -268,14 +257,16 @@
     function renderizarTabela(lista) {
         const tbody = document.getElementById("usersTableBody");
         if (lista.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 20px; color: #a1a1aa;">Nenhum usuário encontrado.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color: #a1a1aa;">Nenhum usuário encontrado.</td></tr>';
             return;
         }
 
         let html = '';
         lista.forEach((user, idx) => {
-            const hasAccess = user.dashboard_access || user.admin;
-            const disabledAttr = user.admin ? 'disabled title="Administradores sempre têm acesso"' : '';
+            const hasDash = user.dashboard_access || user.admin;
+            const hasPlanilha = user.planilha_access || user.admin;
+            const hasPortais = user.portais_access || user.admin;
+            const disabledAttr = user.admin ? 'disabled title="Administradores sempre têm acesso total"' : '';
             const email = escapeHtml(user.email);
             const vendedorAtual = escapeHtml(user.vendedor || '');
             
@@ -287,7 +278,7 @@
                   ${user.verificado === false ? '<span style="color:#f87171; font-size:11px; margin-left:6px;" title="Ainda não clicou no link de ativação">[NÃO VERIFICADO]</span>' : ''}
                 </td>
                 <td>
-                  <div style="display: flex; gap: 8px; align-items: center; max-width: 280px;">
+                  <div style="display: flex; gap: 8px; align-items: center; max-width: 260px;">
                     <input type="text" id="vend_${idx}" value="${vendedorAtual}" placeholder="Ex: JOÃO (vazio = sem vínculo)" 
                       style="background: rgba(15,15,26,0.8); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 13px; width: 100%; outline: none;">
                     <button onclick="salvarVendedorUsuario('${email}', 'vend_${idx}')" 
@@ -298,7 +289,19 @@
                 </td>
                 <td>
                   <label class="toggle-switch">
-                    <input type="checkbox" onchange="toggleAccess('${email}', this.checked)" ${hasAccess ? 'checked' : ''} ${disabledAttr}>
+                    <input type="checkbox" onchange="toggleAccess('${email}', 'dashboard_access', this.checked)" ${hasDash ? 'checked' : ''} ${disabledAttr}>
+                    <span class="slider"></span>
+                  </label>
+                </td>
+                <td>
+                  <label class="toggle-switch">
+                    <input type="checkbox" onchange="toggleAccess('${email}', 'planilha_access', this.checked)" ${hasPlanilha ? 'checked' : ''} ${disabledAttr}>
+                    <span class="slider"></span>
+                  </label>
+                </td>
+                <td>
+                  <label class="toggle-switch">
+                    <input type="checkbox" onchange="toggleAccess('${email}', 'portais_access', this.checked)" ${hasPortais ? 'checked' : ''} ${disabledAttr}>
                     <span class="slider"></span>
                   </label>
                 </td>
@@ -308,19 +311,15 @@
         tbody.innerHTML = html;
     }
 
-    function salvarVendedorUsuario(email, inputId) {
-        const valor = document.getElementById(inputId).value.trim();
-        socket.emit('admin_alterar_vendedor_usuario', { email: email, vendedor: valor });
-    }
-
     function filtrarUsuarios() {
         const termo = document.getElementById('pesquisaUsuario').value.toLowerCase();
         const listaFiltrada = todosUsuarios.filter(u => u.email.toLowerCase().includes(termo));
         renderizarTabela(listaFiltrada);
     }
 
-    function toggleAccess(email, isAllowed) {
-        socket.emit('admin_alterar_acesso_dashboard', { email: email, acesso: isAllowed });
+    function salvarVendedorUsuario(email, inputId) {
+        const valor = document.getElementById(inputId).value.trim();
+        socket.emit('admin_alterar_vendedor_usuario', { email: email, vendedor: valor });
     }
 
     socket.on('admin_vendedor_alterado', (dados) => {
@@ -333,9 +332,20 @@
         }
     });
 
-    // ====================================================
-    // CONFIGURAÇÕES DO ROBÔ
-    // ====================================================
+    function toggleAccess(email, campo, isAllowed) {
+        socket.emit('admin_alterar_acesso_dashboard', { email: email, campo: campo, acesso: isAllowed });
+    }
+
+    socket.on('admin_acesso_alterado', (dados) => {
+        if (dados.sucesso) {
+            const u = todosUsuarios.find(u => u.email === dados.email);
+            if (u && dados.campo) u[dados.campo] = dados.acesso;
+        } else {
+            alert("Erro ao alterar acesso: " + dados.erro);
+            carregarUsuarios();
+        }
+    });
+
     function abrirConfiguracoes() {
         socket.emit('pedir_config_admin');
     }
@@ -391,7 +401,6 @@
         }
         socket.emit('salvar_config_admin', { config: nova_config });
     }
-
   </script>
 </body>
 </html>

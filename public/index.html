@@ -534,14 +534,15 @@ socket.on("sessao_invalida", () => {
                 localStorage.setItem('maestro_admin', resposta.admin);
                 localStorage.setItem('maestro_dev', resposta.dev);
                 localStorage.setItem('maestro_dashboard', resposta.dashboard_access);
-                localStorage.setItem('maestro_vendedor', resposta.vendedor || ''); // <-- SALVA O VENDEDOR
+                localStorage.setItem('maestro_planilha', resposta.planilha_access); // <-- NOVO
+                localStorage.setItem('maestro_portais', resposta.portais_access);   // <-- NOVO
+                localStorage.setItem('maestro_vendedor', resposta.vendedor || '');
 
                 socket.auth = { sessionId: resposta.sessionId };
                 socket.disconnect().connect();
 
                 socket.emit('sou_frontend', { usuario: document.getElementById('log-user').value.trim() });
 
-                // <-- REDIRECIONA DIRETO PARA A TELA DE COTAÇÕES SE TIVER VENDEDOR ATRIBUÍDO
                 if (resposta.vendedor && resposta.vendedor.trim() !== '') {
                     window.location.href = 'minhas_cotacoes.html';
                     return;
@@ -552,7 +553,6 @@ socket.on("sessao_invalida", () => {
             } else {
                 document.getElementById('erro-login').innerText = resposta.erro;
                 document.getElementById('erro-login').style.display = 'block';
-
                 btnLogin.disabled = false;
                 btnLogin.innerHTML = 'ACESSAR';
             }
@@ -562,8 +562,10 @@ socket.on("sessao_invalida", () => {
         const paramsUrl = new URLSearchParams(window.location.search);
         if (localStorage.getItem('maestro_session')) {
             const vendSalvo = (localStorage.getItem('maestro_vendedor') || '').trim();
-            // Se tiver vendedor e não clicou em "Ir para Portais" (?portais=1), vai direto para minhas_cotacoes.html
-            if (vendSalvo && paramsUrl.get('portais') !== '1') {
+            const podePortais = localStorage.getItem('maestro_admin') === 'true' || localStorage.getItem('maestro_portais') === 'true';
+
+            // Só deixa abrir ?portais=1 se tiver permissão de Portais (ou for Admin)
+            if (vendSalvo && !(paramsUrl.get('portais') === '1' && podePortais)) {
                 window.location.href = 'minhas_cotacoes.html';
             } else {
                 alternarTelas('portal');

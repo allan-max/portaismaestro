@@ -746,11 +746,12 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
 <script>
-
-
-
     if (!localStorage.getItem('maestro_session')) {
         window.location.href = 'index.html';
+    }
+
+    if (localStorage.getItem('maestro_vendedor') && localStorage.getItem('maestro_admin') !== 'true' && localStorage.getItem('maestro_planilha') !== 'true') {
+        window.location.href = 'minhas_cotacoes.html';
     }
     
     
