@@ -341,7 +341,7 @@
                     <input type="email" id="rec-email" class="auth-input" placeholder="Seu e-mail da Ventura" onkeypress="verificarEnter(event, 'recuperar')">
                 </div>
                 <div id="erro-rec" class="msg-erro"></div>
-                <div id="sucesso-rec" class="msg-sucesso">Se o e-mail existir, um link foi enviado.</div>
+                <div id="sucesso-rec" class="msg-sucesso">Link enviado! Verifique sua caixa de entrada (e o spam).</div>
                 <button class="btn-entrar" style="margin-top: 20px; background: #ff8c00;" onclick="solicitarRecuperacao()">ENVIAR LINK</button>
                 <p style="margin-top: 20px; text-align: center;"><span class="link-nav" onclick="alternarTelas('login')">Cancelar</span></p>
             </div>
@@ -525,33 +525,53 @@ socket.on("sessao_invalida", () => {
             else { document.getElementById('erro-cad').innerText = res.erro; document.getElementById('erro-cad').style.display = 'block'; }
         });
 
-       socket.on('resposta_login', function(resposta) {
-    const btnLogin = document.querySelector('#box-login button.btn-entrar');
+    socket.on('resposta_login', function(resposta) {
+            const btnLogin = document.querySelector('#box-login button.btn-entrar');
 
-    if (resposta.sucesso) {
-        localStorage.setItem('maestro_session', resposta.sessionId);
-        localStorage.setItem('maestro_user', document.getElementById('log-user').value.trim()); // ✅ SALVA O USUÁRIO
-        localStorage.setItem('maestro_admin', resposta.admin);
-        localStorage.setItem('maestro_dev', resposta.dev);
-        localStorage.setItem('maestro_dashboard', resposta.dashboard_access);
+            if (resposta.sucesso) {
+                localStorage.setItem('maestro_session', resposta.sessionId);
+                localStorage.setItem('maestro_user', document.getElementById('log-user').value.trim());
+                localStorage.setItem('maestro_admin', resposta.admin);
+                localStorage.setItem('maestro_dev', resposta.dev);
+                localStorage.setItem('maestro_dashboard', resposta.dashboard_access);
+                localStorage.setItem('maestro_vendedor', resposta.vendedor || ''); // <-- SALVA O VENDEDOR
 
-        socket.auth = { sessionId: resposta.sessionId };
-        socket.disconnect().connect();
+                socket.auth = { sessionId: resposta.sessionId };
+                socket.disconnect().connect();
 
-        socket.emit('sou_frontend', { usuario: document.getElementById('log-user').value.trim() });
+                socket.emit('sou_frontend', { usuario: document.getElementById('log-user').value.trim() });
 
-        alternarTelas('portal');
-        verificarPrivilegios();
-    } else {
-        document.getElementById('erro-login').innerText = resposta.erro;
-        document.getElementById('erro-login').style.display = 'block';
+                // <-- REDIRECIONA DIRETO PARA A TELA DE COTAÇÕES SE TIVER VENDEDOR ATRIBUÍDO
+                if (resposta.vendedor && resposta.vendedor.trim() !== '') {
+                    window.location.href = 'minhas_cotacoes.html';
+                    return;
+                }
 
-        // ⚠️ DESTRAVA O BOTÃO PARA DEIXAR TENTAR DE NOVO
-        btnLogin.disabled = false;
-        btnLogin.innerHTML = 'ACESSAR';
-    }
-});
+                alternarTelas('portal');
+                verificarPrivilegios();
+            } else {
+                document.getElementById('erro-login').innerText = resposta.erro;
+                document.getElementById('erro-login').style.display = 'block';
 
+                btnLogin.disabled = false;
+                btnLogin.innerHTML = 'ACESSAR';
+            }
+        });
+
+        // Checagem inicial ao abrir o index.html:
+        const paramsUrl = new URLSearchParams(window.location.search);
+        if (localStorage.getItem('maestro_session')) {
+            const vendSalvo = (localStorage.getItem('maestro_vendedor') || '').trim();
+            // Se tiver vendedor e não clicou em "Ir para Portais" (?portais=1), vai direto para minhas_cotacoes.html
+            if (vendSalvo && paramsUrl.get('portais') !== '1') {
+                window.location.href = 'minhas_cotacoes.html';
+            } else {
+                alternarTelas('portal');
+            }
+        } else {
+            alternarTelas('login');
+        }
+        
 // Mais abaixo no index.html, arrume a checagem inicial também:
 if (localStorage.getItem('maestro_session')) {
     alternarTelas('portal');
@@ -590,6 +610,8 @@ if (localStorage.getItem('maestro_session')) {
             if (event.key === 'Enter') {
                 if (acao === 'login') fazerLogin();
                 if (acao === 'cadastro') fazerCadastro();
+                if (acao === 'recuperar') solicitarRecuperacao();
+                if (acao === 'nova_senha') salvarNovaSenha();
             }
         }
 
@@ -627,10 +649,17 @@ if (localStorage.getItem('maestro_session')) {
             socket.emit('solicitar_recuperacao', { email: email });
         }
 
-        socket.on('resposta_recuperacao_solicitada', () => { 
+        socket.on('resposta_recuperacao_solicitada', (res) => { 
             const btn = document.querySelector('#box-recuperar button.btn-entrar');
             btn.disabled = false;
             btn.innerHTML = 'ENVIAR LINK';
+            if (res && res.sucesso === false) {
+                document.getElementById('sucesso-rec').style.display = 'none';
+                document.getElementById('erro-rec').innerText = res.erro || 'Falha ao enviar o e-mail. Tente novamente.';
+                document.getElementById('erro-rec').style.display = 'block';
+                return;
+            }
+            document.getElementById('erro-rec').style.display = 'none';
             document.getElementById('sucesso-rec').style.display = 'block'; 
             document.getElementById('rec-email').value = '';
         });
@@ -692,7 +721,7 @@ if (localStorage.getItem('maestro_session')) {
                     document.getElementById('loading-txt').innerText = "Ativado com sucesso! Faça login.";
                     setTimeout(() => { window.location.href = "index.html"; }, 3000);
                 } else if (urlParams.get('action') === 'reset') alternarTelas('nova-senha');
-            } else { document.getElementById('loading-txt').innerText = "Link inválido."; }
+            } else { document.getElementById('loading-txt').innerText = res.erro || "Link inválido."; }
         });
         // ==========================================
         // ⚙️ LÓGICA DO PAINEL DEV

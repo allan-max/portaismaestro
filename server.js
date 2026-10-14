@@ -351,19 +351,19 @@ io.on('connection', (socket) => {
                 admin: dados.isAdmin, 
                 dev: dados.isDev,
                 dashboard_access: dados.hasDashboardAccess,
+                vendedor: dados.vendedor || '', // <-- NOVO
                 expires: expires 
             }));
             
-            // ✅ CORREÇÃO: Envia para o navegador (clientId) em vez de enviar para o robô
             io.to(dados.clientId).emit('resposta_login', { 
                 sucesso: true, 
                 sessionId: sessionId,
                 admin: dados.isAdmin, 
                 dev: dados.isDev,
-                dashboard_access: dados.hasDashboardAccess
+                dashboard_access: dados.hasDashboardAccess,
+                vendedor: dados.vendedor || '' // <-- NOVO
             });
         } else {
-            // ✅ CORREÇÃO: Envia o erro para o navegador (clientId)
             io.to(dados.clientId).emit('resposta_login', dados);
         }
     });
@@ -386,6 +386,7 @@ io.on('connection', (socket) => {
 
     socket.on('validar_token_email', (dados) => {
         if (bot_socket_id) io.to(bot_socket_id).emit('verificar_token_python', { ...dados, clientId: socket.id });
+        else socket.emit('resposta_verificacao_token', { sucesso: false, erro: "O Servidor Central Maestro está offline." });
     });
 
     socket.on('resultado_verificacao_token', (dados) => {
@@ -394,6 +395,7 @@ io.on('connection', (socket) => {
 
     socket.on('solicitar_recuperacao', (dados) => {
         if (bot_socket_id) io.to(bot_socket_id).emit('gerar_token_recuperacao', { ...dados, clientId: socket.id });
+        else socket.emit('resposta_recuperacao_solicitada', { sucesso: false, erro: "O Servidor Central Maestro está offline." });
     });
 
     socket.on('resposta_recuperacao_solicitada', (dados) => {
@@ -402,6 +404,7 @@ io.on('connection', (socket) => {
 
     socket.on('salvar_nova_senha', (dados) => {
         if (bot_socket_id) io.to(bot_socket_id).emit('processar_nova_senha', { ...dados, clientId: socket.id });
+        else socket.emit('resposta_nova_senha', { sucesso: false, erro: "O Servidor Central Maestro está offline." });
     });
 
     socket.on('resultado_nova_senha', (dados) => {
@@ -422,51 +425,106 @@ io.on('connection', (socket) => {
         }
     });
 
-    // === PAINEL ADMIN (Controle de Acessos e Status) ===
+    // === PAINEL ADMIN (Contas e Privilégios) ===
     socket.on('admin_pedir_usuarios', () => {
         if (!checkRole('admin')) return;
-        const dbPath = path.join(__dirname, '..', 'banco_usuarios.json');
-        fs.readFile(dbPath, 'utf8', (err, data) => {
-            if (err) return;
-            try {
-                const db = JSON.parse(data);
-                const onlineUsers = Object.keys(usuarios_logados);
-                for (let email in db) {
-                    db[email].online = onlineUsers.includes(email);
+        if (bot_socket_id) {
+            io.to(bot_socket_id).emit('admin_listar_usuarios', { clientId: socket.id });
+        } else {
+            // Fallback: lê localmente se o gerenciador não estiver conectado
+            const possiveisCaminhos = [
+                path.join(__dirname, '..', 'senhas gerenciador', 'banco_usuarios.json'),
+                path.join(__dirname, '..', 'gerenciador', 'banco_usuarios.json')
+            ];
+            let db = null;
+            for (const p of possiveisCaminhos) {
+                if (fs.existsSync(p)) {
+                    try {
+                        db = JSON.parse(fs.readFileSync(p, 'utf8'));
+                        break;
+                    } catch(e) {}
                 }
-                socket.emit('admin_receber_usuarios', db);
-            } catch(e) {}
-        });
+            }
+            if (db) {
+                const onlineUsers = Object.keys(usuarios_logados);
+                const lista = {};
+                for (let email in db) {
+                    lista[email] = {
+                        verificado: db[email].verificado !== false,
+                        admin: !!db[email].admin,
+                        dev: !!db[email].dev,
+                        dashboard_access: !!db[email].dashboard_access,
+                        bloqueado: !!db[email].bloqueado,
+                        online: onlineUsers.includes(email)
+                    };
+                }
+                socket.emit('admin_receber_usuarios', { sucesso: true, usuarios: lista });
+            } else {
+                socket.emit('admin_receber_usuarios', { sucesso: false, erro: "O Servidor Central Maestro (gerenciador) está offline." });
+            }
+        }
+    });
+
+    socket.on('admin_resposta_usuarios', (dados) => {
+        if (socket.id !== bot_socket_id) return; // só o gerenciador responde
+        if (dados.sucesso && dados.usuarios) {
+            const onlineUsers = Object.keys(usuarios_logados);
+            for (let email in dados.usuarios) dados.usuarios[email].online = onlineUsers.includes(email);
+        }
+        io.to(dados.clientId).emit('admin_receber_usuarios', dados);
     });
 
     socket.on('admin_alterar_acesso_dashboard', (dados) => {
         if (!checkRole('admin')) return;
-        const dbPath = path.join(__dirname, '..', 'banco_usuarios.json');
-        fs.readFile(dbPath, 'utf8', (err, data) => {
-            if (err) {
-                socket.emit('admin_acesso_alterado', { sucesso: false, erro: "Erro ao ler banco de dados" });
-                return;
-            }
-            try {
-                const db = JSON.parse(data);
-                if (db[dados.email]) {
-                    db[dados.email].dashboard_access = dados.acesso;
-                    fs.writeFile(dbPath, JSON.stringify(db, null, 4), () => {
-                        socket.emit('admin_acesso_alterado', { sucesso: true, email: dados.email, acesso: dados.acesso });
-                        
-                        // Atualizar sessão em tempo real se o usuário estiver logado
-                        const userSession = Array.from(cofreSessoes.values()).find(s => {
-                            const parsed = JSON.parse(s);
-                            return parsed.email === dados.email;
-                        });
-                        
-                        // Enviar atualização silenciosa para o cliente (opcional)
-                    });
+        if (bot_socket_id) {
+            io.to(bot_socket_id).emit('admin_alterar_acesso_dashboard', { email: dados.email, acesso: dados.acesso, clientId: socket.id });
+        } else {
+            const possiveisCaminhos = [
+                path.join(__dirname, '..', 'senhas gerenciador', 'banco_usuarios.json'),
+                path.join(__dirname, '..', 'gerenciador', 'banco_usuarios.json')
+            ];
+            let alterou = false;
+            for (const p of possiveisCaminhos) {
+                if (fs.existsSync(p)) {
+                    try {
+                        const db = JSON.parse(fs.readFileSync(p, 'utf8'));
+                        if (db[dados.email]) {
+                            db[dados.email].dashboard_access = dados.acesso;
+                            fs.writeFileSync(p, JSON.stringify(db, null, 4), 'utf8');
+                            alterou = true;
+                        }
+                    } catch(e) {}
                 }
-            } catch(e) {
-                socket.emit('admin_acesso_alterado', { sucesso: false, erro: "Erro ao salvar banco de dados" });
             }
-        });
+            if (alterou) {
+                socket.emit('admin_acesso_alterado', { sucesso: true, email: dados.email, acesso: dados.acesso });
+            } else {
+                socket.emit('admin_acesso_alterado', { sucesso: false, erro: "Usuário não encontrado ou falha ao salvar." });
+            }
+        }
+    });
+
+    socket.on('admin_resposta_acesso', (dados) => {
+        if (socket.id !== bot_socket_id) return; // só o gerenciador responde
+        io.to(dados.clientId).emit('admin_acesso_alterado', dados);
+    });
+
+    socket.on('admin_alterar_vendedor_usuario', (dados) => {
+        if (!checkRole('admin')) return;
+        if (bot_socket_id) {
+            io.to(bot_socket_id).emit('admin_alterar_vendedor_usuario', { 
+                email: dados.email, 
+                vendedor: dados.vendedor, 
+                clientId: socket.id 
+            });
+        } else {
+            socket.emit('admin_vendedor_alterado', { sucesso: false, erro: "O Robô está offline." });
+        }
+    });
+
+    socket.on('admin_resposta_vendedor', (dados) => {
+        if (socket.id !== bot_socket_id) return;
+        io.to(dados.clientId).emit('admin_vendedor_alterado', dados);
     });
 
     socket.on('pedir_config_admin', () => {
@@ -532,6 +590,12 @@ io.on('connection', (socket) => {
         }
         if (bot_socket_id) {
             dados.clientId = socket.id;
+            const vendSessao = (socket.usuarioLogado && socket.usuarioLogado.vendedor) ? socket.usuarioLogado.vendedor.trim() : '';
+            
+            // Se pediu apenas o vendedor dele (tela minhas_cotacoes.html), filtra pelo vendedor da sessão
+            if (dados.apenas_meu_vendedor) {
+                dados.vendedor_filtro = vendSessao || '__NENHUM__';
+            }
             io.to(bot_socket_id).emit('comando_carregar_planilha_json', dados);
         } else {
             socket.emit('retorno_planilha_json', { sucesso: false, erro: "O Robô está offline." });

@@ -173,13 +173,10 @@
         </button>
         <div>
           <h1>Painel de Controle Admin</h1>
-          <p>Gerencie o acesso à Estatística (Dashboard) e monitore usuários</p>
+          <p>Gerencie as contas cadastradas e seus privilégios</p>
         </div>
       </div>
       <div style="display: flex; gap: 10px;">
-        <button onclick="carregarUsuarios()" style="background: #34d399; color: #000; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s;">
-          🔄 Atualizar Lista
-        </button>
         <button onclick="abrirConfiguracoes()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
           ⚙️ CONFIGURAÇÕES
         </button>
@@ -211,14 +208,12 @@
           <thead>
             <tr>
               <th>Usuário (E-mail)</th>
-              <th>Status</th>
-              <th>Último Login</th>
-              <th>Localização (IP)</th>
-              <th>Acesso Estatística</th>
+              <th>Vendedor Vinculado (Planilha)</th>
+              <th>Acesso Estatísticas</th>
             </tr>
           </thead>
           <tbody id="usersTableBody">
-            <tr><td colspan="5" style="text-align:center; padding: 20px;">Carregando dados...</td></tr>
+            <tr><td colspan="2" style="text-align:center; padding: 20px;">Carregando dados...</td></tr>
           </tbody>
         </table>
       </div>
@@ -252,41 +247,58 @@
         socket.emit('admin_pedir_usuarios');
     }
 
-    socket.on('admin_receber_usuarios', (usuariosJson) => {
-        // Converte o objeto em um array
-        todosUsuarios = Object.entries(usuariosJson).map(([email, dados]) => {
-            return { email, ...dados };
-        });
-        renderizarTabela(todosUsuarios);
+    socket.on('admin_receber_usuarios', (resposta) => {
+        const tbody = document.getElementById("usersTableBody");
+        if (resposta && resposta.sucesso === false) {
+            tbody.innerHTML = `<tr><td colspan="2" style="text-align:center; padding: 20px; color: #f87171;">${escapeHtml(resposta.erro || 'Erro ao carregar usuários.')}</td></tr>`;
+            return;
+        }
+        const usuariosJson = (resposta && resposta.usuarios) ? resposta.usuarios : (resposta || {});
+        // Converte o objeto em um array (ordenado por e-mail)
+        todosUsuarios = Object.entries(usuariosJson)
+            .map(([email, dados]) => ({ email, ...dados }))
+            .sort((a, b) => a.email.localeCompare(b.email));
+        filtrarUsuarios();
     });
+
+    function escapeHtml(txt) {
+        return String(txt).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
 
     function renderizarTabela(lista) {
         const tbody = document.getElementById("usersTableBody");
         if (lista.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color: #a1a1aa;">Nenhum usuário encontrado.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 20px; color: #a1a1aa;">Nenhum usuário encontrado.</td></tr>';
             return;
         }
 
         let html = '';
-        lista.forEach(user => {
-            const statusClass = user.online ? 'online' : 'offline';
-            const statusText = user.online ? 'Ativo' : 'Inativo';
-            const hasAccess = user.dashboard_access || user.admin; // Admin sempre tem acesso!
+        lista.forEach((user, idx) => {
+            const hasAccess = user.dashboard_access || user.admin;
             const disabledAttr = user.admin ? 'disabled title="Administradores sempre têm acesso"' : '';
+            const email = escapeHtml(user.email);
+            const vendedorAtual = escapeHtml(user.vendedor || '');
             
             html += `
               <tr>
-                <td><strong>${user.email}</strong> ${user.admin ? '<span style="color:#fbbf24; font-size:11px; margin-left:6px;">[ADMIN]</span>' : ''}</td>
                 <td>
-                  <div class="status-badge ${statusClass}">
-                    <div class="status-dot ${statusClass}"></div> ${statusText}
+                  <strong>${email}</strong>
+                  ${user.admin ? '<span style="color:#fbbf24; font-size:11px; margin-left:6px;">[ADMIN]</span>' : ''}
+                  ${user.verificado === false ? '<span style="color:#f87171; font-size:11px; margin-left:6px;" title="Ainda não clicou no link de ativação">[NÃO VERIFICADO]</span>' : ''}
+                </td>
+                <td>
+                  <div style="display: flex; gap: 8px; align-items: center; max-width: 280px;">
+                    <input type="text" id="vend_${idx}" value="${vendedorAtual}" placeholder="Ex: JOÃO (vazio = sem vínculo)" 
+                      style="background: rgba(15,15,26,0.8); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 13px; width: 100%; outline: none;">
+                    <button onclick="salvarVendedorUsuario('${email}', 'vend_${idx}')" 
+                      style="background: #34d399; color: #000; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; white-space: nowrap;">
+                      Salvar
+                    </button>
                   </div>
                 </td>
-                <td style="color: #a1a1aa;">${user.ultimo_login || 'Nunca'}</td>
-                <td style="color: #a1a1aa; font-size: 12px; max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${user.ultima_localizacao || 'Desconhecida'}">${user.ultima_localizacao || 'Desconhecida'}</td>
                 <td>
                   <label class="toggle-switch">
-                    <input type="checkbox" onchange="toggleAccess('${user.email}', this.checked)" ${hasAccess ? 'checked' : ''} ${disabledAttr}>
+                    <input type="checkbox" onchange="toggleAccess('${email}', this.checked)" ${hasAccess ? 'checked' : ''} ${disabledAttr}>
                     <span class="slider"></span>
                   </label>
                 </td>
@@ -294,6 +306,11 @@
             `;
         });
         tbody.innerHTML = html;
+    }
+
+    function salvarVendedorUsuario(email, inputId) {
+        const valor = document.getElementById(inputId).value.trim();
+        socket.emit('admin_alterar_vendedor_usuario', { email: email, vendedor: valor });
     }
 
     function filtrarUsuarios() {
@@ -306,14 +323,13 @@
         socket.emit('admin_alterar_acesso_dashboard', { email: email, acesso: isAllowed });
     }
 
-    socket.on('admin_acesso_alterado', (dados) => {
+    socket.on('admin_vendedor_alterado', (dados) => {
         if (dados.sucesso) {
-            // Atualiza localmente para refletir no cache
             const u = todosUsuarios.find(u => u.email === dados.email);
-            if(u) u.dashboard_access = dados.acesso;
+            if (u) u.vendedor = dados.vendedor;
+            alert(`✅ Vendedor "${dados.vendedor || 'Nenhum'}" vinculado à conta ${dados.email}!`);
         } else {
-            alert("Erro ao alterar acesso: " + dados.erro);
-            carregarUsuarios(); // recarrega a tabela p/ voltar o estado real
+            alert("❌ Erro ao vincular vendedor: " + dados.erro);
         }
     });
 
