@@ -11,57 +11,78 @@
 
     <style>
         :root {
-            --bg-body: #10141b;
-            --bg-navbar: #161b22;
-            --bg-card: #1c2433;
-            --bg-card-hover: #212b3d;
-            --bg-search: #161b22;
-            --text-main: #f8fafc;
-            --text-muted: #8b9eb3;
-            --accent-blue: #2563eb;
+            --bg-body: #0b0e14;
+            --bg-surface: #121620;
+            --bg-surface-hover: #171c28;
+            --bg-header-row: #181d29;
+            --text-main: #f1f5f9;
+            --text-muted: #8b95a5;
+            --text-dim: #64748b;
+            --border-color: #222938;
+            --accent-amber: #d99b26;
             --accent-green: #10b981;
-            --accent-red: #ef4444;
-            --accent-amber: #f59e0b;
-            --border-color: #2a3441;
+            --accent-blue: #38bdf8;
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         body {
-            margin: 0; padding: 0;
+            margin: 0;
+            padding: 0;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
             background-color: var(--bg-body) !important;
             color: var(--text-main) !important;
             overflow-y: scroll;
         }
 
+        .page-wrapper {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 24px 40px 80px 40px;
+        }
+
+        /* Top Header */
         .top-navbar {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            background-color: var(--bg-navbar);
-            padding: 0 24px;
-            height: 64px;
-            border-bottom: 1px solid var(--border-color);
-            position: sticky;
-            top: 0;
-            z-index: 100;
+            padding-bottom: 28px;
+            flex-wrap: wrap;
+            gap: 16px;
         }
 
         .brand-area {
             display: flex;
             align-items: center;
-            gap: 12px;
-            font-weight: 700;
-            font-size: 1.1rem;
+            gap: 14px;
+        }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+        }
+
+        .brand-title {
+            font-size: 1.65rem;
+            font-weight: 600;
+            color: var(--text-main);
+            letter-spacing: -0.4px;
         }
 
         .vendedor-badge {
-            background: rgba(56, 189, 248, 0.15);
-            color: #38bdf8;
-            border: 1px solid rgba(56, 189, 248, 0.3);
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            font-weight: 500;
+            margin-left: 4px;
         }
 
         .nav-actions {
@@ -71,263 +92,478 @@
         }
 
         .btn-top {
-            background: rgba(255,255,255,0.05);
+            background: var(--bg-surface);
             border: 1px solid var(--border-color);
             color: var(--text-main);
-            padding: 8px 14px;
+            padding: 9px 16px;
             border-radius: 8px;
-            font-size: 0.85rem;
-            font-weight: 600;
+            font-size: 0.88rem;
+            font-weight: 500;
             cursor: pointer;
             display: flex;
             align-items: center;
             gap: 8px;
             text-decoration: none;
-            transition: 0.2s;
+            transition: background 0.2s, border-color 0.2s;
         }
-        .btn-top:hover { background: rgba(255,255,255,0.1); }
-        .btn-top.logout { color: #f87171; border-color: rgba(248, 113, 113, 0.3); }
 
-        .page-content {
-            padding: 30px 40px 80px 40px;
-            max-width: 1500px;
-            margin: 0 auto;
+        .btn-top i {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .btn-top:hover {
+            background: var(--bg-surface-hover);
+            border-color: #333d52;
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2a3446, #181e29);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-left: 4px;
+            overflow: hidden;
         }
 
         /* KPI Cards */
         .kpi-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 16px;
-            margin-bottom: 25px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+            margin-bottom: 22px;
+        }
+
+        @media (max-width: 900px) {
+            .kpi-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         .kpi-card {
-            background: var(--bg-card);
+            background: var(--bg-surface);
             border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 18px 20px;
+            border-radius: 10px;
+            padding: 20px 24px;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            position: relative;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .kpi-card:hover {
+            background: var(--bg-surface-hover);
+        }
+
+        .kpi-card.active-filter {
+            border-color: #364156;
+        }
+
+        .kpi-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .kpi-card:hover, .kpi-card.active-filter {
-            border-color: #38bdf8;
-            background: var(--bg-card-hover);
         }
 
-        .kpi-title { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 6px; }
-        .kpi-value { font-size: 1.7rem; font-weight: 800; }
+        .kpi-title {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
 
-        /* Toolbar */
+        .kpi-card.active-filter .kpi-title-pill {
+            background: rgba(255, 255, 255, 0.06);
+            padding: 4px 10px;
+            border-radius: 6px;
+            color: #cbd5e1;
+        }
+
+        .kpi-icon-small {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            opacity: 0.7;
+        }
+
+        .kpi-value {
+            font-size: 2.6rem;
+            font-weight: 500;
+            line-height: 1.1;
+            margin-top: 10px;
+            letter-spacing: -1px;
+        }
+
+        /* Toolbar (Search & Sort) */
         .toolbar {
             display: flex;
-            gap: 12px;
-            margin-bottom: 20px;
+            gap: 16px;
+            margin-bottom: 28px;
             align-items: center;
             flex-wrap: wrap;
         }
 
         .search-box {
             flex: 1;
-            min-width: 240px;
-            background: var(--bg-search);
+            min-width: 260px;
+            background: var(--bg-surface);
             border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 12px 15px;
+            border-radius: 8px;
+            padding: 11px 16px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+        }
+
+        .search-box i {
+            color: var(--text-dim);
+            font-size: 0.95rem;
         }
 
         .search-box input {
             background: transparent;
             border: none;
             color: var(--text-main);
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             width: 100%;
             outline: none;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .search-box input::placeholder {
+            color: var(--text-dim);
+        }
+
+        .sort-wrapper {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0 14px;
+            display: flex;
+            align-items: center;
+            height: 42px;
+            font-size: 0.88rem;
+        }
+
+        .sort-label {
+            color: var(--text-dim);
+            margin-right: 4px;
+            white-space: nowrap;
         }
 
         .filter-select {
-            background: var(--bg-navbar);
-            border: 1px solid var(--border-color);
+            background: transparent;
+            border: none;
             color: var(--text-main);
-            padding: 12px 14px;
-            border-radius: 10px;
-            font-size: 0.9rem;
+            font-size: 0.88rem;
+            font-family: 'Inter', sans-serif;
             outline: none;
+            cursor: pointer;
+            padding-right: 6px;
         }
 
-        /* Table */
+        .filter-select option {
+            background: var(--bg-surface);
+            color: var(--text-main);
+        }
+
+        /* Section Heading */
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin: 0 0 14px 0;
+        }
+
+        /* Unified Table Card */
+        .table-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
         .modern-table {
             width: 100%;
-            border-collapse: separate;
-            border-spacing: 0 10px;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .modern-table thead tr {
+            background: var(--bg-header-row);
+            border-bottom: 1px solid var(--border-color);
         }
 
         .modern-table th {
             color: var(--text-muted);
             font-weight: 500;
-            font-size: 0.85rem;
-            padding: 0 20px 5px 20px;
+            font-size: 0.82rem;
+            padding: 13px 20px;
             text-align: left;
-            border-bottom: 1px solid var(--border-color);
         }
 
-        .modern-table td {
-            background: var(--bg-card);
-            padding: 16px 20px;
-            vertical-align: middle;
+        .modern-table tbody tr {
+            border-bottom: 1px solid var(--border-color);
             transition: background 0.15s ease;
         }
 
-        .modern-table tr td:first-child {
-            border-top-left-radius: 12px;
-            border-bottom-left-radius: 12px;
+        .modern-table tbody tr:last-child {
+            border-bottom: none;
         }
 
-        .modern-table tr td:last-child {
-            border-top-right-radius: 12px;
-            border-bottom-right-radius: 12px;
+        .modern-table tbody tr:hover {
+            background: var(--bg-surface-hover);
         }
 
-        .modern-table tr:hover td {
-            background: var(--bg-card-hover);
+        .modern-table td {
+            padding: 18px 20px;
+            vertical-align: middle;
+            font-size: 0.92rem;
+            color: var(--text-main);
         }
 
-        .blue-pill {
-            background: rgba(56, 189, 248, 0.15);
-            color: #38bdf8;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 0.8rem;
+        /* Table Cells Formatting */
+        .cota-id {
             font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 4px;
         }
 
+        .cota-sub {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.35;
+        }
+
+        .venc-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .venc-date {
+            color: var(--text-main);
+            font-size: 0.92rem;
+        }
+
+        .venc-sub {
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 2px;
+        }
+
+        .tag-icon-box {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.07);
+            color: #94a3b8;
+            width: 24px;
+            height: 22px;
+            border-radius: 5px;
+            font-size: 0.72rem;
+        }
+
+        .desc-text {
+            color: #dce3ec;
+            font-size: 0.92rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Status Pills */
         .status-badge {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
+            gap: 7px;
+            padding: 5px 12px;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            font-weight: 500;
         }
-        .status-badge.ok { background: rgba(16, 185, 129, 0.15); color: #34d399; }
-        .status-badge.pend { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
-        .status-badge.nok { background: rgba(239, 68, 68, 0.15); color: #f87171; }
 
-        .btn-responder {
-            background: rgba(16, 185, 129, 0.15);
-            border: 1px solid rgba(16, 185, 129, 0.4);
-            color: #34d399;
-            padding: 7px 12px;
-            border-radius: 8px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
+        .status-badge.pend-amber {
+            background: rgba(217, 155, 38, 0.16);
+            color: #eab308;
         }
+
+        .status-badge.pend-amber .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #eab308;
+        }
+
+        .status-badge.pend-green {
+            background: rgba(16, 185, 129, 0.14);
+            color: #34d399;
+        }
+
+        .status-badge.ok {
+            background: rgba(16, 185, 129, 0.18);
+            color: #34d399;
+        }
+
+        /* Action Button */
+        .btn-responder {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid #2e374a;
+            color: #dce3ec;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 0.84rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-responder i {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
         .btn-responder:hover {
-            background: #10b981;
-            color: #000;
+            background: rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.5);
+            color: #34d399;
+        }
+
+        .btn-responder:hover i {
+            color: #34d399;
         }
     </style>
 </head>
 <body>
 
-    <nav class="top-navbar">
-        <div class="brand-area">
-            <i class="fa-solid fa-file-signature" style="color: #38bdf8; font-size: 1.3rem;"></i>
-            <span>Minhas Cotações</span>
-            <span id="badge-vendedor" class="vendedor-badge">Carregando...</span>
-        </div>
-        <div class="nav-actions">
-            <button class="btn-top" onclick="carregarMinhasCotacoes()">
-                <i class="fa-solid fa-rotate"></i> Atualizar
-            </button>
-            <a id="btn-nav-planilha" href="planilha_vale.html" class="btn-top" style="display: none;" title="Ver Planilha Geral">
-                <i class="fa-solid fa-table"></i> Planilha Geral
-            </a>
-            <a id="btn-nav-portais" href="index.html?portais=1" class="btn-top" style="display: none;" title="Ir para os Robôs / Portais">
-                <i class="fa-solid fa-robot"></i> Portais
-            </a>
-            <button class="btn-top logout" onclick="fazerLogout()">
-                <i class="fa-solid fa-right-from-bracket"></i> Sair
-            </button>
-        </div>
-    </nav>
+    <div class="page-wrapper">
+        <!-- Top Navbar -->
+        <nav class="top-navbar">
+            <div class="brand-area">
+                <div class="brand-logo">
+                    <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="4" y="8" width="10" height="20" rx="3" fill="#0ea5e9"/>
+                        <rect x="16" y="4" width="10" height="14" rx="3" fill="#38bdf8"/>
+                    </svg>
+                </div>
+                <span class="brand-title">Minhas Cotações</span>
+                <span id="badge-vendedor" class="vendedor-badge">Carregando...</span>
+            </div>
 
-    <div class="page-content">
-        <!-- Cards de Resumo (Clicáveis para filtrar) -->
+            <div class="nav-actions">
+                <button class="btn-top" onclick="carregarMinhasCotacoes()">
+                    <i class="fa-solid fa-rotate-right"></i> Atualizar
+                </button>
+                <a id="btn-nav-planilha" href="planilha_vale.html" class="btn-top" style="display: none;" title="Ver Planilha Geral">
+                    <i class="fa-solid fa-table"></i> Planilha Geral
+                </a>
+                <a id="btn-nav-portais" href="index.html?portais=1" class="btn-top" style="display: none;" title="Ir para os Robôs / Portais">
+                    <i class="fa-solid fa-robot"></i> Portais
+                </a>
+                <button class="btn-top" onclick="fazerLogout()">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i> Sair
+                </button>
+                <div class="user-avatar" id="avatar-vendedor" title="Usuário Logado">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Cards de Resumo -->
         <div class="kpi-grid">
             <div class="kpi-card active-filter" id="kpi-todas" onclick="setFiltroStatus('todas')">
-                <div>
-                    <div class="kpi-title">Total Atribuídas a Você</div>
-                    <div class="kpi-value" id="count-total">0</div>
+                <div class="kpi-header">
+                    <span class="kpi-title kpi-title-pill">Total Atribuídas a Você</span>
+                    <i class="fa-regular fa-clone kpi-icon-small"></i>
                 </div>
-                <i class="fa-solid fa-layer-group" style="font-size: 1.8rem; color: #38bdf8;"></i>
+                <div class="kpi-value" id="count-total" style="color: #ffffff;">0</div>
             </div>
+
             <div class="kpi-card" id="kpi-pendentes" onclick="setFiltroStatus('pendentes')">
-                <div>
-                    <div class="kpi-title">Pendentes / Em Aberto</div>
-                    <div class="kpi-value" id="count-pendentes" style="color: #fbbf24;">0</div>
+                <div class="kpi-header">
+                    <span class="kpi-title kpi-title-pill">Pendentes / Em Aberto</span>
                 </div>
-                <i class="fa-solid fa-clock" style="font-size: 1.8rem; color: #fbbf24;"></i>
+                <div class="kpi-value" id="count-pendentes" style="color: var(--accent-amber);">0</div>
             </div>
+
             <div class="kpi-card" id="kpi-respondidas" onclick="setFiltroStatus('respondidas')">
-                <div>
-                    <div class="kpi-title">Respondidas</div>
-                    <div class="kpi-value" id="count-respondidas" style="color: #34d399;">0</div>
+                <div class="kpi-header">
+                    <span class="kpi-title kpi-title-pill">Respondidas</span>
                 </div>
-                <i class="fa-solid fa-circle-check" style="font-size: 1.8rem; color: #34d399;"></i>
+                <div class="kpi-value" id="count-respondidas" style="color: var(--accent-green);">0</div>
             </div>
         </div>
 
         <!-- Barra de Busca e Ordenação -->
         <div class="toolbar">
             <div class="search-box">
-                <i class="fa-solid fa-magnifying-glass" style="color: var(--text-muted);"></i>
+                <i class="fa-solid fa-magnifying-glass"></i>
                 <input type="text" id="input-busca" placeholder="Buscar por número da cotação, item, marca, modelo ou localidade..." oninput="aplicarFiltros()">
             </div>
-            <select id="select-ordem" class="filter-select" onchange="aplicarFiltros()">
-                <option value="prioridade" selected>Ordem: Prioridade (Hoje → Semana → Futuras)</option>
-                <option value="venc_asc">Vencimento: Mais próximas primeiro</option>
-                <option value="venc_desc">Vencimento: Mais distantes primeiro</option>
-                <option value="padrao">Ordem: Mais recentes na planilha</option>
-            </select>
+            <div class="sort-wrapper">
+                <span class="sort-label">Ordem:</span>
+                <select id="select-ordem" class="filter-select" onchange="aplicarFiltros()">
+                    <option value="prioridade" selected>Prioridade (Hoje → Semana → Futuras)</option>
+                    <option value="venc_asc">Vencimento: Mais próximas primeiro</option>
+                    <option value="venc_desc">Vencimento: Mais distantes primeiro</option>
+                    <option value="padrao">Mais recentes na planilha</option>
+                </select>
+            </div>
         </div>
 
-        <!-- Tabela de Cotações -->
-        <table class="modern-table">
-            <thead>
-                <tr>
-                    <th style="width: 14%;">Cotação</th>
-                    <th style="width: 12%;">Vencimento</th>
-                    <th style="width: 16%;">Localidade</th>
-                    <th style="width: 30%;">Item / Descrição</th>
-                    <th style="width: 14%;">Status</th>
-                    <th style="width: 14%; text-align: right;">Ação Rápida</th>
-                </tr>
-            </thead>
-            <tbody id="tbody-cotacoes">
-                <tr>
-                    <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">
-                        <i class="fa-solid fa-spinner fa-spin"></i> Carregando suas cotações...
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+        <!-- Título da Seção + Tabela Unificada -->
+        <h2 class="section-title">Cotações</h2>
+
+        <div class="table-card">
+            <table class="modern-table">
+                <thead>
+                    <tr>
+                        <th style="width: 19%;">Cotação / ID</th>
+                        <th style="width: 14%;">Vencimento</th>
+                        <th style="width: 14%;">Localidade</th>
+                        <th style="width: 28%;">Descrição</th>
+                        <th style="width: 11%;">Status</th>
+                        <th style="width: 14%; text-align: right;">Ação Rápida</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-cotacoes">
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                            <i class="fa-solid fa-spinner fa-spin"></i> Carregando suas cotações...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <!-- Modal de Detalhes da Cotação -->
     <div id="modal-detalhes" style="position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: none; align-items: center; justify-content: center; z-index: 99999;">
-        <div style="background: #1c2433; border: 1px solid #2a3441; border-radius: 12px; padding: 25px; width: 90%; max-width: 850px; max-height: 88vh; overflow-y: auto; position: relative;">
-            <button onclick="document.getElementById('modal-detalhes').style.display='none'" style="position: absolute; top: 15px; right: 15px; background: none; border: none; color: #8b9eb3; font-size: 1.5rem; cursor: pointer;">&times;</button>
-            <h2 id="modal-titulo" style="margin-top: 0; color: #f8fafc; border-bottom: 1px solid #2a3441; padding-bottom: 12px;">Detalhes da Cotação</h2>
+        <div style="background: #121620; border: 1px solid #222938; border-radius: 12px; padding: 25px; width: 90%; max-width: 850px; max-height: 88vh; overflow-y: auto; position: relative;">
+            <button onclick="document.getElementById('modal-detalhes').style.display='none'" style="position: absolute; top: 15px; right: 15px; background: none; border: none; color: #8b95a5; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            <h2 id="modal-titulo" style="margin-top: 0; color: #f1f5f9; border-bottom: 1px solid #222938; padding-bottom: 12px;">Detalhes da Cotação</h2>
             <div id="modal-corpo" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;"></div>
         </div>
     </div>
@@ -340,6 +576,7 @@
         if (!sessionAtual) {
             window.location.href = 'index.html';
         }
+
         const isAdmin = localStorage.getItem('maestro_admin') === 'true';
         const temAcessoPlanilha = isAdmin || localStorage.getItem('maestro_planilha') === 'true';
         const temAcessoPortais = isAdmin || localStorage.getItem('maestro_portais') === 'true';
@@ -354,6 +591,10 @@
         document.getElementById('badge-vendedor').innerText = vendedorLogado 
             ? `Vendedor: ${vendedorLogado.toUpperCase()}` 
             : 'Sem vendedor vinculado';
+
+        if (vendedorLogado) {
+            document.getElementById('avatar-vendedor').innerText = vendedorLogado.trim().charAt(0).toUpperCase();
+        }
 
         const socket = io({ auth: { sessionId: sessionAtual }, transports: ['websocket'], upgrade: false });
 
@@ -407,7 +648,6 @@
             return h.getTime();
         }
 
-        // Calcula o peso de prioridade (apenas de hoje em diante)
         function calcularPrioridadeVencimento(c) {
             const tVenc = parseDataVenc(c['VENCIMENTO']);
             if (tVenc === null) return { grupo: 4, ordem: Infinity, diffDias: null };
@@ -417,18 +657,14 @@
             const diffDias = Math.round((tVenc - hoje) / umDia);
 
             if (diffDias === 0) {
-                // 1º: Vence HOJE
                 return { grupo: 1, ordem: 0, diffDias };
             } else if (diffDias > 0 && diffDias <= 7) {
-                // 2º: Vence ao longo da semana (próximos 7 dias, da mais próxima p/ mais distante)
                 return { grupo: 2, ordem: tVenc, diffDias };
             } else {
-                // 3º: Vence após 7 dias (da mais próxima p/ mais distante)
                 return { grupo: 3, ordem: tVenc, diffDias };
             }
         }
 
-        // AQUI ESTÁ A CHAVE: Descarta todas as cotações antigas (anteriores a hoje) logo na chegada
         socket.on('retorno_planilha_json', (res) => {
             if (!res.sucesso) {
                 document.getElementById('tbody-cotacoes').innerHTML = `
@@ -485,7 +721,6 @@
                     const pB = calcularPrioridadeVencimento(b);
                     if (pA.grupo !== pB.grupo) return pA.grupo - pB.grupo;
                     if (pA.ordem !== pB.ordem) return pA.ordem - pB.ordem;
-                    // Dentro do mesmo dia, Pendentes ficam acima das Respondidas
                     return Number(isRespondida(a)) - Number(isRespondida(b));
                 });
             } else if (ordem === 'venc_asc' || ordem === 'venc_desc') {
@@ -500,26 +735,35 @@
             renderizarTabela();
         }
 
-        function renderizarBadgeVencimento(c) {
+        function renderizarVencimento(c, index) {
             const textoData = escHtml(c['VENCIMENTO'] || '-');
             const info = calcularPrioridadeVencimento(c);
 
             if (info.diffDias === 0) {
-                return `<span class="blue-pill" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4);">
-                    🔥 ${textoData} (HOJE)
-                </span>`;
+                return `
+                    <div class="venc-wrapper">
+                        <span class="venc-date">${textoData}</span>
+                        ${index === 0 ? `<span class="tag-icon-box" title="Vence Hoje"><i class="fa-solid fa-tag"></i></span>` : ''}
+                    </div>
+                `;
             }
             if (info.diffDias === 1) {
-                return `<span class="blue-pill" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8;">
-                    ⚡ ${textoData} (Amanhã)
-                </span>`;
+                return `
+                    <div>
+                        <span class="venc-date">${textoData}</span>
+                        <span class="venc-sub">(Amanhã)</span>
+                    </div>
+                `;
             }
             if (info.diffDias > 1 && info.diffDias <= 7) {
-                return `<span class="blue-pill">
-                    📅 ${textoData} (Em ${info.diffDias}d)
-                </span>`;
+                return `
+                    <div>
+                        <span class="venc-date">${textoData}</span>
+                        <span class="venc-sub">(Em ${info.diffDias}d)</span>
+                    </div>
+                `;
             }
-            return `<span class="blue-pill">${textoData}</span>`;
+            return `<span class="venc-date">${textoData}</span>`;
         }
 
         function renderizarTabela() {
@@ -534,37 +778,38 @@
 
             tbody.innerHTML = cotacoesFiltradas.map((c, idx) => {
                 const respondida = isRespondida(c);
-                const respTexto = String(c['RESPOSTA'] || '').trim() || 'PENDENTE';
-                const classeBadge = respondida ? 'ok' : (respTexto.toUpperCase().includes('NÃO') ? 'nok' : 'pend');
-                const itemResumo = String(c['ITEM'] || c['ITENS'] || '-');
                 const infoVenc = calcularPrioridadeVencimento(c);
-                const bordaHoje = (infoVenc.diffDias === 0 && !respondida) ? 'border-left: 4px solid #f59e0b;' : '';
+                const itemResumo = String(c['ITEM'] || c['ITENS'] || '-').replace(/\s+/g, ' ').trim();
+                const qtdTexto = String(c['QUANTIDADE'] || '').trim();
+                const subtituloId = qtdTexto ? `Qtd: ${escHtml(qtdTexto)}` : escHtml(itemResumo);
+
+                let statusHtml = '';
+                if (respondida) {
+                    statusHtml = `<span class="status-badge ok">Respondida</span>`;
+                } else if (idx === 0 && infoVenc.diffDias === 0) {
+                    statusHtml = `<span class="status-badge pend-amber"><span class="dot"></span>Pendente</span>`;
+                } else {
+                    statusHtml = `<span class="status-badge pend-green">Pendente</span>`;
+                }
 
                 return `
                     <tr onclick="abrirDetalhes(${idx})" style="cursor: pointer;">
-                        <td style="${bordaHoje}">
-                            <div style="font-weight: 700; font-size: 1rem;">#${escHtml(c['COTAÇÃO'] || '-')}</div>
-                            <div style="font-size: 0.75rem; color: var(--text-muted);">Qtd: ${escHtml(c['QUANTIDADE'] || '-')}</div>
+                        <td>
+                            <div class="cota-id" title="#${escHtml(c['COTAÇÃO'] || '-')}">#${escHtml(c['COTAÇÃO'] || '-')}</div>
+                            ${subtituloId ? `<div class="cota-sub">${subtituloId}</div>` : ''}
                         </td>
-                        <td>${renderizarBadgeVencimento(c)}</td>
+                        <td>${renderizarVencimento(c, idx)}</td>
                         <td>${escHtml(c['LOCALIDADE'] || '-')}</td>
                         <td>
-                            <div style="max-width: 420px; font-size: 0.82rem; color: #cbd5e1; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
-                                ${escHtml(itemResumo)}
-                            </div>
+                            <div class="desc-text" title="${escHtml(itemResumo)}">${escHtml(itemResumo)}</div>
                         </td>
-                        <td>
-                            <span class="status-badge ${classeBadge}">
-                                <i class="fa-solid ${respondida ? 'fa-check' : 'fa-clock'}"></i>
-                                ${escHtml(respTexto)}
-                            </span>
-                        </td>
+                        <td>${statusHtml}</td>
                         <td style="text-align: right;" onclick="event.stopPropagation();">
                             ${!respondida ? `
                                 <button class="btn-responder" onclick="marcarComoRespondida(${idx})">
-                                    <i class="fa-solid fa-check"></i> Marcar Respondida
+                                    <i class="fa-regular fa-circle-check"></i> Marcar Respondida
                                 </button>
-                            ` : `<span style="color: var(--text-muted); font-size: 0.8rem;">Concluída</span>`}
+                            ` : `<span style="color: var(--text-muted); font-size: 0.84rem;">Concluída</span>`}
                         </td>
                     </tr>
                 `;
@@ -604,9 +849,9 @@
                 const val = escHtml(c[chave] || '-').replace(/\n/g, '<br>');
                 const destaque = (chave === 'ITEM' || chave === 'ITENS') ? 'grid-column: span 2;' : '';
                 html += `
-                    <div style="background: #161b22; border: 1px solid #2a3441; padding: 12px; border-radius: 8px; ${destaque}">
-                        <div style="font-size: 0.72rem; color: #8b9eb3; font-weight: 700; text-transform: uppercase; margin-bottom: 5px;">${escHtml(chave)}</div>
-                        <div style="font-size: 0.92rem; color: #f8fafc; word-break: break-word; line-height: 1.4;">${val}</div>
+                    <div style="background: #181d29; border: 1px solid #222938; padding: 12px; border-radius: 8px; ${destaque}">
+                        <div style="font-size: 0.72rem; color: #8b95a5; font-weight: 700; text-transform: uppercase; margin-bottom: 5px;">${escHtml(chave)}</div>
+                        <div style="font-size: 0.92rem; color: #f1f5f9; word-break: break-word; line-height: 1.4;">${val}</div>
                     </div>
                 `;
             }
