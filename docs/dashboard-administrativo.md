@@ -117,6 +117,44 @@ O novo servidor deixa de aceitar identificação pública/forjada do robô e res
 
 Pare os dois processos e reverta o código para versões compatíveis entre si. Preserve .env, JSONs, Excel e backups atuais. Não restaure um JSON antigo como parte automática da reversão de interface. Reverter só o handshake do gerenciador enquanto mantém o Node novo provoca recusa de conexão.
 
+## Dashboards de Sincronização, NFs e Atividade (15/10/2026)
+
+Quatro páginas com a mesma barra no topo e a faixa **Saúde dos serviços**, nesta ordem: Cotações (`dashboard2.html`), Sincronização planilha (`sync.html`), NFs (`nfs.html`) e Atividade (`atividade.html`). O painel admin (`dashboard.html`) tem um atalho para cada uma. Todas são **só leitura**.
+
+### Servidor
+
+`lib/dashboard-fontes.js` usa o mesmo esquema do `lib/dashboard-cotacoes.js`, com as funções `lerSessao` e `autorizarAdmin`, agora exportadas e compartilhadas:
+
+- sessão real e `admin === true`, conferidos no pedido e de novo na entrega;
+- `requestId` correlacionado e tempo limite de 30 s;
+- `clientId` gerado pelo servidor (`painel:<uuid>:<parte>`);
+- **só o socket certo é aceito**: o serviço de NF responde Sync, NFs e o estado de NF; o gerenciador responde os próprios eventos.
+
+| Pedido da tela | Fonte | Comando na fonte |
+|---|---|---|
+| `solicitar_dashboard_sync` | serviço de NF | `comando_sync_planilha_painel` |
+| `solicitar_dashboard_nfs` | serviço de NF | `comando_nf_painel` |
+| `solicitar_dashboard_atividade` | gerenciador + serviço de NF | `comando_eventos` + `comando_eventos_nf` (o portal junta e ordena, até 500) |
+| `solicitar_dashboard_saude` | o próprio `server.js` + serviço de NF | estado dos sockets (conectado/visto em, sem batimento extra) + `comando_sync_nf_estado` |
+
+Fonte offline, erro ou tempo esgotado viram `FONTE_OFFLINE`, `FONTE_ERRO` ou `TEMPO_ESGOTADO`, nunca dados vazios. Na Atividade, a fonte que não respondeu fica marcada e os eventos da outra continuam aparecendo.
+
+### Navegador (`public/dashboard-comum/`)
+
+- `base.js`: barra de navegação, acesso, pedido a cada 60 s, aviso imediato por `planilha_atualizada`, selo "Desatualizado" depois de 3 min sem resposta, animações (contagem só na primeira leitura).
+- `saude.js`: cálculo das cores da faixa. Os números de cotações usam o `dados.js` do dashboard2 (`metrics`), sem regra duplicada.
+- `sync.js` (lógica do painel antigo, visual novo), `nfs.js`, `atividade.js` e `comum.css`.
+- Sem biblioteca de gráfico e sem script inline. Com `prefers-reduced-motion`, nada anima.
+- O dashboard2 mudou o mínimo: barra, faixa e o filtro `?prazo=today|overdue|next7`, que é o link da faixa.
+
+### Homologação (15/10/2026)
+
+- Portal local com um gerenciador falso lendo uma cópia real e o **serviço de NF real** (`cruzar_nf.servico.montar`) lendo a cópia de `sync_nf`.
+- Prints em 1440×1000 e 390×844.
+- Casos testados: fonte offline, gerenciador lento (30 s), conta comum com flags forjadas (inclusive pedido direto pelo socket: `SEM_PERMISSAO`), animação reduzida e selo de desatualizado.
+- Hash da cópia igual antes e depois.
+- Evidências em `.local-dashboard/` (ignorada no git).
+
 ## Estado de publicação
 
 Implementação validada localmente e preparada para revisão por PR em cada repositório, conforme autorização do usuário em 14/10/2026. Os dois pacotes devem entrar na main antes da atualização coordenada. Merge, implantação e homologação no servidor ficam com o usuário; nenhum dado operacional faz parte dos commits.

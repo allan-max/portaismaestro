@@ -3,6 +3,8 @@
   'use strict';
   const D = window.DashboardData;
   const state = { view: 'overview', sellers: [], status: '', deadline: '', from: '', to: '', search: '', sort: 'asc', page: 1, dateMode: 'safe' };
+  const prazoUrl = new URLSearchParams(location.search).get('prazo');   // link da faixa de saúde
+  if (['today', 'overdue', 'next7'].includes(prazoUrl)) Object.assign(state, { deadline: prazoUrl, view: 'quotes' });
   let authorized = false, accessState = 'checking', sourceState = 'loading', sourceError = '', rawRows = [], lastSuccess = null;
   let account = '', socket, requestId = '', sequence = 0, requestTimer, sessionTimer, exporting = false, reloadAfter = false;
   const number = value => Number(value).toLocaleString('pt-BR');

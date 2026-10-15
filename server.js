@@ -15,6 +15,7 @@ const arquivoEnvMaestro = path.join(__dirname, '.env');
 const segredoRoboConfigurado = process.env.ROBO_SECRET ?? (fs.existsSync(arquivoEnvMaestro)
     ? require('dotenv').parse(fs.readFileSync(arquivoEnvMaestro)).ROBO_SECRET : '');
 const { criarDashboardCotacoes } = require('./lib/dashboard-cotacoes');
+const { criarDashboardFontes } = require('./lib/dashboard-fontes');
 
 
 // 🛡️ AIRBAG ANTI-CRASH (Impede o servidor de morrer por erros invisíveis)
@@ -113,6 +114,21 @@ const dashboardCotacoes = criarDashboardCotacoes({
     sessoes: cofreSessoes, io, obterRobo: () => bot_socket_id,
     obterSocket: id => io.sockets.sockets.get(id)
 });
+// Faixa "Saúde dos serviços": quando cada serviço conectou e mandou a última mensagem (sem batimento extra).
+const conexoes = {
+    gerenciador: { online: false, conectado_em: null, visto_em: null, desconectado_em: null },
+    nf: { online: false, conectado_em: null, visto_em: null, desconectado_em: null },
+};
+function marcarConexao(nome, online) {
+    const agora = new Date().toISOString();
+    Object.assign(conexoes[nome], online ? { online: true, conectado_em: agora, visto_em: agora }
+        : { online: false, desconectado_em: agora });
+}
+const dashboardFontes = criarDashboardFontes({
+    sessoes: cofreSessoes, io, obterSocket: id => io.sockets.sockets.get(id),
+    obterRobo: () => bot_socket_id, obterSync: () => sync_socket_id,
+    obterConexoes: () => JSON.parse(JSON.stringify(conexoes))
+});
 
 function notificar_todos(mensagem = null) {
     estado_global.tamanho_fila = fila_respostas.length;
@@ -153,6 +169,15 @@ io.use((socket, next) => {
 
 io.on('connection', (socket) => {
     dashboardCotacoes.conectar(socket);
+    dashboardFontes.conectar(socket);
+    socket.onAny(() => {
+        const nome = socket.id === bot_socket_id ? 'gerenciador' : socket.id === sync_socket_id ? 'nf' : null;
+        if (nome) conexoes[nome].visto_em = new Date().toISOString();
+    });
+    // Respostas das fontes para os dashboards (Sync, NFs, Atividade): só o socket certo é aceito.
+    for (const evento of ['retorno_sync_planilha_painel', 'retorno_nf_painel', 'retorno_eventos_nf', 'retorno_eventos']) {
+        socket.on(evento, (dados = {}) => dashboardFontes.receber(evento, socket.id, dados));
+    }
 
     // Cancelar Evento da Fila
     socket.on('remover_da_fila', (dados) => {
@@ -179,7 +204,7 @@ io.on('connection', (socket) => {
 
     socket.on('sou_o_robo', () => {
         if (!socket.isBot) return socket.emit('robo_recusado', { erro: 'Identificação de serviço inválida.' });
-        bot_socket_id = socket.id;
+        bot_socket_id = socket.id; marcarConexao('gerenciador', true);
         socket.autenticado = true; socket.join('backend');
         console.log("🤖 Robô Local Conectado.");
         io.emit('sincronizar_estado', { estado: estado_global, mensagem: "Robô operacional e conectado!" });
@@ -435,12 +460,13 @@ io.on('connection', (socket) => {
         for (let email in usuarios_logados) {
             if (usuarios_logados[email] === socket.id) delete usuarios_logados[email];
         }
+        dashboardFontes.limparCliente(socket.id);
         if (socket.id === bot_socket_id) {
-            bot_socket_id = null;
+            bot_socket_id = null; marcarConexao('gerenciador', false);
             console.log("❌ Ligação com o Robô Local perdida.");
         }
         if (socket.id === sync_socket_id) {
-            sync_socket_id = null;
+            sync_socket_id = null; marcarConexao('nf', false);
             console.log("❌ Serviço de NF desconectado.");
         }
     });
@@ -670,7 +696,7 @@ io.on('connection', (socket) => {
             socket.emit('sync_nf_recusado', {});
             return socket.disconnect(true);
         }
-        sync_socket_id = socket.id;
+        sync_socket_id = socket.id; marcarConexao('nf', true);
         console.log("🧾 Serviço de NF conectado.");
     });
 
@@ -702,6 +728,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('retorno_sync_nf_estado', (dados = {}) => {
+        if (dashboardFontes.receber('retorno_sync_nf_estado', socket.id, dados)) return;   // faixa de saúde
         if (socket.id === sync_socket_id && dados.clientId) io.to(dados.clientId).emit('retorno_sync_nf_estado', dados);
     });
 
