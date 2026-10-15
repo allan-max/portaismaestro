@@ -492,13 +492,11 @@
         </nav>
 
         <!-- Cards de Resumo -->
-        <div class="kpi-grid">
-            <div class="kpi-card active-filter" id="kpi-todas" onclick="setFiltroStatus('todas')">
+        <div class="kpi-card" id="kpi-hoje" onclick="setFiltroStatus('hoje')">
                 <div class="kpi-header">
-                    <span class="kpi-title kpi-title-pill">Total Atribuídas a Você</span>
-                    <i class="fa-regular fa-clone kpi-icon-small"></i>
+                    <span class="kpi-title kpi-title-pill">Vencem HOJE</span>
                 </div>
-                <div class="kpi-value" id="count-total" style="color: #ffffff;">0</div>
+                <div class="kpi-value" id="count-hoje" style="color: var(--accent-amber);">0</div>
             </div>
 
             <div class="kpi-card" id="kpi-pendentes" onclick="setFiltroStatus('pendentes')">
@@ -687,11 +685,11 @@
         function atualizarContadores() {
             const total = todasCotacoes.length;
             const resp = todasCotacoes.filter(c => isRespondida(c)).length;
-            const pend = total - resp;
+            const vencemHoje = todasCotacoes.filter(c => calcularPrioridadeVencimento(c).diffDias === 0).length;
 
             document.getElementById('count-total').innerText = total;
             document.getElementById('count-respondidas').innerText = resp;
-            document.getElementById('count-pendentes').innerText = pend;
+            document.getElementById('count-hoje').innerText = vencemHoje;
         }
 
         function setFiltroStatus(status) {
