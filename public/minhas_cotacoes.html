@@ -11,15 +11,15 @@
 
     <style>
         :root {
-            --bg-body: #0b0e14;
-            --bg-surface: #121620;
-            --bg-surface-hover: #171c28;
-            --bg-header-row: #181d29;
+            --bg-body: #0b0f17;
+            --bg-surface: #141a26;
+            --bg-surface-hover: #182030;
+            --bg-header-row: #141a26;
             --text-main: #f1f5f9;
             --text-muted: #8b95a5;
             --text-dim: #64748b;
-            --border-color: #222938;
-            --accent-amber: #d99b26;
+            --border-color: #1f2738;
+            --accent-amber: #e5a43b;
             --accent-green: #10b981;
             --accent-blue: #38bdf8;
         }
@@ -40,7 +40,7 @@
         .page-wrapper {
             max-width: 1440px;
             margin: 0 auto;
-            padding: 24px 40px 80px 40px;
+            padding: 28px 48px 80px 48px;
         }
 
         /* Top Header */
@@ -48,7 +48,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding-bottom: 28px;
+            padding-bottom: 24px;
             flex-wrap: wrap;
             gap: 16px;
         }
@@ -56,46 +56,44 @@
         .brand-area {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 12px;
         }
 
         .brand-logo {
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 34px;
-            height: 34px;
         }
 
         .brand-title {
-            font-size: 1.65rem;
+            font-size: 1.5rem;
             font-weight: 600;
             color: var(--text-main);
-            letter-spacing: -0.4px;
+            letter-spacing: -0.3px;
         }
 
         .vendedor-badge {
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(255, 255, 255, 0.02);
             color: var(--text-muted);
-            border: 1px solid var(--border-color);
-            padding: 6px 14px;
-            border-radius: 999px;
-            font-size: 0.82rem;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            padding: 5px 14px;
+            border-radius: 9999px;
+            font-size: 0.84rem;
             font-weight: 500;
-            margin-left: 4px;
+            margin-left: 2px;
         }
 
         .nav-actions {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
         }
 
         .btn-top {
-            background: var(--bg-surface);
+            background: transparent;
             border: 1px solid var(--border-color);
             color: var(--text-main);
-            padding: 9px 16px;
+            padding: 8px 16px;
             border-radius: 8px;
             font-size: 0.88rem;
             font-weight: 500;
@@ -108,8 +106,8 @@
         }
 
         .btn-top i {
-            color: var(--text-muted);
-            font-size: 0.85rem;
+            color: var(--text-main);
+            font-size: 0.88rem;
         }
 
         .btn-top:hover {
@@ -129,7 +127,7 @@
             color: var(--text-muted);
             font-weight: 600;
             font-size: 0.85rem;
-            margin-left: 4px;
+            margin-left: 2px;
             overflow: hidden;
         }
 
@@ -138,7 +136,7 @@
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 18px;
-            margin-bottom: 22px;
+            margin-bottom: 24px;
         }
 
         @media (max-width: 900px) {
@@ -150,12 +148,12 @@
         .kpi-card {
             background: var(--bg-surface);
             border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 20px 24px;
+            border-radius: 12px;
+            padding: 22px 24px;
             cursor: pointer;
             transition: border-color 0.2s, background 0.2s;
             position: relative;
-            min-height: 120px;
+            min-height: 125px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -163,10 +161,11 @@
 
         .kpi-card:hover {
             background: var(--bg-surface-hover);
+            border-color: #2e3a4e;
         }
 
         .kpi-card.active-filter {
-            border-color: #364156;
+            border-color: #2b394e;
         }
 
         .kpi-header {
@@ -181,25 +180,26 @@
             font-weight: 500;
         }
 
-        .kpi-card.active-filter .kpi-title-pill {
-            background: rgba(255, 255, 255, 0.06);
+        .kpi-title-pill {
+            background: rgba(255, 255, 255, 0.05);
             padding: 4px 10px;
             border-radius: 6px;
-            color: #cbd5e1;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-weight: 500;
         }
 
         .kpi-icon-small {
-            color: var(--text-muted);
-            font-size: 0.95rem;
-            opacity: 0.7;
+            color: var(--text-dim);
+            font-size: 1.05rem;
         }
 
         .kpi-value {
-            font-size: 2.6rem;
+            font-size: 3.1rem;
             font-weight: 500;
-            line-height: 1.1;
-            margin-top: 10px;
-            letter-spacing: -1px;
+            line-height: 1;
+            margin-top: 14px;
+            letter-spacing: -0.5px;
         }
 
         /* Toolbar (Search & Sort) */
@@ -217,7 +217,8 @@
             background: var(--bg-surface);
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            padding: 11px 16px;
+            height: 44px;
+            padding: 0 16px;
             display: flex;
             align-items: center;
             gap: 12px;
@@ -246,16 +247,17 @@
             background: var(--bg-surface);
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            padding: 0 14px;
+            height: 44px;
+            padding: 0 16px;
             display: flex;
             align-items: center;
-            height: 42px;
-            font-size: 0.88rem;
+            gap: 8px;
+            cursor: pointer;
         }
 
         .sort-label {
             color: var(--text-dim);
-            margin-right: 4px;
+            font-size: 0.88rem;
             white-space: nowrap;
         }
 
@@ -267,7 +269,9 @@
             font-family: 'Inter', sans-serif;
             outline: none;
             cursor: pointer;
-            padding-right: 6px;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
         }
 
         .filter-select option {
@@ -277,10 +281,11 @@
 
         /* Section Heading */
         .section-title {
-            font-size: 1.25rem;
+            font-size: 1.35rem;
             font-weight: 600;
             color: var(--text-main);
-            margin: 0 0 14px 0;
+            margin: 24px 0 16px 0;
+            letter-spacing: -0.3px;
         }
 
         /* Unified Table Card */
@@ -298,20 +303,20 @@
         }
 
         .modern-table thead tr {
-            background: var(--bg-header-row);
+            background: var(--bg-surface);
             border-bottom: 1px solid var(--border-color);
         }
 
         .modern-table th {
-            color: var(--text-muted);
+            color: var(--text-dim);
             font-weight: 500;
-            font-size: 0.82rem;
-            padding: 13px 20px;
+            font-size: 0.84rem;
+            padding: 14px 20px;
             text-align: left;
         }
 
         .modern-table tbody tr {
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 1px solid #1a2230;
             transition: background 0.15s ease;
         }
 
@@ -324,49 +329,52 @@
         }
 
         .modern-table td {
-            padding: 18px 20px;
+            padding: 16px 20px;
             vertical-align: middle;
-            font-size: 0.92rem;
+            font-size: 0.9rem;
             color: var(--text-main);
         }
 
         /* Table Cells Formatting */
         .cota-id {
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: 0.92rem;
             color: var(--text-main);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            margin-bottom: 4px;
+            max-width: 210px;
+            margin-bottom: 3px;
         }
 
         .cota-sub {
-            font-size: 0.8rem;
+            font-size: 0.78rem;
             color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 210px;
+            line-height: 1.35;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
-            overflow: hidden;
-            line-height: 1.35;
         }
 
         .venc-wrapper {
             display: flex;
             align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
+            gap: 6px;
         }
 
         .venc-date {
             color: var(--text-main);
-            font-size: 0.92rem;
+            font-size: 0.9rem;
         }
 
         .venc-sub {
             display: block;
             color: var(--text-muted);
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             margin-top: 2px;
         }
 
@@ -374,27 +382,29 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            background: rgba(255, 255, 255, 0.07);
+            background: rgba(255, 255, 255, 0.08);
             color: #94a3b8;
-            width: 24px;
-            height: 22px;
-            border-radius: 5px;
-            font-size: 0.72rem;
+            width: 20px;
+            height: 18px;
+            border-radius: 4px;
+            font-size: 0.68rem;
+            margin-left: 2px;
         }
 
         .desc-text {
-            color: #dce3ec;
-            font-size: 0.92rem;
+            color: #cbd5e1;
+            font-size: 0.88rem;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            max-width: 340px;
         }
 
         /* Status Pills */
         .status-badge {
             display: inline-flex;
             align-items: center;
-            gap: 7px;
+            gap: 6px;
             padding: 5px 12px;
             border-radius: 999px;
             font-size: 0.82rem;
@@ -403,7 +413,7 @@
 
         .status-badge.pend-amber {
             background: rgba(217, 155, 38, 0.16);
-            color: #eab308;
+            color: #d5a453;
         }
 
         .status-badge.pend-amber .dot {
@@ -425,10 +435,10 @@
 
         /* Action Button */
         .btn-responder {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid #2e374a;
-            color: #dce3ec;
-            padding: 8px 14px;
+            background: transparent;
+            border: 1px solid #23303e;
+            color: var(--text-main);
+            padding: 7px 14px;
             border-radius: 8px;
             font-size: 0.84rem;
             font-weight: 500;
@@ -438,15 +448,16 @@
             gap: 8px;
             transition: all 0.2s;
             font-family: 'Inter', sans-serif;
+            white-space: nowrap;
         }
 
         .btn-responder i {
             color: var(--text-muted);
-            font-size: 0.9rem;
+            font-size: 0.92rem;
         }
 
         .btn-responder:hover {
-            background: rgba(16, 185, 129, 0.15);
+            background: rgba(16, 185, 129, 0.12);
             border-color: rgba(16, 185, 129, 0.5);
             color: #34d399;
         }
@@ -463,9 +474,10 @@
         <nav class="top-navbar">
             <div class="brand-area">
                 <div class="brand-logo">
-                    <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="4" y="8" width="10" height="20" rx="3" fill="#0ea5e9"/>
-                        <rect x="16" y="4" width="10" height="14" rx="3" fill="#38bdf8"/>
+                    <svg width="26" height="28" viewBox="0 0 26 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="0" y="10" width="9.5" height="18" rx="4.5" fill="#38bdf8"/>
+                        <path d="M12.5 4.5C12.5 2.01 14.51 0 17 0H17.5C19.99 0 22 2.01 22 4.5V11.5L12.5 18V4.5Z" fill="#7dd3fc"/>
+                        <path d="M12.5 20L22 13.5V23.5C22 25.99 19.99 28 17.5 28H17C14.51 28 12.5 25.99 12.5 23.5V20Z" fill="#074051"/>
                     </svg>
                 </div>
                 <span class="brand-title">Minhas Cotações</span>
@@ -492,23 +504,25 @@
         </nav>
 
         <!-- Cards de Resumo -->
-        <div class="kpi-card" id="kpi-hoje" onclick="setFiltroStatus('hoje')">
+        <div class="kpi-grid">
+            <div class="kpi-card active-filter" id="kpi-todas" onclick="setFiltroStatus('todas')">
                 <div class="kpi-header">
-                    <span class="kpi-title kpi-title-pill">Vencem HOJE</span>
+                    <span class="kpi-title-pill">Total Atribuídas a Você</span>
+                    <i class="fa-regular fa-clone kpi-icon-small"></i>
                 </div>
-                <div class="kpi-value" id="count-hoje" style="color: var(--accent-amber);">0</div>
+                <div class="kpi-value" id="count-total" style="color: #ffffff;">0</div>
             </div>
 
             <div class="kpi-card" id="kpi-pendentes" onclick="setFiltroStatus('pendentes')">
                 <div class="kpi-header">
-                    <span class="kpi-title kpi-title-pill">Pendentes / Em Aberto</span>
+                    <span class="kpi-title">Pendentes / Em Aberto</span>
                 </div>
                 <div class="kpi-value" id="count-pendentes" style="color: var(--accent-amber);">0</div>
             </div>
 
             <div class="kpi-card" id="kpi-respondidas" onclick="setFiltroStatus('respondidas')">
                 <div class="kpi-header">
-                    <span class="kpi-title kpi-title-pill">Respondidas</span>
+                    <span class="kpi-title">Respondidas</span>
                 </div>
                 <div class="kpi-value" id="count-respondidas" style="color: var(--accent-green);">0</div>
             </div>
@@ -528,6 +542,7 @@
                     <option value="venc_desc">Vencimento: Mais distantes primeiro</option>
                     <option value="padrao">Mais recentes na planilha</option>
                 </select>
+                <i class="fa-solid fa-chevron-down" style="color: var(--text-dim); font-size: 0.78rem; pointer-events: none;"></i>
             </div>
         </div>
 
@@ -538,12 +553,12 @@
             <table class="modern-table">
                 <thead>
                     <tr>
-                        <th style="width: 19%;">Cotação / ID</th>
-                        <th style="width: 14%;">Vencimento</th>
-                        <th style="width: 14%;">Localidade</th>
-                        <th style="width: 28%;">Descrição</th>
-                        <th style="width: 11%;">Status</th>
-                        <th style="width: 14%; text-align: right;">Ação Rápida</th>
+                        <th style="width: 18%;">Cotação / ID</th>
+                        <th style="width: 13%;">Vencimento</th>
+                        <th style="width: 13%;">Localidade</th>
+                        <th style="width: 29%;">Descrição</th>
+                        <th style="width: 12%;">Status</th>
+                        <th style="width: 15%;">Ação Rápida</th>
                     </tr>
                 </thead>
                 <tbody id="tbody-cotacoes">
@@ -685,17 +700,22 @@
         function atualizarContadores() {
             const total = todasCotacoes.length;
             const resp = todasCotacoes.filter(c => isRespondida(c)).length;
-            const vencemHoje = todasCotacoes.filter(c => calcularPrioridadeVencimento(c).diffDias === 0).length;
+            const pend = total - resp;
 
-            document.getElementById('count-total').innerText = total;
-            document.getElementById('count-respondidas').innerText = resp;
-            document.getElementById('count-hoje').innerText = vencemHoje;
+            const elTotal = document.getElementById('count-total');
+            const elPend = document.getElementById('count-pendentes');
+            const elResp = document.getElementById('count-respondidas');
+
+            if (elTotal) elTotal.innerText = total;
+            if (elPend) elPend.innerText = pend;
+            if (elResp) elResp.innerText = resp;
         }
 
         function setFiltroStatus(status) {
             filtroStatusAtual = status;
             document.querySelectorAll('.kpi-card').forEach(el => el.classList.remove('active-filter'));
-            document.getElementById('kpi-' + status).classList.add('active-filter');
+            const el = document.getElementById('kpi-' + status);
+            if (el) el.classList.add('active-filter');
             aplicarFiltros();
         }
 
@@ -784,8 +804,12 @@
                 let statusHtml = '';
                 if (respondida) {
                     statusHtml = `<span class="status-badge ok">Respondida</span>`;
-                } else if (idx === 0 && infoVenc.diffDias === 0) {
-                    statusHtml = `<span class="status-badge pend-amber"><span class="dot"></span>Pendente</span>`;
+                } else if (infoVenc.diffDias === 0) {
+                    if (idx === 0) {
+                        statusHtml = `<span class="status-badge pend-amber"><span class="dot"></span>Pendente</span>`;
+                    } else {
+                        statusHtml = `<span class="status-badge pend-amber">Pendente</span>`;
+                    }
                 } else {
                     statusHtml = `<span class="status-badge pend-green">Pendente</span>`;
                 }
@@ -794,7 +818,7 @@
                     <tr onclick="abrirDetalhes(${idx})" style="cursor: pointer;">
                         <td>
                             <div class="cota-id" title="#${escHtml(c['COTAÇÃO'] || '-')}">#${escHtml(c['COTAÇÃO'] || '-')}</div>
-                            ${subtituloId ? `<div class="cota-sub">${subtituloId}</div>` : ''}
+                            ${subtituloId ? `<div class="cota-sub" title="${subtituloId}">${subtituloId}</div>` : ''}
                         </td>
                         <td>${renderizarVencimento(c, idx)}</td>
                         <td>${escHtml(c['LOCALIDADE'] || '-')}</td>
@@ -802,7 +826,7 @@
                             <div class="desc-text" title="${escHtml(itemResumo)}">${escHtml(itemResumo)}</div>
                         </td>
                         <td>${statusHtml}</td>
-                        <td style="text-align: right;" onclick="event.stopPropagation();">
+                        <td onclick="event.stopPropagation();">
                             ${!respondida ? `
                                 <button class="btn-responder" onclick="marcarComoRespondida(${idx})">
                                     <i class="fa-regular fa-circle-check"></i> Marcar Respondida
