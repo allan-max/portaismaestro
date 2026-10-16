@@ -519,6 +519,46 @@
             color: #34d399;
         }
 
+        /* Action Button - Exportar para Word (Azul clarinho suave) */
+        .btn-exportar-word {
+            background: rgba(56, 189, 248, 0.12);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            color: #7dd3fc;
+            padding: 6px 13px;
+            border-radius: 8px;
+            font-size: 0.83rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            transition: all 0.2s ease;
+            font-family: 'Inter', sans-serif;
+            white-space: nowrap;
+        }
+
+        .btn-exportar-word i {
+            color: #38bdf8;
+            font-size: 0.92rem;
+            transition: color 0.2s ease;
+        }
+
+        .btn-exportar-word:hover {
+            background: rgba(56, 189, 248, 0.22);
+            border-color: rgba(56, 189, 248, 0.65);
+            color: #ffffff;
+            box-shadow: 0 2px 10px rgba(56, 189, 248, 0.22);
+        }
+
+        .btn-exportar-word:hover i {
+            color: #ffffff;
+        }
+
+        .btn-exportar-word:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
         /* Botão de Filtro no Cabeçalho da Tabela */
         .btn-th-filtro {
             background: rgba(255, 255, 255, 0.05);
@@ -882,6 +922,45 @@
             opacity: 0.6;
             cursor: not-allowed;
         }
+
+        .btn-modal-word {
+            background: rgba(56, 189, 248, 0.12);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            color: #7dd3fc;
+            padding: 7px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.82rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            transition: all 0.2s ease;
+            font-family: 'Inter', sans-serif;
+            white-space: nowrap;
+        }
+
+        .btn-modal-word i {
+            color: #38bdf8;
+            font-size: 0.92rem;
+            transition: color 0.2s ease;
+        }
+
+        .btn-modal-word:hover {
+            background: rgba(56, 189, 248, 0.22);
+            border-color: rgba(56, 189, 248, 0.65);
+            color: #ffffff;
+            box-shadow: 0 2px 10px rgba(56, 189, 248, 0.22);
+        }
+
+        .btn-modal-word:hover i {
+            color: #ffffff;
+        }
+
+        .btn-modal-word:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -1022,7 +1101,7 @@
                         </th>
                         <th style="width: 25%;">Descrição</th>
                         <th style="width: 10%;">Status</th>
-                        <th style="width: 12%;">Ação Rápida</th>
+                        <th style="width: 12%;">Exportar Word</th>
                     </tr>
                 </thead>
                 <tbody id="tbody-cotacoes">
@@ -1154,15 +1233,21 @@
             <button onclick="document.getElementById('modal-detalhes').style.display='none'" style="position: absolute; top: 15px; right: 15px; background: none; border: none; color: #8b95a5; font-size: 1.5rem; cursor: pointer;">&times;</button>
             <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #222938; padding-bottom: 12px; margin-right: 35px; flex-wrap: wrap; gap: 10px;">
                 <h2 id="modal-titulo" style="margin: 0; color: #f1f5f9;">Detalhes da Cotação</h2>
-                <button id="btn-exportar-planilha-base" type="button" class="btn-modal-export" onclick="exportarCotacaoModalPlanilhaBase()" title="Exportar esta cotação para a Planilha Base (.xlsx)">
-                    <i class="fa-solid fa-file-excel"></i> Exportar para Planilha Base
-                </button>
+                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <button id="btn-exportar-modal-word" type="button" class="btn-modal-word" onclick="exportarCotacaoModalWord()" title="Exportar esta cotação para Word (.docx) no padrão Coupa">
+                        <i class="fa-solid fa-file-word"></i> Exportar para Word
+                    </button>
+                    <button id="btn-exportar-planilha-base" type="button" class="btn-modal-export" onclick="exportarCotacaoModalPlanilhaBase()" title="Exportar esta cotação para a Planilha Base (.xlsx)">
+                        <i class="fa-solid fa-file-excel"></i> Exportar para Planilha Base
+                    </button>
+                </div>
             </div>
             <div id="modal-corpo" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;"></div>
         </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script src="vendor/jszip.min.js"></script>
     <script src="vendor/exceljs-4.4.0.min.js"></script>
     <script src="vendor/template_planilha_base.js"></script>
     <script>
@@ -1952,7 +2037,8 @@
 
         function renderizarTabela() {
             const tbody = document.getElementById('tbody-cotacoes');
-            if (cotacoesFiltradas.length === 0) {
+            const lista = Array.isArray(window.cotacoesFiltradas) ? window.cotacoesFiltradas : (cotacoesFiltradas || []);
+            if (lista.length === 0) {
                 tbody.innerHTML = `
                     <tr><td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted);">
                         Nenhuma cotação encontrada para este filtro.
@@ -1960,7 +2046,7 @@
                 return;
             }
 
-            tbody.innerHTML = cotacoesFiltradas.map((c, idx) => {
+            tbody.innerHTML = lista.map((c, idx) => {
                 const respondida = isRespondida(c);
                 const infoVenc = calcularPrioridadeVencimento(c);
                 const itemResumo = String(c['ITEM'] || c['ITENS'] || '-').replace(/\s+/g, ' ').trim();
@@ -1997,11 +2083,9 @@
                         </td>
                         <td>${statusHtml}</td>
                         <td onclick="event.stopPropagation();">
-                            ${!respondida ? `
-                                <button class="btn-responder" onclick="marcarComoRespondida(${idx})">
-                                    <i class="fa-regular fa-circle-check"></i> Marcar Respondida
-                                </button>
-                            ` : `<span style="color: var(--text-muted); font-size: 0.84rem;">Concluída</span>`}
+                            <button class="btn-exportar-word" onclick="exportarCotacaoWord(${idx})" title="Exportar cotação #${escHtml(c['COTAÇÃO'] || '')} para Word (.docx)">
+                                <i class="fa-solid fa-file-word"></i> Exportar Word
+                            </button>
                         </td>
                     </tr>
                 `;
@@ -2276,6 +2360,251 @@
             await exportarCotacaoPlanilhaBase(c);
         }
 
+        function escaparXml(s) {
+            if (s === null || s === undefined) return '';
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&apos;');
+        }
+
+        function gerarDocxCotacaoCoupaXml(cotacoes) {
+            const lista = Array.isArray(cotacoes) ? cotacoes : [cotacoes];
+            const paragraphs = [];
+
+            lista.forEach((ev, evIdx) => {
+                if (!ev) return;
+
+                // Separador entre eventos (se houver mais de um, conforme o robô Coupa)
+                if (evIdx > 0) {
+                    paragraphs.push(`    <w:p><w:pPr><w:spacing w:before="200" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:t>____________________________________________________________________________________________________</w:t></w:r></w:p>`);
+                }
+
+                // Alerta de marca bloqueada
+                const bloqueio = ev['marca_bloqueada'] || ev['bloqueado'] || ev['BLOQUEADO'];
+                if (bloqueio) {
+                    paragraphs.push(`    <w:p><w:r><w:rPr><w:b/><w:color w:val="FF0000"/></w:rPr><w:t xml:space="preserve">⚠️ BLOQUEADO: ${escaparXml(bloqueio)}</w:t></w:r></w:p>`);
+                }
+
+                // Cabeçalho: REQ: ... | EVENTO: ... ou COTAÇÃO: #...
+                const reqNum = ev['req_num'] || ev['REQ'] || ev['REQUISICAO'] || '';
+                const numEvento = ev['numero_evento'] || ev['COTAÇÃO'] || ev['COTACAO'] || ev['NUMERO'] || ev['ID'] || '-';
+                let textoEvento = '';
+                if (reqNum) {
+                    textoEvento = `REQ: ${reqNum} | EVENTO: ${numEvento}`;
+                } else {
+                    textoEvento = `COTAÇÃO: #${numEvento}`;
+                }
+                if (ev['tem_anexo'] || ev['anexo']) {
+                    textoEvento += ' *contem anexo*';
+                }
+
+                const dataVenc = ev['data_vencimento'] || ev['VENCIMENTO'] || '-';
+                paragraphs.push(`    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">${escaparXml(textoEvento)}</w:t><w:tab/></w:r><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">VENCIMENTO: </w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>${escaparXml(dataVenc)}</w:t></w:r></w:p>`);
+
+                // Linha de assinaturas padrão Coupa
+                paragraphs.push(`    <w:p><w:r><w:t>RESPONDIDO POR: ______________ CONFERIDO POR: ______________ PRECIFICADO POR:_____________</w:t></w:r></w:p>`);
+
+                // Frete
+                const frete = ev['tipo_frete'] || ev['FRETE'] || ev['LOCALIDADE'] || '-';
+                paragraphs.push(`    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">FRETE: </w:t></w:r><w:r><w:t>${escaparXml(frete)}</w:t></w:r></w:p>`);
+
+                // Itens (separa múltiplos itens caso haja)
+                const itens = (Array.isArray(ev['itens']) && ev['itens'].length)
+                    ? ev['itens']
+                    : (typeof parseItensCotacao === 'function' ? parseItensCotacao(ev) : [{ produto: ev['ITEM'] || '-', quantidade: ev['QUANTIDADE'] || 1 }]);
+                const localEntrega = ev['local_entrega'] || ev['LOCALIDADE'] || '-';
+
+                itens.forEach((it, itIdx) => {
+                    const itemNum = it.item_num || (itIdx + 1);
+                    const titulo = it.titulo && it.titulo !== 'Não' ? it.titulo : '';
+                    const descricao = it.descricao || it.produto || '-';
+
+                    if (titulo) {
+                        paragraphs.push(`    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">ITEM ${itemNum} (Título): </w:t></w:r><w:r><w:t>${escaparXml(titulo)}</w:t></w:r></w:p>`);
+                        paragraphs.push(`    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">DESCRIÇÃO:\n</w:t></w:r><w:r><w:t>${escaparXml(descricao)}</w:t></w:r></w:p>`);
+                    } else {
+                        paragraphs.push(`    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">ITEM ${itemNum}: </w:t></w:r><w:r><w:t>${escaparXml(descricao)}</w:t></w:r></w:p>`);
+                    }
+
+                    const textoItem = it['texto_item'];
+                    if (textoItem && String(textoItem).trim().toLowerCase() !== String(descricao).trim().toLowerCase()) {
+                        paragraphs.push(`    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">TEXTO DO ITEM:\n</w:t></w:r><w:r><w:t>${escaparXml(textoItem)}</w:t></w:r></w:p>`);
+                    }
+
+                    const textoCompra = it['texto_compra'];
+                    if (textoCompra && String(textoCompra).trim().toLowerCase() !== String(descricao).trim().toLowerCase()) {
+                        paragraphs.push(`    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">TEXTO DE COMPRA DO MATERIAL:\n</w:t></w:r><w:r><w:t>${escaparXml(textoCompra)}</w:t></w:r></w:p>`);
+                    }
+
+                    const qtd = it.quantidade !== undefined ? it.quantidade : (ev['QUANTIDADE'] || 1);
+                    const local = it.local_entrega || localEntrega;
+                    paragraphs.push(`    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">QTD: </w:t></w:r><w:r><w:t>${escaparXml(qtd)} - LOCAL: ${escaparXml(local)}</w:t></w:r></w:p>`);
+
+                    paragraphs.push(`    <w:p><w:r><w:t>VALOR DE VENDA: R$ __________________ CUSTO UNIT: R$__________________</w:t></w:r></w:p>`);
+
+                    const marca = it.marca || ev['MARCA'] || ev['MARCAS'] || ev['MARCAS '];
+                    const modelo = it.modelo || ev['MODELO'] || ev['MODELOS'];
+                    if (marca || modelo) {
+                        let info = '';
+                        if (marca && modelo) info = `MARCA: ${marca} | MODELO: ${modelo}`;
+                        else if (marca) info = `MARCA: ${marca}`;
+                        else info = `MODELO: ${modelo}`;
+                        paragraphs.push(`    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">${escaparXml(info)}</w:t></w:r></w:p>`);
+                    }
+
+                    if (it['historico_match'] || ev['historico_match'] || ev['HISTORICO_MATCH']) {
+                        const hist = it['historico_match'] || ev['historico_match'] || ev['HISTORICO_MATCH'];
+                        paragraphs.push(`    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">${escaparXml(hist)}</w:t></w:r></w:p>`);
+                    }
+                });
+            });
+
+            return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+${paragraphs.join('\n')}
+    <w:sectPr>
+      <w:pgSz w:w="11906" w:h="16838"/>
+      <w:pgMar w:top="567" w:right="567" w:bottom="567" w:left="567" w:header="720" w:footer="720" w:gutter="0"/>
+    </w:sectPr>
+  </w:body>
+</w:document>`;
+        }
+
+        async function gerarDocxCotacaoCoupaBlob(cotacoes, options = {}) {
+            const ZipClass = (typeof JSZip !== 'undefined')
+                ? JSZip
+                : (typeof window !== 'undefined' && window.JSZip ? window.JSZip : null);
+
+            if (!ZipClass) {
+                throw new Error('Biblioteca JSZip não encontrada para gerar o documento Word.');
+            }
+
+            const zip = new ZipClass();
+
+            zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+</Types>`);
+
+            zip.file('_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`);
+
+            zip.file('word/_rels/document.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`);
+
+            zip.file('word/styles.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:docDefaults>
+    <w:rPrDefault>
+      <w:rPr>
+        <w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>
+        <w:sz w:val="18"/>
+        <w:szCs w:val="18"/>
+        <w:lang w:val="pt-BR"/>
+      </w:rPr>
+    </w:rPrDefault>
+    <w:pPrDefault>
+      <w:pPr>
+        <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
+      </w:pPr>
+    </w:pPrDefault>
+  </w:docDefaults>
+  <w:style w:type="paragraph" w:default="1" w:styleId="Normal">
+    <w:name w:val="Normal"/>
+    <w:qFormat/>
+    <w:rPr>
+      <w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>
+      <w:sz w:val="18"/>
+      <w:szCs w:val="18"/>
+    </w:rPr>
+    <w:pPr>
+      <w:spacing w:after="0" w:line="240" w:lineRule="auto"/>
+    </w:pPr>
+  </w:style>
+</w:styles>`);
+
+            zip.file('word/document.xml', gerarDocxCotacaoCoupaXml(cotacoes));
+
+            let outputType = options.type;
+            if (!outputType) {
+                if (typeof ZipClass !== 'undefined' && ZipClass.support && ZipClass.support.blob) {
+                    outputType = 'blob';
+                } else if (typeof window !== 'undefined' && typeof Blob !== 'undefined') {
+                    outputType = 'uint8array';
+                } else {
+                    outputType = 'nodebuffer';
+                }
+            }
+
+            const rawData = await zip.generateAsync({
+                type: outputType,
+                mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            });
+
+            if (outputType === 'uint8array' && typeof Blob !== 'undefined') {
+                return new Blob([rawData], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+            }
+            return rawData;
+        }
+
+        async function exportarCotacaoWordCore(cota, btnTrigger) {
+            let origHtml = null;
+            if (btnTrigger) {
+                btnTrigger.disabled = true;
+                origHtml = btnTrigger.innerHTML;
+                btnTrigger.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Word';
+            }
+
+            try {
+                const idCotacao = String(cota['COTAÇÃO'] || cota['COTACAO'] || cota['NUMERO'] || cota['ID'] || 'cotacao')
+                    .replace(/[^a-zA-Z0-9_-]/g, '_') || 'cotacao';
+                const nomeArquivo = `Cotacao_${idCotacao}.docx`;
+
+                const blob = await gerarDocxCotacaoCoupaBlob(cota);
+                baixarBlob(blob, nomeArquivo);
+            } catch (err) {
+                console.error('Erro ao exportar cotação para Word:', err);
+                alert('Não foi possível gerar o documento Word: ' + (err.message || 'Erro desconhecido'));
+            } finally {
+                if (btnTrigger) {
+                    btnTrigger.disabled = false;
+                    if (origHtml) btnTrigger.innerHTML = origHtml;
+                }
+            }
+        }
+
+        async function exportarCotacaoWord(idx) {
+            const base = Array.isArray(window.cotacoesFiltradas) ? window.cotacoesFiltradas : cotacoesFiltradas;
+            const c = (Array.isArray(base) && base[idx]) ? base[idx] : null;
+            if (!c) {
+                alert('Cotação não encontrada.');
+                return;
+            }
+            const btn = (typeof event !== 'undefined' && event && event.currentTarget) ? event.currentTarget : null;
+            await exportarCotacaoWordCore(c, btn);
+        }
+
+        async function exportarCotacaoModalWord() {
+            const c = window.cotacaoModalAtual || cotacaoModalAtual;
+            if (!c) {
+                alert('Nenhuma cotação selecionada para exportar.');
+                return;
+            }
+            const btn = document.getElementById('btn-exportar-modal-word');
+            await exportarCotacaoWordCore(c, btn);
+        }
+
         window.cotacaoModalAtual = cotacaoModalAtual;
         window.extrairQuantidadeNumero = extrairQuantidadeNumero;
         window.extrairLinhasItens = extrairLinhasItens;
@@ -2284,6 +2613,11 @@
         window.obterBufferPlanilhaBase = obterBufferPlanilhaBase;
         window.exportarCotacaoPlanilhaBase = exportarCotacaoPlanilhaBase;
         window.exportarCotacaoModalPlanilhaBase = exportarCotacaoModalPlanilhaBase;
+        window.escaparXml = escaparXml;
+        window.gerarDocxCotacaoCoupaXml = gerarDocxCotacaoCoupaXml;
+        window.gerarDocxCotacaoCoupaBlob = gerarDocxCotacaoCoupaBlob;
+        window.exportarCotacaoWord = exportarCotacaoWord;
+        window.exportarCotacaoModalWord = exportarCotacaoModalWord;
 
         function obterTextoStatus(c) {
             if (isRespondida(c)) return 'Respondida';
