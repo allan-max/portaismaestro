@@ -279,6 +279,59 @@
             color: var(--text-main);
         }
 
+        /* Export Button */
+        .btn-exportar {
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.45);
+            color: #34d399;
+            height: 44px;
+            padding: 0 18px;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .btn-exportar i {
+            color: #10b981;
+            font-size: 0.95rem;
+        }
+
+        .btn-exportar:hover {
+            background: rgba(16, 185, 129, 0.22);
+            border-color: #10b981;
+            color: #6ee7b7;
+            box-shadow: 0 0 14px rgba(16, 185, 129, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .btn-exportar:active {
+            transform: translateY(0);
+        }
+
+        .btn-exportar:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            pointer-events: none;
+            transform: none;
+        }
+
+        .btn-top-export {
+            border-color: rgba(16, 185, 129, 0.35) !important;
+            color: #34d399 !important;
+        }
+
+        .btn-top-export:hover {
+            background: rgba(16, 185, 129, 0.12) !important;
+            border-color: #10b981 !important;
+        }
+
         /* Section Heading */
         .section-title {
             font-size: 1.35rem;
@@ -465,6 +518,236 @@
         .btn-responder:hover i {
             color: #34d399;
         }
+
+        /* Botão de Filtro no Cabeçalho da Tabela */
+        .btn-th-filtro {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-dim);
+            cursor: pointer;
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.74rem;
+            transition: all 0.2s ease;
+            vertical-align: middle;
+        }
+
+        .btn-th-filtro:hover,
+        .btn-th-filtro.active-filter {
+            background: rgba(56, 189, 248, 0.18);
+            border-color: rgba(56, 189, 248, 0.5);
+            color: #38bdf8;
+        }
+
+        .btn-th-filtro.active-filter {
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+        }
+
+        /* Popover de Filtro de Período */
+        .filtro-popover {
+            position: absolute;
+            background: #151b27;
+            border: 1px solid #2b3548;
+            border-radius: 10px;
+            padding: 16px;
+            width: 290px;
+            box-shadow: 0 14px 32px rgba(0, 0, 0, 0.65), 0 2px 8px rgba(0, 0, 0, 0.4);
+            z-index: 10001;
+            font-family: 'Inter', sans-serif;
+            text-align: left;
+        }
+
+        .filtro-popover-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #242e40;
+        }
+
+        .filtro-popover-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+
+        .filtro-popover-title i {
+            color: #38bdf8;
+            font-size: 0.92rem;
+        }
+
+        .filtro-popover-close {
+            background: transparent;
+            border: none;
+            color: #8b95a5;
+            font-size: 1.25rem;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .filtro-popover-close:hover {
+            color: #ffffff;
+        }
+
+        .filtro-popover-presets {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            margin-bottom: 14px;
+        }
+
+        .filtro-preset-btn {
+            background: #1d2536;
+            border: 1px solid #2b3548;
+            border-radius: 6px;
+            color: #cbd5e1;
+            font-size: 0.74rem;
+            font-weight: 500;
+            padding: 6px 2px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.15s ease;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .filtro-preset-btn:hover {
+            background: rgba(56, 189, 248, 0.15);
+            border-color: rgba(56, 189, 248, 0.4);
+            color: #38bdf8;
+        }
+
+        .filtro-campo-grupo {
+            margin-bottom: 12px;
+        }
+
+        .filtro-campo-label {
+            display: block;
+            font-size: 0.78rem;
+            color: #94a3b8;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .filtro-date-input {
+            width: 100%;
+            box-sizing: border-box;
+            background: #0f141e;
+            border: 1px solid #283244;
+            color: #f1f5f9;
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .filtro-date-input:focus {
+            border-color: #38bdf8;
+        }
+
+        .filtro-date-input::-webkit-calendar-picker-indicator {
+            filter: invert(0.8);
+            cursor: pointer;
+        }
+
+        .filtro-popover-footer {
+            display: flex;
+            gap: 8px;
+            margin-top: 14px;
+            padding-top: 10px;
+            border-top: 1px solid #242e40;
+        }
+
+        .btn-filtro-limpar {
+            flex: 1;
+            background: transparent;
+            border: 1px solid #334155;
+            color: #94a3b8;
+            padding: 7px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-filtro-limpar:hover {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.35);
+            color: #f87171;
+        }
+
+        .btn-filtro-aplicar {
+            flex: 1.3;
+            background: #0284c7;
+            border: 1px solid #0284c7;
+            color: #ffffff;
+            padding: 7px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-filtro-aplicar:hover {
+            background: #0369a1;
+            border-color: #0369a1;
+        }
+
+        /* Chip de filtro ativo */
+        .filter-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(56, 189, 248, 0.12);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            color: #38bdf8;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .filter-chip i {
+            font-size: 0.82rem;
+        }
+
+        .btn-clear-chip {
+            background: transparent;
+            border: none;
+            color: #7dd3fc;
+            cursor: pointer;
+            font-size: 1.15rem;
+            line-height: 1;
+            padding: 0 2px;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .btn-clear-chip:hover {
+            color: #ffffff;
+        }
     </style>
 </head>
 <body>
@@ -487,6 +770,9 @@
             <div class="nav-actions">
                 <button class="btn-top" onclick="carregarMinhasCotacoes()">
                     <i class="fa-solid fa-rotate-right"></i> Atualizar
+                </button>
+                <button id="btn-top-exportar" class="btn-top btn-top-export" onclick="exportarMinhasCotacoesExcel()" title="Exportar cotações para Excel">
+                    <i class="fa-solid fa-file-excel"></i> Exportar Excel
                 </button>
                 <a id="btn-nav-planilha" href="planilha_vale.html" class="btn-top" style="display: none;" title="Ver Planilha Geral">
                     <i class="fa-solid fa-table"></i> Planilha Geral
@@ -544,19 +830,38 @@
                 </select>
                 <i class="fa-solid fa-chevron-down" style="color: var(--text-dim); font-size: 0.78rem; pointer-events: none;"></i>
             </div>
+            <button id="btn-exportar-excel" class="btn-exportar" onclick="exportarMinhasCotacoesExcel()" title="Exportar cotações para planilha Excel (.xlsx)">
+                <i class="fa-solid fa-file-excel"></i> Exportar Excel
+            </button>
         </div>
 
         <!-- Título da Seção + Tabela Unificada -->
-        <h2 class="section-title">Cotações</h2>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 24px 0 16px 0; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <h2 class="section-title" style="margin: 0;">Cotações</h2>
+                <div id="chip-filtro-periodo" class="filter-chip" style="display: none;">
+                    <i class="fa-regular fa-calendar-days"></i>
+                    <span>Vencimento: <strong id="texto-filtro-periodo"></strong></span>
+                    <button type="button" class="btn-clear-chip" onclick="limparFiltroPeriodo(event)" title="Remover filtro de data">&times;</button>
+                </div>
+            </div>
+        </div>
 
         <div class="table-card">
             <table class="modern-table">
                 <thead>
                     <tr>
                         <th style="width: 18%;">Cotação / ID</th>
-                        <th style="width: 13%;">Vencimento</th>
+                        <th style="width: 14%; cursor: pointer; user-select: none;" id="th-vencimento" onclick="toggleMenuFiltroVencimento(event)" title="Clique para filtrar por data de vencimento">
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                                <span>Vencimento</span>
+                                <button type="button" id="btn-filtro-vencimento" class="btn-th-filtro" onclick="toggleMenuFiltroVencimento(event)" title="Filtrar por período de vencimento">
+                                    <i class="fa-solid fa-filter"></i>
+                                </button>
+                            </div>
+                        </th>
                         <th style="width: 13%;">Localidade</th>
-                        <th style="width: 29%;">Descrição</th>
+                        <th style="width: 28%;">Descrição</th>
                         <th style="width: 12%;">Status</th>
                         <th style="width: 15%;">Ação Rápida</th>
                     </tr>
@@ -572,6 +877,44 @@
         </div>
     </div>
 
+    <!-- Menu Popover Filtro de Vencimento -->
+    <div id="menu-filtro-periodo" class="filtro-popover" style="display: none;" onclick="event.stopPropagation();">
+        <div class="filtro-popover-header">
+            <div class="filtro-popover-title">
+                <i class="fa-regular fa-calendar-days"></i>
+                <span>Filtrar Vencimento</span>
+            </div>
+            <button type="button" class="filtro-popover-close" onclick="fecharMenuFiltroPeriodo()">&times;</button>
+        </div>
+
+        <div class="filtro-popover-presets">
+            <button type="button" class="filtro-preset-btn" onclick="setPresetPeriodo('hoje')">Hoje</button>
+            <button type="button" class="filtro-preset-btn" onclick="setPresetPeriodo('7dias')">7 dias</button>
+            <button type="button" class="filtro-preset-btn" onclick="setPresetPeriodo('15dias')">15 dias</button>
+            <button type="button" class="filtro-preset-btn" onclick="setPresetPeriodo('mes')">Mês</button>
+        </div>
+
+        <div class="filtro-popover-body">
+            <div class="filtro-campo-grupo">
+                <label for="filtro-venc-inicio" class="filtro-campo-label">Data de Início:</label>
+                <input type="date" id="filtro-venc-inicio" class="filtro-date-input" onkeydown="if(event.key==='Enter') aplicarFiltroPeriodo()">
+            </div>
+            <div class="filtro-campo-grupo">
+                <label for="filtro-venc-fim" class="filtro-campo-label">Data Final:</label>
+                <input type="date" id="filtro-venc-fim" class="filtro-date-input" onkeydown="if(event.key==='Enter') aplicarFiltroPeriodo()">
+            </div>
+        </div>
+
+        <div class="filtro-popover-footer">
+            <button type="button" class="btn-filtro-limpar" onclick="limparFiltroPeriodo(event)">
+                <i class="fa-solid fa-eraser"></i> Limpar
+            </button>
+            <button type="button" class="btn-filtro-aplicar" onclick="aplicarFiltroPeriodo()">
+                <i class="fa-solid fa-check"></i> Aplicar
+            </button>
+        </div>
+    </div>
+
     <!-- Modal de Detalhes da Cotação -->
     <div id="modal-detalhes" style="position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: none; align-items: center; justify-content: center; z-index: 99999;">
         <div style="background: #121620; border: 1px solid #222938; border-radius: 12px; padding: 25px; width: 90%; max-width: 850px; max-height: 88vh; overflow-y: auto; position: relative;">
@@ -582,6 +925,7 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script src="vendor/exceljs-4.4.0.min.js"></script>
     <script>
         const sessionAtual = localStorage.getItem('maestro_session');
         const vendedorLogado = (localStorage.getItem('maestro_vendedor') || '').trim();
@@ -622,6 +966,8 @@
 
         let todasCotacoes = [];
         let cotacoesFiltradas = [];
+        window.todasCotacoes = todasCotacoes;
+        window.cotacoesFiltradas = cotacoesFiltradas;
         let filtroStatusAtual = 'todas';
 
         function escHtml(v) {
@@ -643,8 +989,29 @@
             return (resp.includes('RESPONDID')) && !resp.includes('NÃO') && !resp.includes('NAO');
         }
 
+        window.filtroPeriodoAtivo = { inicio: null, fim: null, strInicio: '', strFim: '' };
+
+        function formatarDataBr(isoStr) {
+            if (!isoStr) return '';
+            const partes = String(isoStr).split('-');
+            if (partes.length !== 3) return isoStr;
+            return `${partes[2]}/${partes[1]}/${partes[0]}`;
+        }
+
         function parseDataVenc(valor) {
-            const match = String(valor || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+            if (!valor) return null;
+            const str = String(valor).trim();
+
+            const isoMatch = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (isoMatch) {
+                const yr = Number(isoMatch[1]), m = Number(isoMatch[2]), d = Number(isoMatch[3]);
+                const dt = new Date(yr, m - 1, d);
+                dt.setHours(0, 0, 0, 0);
+                if (dt.getFullYear() !== yr || dt.getMonth() !== m - 1 || dt.getDate() !== d) return null;
+                return dt.getTime();
+            }
+
+            const match = str.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
             if (!match) return null;
             const p1 = Number(match[1]), p2 = Number(match[2]), yr = Number(match[3]);
             const d = p2 > 12 ? p2 : p1;
@@ -653,6 +1020,168 @@
             dt.setHours(0, 0, 0, 0);
             if (dt.getFullYear() !== yr || dt.getMonth() !== m - 1 || dt.getDate() !== d) return null;
             return dt.getTime();
+        }
+
+        function toggleMenuFiltroVencimento(event) {
+            if (event) {
+                event.stopPropagation();
+            }
+            const menu = document.getElementById('menu-filtro-periodo');
+            if (!menu) return;
+
+            if (menu.style.display === 'block') {
+                fecharMenuFiltroPeriodo();
+                return;
+            }
+
+            const th = document.getElementById('th-vencimento') || (event && event.currentTarget);
+            if (th && typeof th.getBoundingClientRect === 'function') {
+                const rect = th.getBoundingClientRect();
+                const menuWidth = 290;
+                let left = rect.left + (window.scrollX || 0);
+                if (typeof window !== 'undefined' && window.innerWidth && (left + menuWidth > window.innerWidth - 10)) {
+                    left = Math.max(10, window.innerWidth - menuWidth - 15);
+                }
+                menu.style.top = `${rect.bottom + (window.scrollY || 0) + 6}px`;
+                menu.style.left = `${left}px`;
+            }
+            menu.style.display = 'block';
+        }
+
+        function fecharMenuFiltroPeriodo() {
+            const menu = document.getElementById('menu-filtro-periodo');
+            if (menu) menu.style.display = 'none';
+        }
+
+        function setPresetPeriodo(preset) {
+            const hoje = new Date();
+            const formatarYmd = d => {
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            };
+
+            const inputIni = document.getElementById('filtro-venc-inicio');
+            const inputFim = document.getElementById('filtro-venc-fim');
+            if (!inputIni || !inputFim) return;
+
+            if (preset === 'hoje') {
+                const hojeStr = formatarYmd(hoje);
+                inputIni.value = hojeStr;
+                inputFim.value = hojeStr;
+            } else if (preset === '7dias') {
+                inputIni.value = formatarYmd(hoje);
+                const d7 = new Date(hoje);
+                d7.setDate(d7.getDate() + 7);
+                inputFim.value = formatarYmd(d7);
+            } else if (preset === '15dias') {
+                inputIni.value = formatarYmd(hoje);
+                const d15 = new Date(hoje);
+                d15.setDate(d15.getDate() + 15);
+                inputFim.value = formatarYmd(d15);
+            } else if (preset === 'mes') {
+                const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+                const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+                inputIni.value = formatarYmd(primeiroDia);
+                inputFim.value = formatarYmd(ultimoDia);
+            }
+        }
+
+        function aplicarFiltroPeriodo() {
+            const inputIni = document.getElementById('filtro-venc-inicio');
+            const inputFim = document.getElementById('filtro-venc-fim');
+            const valInicio = inputIni ? inputIni.value : '';
+            const valFim = inputFim ? inputFim.value : '';
+
+            let tInicio = null;
+            let tFim = null;
+
+            if (valInicio) {
+                const [ano, mes, dia] = valInicio.split('-').map(Number);
+                const dt = new Date(ano, mes - 1, dia);
+                dt.setHours(0, 0, 0, 0);
+                tInicio = dt.getTime();
+            }
+
+            if (valFim) {
+                const [ano, mes, dia] = valFim.split('-').map(Number);
+                const dt = new Date(ano, mes - 1, dia);
+                dt.setHours(23, 59, 59, 999);
+                tFim = dt.getTime();
+            }
+
+            if (tInicio !== null && tFim !== null && tInicio > tFim) {
+                alert('A data final não pode ser anterior à data inicial.');
+                return;
+            }
+
+            window.filtroPeriodoAtivo = {
+                inicio: tInicio,
+                fim: tFim,
+                strInicio: valInicio,
+                strFim: valFim
+            };
+
+            fecharMenuFiltroPeriodo();
+            atualizarIndicadorFiltroPeriodo();
+            aplicarFiltros();
+        }
+
+        function limparFiltroPeriodo(event) {
+            if (event) {
+                event.stopPropagation();
+            }
+            const inputIni = document.getElementById('filtro-venc-inicio');
+            const inputFim = document.getElementById('filtro-venc-fim');
+            if (inputIni) inputIni.value = '';
+            if (inputFim) inputFim.value = '';
+
+            window.filtroPeriodoAtivo = { inicio: null, fim: null, strInicio: '', strFim: '' };
+
+            fecharMenuFiltroPeriodo();
+            atualizarIndicadorFiltroPeriodo();
+            aplicarFiltros();
+        }
+
+        function atualizarIndicadorFiltroPeriodo() {
+            const ativo = window.filtroPeriodoAtivo && (window.filtroPeriodoAtivo.inicio !== null || window.filtroPeriodoAtivo.fim !== null);
+            const btnFiltro = document.getElementById('btn-filtro-vencimento');
+            const chip = document.getElementById('chip-filtro-periodo');
+            const textoChip = document.getElementById('texto-filtro-periodo');
+
+            if (btnFiltro) {
+                if (btnFiltro.classList) {
+                    if (ativo) {
+                        btnFiltro.classList.add('active-filter');
+                    } else {
+                        btnFiltro.classList.remove('active-filter');
+                    }
+                }
+                if (typeof btnFiltro.setAttribute === 'function') {
+                    btnFiltro.setAttribute('title', ativo ? 'Filtro de período ativo (clique para alterar)' : 'Filtrar por período de vencimento');
+                }
+            }
+
+            if (chip && textoChip) {
+                if (ativo) {
+                    const strIniBr = formatarDataBr(window.filtroPeriodoAtivo.strInicio);
+                    const strFimBr = formatarDataBr(window.filtroPeriodoAtivo.strFim);
+                    let label = '';
+                    if (strIniBr && strFimBr) {
+                        label = `${strIniBr} até ${strFimBr}`;
+                    } else if (strIniBr) {
+                        label = `A partir de ${strIniBr}`;
+                    } else if (strFimBr) {
+                        label = `Até ${strFimBr}`;
+                    }
+                    textoChip.innerText = label;
+                    chip.style.display = 'inline-flex';
+                } else {
+                    chip.style.display = 'none';
+                    textoChip.innerText = '';
+                }
+            }
         }
 
         function getHojeMeiaNoite() {
@@ -692,6 +1221,7 @@
                 const tVenc = parseDataVenc(c['VENCIMENTO']);
                 return tVenc !== null && tVenc >= hoje;
             });
+            window.todasCotacoes = todasCotacoes;
 
             atualizarContadores();
             aplicarFiltros();
@@ -720,13 +1250,24 @@
         }
 
         function aplicarFiltros() {
-            const busca = document.getElementById('input-busca').value.trim().toLowerCase();
-            const ordem = document.getElementById('select-ordem').value;
+            const inputBusca = document.getElementById('input-busca');
+            const selectOrdem = document.getElementById('select-ordem');
+            const busca = (inputBusca ? inputBusca.value : '').trim().toLowerCase();
+            const ordem = selectOrdem ? selectOrdem.value : 'prioridade';
 
-            cotacoesFiltradas = todasCotacoes.filter(c => {
+            const base = Array.isArray(window.todasCotacoes) ? window.todasCotacoes : todasCotacoes;
+            cotacoesFiltradas = base.filter(c => {
                 if (filtroStatusAtual === 'hoje' && calcularPrioridadeVencimento(c).diffDias !== 0) return false;
                 if (filtroStatusAtual === 'pendentes' && isRespondida(c)) return false;
                 if (filtroStatusAtual === 'respondidas' && !isRespondida(c)) return false;
+
+                // Filtro de Vencimento por Período
+                if (window.filtroPeriodoAtivo && (window.filtroPeriodoAtivo.inicio !== null || window.filtroPeriodoAtivo.fim !== null)) {
+                    const tVenc = parseDataVenc(c['VENCIMENTO']);
+                    if (tVenc === null) return false;
+                    if (window.filtroPeriodoAtivo.inicio !== null && tVenc < window.filtroPeriodoAtivo.inicio) return false;
+                    if (window.filtroPeriodoAtivo.fim !== null && tVenc > window.filtroPeriodoAtivo.fim) return false;
+                }
 
                 if (busca) {
                     return Object.values(c).some(v => String(v || '').toLowerCase().includes(busca));
@@ -751,6 +1292,7 @@
                 });
             }
 
+            window.cotacoesFiltradas = cotacoesFiltradas;
             renderizarTabela();
         }
 
@@ -882,9 +1424,231 @@
             document.getElementById('modal-detalhes').style.display = 'flex';
         }
 
+        function obterTextoStatus(c) {
+            if (isRespondida(c)) return 'Respondida';
+            const info = calcularPrioridadeVencimento(c);
+            if (info.diffDias === 0) return 'Pendente (Vence Hoje)';
+            if (info.diffDias === 1) return 'Pendente (Vence Amanhã)';
+            if (info.diffDias > 1 && info.diffDias <= 7) return `Pendente (Em ${info.diffDias}d)`;
+            if (info.diffDias !== null && info.diffDias < 0) return 'Vencida';
+            return 'Pendente';
+        }
+
+        function baixarBlob(blob, nomeArquivo) {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = nomeArquivo;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1500);
+        }
+
+        function exportarCsvFallback(registros, nomeArquivo) {
+            const colunas = ['COTAÇÃO', 'STATUS', 'VENCIMENTO', 'LOCALIDADE', 'ITEM', 'QUANTIDADE', 'MODELOS', 'MARCAS', 'RESPOSTA', 'VENDEDOR'];
+            const linhas = [colunas.join(';')];
+
+            registros.forEach(r => {
+                const valores = [
+                    r['COTAÇÃO'] ?? '',
+                    obterTextoStatus(r),
+                    r['VENCIMENTO'] ?? '',
+                    r['LOCALIDADE'] ?? '',
+                    (r['ITEM'] || r['ITENS'] || '').replace(/\r?\n/g, ' '),
+                    r['QUANTIDADE'] || r['QTD'] || '',
+                    r['MODELOS'] || r['MODELO'] || '',
+                    r['MARCAS '] || r['MARCAS'] || r['MARCA'] || '',
+                    r['RESPOSTA'] ?? '',
+                    r['VENDEDOR'] ?? ''
+                ];
+                const linhaEscapada = valores.map(v => {
+                    const s = String(v ?? '').replace(/"/g, '""');
+                    return /[;"\n]/.test(s) ? `"${s}"` : s;
+                }).join(';');
+                linhas.push(linhaEscapada);
+            });
+
+            const csvConteudo = '\uFEFF' + linhas.join('\r\n');
+            const blob = new Blob([csvConteudo], { type: 'text/csv;charset=utf-8;' });
+            baixarBlob(blob, nomeArquivo);
+        }
+
+        async function exportarMinhasCotacoesExcel() {
+            const registros = Array.isArray(window.cotacoesFiltradas)
+                ? window.cotacoesFiltradas
+                : (cotacoesFiltradas || []);
+            if (!registros.length) {
+                alert('Nenhuma cotação encontrada para exportar com os filtros atuais.');
+                return;
+            }
+
+            const botoes = [
+                document.getElementById('btn-exportar-excel'),
+                document.getElementById('btn-top-exportar')
+            ].filter(Boolean);
+
+            botoes.forEach(b => {
+                b.disabled = true;
+                b._origHtml = b.innerHTML;
+                b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Gerando...';
+            });
+
+            try {
+                const vendedorNome = (vendedorLogado || 'vendedor').trim();
+                const vendedorSanitizado = vendedorNome.toLowerCase()
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^a-z0-9]/g, '_') || 'vendedor';
+                const hojeIso = new Date().toISOString().slice(0, 10);
+                const nomeArquivo = `cotacoes_${vendedorSanitizado}_${hojeIso}.xlsx`;
+
+                if (typeof ExcelJS !== 'undefined') {
+                    const normalizar = nome => String(nome || '').trim().toUpperCase()
+                        .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9]/g, '');
+
+                    const padraoColunas = [
+                        { nome: 'COTAÇÃO', largura: 22, campos: ['COTAÇÃO', 'COTACAO', 'NUMERO', 'ID'] },
+                        { nome: 'STATUS', largura: 22, ehStatus: true },
+                        { nome: 'VENCIMENTO', largura: 16, campos: ['VENCIMENTO', 'DATA_VENCIMENTO'] },
+                        { nome: 'LOCALIDADE', largura: 24, campos: ['LOCALIDADE', 'CIDADE'] },
+                        { nome: 'ITEM', largura: 55, campos: ['ITEM', 'ITENS', 'DESCRICAO', 'PRODUTO'] },
+                        { nome: 'QUANTIDADE', largura: 14, campos: ['QUANTIDADE', 'QTD'] },
+                        { nome: 'MODELOS', largura: 22, campos: ['MODELOS', 'MODELO'] },
+                        { nome: 'MARCAS', largura: 22, campos: ['MARCAS', 'MARCA', 'MARCAS '] },
+                        { nome: 'RESPOSTA', largura: 20, campos: ['RESPOSTA'] },
+                        { nome: 'VENDEDOR', largura: 20, campos: ['VENDEDOR'] }
+                    ];
+
+                    const todasChaves = [...new Set(registros.flatMap(r => Object.keys(r || {})))];
+                    const chavesUsadas = new Set();
+
+                    const colunasFinais = padraoColunas.map(col => {
+                        if (col.ehStatus) return col;
+                        const nomesNorm = (col.campos || []).map(normalizar);
+                        const camposReais = todasChaves.filter(k => nomesNorm.includes(normalizar(k)));
+                        camposReais.forEach(k => chavesUsadas.add(k));
+                        return { ...col, camposReais };
+                    });
+
+                    todasChaves.filter(k => !chavesUsadas.has(k)).forEach(k => {
+                        colunasFinais.push({ nome: k.trim().toUpperCase(), largura: 24, camposReais: [k] });
+                    });
+
+                    const wb = new ExcelJS.Workbook();
+                    wb.creator = 'Maestro';
+                    wb.lastModifiedBy = vendedorNome || 'Maestro';
+                    wb.created = new Date();
+
+                    const ws = wb.addWorksheet('Minhas Cotações', {
+                        views: [{ state: 'frozen', ySplit: 1 }]
+                    });
+
+                    ws.columns = colunasFinais.map(c => ({
+                        header: c.nome,
+                        width: c.largura || 20
+                    }));
+
+                    registros.forEach(r => {
+                        const linhaValores = colunasFinais.map(col => {
+                            if (col.ehStatus) return obterTextoStatus(r);
+                            const campoEncontrado = (col.camposReais || []).find(k => r[k] != null && r[k] !== '');
+                            const val = campoEncontrado !== undefined ? r[campoEncontrado] : '';
+                            return typeof val === 'number' || typeof val === 'boolean' ? val : String(val ?? '');
+                        });
+                        ws.addRow(linhaValores);
+                    });
+
+                    const bordaFina = { style: 'thin', color: { argb: 'FFD1D5DB' } };
+
+                    ws.eachRow((row, rowNumber) => {
+                        if (rowNumber === 1) {
+                            row.height = 30;
+                            row.eachCell({ includeEmpty: true }, cell => {
+                                cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+                                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
+                                cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: false };
+                                cell.border = { top: bordaFina, left: bordaFina, bottom: bordaFina, right: bordaFina };
+                            });
+                        } else {
+                            row.height = 26;
+                            const cota = registros[rowNumber - 2];
+                            const statusStr = cota ? obterTextoStatus(cota) : '';
+
+                            row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                                cell.font = { name: 'Calibri', size: 10.5 };
+                                const colDef = colunasFinais[colNumber - 1];
+                                const ehCentralizado = colDef && (
+                                    colDef.ehStatus || 
+                                    ['COTAÇÃO', 'VENCIMENTO', 'QUANTIDADE', 'RESPOSTA'].includes(colDef.nome)
+                                );
+
+                                cell.alignment = {
+                                    vertical: 'middle',
+                                    horizontal: ehCentralizado ? 'center' : 'left',
+                                    wrapText: colDef && colDef.nome === 'ITEM'
+                                };
+                                cell.border = { top: bordaFina, left: bordaFina, bottom: bordaFina, right: bordaFina };
+
+                                if (colDef && colDef.ehStatus) {
+                                    if (statusStr.includes('Respondida')) {
+                                        cell.font = { name: 'Calibri', size: 10.5, bold: true, color: { argb: 'FF047857' } };
+                                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD1FAE5' } };
+                                    } else if (statusStr.includes('Hoje')) {
+                                        cell.font = { name: 'Calibri', size: 10.5, bold: true, color: { argb: 'FFB45309' } };
+                                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
+                                    }
+                                }
+                            });
+                        }
+                    });
+
+                    ws.autoFilter = {
+                        from: { row: 1, column: 1 },
+                        to: { row: registros.length + 1, column: colunasFinais.length }
+                    };
+
+                    const buffer = await wb.xlsx.writeBuffer();
+                    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                    baixarBlob(blob, nomeArquivo);
+                } else {
+                    exportarCsvFallback(registros, nomeArquivo.replace(/\.xlsx$/, '.csv'));
+                }
+            } catch (err) {
+                console.error('Erro ao exportar cotações para Excel:', err);
+                alert('Não foi possível gerar a planilha Excel: ' + (err.message || 'Erro desconhecido'));
+            } finally {
+                botoes.forEach(b => {
+                    b.disabled = false;
+                    if (b._origHtml) b.innerHTML = b._origHtml;
+                });
+            }
+        }
+
         function fazerLogout() {
             localStorage.clear();
             window.location.href = 'index.html';
+        }
+
+        if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+            document.addEventListener('click', (e) => {
+                const menu = document.getElementById('menu-filtro-periodo');
+                if (menu && menu.style.display === 'block') {
+                    const th = document.getElementById('th-vencimento');
+                    if (typeof menu.contains === 'function' && !menu.contains(e.target) && (!th || !th.contains(e.target))) {
+                        fecharMenuFiltroPeriodo();
+                    }
+                }
+            });
+        } else if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+            window.addEventListener('click', (e) => {
+                const menu = document.getElementById('menu-filtro-periodo');
+                if (menu && menu.style.display === 'block') {
+                    const th = document.getElementById('th-vencimento');
+                    if (typeof menu.contains === 'function' && !menu.contains(e.target) && (!th || !th.contains(e.target))) {
+                        fecharMenuFiltroPeriodo();
+                    }
+                }
+            });
         }
 
         window.addEventListener('DOMContentLoaded', () => carregarMinhasCotacoes());
