@@ -978,6 +978,52 @@ test('minhas_cotacoes.html inclui fallback de CDN para JSZip quando vendor local
     assert.ok(html.includes('obterJSZip'), 'Deve expor função obterJSZip');
 });
 
+test('gerarDocxCotacaoCoupaBlob funciona 100% sem JSZip usando gerador ZIP nativo puro', async () => {
+    // Configura o ambiente SEM JSZip (simula servidor offline ou sem vendor/jszip.min.js)
+    const env = setupMinhasCotacoesEnv({ useJSZip: false });
+    const { context, downloads } = env;
+
+    assert.equal(context.JSZip, undefined, 'JSZip não deve existir no contexto');
+    assert.equal(context.window.JSZip, undefined, 'window.JSZip não deve existir');
+
+    const cotacao = {
+        'COTAÇÃO': '998877',
+        'VENCIMENTO': '30/10/2026',
+        'LOCALIDADE': 'SÃO PAULO',
+        'MARCA': 'HONEYWELL',
+        'ITEM': 'Coletor de Dados Honeywell EDA51'
+    };
+
+    // Gera buffer sem JSZip
+    const buffer = await context.gerarDocxCotacaoCoupaBlob(cotacao, { type: 'nodebuffer' });
+    assert.ok(Buffer.isBuffer(buffer), 'Deve retornar um Buffer');
+    assert.ok(buffer.length > 500, 'Tamanho do buffer deve ser válido');
+
+    // Valida que o ZIP gerado é 100% compatível com a especificação standard lendo com JSZip
+    const JSZip = require('../public/vendor/jszip.min.js');
+    const zip = await JSZip.loadAsync(buffer);
+
+    assert.ok(zip.file('[Content_Types].xml'), 'Deve conter [Content_Types].xml');
+    assert.ok(zip.file('_rels/.rels'), 'Deve conter _rels/.rels');
+    assert.ok(zip.file('word/_rels/document.xml.rels'), 'Deve conter word/_rels/document.xml.rels');
+    assert.ok(zip.file('word/styles.xml'), 'Deve conter word/styles.xml');
+    assert.ok(zip.file('word/document.xml'), 'Deve conter word/document.xml');
+
+    const docXml = await zip.file('word/document.xml').async('text');
+    assert.ok(docXml.includes('COTAÇÃO: #998877'));
+    assert.ok(docXml.includes('Coletor de Dados Honeywell EDA51'));
+    assert.ok(docXml.includes('MARCA: HONEYWELL'));
+
+    // Valida exportação completa pela UI sem JSZip
+    context.cotacoesFiltradas = [cotacao];
+    context.window.cotacoesFiltradas = [cotacao];
+    await context.exportarCotacaoWord(0);
+
+    assert.equal(downloads.length, 1);
+    assert.equal(downloads[0].filename, 'Cotacao_998877.docx');
+    assert.ok(downloads[0].buffer && downloads[0].buffer.length > 500);
+});
+
 
 
 
