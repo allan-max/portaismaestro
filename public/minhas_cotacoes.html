@@ -748,6 +748,140 @@
         .btn-clear-chip:hover {
             color: #ffffff;
         }
+
+        /* Coluna Marca */
+        .marca-text {
+            color: #e2e8f0;
+            font-size: 0.88rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 140px;
+        }
+
+        /* Itens de busca e lista de opções para os filtros de Localidade e Marca */
+        .filtro-busca-box {
+            background: #0f141e;
+            border: 1px solid #283244;
+            border-radius: 6px;
+            padding: 6px 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .filtro-busca-box i {
+            color: var(--text-dim);
+            font-size: 0.8rem;
+        }
+
+        .filtro-busca-box input {
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-size: 0.82rem;
+            outline: none;
+            width: 100%;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .filtro-busca-box input::placeholder {
+            color: #64748b;
+        }
+
+        .filtro-opcoes-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            padding: 2px 2px 6px 2px;
+            border-bottom: 1px solid #20293a;
+            font-size: 0.76rem;
+            color: #94a3b8;
+        }
+
+        .filtro-opcoes-lista {
+            max-height: 180px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            margin-bottom: 8px;
+            padding-right: 4px;
+        }
+
+        .filtro-opcoes-lista::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .filtro-opcoes-lista::-webkit-scrollbar-thumb {
+            background: #2b3548;
+            border-radius: 3px;
+        }
+
+        .filtro-opcao-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
+            color: #cbd5e1;
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 4px;
+            transition: background 0.15s;
+            user-select: none;
+        }
+
+        .filtro-opcao-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #ffffff;
+        }
+
+        .filtro-opcao-item input[type="checkbox"] {
+            accent-color: #0284c7;
+            cursor: pointer;
+        }
+
+        .filtro-opcao-nome {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .filtro-opcao-count {
+            color: #64748b;
+            font-size: 0.74rem;
+        }
+
+        /* Botão Exportar para Planilha Base no Modal */
+        .btn-modal-export {
+            background: #0284c7;
+            border: 1px solid #0284c7;
+            color: #ffffff;
+            padding: 7px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.82rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-modal-export:hover {
+            background: #0369a1;
+            border-color: #0369a1;
+        }
+
+        .btn-modal-export:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -844,6 +978,16 @@
                     <span>Vencimento: <strong id="texto-filtro-periodo"></strong></span>
                     <button type="button" class="btn-clear-chip" onclick="limparFiltroPeriodo(event)" title="Remover filtro de data">&times;</button>
                 </div>
+                <div id="chip-filtro-localidade" class="filter-chip" style="display: none;">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <span>Localidade: <strong id="texto-filtro-localidade"></strong></span>
+                    <button type="button" class="btn-clear-chip" onclick="limparFiltroLocalidade(event)" title="Remover filtro de localidade">&times;</button>
+                </div>
+                <div id="chip-filtro-marca" class="filter-chip" style="display: none;">
+                    <i class="fa-solid fa-tag"></i>
+                    <span>Marca: <strong id="texto-filtro-marca"></strong></span>
+                    <button type="button" class="btn-clear-chip" onclick="limparFiltroMarca(event)" title="Remover filtro de marca">&times;</button>
+                </div>
             </div>
         </div>
 
@@ -851,8 +995,8 @@
             <table class="modern-table">
                 <thead>
                     <tr>
-                        <th style="width: 18%;">Cotação / ID</th>
-                        <th style="width: 14%; cursor: pointer; user-select: none;" id="th-vencimento" onclick="toggleMenuFiltroVencimento(event)" title="Clique para filtrar por data de vencimento">
+                        <th style="width: 16%;">Cotação / ID</th>
+                        <th style="width: 13%; cursor: pointer; user-select: none;" id="th-vencimento" onclick="toggleMenuFiltroVencimento(event)" title="Clique para filtrar por data de vencimento">
                             <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
                                 <span>Vencimento</span>
                                 <button type="button" id="btn-filtro-vencimento" class="btn-th-filtro" onclick="toggleMenuFiltroVencimento(event)" title="Filtrar por período de vencimento">
@@ -860,15 +1004,30 @@
                                 </button>
                             </div>
                         </th>
-                        <th style="width: 13%;">Localidade</th>
-                        <th style="width: 28%;">Descrição</th>
-                        <th style="width: 12%;">Status</th>
-                        <th style="width: 15%;">Ação Rápida</th>
+                        <th style="width: 12%; cursor: pointer; user-select: none;" id="th-localidade" onclick="toggleMenuFiltroLocalidade(event)" title="Clique para filtrar por localidade">
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                                <span>Localidade</span>
+                                <button type="button" id="btn-filtro-localidade" class="btn-th-filtro" onclick="toggleMenuFiltroLocalidade(event)" title="Filtrar por localidade">
+                                    <i class="fa-solid fa-filter"></i>
+                                </button>
+                            </div>
+                        </th>
+                        <th style="width: 12%; cursor: pointer; user-select: none;" id="th-marca" onclick="toggleMenuFiltroMarca(event)" title="Clique para filtrar por marca">
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                                <span>Marca</span>
+                                <button type="button" id="btn-filtro-marca" class="btn-th-filtro" onclick="toggleMenuFiltroMarca(event)" title="Filtrar por marca">
+                                    <i class="fa-solid fa-filter"></i>
+                                </button>
+                            </div>
+                        </th>
+                        <th style="width: 25%;">Descrição</th>
+                        <th style="width: 10%;">Status</th>
+                        <th style="width: 12%;">Ação Rápida</th>
                     </tr>
                 </thead>
                 <tbody id="tbody-cotacoes">
                     <tr>
-                        <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                        <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted);">
                             <i class="fa-solid fa-spinner fa-spin"></i> Carregando suas cotações...
                         </td>
                     </tr>
@@ -915,17 +1074,97 @@
         </div>
     </div>
 
+    <!-- Menu Popover Filtro de Localidade -->
+    <div id="menu-filtro-localidade" class="filtro-popover" style="display: none;" onclick="event.stopPropagation();">
+        <div class="filtro-popover-header">
+            <div class="filtro-popover-title">
+                <i class="fa-solid fa-location-dot"></i>
+                <span>Filtrar Localidade</span>
+            </div>
+            <button type="button" class="filtro-popover-close" onclick="fecharMenuFiltroLocalidade()">&times;</button>
+        </div>
+
+        <div class="filtro-busca-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="input-busca-localidade" placeholder="Buscar localidade..." oninput="filtrarListaOpcoesLocalidade()">
+        </div>
+
+        <div class="filtro-opcoes-header">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                <input type="checkbox" id="chk-todos-localidade" onchange="toggleTodosLocalidade(this.checked)">
+                <span>(Selecionar Tudo)</span>
+            </label>
+            <span id="contagem-opcoes-localidade" style="color: #64748b; font-size: 0.74rem;">0 opções</span>
+        </div>
+
+        <div class="filtro-opcoes-lista" id="lista-opcoes-localidade">
+            <!-- Preenchido dinamicamente via JS -->
+        </div>
+
+        <div class="filtro-popover-footer">
+            <button type="button" class="btn-filtro-limpar" onclick="limparFiltroLocalidade(event)">
+                <i class="fa-solid fa-eraser"></i> Limpar
+            </button>
+            <button type="button" class="btn-filtro-aplicar" onclick="aplicarFiltroLocalidade()">
+                <i class="fa-solid fa-check"></i> Aplicar
+            </button>
+        </div>
+    </div>
+
+    <!-- Menu Popover Filtro de Marca -->
+    <div id="menu-filtro-marca" class="filtro-popover" style="display: none;" onclick="event.stopPropagation();">
+        <div class="filtro-popover-header">
+            <div class="filtro-popover-title">
+                <i class="fa-solid fa-tag"></i>
+                <span>Filtrar Marca</span>
+            </div>
+            <button type="button" class="filtro-popover-close" onclick="fecharMenuFiltroMarca()">&times;</button>
+        </div>
+
+        <div class="filtro-busca-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="input-busca-marca" placeholder="Buscar marca..." oninput="filtrarListaOpcoesMarca()">
+        </div>
+
+        <div class="filtro-opcoes-header">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                <input type="checkbox" id="chk-todos-marca" onchange="toggleTodosMarca(this.checked)">
+                <span>(Selecionar Tudo)</span>
+            </label>
+            <span id="contagem-opcoes-marca" style="color: #64748b; font-size: 0.74rem;">0 opções</span>
+        </div>
+
+        <div class="filtro-opcoes-lista" id="lista-opcoes-marca">
+            <!-- Preenchido dinamicamente via JS -->
+        </div>
+
+        <div class="filtro-popover-footer">
+            <button type="button" class="btn-filtro-limpar" onclick="limparFiltroMarca(event)">
+                <i class="fa-solid fa-eraser"></i> Limpar
+            </button>
+            <button type="button" class="btn-filtro-aplicar" onclick="aplicarFiltroMarca()">
+                <i class="fa-solid fa-check"></i> Aplicar
+            </button>
+        </div>
+    </div>
+
     <!-- Modal de Detalhes da Cotação -->
     <div id="modal-detalhes" style="position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: none; align-items: center; justify-content: center; z-index: 99999;">
         <div style="background: #121620; border: 1px solid #222938; border-radius: 12px; padding: 25px; width: 90%; max-width: 850px; max-height: 88vh; overflow-y: auto; position: relative;">
             <button onclick="document.getElementById('modal-detalhes').style.display='none'" style="position: absolute; top: 15px; right: 15px; background: none; border: none; color: #8b95a5; font-size: 1.5rem; cursor: pointer;">&times;</button>
-            <h2 id="modal-titulo" style="margin-top: 0; color: #f1f5f9; border-bottom: 1px solid #222938; padding-bottom: 12px;">Detalhes da Cotação</h2>
+            <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #222938; padding-bottom: 12px; margin-right: 35px; flex-wrap: wrap; gap: 10px;">
+                <h2 id="modal-titulo" style="margin: 0; color: #f1f5f9;">Detalhes da Cotação</h2>
+                <button id="btn-exportar-planilha-base" type="button" class="btn-modal-export" onclick="exportarCotacaoModalPlanilhaBase()" title="Exportar esta cotação para a Planilha Base (.xlsx)">
+                    <i class="fa-solid fa-file-excel"></i> Exportar para Planilha Base
+                </button>
+            </div>
             <div id="modal-corpo" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;"></div>
         </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
     <script src="vendor/exceljs-4.4.0.min.js"></script>
+    <script src="vendor/template_planilha_base.js"></script>
     <script>
         const sessionAtual = localStorage.getItem('maestro_session');
         const vendedorLogado = (localStorage.getItem('maestro_vendedor') || '').trim();
@@ -977,7 +1216,7 @@
         function carregarMinhasCotacoes(silencioso = false) {
             if (!silencioso) {
                 document.getElementById('tbody-cotacoes').innerHTML = `
-                    <tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                    <tr><td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted);">
                         <i class="fa-solid fa-spinner fa-spin"></i> Atualizando suas cotações...
                     </td></tr>`;
             }
@@ -1184,6 +1423,377 @@
             }
         }
 
+        function obterLocalidade(c) {
+            if (!c) return 'SEM LOCALIDADE';
+            const loc = String(c['LOCALIDADE'] || c['CIDADE'] || '').trim().toUpperCase();
+            return loc || 'SEM LOCALIDADE';
+        }
+
+        function obterMarca(c) {
+            if (!c) return 'SEM MARCA';
+            const marca = String(c['MARCA'] || c['MARCAS'] || c['MARCAS '] || '').trim().toUpperCase();
+            return marca || 'SEM MARCA';
+        }
+
+        window.filtroLocalidadeSelecionados = null;
+        window.filtroMarcaSelecionados = null;
+        window.localidadesUnicas = [];
+        window.marcasUnicas = [];
+
+        function extrairListasFiltrosUnicas() {
+            const base = Array.isArray(window.todasCotacoes) ? window.todasCotacoes : todasCotacoes;
+            const locSet = new Set();
+            const marcaSet = new Set();
+
+            base.forEach(c => {
+                locSet.add(obterLocalidade(c));
+                marcaSet.add(obterMarca(c));
+            });
+
+            window.localidadesUnicas = Array.from(locSet).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+            window.marcasUnicas = Array.from(marcaSet).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        }
+
+        function posicionarMenu(menu, th) {
+            if (!menu || !th || typeof th.getBoundingClientRect !== 'function') return;
+            const rect = th.getBoundingClientRect();
+            const menuWidth = 290;
+            let left = rect.left + (window.scrollX || 0);
+            if (typeof window !== 'undefined' && window.innerWidth && (left + menuWidth > window.innerWidth - 10)) {
+                left = Math.max(10, window.innerWidth - menuWidth - 15);
+            }
+            menu.style.top = `${rect.bottom + (window.scrollY || 0) + 6}px`;
+            menu.style.left = `${left}px`;
+        }
+
+        // --- FILTRO DE LOCALIDADE ---
+        function toggleMenuFiltroLocalidade(event) {
+            if (event) event.stopPropagation();
+            fecharMenuFiltroPeriodo();
+            fecharMenuFiltroMarca();
+
+            const menu = document.getElementById('menu-filtro-localidade');
+            if (!menu) return;
+            if (menu.style.display === 'block') {
+                fecharMenuFiltroLocalidade();
+                return;
+            }
+
+            extrairListasFiltrosUnicas();
+            const inputBusca = document.getElementById('input-busca-localidade');
+            if (inputBusca) inputBusca.value = '';
+            renderizarListaOpcoesLocalidade('');
+
+            const th = document.getElementById('th-localidade') || (event && event.currentTarget);
+            posicionarMenu(menu, th);
+            menu.style.display = 'block';
+        }
+
+        function fecharMenuFiltroLocalidade() {
+            const menu = document.getElementById('menu-filtro-localidade');
+            if (menu) menu.style.display = 'none';
+        }
+
+        function filtrarListaOpcoesLocalidade() {
+            const inputBusca = document.getElementById('input-busca-localidade');
+            const termo = inputBusca ? inputBusca.value : '';
+            renderizarListaOpcoesLocalidade(termo);
+        }
+
+        function renderizarListaOpcoesLocalidade(termoBusca = '') {
+            const lista = document.getElementById('lista-opcoes-localidade');
+            if (!lista) return;
+
+            const base = Array.isArray(window.todasCotacoes) ? window.todasCotacoes : todasCotacoes;
+            const contagens = {};
+            base.forEach(c => {
+                const loc = obterLocalidade(c);
+                contagens[loc] = (contagens[loc] || 0) + 1;
+            });
+
+            const busca = termoBusca.trim().toLowerCase();
+            const filtradas = window.localidadesUnicas.filter(loc => !busca || loc.toLowerCase().includes(busca));
+
+            let todosMarcados = true;
+            let html = '';
+
+            filtradas.forEach(loc => {
+                const isChecked = window.filtroLocalidadeSelecionados === null || window.filtroLocalidadeSelecionados.has(loc);
+                if (!isChecked) todosMarcados = false;
+                const count = contagens[loc] || 0;
+
+                html += `
+                    <label class="filtro-opcao-item">
+                        <input type="checkbox" value="${escHtml(loc)}" class="chk-filtro-localidade" ${isChecked ? 'checked' : ''} onchange="atualizarCheckboxTodosLocalidade()">
+                        <span class="filtro-opcao-nome" title="${escHtml(loc)}">${escHtml(loc)}</span>
+                        <span class="filtro-opcao-count">(${count})</span>
+                    </label>
+                `;
+            });
+
+            if (filtradas.length === 0) {
+                html = `<div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 12px 0;">Nenhuma localidade encontrada</div>`;
+            }
+
+            lista.innerHTML = html;
+
+            const chkTodos = document.getElementById('chk-todos-localidade');
+            if (chkTodos) chkTodos.checked = (filtradas.length > 0 && todosMarcados);
+
+            const contagemEl = document.getElementById('contagem-opcoes-localidade');
+            if (contagemEl) contagemEl.innerText = `${filtradas.length} de ${window.localidadesUnicas.length}`;
+        }
+
+        function toggleTodosLocalidade(checked) {
+            document.querySelectorAll('.chk-filtro-localidade').forEach(chk => {
+                chk.checked = checked;
+            });
+        }
+
+        function atualizarCheckboxTodosLocalidade() {
+            const checkboxes = document.querySelectorAll('.chk-filtro-localidade');
+            let todos = checkboxes.length > 0;
+            checkboxes.forEach(c => {
+                if (!c.checked) todos = false;
+            });
+            const chkTodos = document.getElementById('chk-todos-localidade');
+            if (chkTodos) chkTodos.checked = todos;
+        }
+
+        function aplicarFiltroLocalidade() {
+            const checkboxes = document.querySelectorAll('.chk-filtro-localidade');
+            if (checkboxes.length === 0) {
+                fecharMenuFiltroLocalidade();
+                return;
+            }
+
+            const marcados = [];
+            checkboxes.forEach(c => {
+                if (c.checked) marcados.push(c.value);
+            });
+
+            if (marcados.length === window.localidadesUnicas.length) {
+                window.filtroLocalidadeSelecionados = null;
+            } else {
+                window.filtroLocalidadeSelecionados = new Set(marcados);
+            }
+
+            fecharMenuFiltroLocalidade();
+            atualizarIndicadorFiltroLocalidade();
+            aplicarFiltros();
+        }
+
+        function limparFiltroLocalidade(event) {
+            if (event) event.stopPropagation();
+            window.filtroLocalidadeSelecionados = null;
+            const inputBusca = document.getElementById('input-busca-localidade');
+            if (inputBusca) inputBusca.value = '';
+
+            fecharMenuFiltroLocalidade();
+            atualizarIndicadorFiltroLocalidade();
+            aplicarFiltros();
+        }
+
+        function atualizarIndicadorFiltroLocalidade() {
+            const ativo = window.filtroLocalidadeSelecionados !== null;
+            const btnFiltro = document.getElementById('btn-filtro-localidade');
+            const chip = document.getElementById('chip-filtro-localidade');
+            const textoChip = document.getElementById('texto-filtro-localidade');
+
+            if (btnFiltro) {
+                if (btnFiltro.classList) {
+                    if (ativo) btnFiltro.classList.add('active-filter');
+                    else btnFiltro.classList.remove('active-filter');
+                }
+                if (typeof btnFiltro.setAttribute === 'function') {
+                    btnFiltro.setAttribute('title', ativo ? 'Filtro de localidade ativo (clique para alterar)' : 'Filtrar por localidade');
+                }
+            }
+
+            if (chip && textoChip) {
+                if (ativo) {
+                    const arr = Array.from(window.filtroLocalidadeSelecionados);
+                    let label = '';
+                    if (arr.length === 0) {
+                        label = 'Nenhuma';
+                    } else if (arr.length <= 2) {
+                        label = arr.join(', ');
+                    } else {
+                        label = `${arr.slice(0, 2).join(', ')} +${arr.length - 2}`;
+                    }
+                    textoChip.innerText = label;
+                    chip.style.display = 'inline-flex';
+                } else {
+                    chip.style.display = 'none';
+                    textoChip.innerText = '';
+                }
+            }
+        }
+
+        // --- FILTRO DE MARCA ---
+        function toggleMenuFiltroMarca(event) {
+            if (event) event.stopPropagation();
+            fecharMenuFiltroPeriodo();
+            fecharMenuFiltroLocalidade();
+
+            const menu = document.getElementById('menu-filtro-marca');
+            if (!menu) return;
+            if (menu.style.display === 'block') {
+                fecharMenuFiltroMarca();
+                return;
+            }
+
+            extrairListasFiltrosUnicas();
+            const inputBusca = document.getElementById('input-busca-marca');
+            if (inputBusca) inputBusca.value = '';
+            renderizarListaOpcoesMarca('');
+
+            const th = document.getElementById('th-marca') || (event && event.currentTarget);
+            posicionarMenu(menu, th);
+            menu.style.display = 'block';
+        }
+
+        function fecharMenuFiltroMarca() {
+            const menu = document.getElementById('menu-filtro-marca');
+            if (menu) menu.style.display = 'none';
+        }
+
+        function filtrarListaOpcoesMarca() {
+            const inputBusca = document.getElementById('input-busca-marca');
+            const termo = inputBusca ? inputBusca.value : '';
+            renderizarListaOpcoesMarca(termo);
+        }
+
+        function renderizarListaOpcoesMarca(termoBusca = '') {
+            const lista = document.getElementById('lista-opcoes-marca');
+            if (!lista) return;
+
+            const base = Array.isArray(window.todasCotacoes) ? window.todasCotacoes : todasCotacoes;
+            const contagens = {};
+            base.forEach(c => {
+                const m = obterMarca(c);
+                contagens[m] = (contagens[m] || 0) + 1;
+            });
+
+            const busca = termoBusca.trim().toLowerCase();
+            const filtradas = window.marcasUnicas.filter(m => !busca || m.toLowerCase().includes(busca));
+
+            let todosMarcados = true;
+            let html = '';
+
+            filtradas.forEach(m => {
+                const isChecked = window.filtroMarcaSelecionados === null || window.filtroMarcaSelecionados.has(m);
+                if (!isChecked) todosMarcados = false;
+                const count = contagens[m] || 0;
+
+                html += `
+                    <label class="filtro-opcao-item">
+                        <input type="checkbox" value="${escHtml(m)}" class="chk-filtro-marca" ${isChecked ? 'checked' : ''} onchange="atualizarCheckboxTodosMarca()">
+                        <span class="filtro-opcao-nome" title="${escHtml(m)}">${escHtml(m)}</span>
+                        <span class="filtro-opcao-count">(${count})</span>
+                    </label>
+                `;
+            });
+
+            if (filtradas.length === 0) {
+                html = `<div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 12px 0;">Nenhuma marca encontrada</div>`;
+            }
+
+            lista.innerHTML = html;
+
+            const chkTodos = document.getElementById('chk-todos-marca');
+            if (chkTodos) chkTodos.checked = (filtradas.length > 0 && todosMarcados);
+
+            const contagemEl = document.getElementById('contagem-opcoes-marca');
+            if (contagemEl) contagemEl.innerText = `${filtradas.length} de ${window.marcasUnicas.length}`;
+        }
+
+        function toggleTodosMarca(checked) {
+            document.querySelectorAll('.chk-filtro-marca').forEach(chk => {
+                chk.checked = checked;
+            });
+        }
+
+        function atualizarCheckboxTodosMarca() {
+            const checkboxes = document.querySelectorAll('.chk-filtro-marca');
+            let todos = checkboxes.length > 0;
+            checkboxes.forEach(c => {
+                if (!c.checked) todos = false;
+            });
+            const chkTodos = document.getElementById('chk-todos-marca');
+            if (chkTodos) chkTodos.checked = todos;
+        }
+
+        function aplicarFiltroMarca() {
+            const checkboxes = document.querySelectorAll('.chk-filtro-marca');
+            if (checkboxes.length === 0) {
+                fecharMenuFiltroMarca();
+                return;
+            }
+
+            const marcados = [];
+            checkboxes.forEach(c => {
+                if (c.checked) marcados.push(c.value);
+            });
+
+            if (marcados.length === window.marcasUnicas.length) {
+                window.filtroMarcaSelecionados = null;
+            } else {
+                window.filtroMarcaSelecionados = new Set(marcados);
+            }
+
+            fecharMenuFiltroMarca();
+            atualizarIndicadorFiltroMarca();
+            aplicarFiltros();
+        }
+
+        function limparFiltroMarca(event) {
+            if (event) event.stopPropagation();
+            window.filtroMarcaSelecionados = null;
+            const inputBusca = document.getElementById('input-busca-marca');
+            if (inputBusca) inputBusca.value = '';
+
+            fecharMenuFiltroMarca();
+            atualizarIndicadorFiltroMarca();
+            aplicarFiltros();
+        }
+
+        function atualizarIndicadorFiltroMarca() {
+            const ativo = window.filtroMarcaSelecionados !== null;
+            const btnFiltro = document.getElementById('btn-filtro-marca');
+            const chip = document.getElementById('chip-filtro-marca');
+            const textoChip = document.getElementById('texto-filtro-marca');
+
+            if (btnFiltro) {
+                if (btnFiltro.classList) {
+                    if (ativo) btnFiltro.classList.add('active-filter');
+                    else btnFiltro.classList.remove('active-filter');
+                }
+                if (typeof btnFiltro.setAttribute === 'function') {
+                    btnFiltro.setAttribute('title', ativo ? 'Filtro de marca ativo (clique para alterar)' : 'Filtrar por marca');
+                }
+            }
+
+            if (chip && textoChip) {
+                if (ativo) {
+                    const arr = Array.from(window.filtroMarcaSelecionados);
+                    let label = '';
+                    if (arr.length === 0) {
+                        label = 'Nenhuma';
+                    } else if (arr.length <= 2) {
+                        label = arr.join(', ');
+                    } else {
+                        label = `${arr.slice(0, 2).join(', ')} +${arr.length - 2}`;
+                    }
+                    textoChip.innerText = label;
+                    chip.style.display = 'inline-flex';
+                } else {
+                    chip.style.display = 'none';
+                    textoChip.innerText = '';
+                }
+            }
+        }
+
         function getHojeMeiaNoite() {
             const h = new Date();
             h.setHours(0, 0, 0, 0);
@@ -1210,7 +1820,7 @@
         socket.on('retorno_planilha_json', (res) => {
             if (!res.sucesso) {
                 document.getElementById('tbody-cotacoes').innerHTML = `
-                    <tr><td colspan="6" style="text-align: center; padding: 30px; color: #f87171;">
+                    <tr><td colspan="7" style="text-align: center; padding: 30px; color: #f87171;">
                         Erro ao carregar cotações: ${escHtml(res.erro)}
                     </td></tr>`;
                 return;
@@ -1223,6 +1833,7 @@
             });
             window.todasCotacoes = todasCotacoes;
 
+            extrairListasFiltrosUnicas();
             atualizarContadores();
             aplicarFiltros();
         });
@@ -1267,6 +1878,18 @@
                     if (tVenc === null) return false;
                     if (window.filtroPeriodoAtivo.inicio !== null && tVenc < window.filtroPeriodoAtivo.inicio) return false;
                     if (window.filtroPeriodoAtivo.fim !== null && tVenc > window.filtroPeriodoAtivo.fim) return false;
+                }
+
+                // Filtro por Localidade
+                if (window.filtroLocalidadeSelecionados !== null) {
+                    const loc = obterLocalidade(c);
+                    if (!window.filtroLocalidadeSelecionados.has(loc)) return false;
+                }
+
+                // Filtro por Marca
+                if (window.filtroMarcaSelecionados !== null) {
+                    const marca = obterMarca(c);
+                    if (!window.filtroMarcaSelecionados.has(marca)) return false;
                 }
 
                 if (busca) {
@@ -1331,7 +1954,7 @@
             const tbody = document.getElementById('tbody-cotacoes');
             if (cotacoesFiltradas.length === 0) {
                 tbody.innerHTML = `
-                    <tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                    <tr><td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted);">
                         Nenhuma cotação encontrada para este filtro.
                     </td></tr>`;
                 return;
@@ -1343,6 +1966,7 @@
                 const itemResumo = String(c['ITEM'] || c['ITENS'] || '-').replace(/\s+/g, ' ').trim();
                 const qtdTexto = String(c['QUANTIDADE'] || '').trim();
                 const subtituloId = qtdTexto ? `Qtd: ${escHtml(qtdTexto)}` : escHtml(itemResumo);
+                const marcaTexto = String(c['MARCA'] || c['MARCAS'] || c['MARCAS '] || '').trim();
 
                 let statusHtml = '';
                 if (respondida) {
@@ -1365,6 +1989,9 @@
                         </td>
                         <td>${renderizarVencimento(c, idx)}</td>
                         <td>${escHtml(c['LOCALIDADE'] || '-')}</td>
+                        <td>
+                            <div class="marca-text" title="${escHtml(marcaTexto || '-')}">${escHtml(marcaTexto || '-')}</div>
+                        </td>
                         <td>
                             <div class="desc-text" title="${escHtml(itemResumo)}">${escHtml(itemResumo)}</div>
                         </td>
@@ -1404,9 +2031,14 @@
             }
         });
 
+        let cotacaoModalAtual = null;
+
         function abrirDetalhes(idx) {
-            const c = cotacoesFiltradas[idx];
+            const base = Array.isArray(window.cotacoesFiltradas) ? window.cotacoesFiltradas : cotacoesFiltradas;
+            const c = base[idx];
             if (!c) return;
+            cotacaoModalAtual = c;
+            window.cotacaoModalAtual = c;
             document.getElementById('modal-titulo').innerText = `Cotação #${c['COTAÇÃO'] || ''}`;
 
             let html = '';
@@ -1423,6 +2055,235 @@
             document.getElementById('modal-corpo').innerHTML = html;
             document.getElementById('modal-detalhes').style.display = 'flex';
         }
+
+        function extrairQuantidadeNumero(val) {
+            if (typeof val === 'number') {
+                return isNaN(val) || val <= 0 ? 1 : val;
+            }
+            if (!val) return 1;
+            let s = String(val).trim();
+            if (/\d+\.\d+,\d+/.test(s)) {
+                s = s.replace(/\./g, '').replace(',', '.');
+            } else if (/\d+,\d+/.test(s)) {
+                s = s.replace(',', '.');
+            } else if (/\d+\.\d{3}/.test(s) && !/\./.test(s.slice(s.indexOf('.') + 4))) {
+                s = s.replace(/\./g, '');
+            }
+            const m = s.match(/-?\d+(?:\.\d+)?/);
+            if (m) {
+                const num = parseFloat(m[0]);
+                return (!isNaN(num) && num > 0) ? num : 1;
+            }
+            return 1;
+        }
+
+        function extrairLinhasItens(textoBruto) {
+            if (!textoBruto) return [];
+            let s = String(textoBruto).trim();
+            if (!s) return [];
+
+            let linhas = s.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+
+            if (linhas.length <= 1) {
+                if (s.includes('•')) {
+                    linhas = s.split('•').map(l => l.trim()).filter(Boolean);
+                } else if (/(?:^|\s)Item\s*\d+\s*:/i.test(s)) {
+                    const partes = s.split(/(?=(?:^|\s)Item\s*\d+\s*:)/i).map(l => l.trim()).filter(Boolean);
+                    if (partes.length > 1) linhas = partes;
+                }
+            }
+            return linhas;
+        }
+
+        function parseLinhaItem(linhaStr, fallbackQtd = 1) {
+            let s = String(linhaStr || '').trim();
+            if (!s) return null;
+
+            s = s.replace(/^[•\-\*\s]+/, '').trim();
+            s = s.replace(/^(?:Item\s*\d+|\d+)\s*[:.-]\s*/i, '').trim();
+
+            let qtd = null;
+            let produto = s;
+
+            const mQtdInicio = s.match(/^(\d+(?:\.\d{3})*(?:[.,]\d+)?)\s*(?:unid\.?|unidades?|un\b|pcs?\b|pçs?\b|peças?\b|cx\b|caixas?\b|rolos?\b|kit\b|pares?\b|mt\b|metros?\b|kg\b|g\b|x\b)?\s*[:.-]?\s*/i);
+
+            if (mQtdInicio && mQtdInicio[0].length < s.length) {
+                let qStr = mQtdInicio[1].trim();
+                if (/^\d+\.\d{3}$/.test(qStr)) qStr = qStr.replace(/\./g, '');
+                else if (/\d+\.\d+,\d+/.test(qStr)) qStr = qStr.replace(/\./g, '').replace(',', '.');
+                else if (/\d+,\d+/.test(qStr)) qStr = qStr.replace(',', '.');
+                const num = parseFloat(qStr);
+                if (!isNaN(num) && num > 0) {
+                    qtd = num;
+                    produto = s.slice(mQtdInicio[0].length).trim();
+                }
+            }
+
+            if (qtd === null) {
+                const mQtdFim = s.match(/[\(\[]?\s*(?:qtd|quantidade)?\s*[:.-]?\s*(\d+(?:\.\d{3})*(?:[.,]\d+)?)\s*(?:unid\.?|unidades?|un\b|pcs?\b|pçs?\b|peças?\b|cx\b|caixas?\b|rolos?\b|kit\b|pares?\b|mt\b|metros?\b|kg\b|g\b)?\s*[\)\]]?$/i);
+                if (mQtdFim && mQtdFim.index > 0) {
+                    let qStr = mQtdFim[1].trim();
+                    if (/^\d+\.\d{3}$/.test(qStr)) qStr = qStr.replace(/\./g, '');
+                    else if (/\d+\.\d+,\d+/.test(qStr)) qStr = qStr.replace(/\./g, '').replace(',', '.');
+                    else if (/\d+,\d+/.test(qStr)) qStr = qStr.replace(',', '.');
+                    const num = parseFloat(qStr);
+                    if (!isNaN(num) && num > 0) {
+                        qtd = num;
+                        produto = s.slice(0, mQtdFim.index).replace(/[-:;,]+$/, '').trim();
+                    }
+                }
+            }
+
+            if (qtd === null) {
+                qtd = (typeof fallbackQtd === 'number' && fallbackQtd > 0) ? fallbackQtd : 1;
+            }
+
+            return {
+                produto: produto || s,
+                quantidade: qtd
+            };
+        }
+
+        function parseItensCotacao(cota) {
+            if (!cota) return [];
+            const rawTexto = cota['ITEM'] || cota['ITENS'] || cota['DESCRICAO'] || cota['PRODUTO'] || '';
+            const qtdGlobalRaw = cota['QUANTIDADE'] !== undefined ? cota['QUANTIDADE'] : (cota['QTD'] !== undefined ? cota['QTD'] : (cota['QUANT'] !== undefined ? cota['QUANT'] : ''));
+            const qtdGlobal = extrairQuantidadeNumero(qtdGlobalRaw);
+
+            const linhas = extrairLinhasItens(rawTexto);
+            if (!linhas.length) {
+                return [{ produto: '', quantidade: qtdGlobal || 1 }];
+            }
+
+            const fallbackPorItem = (linhas.length === 1) ? qtdGlobal : 1;
+            const itens = [];
+
+            for (const linha of linhas) {
+                const parsed = parseLinhaItem(linha, fallbackPorItem);
+                if (parsed && parsed.produto) {
+                    itens.push(parsed);
+                }
+            }
+
+            if (!itens.length) {
+                itens.push({ produto: rawTexto, quantidade: qtdGlobal || 1 });
+            }
+
+            return itens;
+        }
+
+        async function obterBufferPlanilhaBase() {
+            const base64 = (typeof window !== 'undefined' && window.__TEMPLATE_PLANILHA_BASE_BASE64)
+                ? window.__TEMPLATE_PLANILHA_BASE_BASE64
+                : (typeof __TEMPLATE_PLANILHA_BASE_BASE64 !== 'undefined' ? __TEMPLATE_PLANILHA_BASE_BASE64 : null);
+
+            if (base64) {
+                const binStr = (typeof atob === 'function')
+                    ? atob(base64)
+                    : (typeof Buffer !== 'undefined' ? Buffer.from(base64, 'base64').toString('binary') : null);
+                if (binStr) {
+                    const len = binStr.length;
+                    const bytes = new Uint8Array(len);
+                    for (let i = 0; i < len; i++) {
+                        bytes[i] = binStr.charCodeAt(i);
+                    }
+                    return bytes.buffer;
+                }
+            }
+
+            if (typeof fetch === 'function') {
+                const resp = await fetch('PLANILHA BASE.xlsx');
+                if (!resp.ok) {
+                    throw new Error(`Falha ao obter PLANILHA BASE.xlsx (HTTP ${resp.status})`);
+                }
+                return await resp.arrayBuffer();
+            }
+
+            throw new Error('Template da Planilha Base não encontrado.');
+        }
+
+        async function exportarCotacaoPlanilhaBase(cota) {
+            if (!cota) {
+                alert('Nenhuma cotação selecionada para exportar.');
+                return;
+            }
+
+            const btn = document.getElementById('btn-exportar-planilha-base');
+            if (btn) {
+                btn.disabled = true;
+                btn._origHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Exportando...';
+            }
+
+            try {
+                if (typeof ExcelJS === 'undefined') {
+                    throw new Error('Biblioteca ExcelJS não carregada.');
+                }
+
+                const bufferTemplate = await obterBufferPlanilhaBase();
+                const wb = new ExcelJS.Workbook();
+                await wb.xlsx.load(bufferTemplate);
+
+                const ws = wb.getWorksheet('ORÇAMENTO') || wb.worksheets[0];
+                if (!ws) {
+                    throw new Error('Aba ORÇAMENTO não encontrada na Planilha Base.');
+                }
+
+                const itens = parseItensCotacao(cota);
+
+                // Preenche cada item na sua linha correspondente: linha 2 = item 1, linha 3 = item 2, etc.
+                itens.forEach((item, idx) => {
+                    const rowNum = 2 + idx;
+
+                    // Coluna A (PRODUTO)
+                    ws.getCell('A' + rowNum).value = item.produto;
+
+                    // Coluna B (QUANTIDADE)
+                    ws.getCell('B' + rowNum).value = item.quantidade;
+
+                    // Se exceder as linhas pré-configuradas do template, adiciona as fórmulas padrão
+                    if (rowNum > 25) {
+                        ws.getCell('H' + rowNum).value = { formula: `(C${rowNum}+(D${rowNum}/B${rowNum})+(E${rowNum}/B${rowNum})+(F${rowNum}))*B${rowNum}` };
+                        ws.getCell('I' + rowNum).value = { formula: `(H${rowNum}*G${rowNum}/100)+H${rowNum}` };
+                        ws.getCell('J' + rowNum).value = { formula: `I${rowNum}/B${rowNum}` };
+                    }
+                });
+
+                const idCotacao = String(cota['COTAÇÃO'] || cota['COTACAO'] || cota['NUMERO'] || cota['ID'] || 'cotacao')
+                    .replace(/[^a-zA-Z0-9_-]/g, '_') || 'cotacao';
+                const nomeArquivo = `planilha_base_cotacao_${idCotacao}.xlsx`;
+
+                const buffer = await wb.xlsx.writeBuffer();
+                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                baixarBlob(blob, nomeArquivo);
+            } catch (err) {
+                console.error('Erro ao exportar para Planilha Base:', err);
+                alert('Não foi possível exportar para a Planilha Base: ' + (err.message || 'Erro desconhecido'));
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    if (btn._origHtml) btn.innerHTML = btn._origHtml;
+                }
+            }
+        }
+
+        async function exportarCotacaoModalPlanilhaBase() {
+            const c = window.cotacaoModalAtual || cotacaoModalAtual;
+            if (!c) {
+                alert('Nenhuma cotação selecionada para exportar.');
+                return;
+            }
+            await exportarCotacaoPlanilhaBase(c);
+        }
+
+        window.cotacaoModalAtual = cotacaoModalAtual;
+        window.extrairQuantidadeNumero = extrairQuantidadeNumero;
+        window.extrairLinhasItens = extrairLinhasItens;
+        window.parseLinhaItem = parseLinhaItem;
+        window.parseItensCotacao = parseItensCotacao;
+        window.obterBufferPlanilhaBase = obterBufferPlanilhaBase;
+        window.exportarCotacaoPlanilhaBase = exportarCotacaoPlanilhaBase;
+        window.exportarCotacaoModalPlanilhaBase = exportarCotacaoModalPlanilhaBase;
 
         function obterTextoStatus(c) {
             if (isRespondida(c)) return 'Respondida';
@@ -1629,26 +2490,35 @@
             window.location.href = 'index.html';
         }
 
+        function fecharMenusFiltroFora(e) {
+            const target = e.target;
+            const menuPeriodo = document.getElementById('menu-filtro-periodo');
+            if (menuPeriodo && menuPeriodo.style.display === 'block') {
+                const th = document.getElementById('th-vencimento');
+                if (typeof menuPeriodo.contains === 'function' && !menuPeriodo.contains(target) && (!th || !th.contains(target))) {
+                    fecharMenuFiltroPeriodo();
+                }
+            }
+            const menuLoc = document.getElementById('menu-filtro-localidade');
+            if (menuLoc && menuLoc.style.display === 'block') {
+                const th = document.getElementById('th-localidade');
+                if (typeof menuLoc.contains === 'function' && !menuLoc.contains(target) && (!th || !th.contains(target))) {
+                    fecharMenuFiltroLocalidade();
+                }
+            }
+            const menuMarca = document.getElementById('menu-filtro-marca');
+            if (menuMarca && menuMarca.style.display === 'block') {
+                const th = document.getElementById('th-marca');
+                if (typeof menuMarca.contains === 'function' && !menuMarca.contains(target) && (!th || !th.contains(target))) {
+                    fecharMenuFiltroMarca();
+                }
+            }
+        }
+
         if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
-            document.addEventListener('click', (e) => {
-                const menu = document.getElementById('menu-filtro-periodo');
-                if (menu && menu.style.display === 'block') {
-                    const th = document.getElementById('th-vencimento');
-                    if (typeof menu.contains === 'function' && !menu.contains(e.target) && (!th || !th.contains(e.target))) {
-                        fecharMenuFiltroPeriodo();
-                    }
-                }
-            });
+            document.addEventListener('click', fecharMenusFiltroFora);
         } else if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
-            window.addEventListener('click', (e) => {
-                const menu = document.getElementById('menu-filtro-periodo');
-                if (menu && menu.style.display === 'block') {
-                    const th = document.getElementById('th-vencimento');
-                    if (typeof menu.contains === 'function' && !menu.contains(e.target) && (!th || !th.contains(e.target))) {
-                        fecharMenuFiltroPeriodo();
-                    }
-                }
-            });
+            window.addEventListener('click', fecharMenusFiltroFora);
         }
 
         window.addEventListener('DOMContentLoaded', () => carregarMinhasCotacoes());
