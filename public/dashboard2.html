@@ -8,14 +8,18 @@
   <title>MAESTRO · Gestão de cotações</title>
   <link rel="icon" href="favicon-32x32.png">
   <link rel="stylesheet" href="dashboard-cotacoes/style.css">
+  <link rel="stylesheet" href="dashboard-comum/comum.css">
   <script src="/socket.io/socket.io.js" defer></script>
   <script src="vendor/exceljs-4.4.0.min.js" defer></script>
   <script src="dashboard-cotacoes/dados.js" defer></script>
   <script src="dashboard-cotacoes/exportar.js" defer></script>
   <script src="dashboard-cotacoes/app.js" defer></script>
+  <script src="dashboard-comum/saude.js" defer></script>
+  <script src="dashboard-comum/base.js" defer></script>
 </head>
-<body class="layout-admin">
+<body class="layout-admin" data-dashboard="cotacoes">
   <a class="skip-link" href="#main">Ir para o conteúdo</a>
+  <div id="dash-topo"></div>
   <div id="app"><main class="empty" id="main"><h1>Gestão de cotações</h1><p>Verificando acesso administrativo…</p></main></div>
   <div id="drawer-root"></div>
   <div id="toast" role="status" aria-live="polite"></div>

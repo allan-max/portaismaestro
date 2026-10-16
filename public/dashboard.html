@@ -145,7 +145,12 @@
           <p>Gerencie as contas cadastradas, vendedores vinculados e privilégios</p>
         </div>
       </div>
-      <div style="display: flex; gap: 10px;">
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <!-- Dashboards (só admin; o servidor confere de novo em cada página) -->
+        <a href="dashboard2.html" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px 14px; border-radius: 8px; font-weight: bold; text-decoration: none;">📊 Cotações</a>
+        <a href="sync.html" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px 14px; border-radius: 8px; font-weight: bold; text-decoration: none;">🔄 Sincronização</a>
+        <a href="nfs.html" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px 14px; border-radius: 8px; font-weight: bold; text-decoration: none;">🧾 NFs</a>
+        <a href="atividade.html" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px 14px; border-radius: 8px; font-weight: bold; text-decoration: none;">📈 Atividade</a>
         <button onclick="abrirConfiguracoes()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
           ⚙️ CONFIGURAÇÕES
         </button>
