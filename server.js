@@ -15,7 +15,10 @@ const arquivoEnvMaestro = path.join(__dirname, '.env');
 const segredoRoboConfigurado = process.env.ROBO_SECRET ?? (fs.existsSync(arquivoEnvMaestro)
     ? require('dotenv').parse(fs.readFileSync(arquivoEnvMaestro)).ROBO_SECRET : '');
 const { criarDashboardCotacoes } = require('./lib/dashboard-cotacoes');
+const { lerSessao } = require('./lib/dashboard-cotacoes');
 const { criarDashboardFontes } = require('./lib/dashboard-fontes');
+const { criarAuditoria } = require('./lib/auditoria');
+const { criarDashboardAuditoria, ipDe } = require('./lib/dashboard-auditoria');
 
 
 // 🛡️ AIRBAG ANTI-CRASH (Impede o servidor de morrer por erros invisíveis)
@@ -130,6 +133,57 @@ const dashboardFontes = criarDashboardFontes({
     obterConexoes: () => JSON.parse(JSON.stringify(conexoes))
 });
 
+// 🛡️ AUDITORIA: quem mudou o quê (docs/auditoria/plano.md). Admins na sala 'auditoria' recebem ao vivo.
+const auditoria = criarAuditoria({ dir: path.join(__dirname, '..', 'auditoria'), uuid: uuidv4 });
+const emailsPendentes = new Map();      // clientId -> e-mail digitado no login/cadastro, até o robô responder
+const auditPorCliente = new Map();      // `${tipo}:${clientId}` -> id do registro, para respostas sem audit_id
+const MODOS_AUDITADOS = new Set(['ligar_robo', 'desligar_robo', 'forcar_troca', 'solicitar_parada', 'parar_extracao', 'extrair', 'verificar', 'mover_anexos_findes']);
+let syncNfAuditId = null;
+
+// Só quem ainda é admin com sessão válida continua recebendo ao vivo (rebaixado, bloqueado ou expirado sai da sala)
+function emitirAuditoria(evento, dados) {
+    for (const id of [...(io.sockets.adapter.rooms.get('auditoria') || [])]) {
+        const s = io.sockets.sockets.get(id);
+        if (!s) continue;
+        if (lerSessao(cofreSessoes, s)?.admin === true) s.emit(evento, dados);
+        else s.leave('auditoria');
+    }
+}
+
+// Falha ao gravar auditoria nunca pode impedir a ação do usuário
+function registrarAuditoria(dados) {
+    try {
+        const reg = auditoria.registrar(dados);
+        emitirAuditoria('auditoria_nova', reg);
+        return reg;
+    } catch (e) {
+        console.error('Erro ao gravar auditoria:', e);
+        return null;
+    }
+}
+function fecharAuditoria(id, resultado) {
+    if (!id) return;
+    try {
+        emitirAuditoria('auditoria_atualizada', auditoria.fechar(id, resultado));
+    } catch (e) {
+        console.error('Erro ao fechar auditoria:', e);
+    }
+}
+// Fecha a partir da resposta do robô: { sucesso, erro|mensagem }
+function fecharPelaResposta(id, dados = {}, detalhes_extra = null) {
+    fecharAuditoria(id, {
+        status: dados.sucesso ? 'sucesso' : 'erro',
+        erro: dados.sucesso ? null : String(dados.erro || dados.mensagem || 'Erro sem mensagem'),
+        detalhes_extra
+    });
+}
+function fecharPorCliente(tipo, clientId, dados) {
+    const chave = `${tipo}:${clientId}`;
+    fecharPelaResposta(auditPorCliente.get(chave), dados);
+    auditPorCliente.delete(chave);
+}
+const dashboardAuditoria = criarDashboardAuditoria({ sessoes: cofreSessoes, auditoria, registrar: registrarAuditoria });
+
 function notificar_todos(mensagem = null) {
     estado_global.tamanho_fila = fila_respostas.length;
     io.to('frontend').emit('sincronizar_estado', { estado: estado_global, mensagem: mensagem });
@@ -170,6 +224,11 @@ io.use((socket, next) => {
 io.on('connection', (socket) => {
     dashboardCotacoes.conectar(socket);
     dashboardFontes.conectar(socket);
+    dashboardAuditoria.conectar(socket);
+    const audit = (area, acao, extra = {}) => registrarAuditoria({
+        email: socket.usuarioLogado ? socket.usuarioLogado.email : null, ip: ipDe(socket), area, acao, ...extra
+    });
+    const doRobo = () => socket.id === bot_socket_id;
     socket.onAny(() => {
         const nome = socket.id === bot_socket_id ? 'gerenciador' : socket.id === sync_socket_id ? 'nf' : null;
         if (nome) conexoes[nome].visto_em = new Date().toISOString();
@@ -181,6 +240,7 @@ io.on('connection', (socket) => {
 
     // Cancelar Evento da Fila
     socket.on('remover_da_fila', (dados) => {
+        if (!socket.autenticado) return;
         const eventoId = dados.evento;
 
         // Proteção: não cancela se já estiver a ser preenchido pelo robô
@@ -188,6 +248,11 @@ io.on('connection', (socket) => {
             return; // Já está no forno, não pode cancelar!
         }
 
+        const cancelado = fila_respostas.find(e => e.id === eventoId);
+        if (cancelado) {
+            audit('portal', 'cancelar_evento', { portal: cancelado.payload.portal, alvo: eventoId, status: 'sucesso' });
+            fecharAuditoria(cancelado.audit_id, { status: 'erro', erro: 'Evento cancelado antes do envio' });
+        }
         fila_respostas = fila_respostas.filter(e => e.id !== eventoId);
         if (estado_global.fila_pendente) {
             estado_global.fila_pendente = estado_global.fila_pendente.filter(e => e !== eventoId);
@@ -244,6 +309,9 @@ io.on('connection', (socket) => {
         // 👇 NOVA ROTINA PARA CONTROLE DE FILA (EVENTOS) 👇
         if (dados.evento && dados.evento.startsWith('Evento ')) {
             const eventoId = dados.evento.replace('Evento ', '');
+
+            const respondido = fila_respostas.find(e => e.id === eventoId);
+            if (respondido && doRobo()) fecharPelaResposta(respondido.audit_id, dados);
 
             // 1. Remove da Fila Pendente
             fila_respostas = fila_respostas.filter(e => e.id !== eventoId);
@@ -330,11 +398,15 @@ io.on('connection', (socket) => {
 
     socket.on('promover_usuario', (dados) => {
         if (!checkRole('admin')) return;
-        if (bot_socket_id) io.to(bot_socket_id).emit('comando_promover_usuario', { ...dados, clientId: socket.id });
+        if (bot_socket_id) {
+            audit('admin', 'promover_usuario', { alvo: dados.alvo, detalhes: { depois: 'admin' }, status: 'sucesso' });
+            io.to(bot_socket_id).emit('comando_promover_usuario', { ...dados, clientId: socket.id });
+        }
     });
 
     socket.on('solicitar_impressao', (dados) => {
         if (!socket.autenticado) return;
+        audit('portal', 'imprimir', { portal: dados.portal || null, alvo: dados.evento || null, status: 'sucesso' });
         if (dados.portal === 'ariba') {
             estado_ariba.status = 'ocupado';
             io.to('frontend').emit('sincronizar_estado_ariba', estado_ariba);
@@ -350,7 +422,11 @@ io.on('connection', (socket) => {
 
     socket.on('comando_direto', (dados) => {
         if (!socket.autenticado) return;
-        
+        if (MODOS_AUDITADOS.has(dados.modo)) {
+            audit('portal', 'robo_' + dados.modo, { portal: dados.portal || null, alvo: dados.evento || null,
+                detalhes: { modo: dados.modo, evento: dados.evento || null }, status: 'sucesso' });
+        }
+
         // Só altera o estado GLOBAL (travando a tela) se for Coupa ou Vale
         if (dados.portal === 'coupa' || dados.portal === 'vale') {
             if (dados.modo === 'ligar_robo') {
@@ -374,8 +450,19 @@ io.on('connection', (socket) => {
     });
 
     // === SISTEMA DE LOGIN (PONTE FRONTEND -> ROBÔ) ===
+    // Login/cadastro/senha: quem responde é o robô; o e-mail é o que foi digitado (nunca a senha)
+    function registrarContaPeloRobo(dados, acao, emailReserva = null) {
+        if (!doRobo() || !dados) return;
+        const email = emailsPendentes.get(dados.clientId) || emailReserva || null;
+        emailsPendentes.delete(dados.clientId);
+        const cliente = io.sockets.sockets.get(dados.clientId);
+        registrarAuditoria({ email, ip: cliente ? ipDe(cliente) : null, area: 'conta', acao, alvo: email,
+            status: dados.sucesso ? 'sucesso' : 'erro', erro: dados.sucesso ? null : String(dados.erro || 'Falhou') });
+    }
+
     socket.on('solicitar_login', (dados) => {
         if (bot_socket_id) {
+            emailsPendentes.set(socket.id, String((dados && dados.user) || '').trim().toLowerCase());
             io.to(bot_socket_id).emit('validar_login', { ...dados, clientId: socket.id });
         } else {
             socket.emit('resposta_login', { sucesso: false, erro: "O Servidor Central (Robô) está offline." });
@@ -384,6 +471,7 @@ io.on('connection', (socket) => {
 
     socket.on('resultado_login', (dados) => {
         if (!socket.isBot || socket.id !== bot_socket_id) return;
+        registrarContaPeloRobo(dados, dados.sucesso ? 'login' : 'login_falha', dados.user);
         if (dados.sucesso) {
             const sessionId = uuidv4();
             const expires = Date.now() + (28800 * 1000); 
@@ -415,6 +503,7 @@ io.on('connection', (socket) => {
 
     socket.on('solicitar_cadastro', (dados) => {
         if (bot_socket_id) {
+            emailsPendentes.set(socket.id, String((dados && dados.email) || '').trim().toLowerCase());
             io.to(bot_socket_id).emit('registrar_usuario', { ...dados, clientId: socket.id });
         } else {
             // 🛑 Avisa o usuário que o robô local está desligado
@@ -424,6 +513,8 @@ io.on('connection', (socket) => {
 
     // ✅ NOVO: Repassa a resposta do robô de volta para o frontend
     socket.on('resposta_cadastro', (dados) => {
+        if (dados.sucesso) registrarContaPeloRobo(dados, 'cadastro', dados.email);
+        else emailsPendentes.delete(dados.clientId);
         io.to(dados.clientId).emit('resposta_cadastro', dados);
     });
 
@@ -453,10 +544,12 @@ io.on('connection', (socket) => {
     });
 
     socket.on('resultado_nova_senha', (dados) => {
+        if (dados.sucesso) registrarContaPeloRobo(dados, 'troca_senha', dados.email);
         io.to(dados.clientId).emit('resposta_nova_senha', dados);
     });
 
     socket.on('disconnect', () => {
+        emailsPendentes.delete(socket.id);
         for (let email in usuarios_logados) {
             if (usuarios_logados[email] === socket.id) delete usuarios_logados[email];
         }
@@ -563,7 +656,9 @@ io.on('connection', (socket) => {
             : 'dashboard_access';
 
         if (bot_socket_id) {
-            io.to(bot_socket_id).emit('admin_alterar_acesso_dashboard', { 
+            const reg = audit('admin', 'acesso_' + campo.replace('_access', ''), { alvo: dados.email, detalhes: { depois: !!dados.acesso } });
+            if (reg) auditPorCliente.set(`acesso:${socket.id}`, reg.id);
+            io.to(bot_socket_id).emit('admin_alterar_acesso_dashboard', {
                 email: dados.email, 
                 campo: campo,
                 acesso: dados.acesso, 
@@ -576,13 +671,16 @@ io.on('connection', (socket) => {
 
     socket.on('admin_resposta_acesso', (dados) => {
         if (socket.id !== bot_socket_id) return; // só o gerenciador responde
+        fecharPorCliente('acesso', dados.clientId, dados);
         io.to(dados.clientId).emit('admin_acesso_alterado', dados);
     });
 
     socket.on('admin_alterar_vendedor_usuario', (dados) => {
         if (!checkRole('admin')) return;
         if (bot_socket_id) {
-            io.to(bot_socket_id).emit('admin_alterar_vendedor_usuario', { 
+            const reg = audit('admin', 'vincular_vendedor', { alvo: dados.email, detalhes: { depois: dados.vendedor || null } });
+            if (reg) auditPorCliente.set(`vendedor:${socket.id}`, reg.id);
+            io.to(bot_socket_id).emit('admin_alterar_vendedor_usuario', {
                 email: dados.email, 
                 vendedor: dados.vendedor, 
                 clientId: socket.id 
@@ -594,6 +692,7 @@ io.on('connection', (socket) => {
 
     socket.on('admin_resposta_vendedor', (dados) => {
         if (socket.id !== bot_socket_id) return;
+        fecharPorCliente('vendedor', dados.clientId, dados);
         io.to(dados.clientId).emit('admin_vendedor_alterado', dados);
     });
 
@@ -604,6 +703,8 @@ io.on('connection', (socket) => {
 
     socket.on('salvar_config_admin', (dados) => {
         if (!checkRole('admin')) return;
+        // só os nomes das chaves: a config pode conter senhas dos portais
+        audit('admin', 'salvar_config', { detalhes: { chaves: Object.keys((dados && dados.config) || {}) }, status: 'sucesso' });
         if (bot_socket_id) io.to(bot_socket_id).emit('salvar_config_admin', { ...dados, clientId: socket.id });
     });
 
@@ -616,15 +717,21 @@ io.on('connection', (socket) => {
     // Site pede para visualizar JSON
     
     socket.on('comando_apagar_linha', (dados = {}) => {
+        if (!socket.autenticado) return socket.emit('sessao_invalida');
         if (bot_socket_id) {
             dados.clientId = socket.id;
+            const reg = audit('planilha', 'apagar_linha', { alvo: dados.chave, detalhes: { tipo: dados.tipo } });
+            dados.audit_id = reg && reg.id;
             io.to(bot_socket_id).emit('comando_apagar_linha', dados);
         }
     });
 
     socket.on('comando_editar_linha', (dados = {}) => {
+        if (!socket.autenticado) return socket.emit('sessao_invalida');
         if (bot_socket_id) {
             dados.clientId = socket.id;
+            const reg = audit('planilha', 'editar_linha', { alvo: dados.chave, detalhes: { tipo: dados.tipo, novos_dados: dados.novos_dados } });
+            dados.audit_id = reg && reg.id;
             io.to(bot_socket_id).emit('comando_editar_linha', dados);
         }
     });
@@ -638,15 +745,21 @@ io.on('connection', (socket) => {
             return socket.emit('resposta_acao_linha', { sucesso: false, erro: 'Cotação inválida.' });
         }
         if (!bot_socket_id) return socket.emit('resposta_acao_linha', { sucesso: false, erro: 'O Robô está offline.' });
+        const reg = audit('planilha', 'marcar_respondida', { alvo: identidade['COTAÇÃO'],
+            detalhes: { tipo: 'cotacoes', vendedor: identidade.VENDEDOR, novos_dados: { RESPOSTA: 'RESPONDIDO' } } });
         io.to(bot_socket_id).emit('comando_marcar_cotacao_respondida', {
             tipo: 'cotacoes', chave: identidade['COTAÇÃO'],
             identidade: Object.fromEntries(campos.map(c => [c, identidade[c]])),
-            novos_dados: { RESPOSTA: 'RESPONDIDO' }, clientId: socket.id
+            novos_dados: { RESPOSTA: 'RESPONDIDO' }, clientId: socket.id, audit_id: reg && reg.id
         });
     });
 
     socket.on('resposta_acao_linha', (dados) => {
         if (socket.id !== bot_socket_id) return;
+        const extra = {};
+        if (dados.antes) extra.antes = dados.antes;
+        if (dados.linha_apagada) extra.linha_apagada = dados.linha_apagada;
+        fecharPelaResposta(dados.audit_id, dados, Object.keys(extra).length ? extra : null);
         if (dados.sucesso) io.emit('planilha_atualizada');
         if (dados.clientId) {
             io.to(dados.clientId).emit('resposta_acao_linha', dados);
@@ -709,6 +822,8 @@ io.on('connection', (socket) => {
     socket.on('solicitar_sync_nf', (dados = {}) => {
         if (!socket.rooms.has('frontend')) return;
         if (!sync_socket_id) return socket.emit('retorno_sync_nf', { sucesso: false, erro: "O serviço de NF está offline." });
+        const reg = audit('planilha', 'sincronizar_nf', { detalhes: { de: dados.de || null, ate: dados.ate || null, gravar: dados.gravar !== false } });
+        syncNfAuditId = reg && reg.id;
         io.to(sync_socket_id).emit('comando_sync_nf', {
             clientId: socket.id, de: dados.de || null, ate: dados.ate || null, gravar: dados.gravar !== false
         });
@@ -718,12 +833,17 @@ io.on('connection', (socket) => {
     socket.on('solicitar_nf_planilha', (dados = {}) => {
         if (!socket.rooms.has('frontend')) return;
         if (!sync_socket_id) return socket.emit('retorno_nf_planilha', { sucesso: false, erro: "O serviço de NF está offline." });
+        if (dados.gravar === true) {   // a prévia só lê; gravar muda a planilha
+            const reg = audit('planilha', 'gravar_nf_planilha');
+            if (reg) auditPorCliente.set(`nf_planilha:${socket.id}`, reg.id);
+        }
         io.to(sync_socket_id).emit('comando_nf_planilha', { clientId: socket.id, gravar: dados.gravar === true });
     });
     socket.on('progresso_nf_planilha', (dados = {}) => {
         if (socket.id === sync_socket_id && dados.clientId) io.to(dados.clientId).emit('progresso_nf_planilha', dados);
     });
     socket.on('retorno_nf_planilha', (dados = {}) => {
+        if (socket.id === sync_socket_id && dados.clientId) fecharPorCliente('nf_planilha', dados.clientId, dados);
         if (socket.id === sync_socket_id && dados.clientId) io.to(dados.clientId).emit('retorno_nf_planilha', dados);
     });
 
@@ -738,7 +858,10 @@ io.on('connection', (socket) => {
     });
 
     socket.on('retorno_sync_nf', (dados = {}) => {
-        if (socket.id === sync_socket_id) io.to('frontend').emit('retorno_sync_nf', dados);
+        if (socket.id !== sync_socket_id) return;
+        // ponytail: uma sincronização manual por vez; a rodada automática pode fechar a manual se coincidirem
+        if (syncNfAuditId) { fecharPelaResposta(syncNfAuditId, dados); syncNfAuditId = null; }
+        io.to('frontend').emit('retorno_sync_nf', dados);
     });
 
     // O robô (Auto-Pilot) ou o serviço de NF avisam que a planilha mudou: as telas recarregam
@@ -759,15 +882,18 @@ io.on('connection', (socket) => {
     });
 
     // Site pede para registrar vendedor na planilha
-    socket.on('solicitar_registro_vendedor_cotacao', (dados) => {
+    socket.on('solicitar_registro_vendedor_cotacao', (dados = {}) => {
+        if (!socket.autenticado) return socket.emit('sessao_invalida');
         if (bot_socket_id) {
-            io.to(bot_socket_id).emit('comando_registrar_vendedor_cotacao', { clientId: socket.id, ...dados });
+            const reg = audit('planilha', 'atribuir_vendedor', { alvo: dados.vendedor, detalhes: { cotacoes: dados.cotacoes } });
+            io.to(bot_socket_id).emit('comando_registrar_vendedor_cotacao', { clientId: socket.id, ...dados, audit_id: reg && reg.id });
         } else {
             socket.emit('resposta_registro_vendedor_cotacao', { sucesso: false, erro: "O Robô (Gerenciador Python) está offline. Inicie o script no seu computador." });
         }
     });
 
     socket.on('retorno_registro_vendedor_cotacao', (dados) => {
+        if (doRobo()) fecharPelaResposta(dados.audit_id, dados);
         if (dados.sucesso) io.emit('planilha_atualizada');
         if (dados.clientId) {
             io.to(dados.clientId).emit('resposta_registro_vendedor_cotacao', dados);
@@ -782,9 +908,13 @@ io.on('connection', (socket) => {
 
     // Site pede para registrar cotações manuais na planilha
     
-    socket.on('solicitar_registro_pedido_manual', (dados) => {
+    socket.on('solicitar_registro_pedido_manual', (dados = {}) => {
+        if (!socket.autenticado) return socket.emit('sessao_invalida');
         if (bot_socket_id) {
             dados.clientId = socket.id;
+            const numeros = (Array.isArray(dados.pedidos) ? dados.pedidos : []).map(p => p && p.pedido).filter(Boolean);
+            const reg = audit('planilha', 'pedido_manual', { alvo: numeros.join(', '), detalhes: { qtd: numeros.length, pedidos: numeros } });
+            dados.audit_id = reg && reg.id;
             io.to(bot_socket_id).emit('solicitar_registro_pedido_manual', dados);
         } else {
             socket.emit('resposta_registro_pedido_manual', { sucesso: false, erro: "Robô desconectado." });
@@ -792,21 +922,26 @@ io.on('connection', (socket) => {
     });
 
     socket.on('resposta_registro_pedido_manual', (dados) => {
+        if (doRobo()) fecharPelaResposta(dados.audit_id, dados);
         if (dados.sucesso) io.emit('planilha_atualizada');
         if (dados.clientId) {
             io.to(dados.clientId).emit('resposta_registro_pedido_manual', dados);
         }
     });
 
-    socket.on('solicitar_registro_cotacao_manual', (dados) => {
+    socket.on('solicitar_registro_cotacao_manual', (dados = {}) => {
+        if (!socket.autenticado) return socket.emit('sessao_invalida');
         if (bot_socket_id) {
-            io.to(bot_socket_id).emit('comando_registrar_cotacao_manual', { clientId: socket.id, ...dados });
+            const numeros = (Array.isArray(dados.cotacoes) ? dados.cotacoes : []).map(c => c && c.cotacao).filter(Boolean);
+            const reg = audit('planilha', 'cotacao_manual', { alvo: numeros.join(', '), detalhes: { qtd: numeros.length, cotacoes: numeros } });
+            io.to(bot_socket_id).emit('comando_registrar_cotacao_manual', { clientId: socket.id, ...dados, audit_id: reg && reg.id });
         } else {
             socket.emit('resposta_registro_cotacao_manual', { sucesso: false, erro: "O Robô (Gerenciador Python) está offline." });
         }
     });
 
     socket.on('retorno_registro_cotacao_manual', (dados) => {
+        if (doRobo()) fecharPelaResposta(dados.audit_id, dados);
         if (dados.sucesso) io.emit('planilha_atualizada');
         if (dados.clientId) {
             io.to(dados.clientId).emit('resposta_registro_cotacao_manual', dados);
@@ -815,7 +950,11 @@ io.on('connection', (socket) => {
 
     // FILA EXTRAÇÃO
     socket.on('obter_fila_extracao', (dados) => io.to('backend').emit('obter_fila_extracao', dados));
-    socket.on('iniciar_extracao_fila', (dados) => io.to('backend').emit('iniciar_extracao_fila', dados));
+    socket.on('iniciar_extracao_fila', (dados) => {
+        if (!socket.autenticado) return;
+        audit('portal', 'extracao_fila', { status: 'sucesso' });
+        io.to('backend').emit('iniciar_extracao_fila', dados);
+    });
     socket.on('atualizar_fila_extracao', (dados) => {
         io.emit('atualizar_fila_extracao', dados);
     });
@@ -861,6 +1000,7 @@ app.post('/api/responder', upload.fields([{ name: 'datasheet' }, { name: 'dav' }
     try {
         const sessionId = req.body.sessionId;
         if (!cofreSessoes.has(sessionId)) return res.status(401).json({ error: "Sessão inválida" });
+        const autor = JSON.parse(cofreSessoes.get(sessionId)).email;
 
         const evento = req.body.evento;
         const precos = JSON.parse(req.body.precos || '[]');
@@ -910,7 +1050,13 @@ app.post('/api/responder', upload.fields([{ name: 'datasheet' }, { name: 'dav' }
         };
 
         // 2. Adiciona à fila real de trabalho do servidor
-        fila_respostas.push({ id: evento, payload: payload });
+        // Auditoria: só metadados, nunca preços/prazos/anexos
+        const reg = registrarAuditoria({
+            email: autor, ip: String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.ip,
+            area: 'portal', acao: 'responder_evento', portal: portal_origem, alvo: evento,
+            detalhes: { qtd_itens: precos.length, tem_datasheet: datasheets.length > 0, tem_dav: davs.length > 0 }
+        });
+        fila_respostas.push({ id: evento, payload: payload, audit_id: reg && reg.id });
         
         // 3. Adiciona à fila visual para aparecer no site
         if (!estado_global.fila_pendente) estado_global.fila_pendente = [];
