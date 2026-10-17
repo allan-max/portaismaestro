@@ -45,6 +45,10 @@
   const deadlineBadge = row => `<span class="deadline-badge ${({ overdue: 'red', today: 'amber', week: 'blue' })[D.deadline(row)] || ''}">${deadlineLabels[D.deadline(row)]}</span>`;
   const btn = (action, label, glyph, cls = '') => `<button class="button ${cls}" data-action="${action}" aria-label="${esc(label)}">${glyph ? icon(glyph) : ''}<span>${label}</span></button>`;
   const app = document.getElementById('app');
+  // Controle → Auditoria / Usuários (dashboard-cotacoes/auditoria.js)
+  const A = window.DashAuditoria.criar({ icon, esc, btn, number, timestamp: v => v ? new Date(v).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'medium' }) : 'Não registrado',
+    mountDialog: html => mountDialog(html), toast: m => toast(m), render: () => render(), socket: () => socket,
+    irPara: view => { state.view = view; state.page = 1; render(); A.carregar(false); } });
 
   function nav() {
     return `<nav class="subnav" aria-label="Seções da gestão">${[
@@ -164,13 +168,14 @@
   function render() {
     if (!authorized) return accessScreen();
     const focused = document.activeElement?.id;
-    const position = focused === 'filter-search' ? document.activeElement.selectionStart : null;
+    const position = ['filter-search', 'aud-busca', 'aud-busca-usuario'].includes(focused) ? document.activeElement.selectionStart : null;
     const vendorOpen = document.getElementById('vendor-picker')?.open;
     const data = D.select(D.rows, state);
     const loadedContent = state.view === 'vendors' ? vendors(data) : state.view === 'quotes' ? metrics(data) + table(data, 12) + quality(data) : state.view === 'history' ? history(data) : overview(data);
     const sourceNotice = sourceState === 'error' ? `<div class="source-notice" role="alert">${icon('alert')}<span>${esc(sourceError)} ${lastSuccess ? `Exibindo a última leitura de ${timestamp(lastSuccess)} (horário de Brasília), que pode estar desatualizada.` : 'Os indicadores serão exibidos depois de uma leitura válida.'}</span>${btn('refresh', 'Tentar novamente', 'refresh', 'small')}</div>` : sourceState === 'loading' && lastSuccess ? `<div class="source-notice" role="status">${icon('refresh')}<span>Atualizando. Até a confirmação, os dados exibidos são da leitura de ${timestamp(lastSuccess)} (horário de Brasília).</span></div>` : '';
-    const content = lastSuccess ? loadedContent : `<section class="panel empty" role="status">${icon(sourceState === 'error' ? 'alert' : 'refresh')}<h2>${sourceState === 'error' ? 'Base indisponível' : 'Consultando as cotações…'}</h2><p>${sourceState === 'error' ? 'Use Atualizar para tentar uma nova leitura.' : 'Aguarde a confirmação do gerenciador.'}</p></section>`;
-    app.innerHTML = `${portal()}<div class="page-wrap workspace"><aside class="sidebar"><div class="eyebrow">Gestão comercial</div>${nav()}<div class="sidebar-bottom">${icon('shield')}<p>Visão administrativa</p><small>Consulta da carteira e evidências</small></div></aside><main class="page-main" id="main" tabindex="-1">${heading()}${sourceNotice}${filters()}<div id="content" aria-busy="${sourceState === 'loading'}">${content}</div><footer class="footer"><span>MAESTRO <span class="muted">/ Gestão comercial</span></span><span>Somente consulta · dados de resposta conforme evidência</span></footer></main></div>`;
+    const controle = A.ativa(state.view);
+    const content = controle ? A.conteudo(state.view) : lastSuccess ? loadedContent :`<section class="panel empty" role="status">${icon(sourceState === 'error' ? 'alert' : 'refresh')}<h2>${sourceState === 'error' ? 'Base indisponível' : 'Consultando as cotações…'}</h2><p>${sourceState === 'error' ? 'Use Atualizar para tentar uma nova leitura.' : 'Aguarde a confirmação do gerenciador.'}</p></section>`;
+    app.innerHTML = `${portal()}<div class="page-wrap workspace"><aside class="sidebar"><div class="eyebrow">Gestão comercial</div>${nav()}${A.nav(state.view)}<div class="sidebar-bottom">${icon('shield')}<p>Visão administrativa</p><small>Consulta da carteira e evidências</small></div></aside><main class="page-main" id="main" tabindex="-1">${controle ? A.heading(state.view) + A.aviso() + A.filtros(state.view) : heading() + sourceNotice + filters()}<div id="content" aria-busy="${sourceState === 'loading'}">${content}</div><footer class="footer"><span>MAESTRO <span class="muted">/ Gestão comercial</span></span><span>Somente consulta · dados de resposta conforme evidência</span></footer></main></div>`;
     document.querySelectorAll('[data-action="export"], [data-action="print"]').forEach(b => { b.disabled = !data.length || sourceState !== 'ready' || exporting; });
     if (vendorOpen) document.getElementById('vendor-picker').open = true;
     const target = focused && document.getElementById(focused);
@@ -203,8 +208,9 @@
   document.addEventListener('click', event => {
     const element = event.target.closest('button, [data-backdrop]'); if (!element) return;
     if (element.hasAttribute('data-close-dialog') || (event.target === element && element.hasAttribute('data-backdrop'))) return closeDrawer();
-    if (element.dataset.view) { state.view = element.dataset.view; state.page = 1; render(); return; }
+    if (element.dataset.view) { state.view = element.dataset.view; state.page = 1; render(); if (A.ativa(state.view)) A.carregar(false); return; }
     if (!authorized) { if (element.dataset.action === 'refresh') refresh(); return; }
+    if (A.clique(element)) return;
     if (element.dataset.quote) return openQuote(element.dataset.quote);
     if (element.dataset.selectSeller) { changeFilters({ sellers: [element.dataset.selectSeller], view: 'quotes' }); return; }
     if (element.dataset.removeSeller) return changeFilters({ sellers: state.sellers.filter(s => s !== element.dataset.removeSeller) });
@@ -230,6 +236,7 @@
   });
   document.addEventListener('change', event => {
     const element = event.target;
+    if (A.mudanca(element)) return;
     if (element.dataset.seller) {
       const seller = element.dataset.seller;
       changeFilters({ sellers: element.checked ? [...state.sellers, seller] : state.sellers.filter(s => s !== seller) }); return;
@@ -239,6 +246,7 @@
     if (keys[element.id]) changeFilters({ [keys[element.id]]: element.value });
   });
   document.addEventListener('input', event => {
+    if (A.digitar(event.target)) return;
     if (event.target.id === 'filter-search') changeFilters({ search: event.target.value });
   });
   document.addEventListener('keydown', event => {
@@ -315,6 +323,7 @@
         if (reloadAfter) { reloadAfter = false; requestData(); }
       } catch { unavailable('A resposta recebida não contém uma base de cotações válida. Tente atualizar.'); }
     });
+    A.ouvir(socket);
     socket.on('planilha_atualizada', requestData);
     socket.on('sessao_invalida', () => { invalidate(); socket.disconnect(); });
     socket.on('disconnect', () => {

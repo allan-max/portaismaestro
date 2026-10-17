@@ -6,7 +6,7 @@ const server = fs.readFileSync(require('node:path').join(__dirname, '../server.j
 const handler = server.match(/socket\.on\('marcar_cotacao_respondida', (\(dados = \{\}\) => \{[\s\S]*?\n    \})\);/)[1];
 function executar(autenticado, bot, dados) {
     const eventos = [];
-    vm.runInNewContext(`(${handler})(dados)`, { dados, bot_socket_id: bot,
+    vm.runInNewContext(`(${handler})(dados)`, { dados, bot_socket_id: bot, audit: () => ({ id: 'aud-1' }),
         socket: { autenticado, id: 'usuario', emit: (e, d) => eventos.push({ e, d }) },
         io: { to: destino => ({ emit: (e, d) => eventos.push({ destino, e, d }) }) } });
     return eventos;
@@ -22,6 +22,7 @@ test('encaminha apenas RESPOSTA com identidade e clientId do socket', () => {
     assert.equal(r.destino, 'bot');
     assert.equal(r.e, 'comando_marcar_cotacao_respondida');
     assert.equal(r.d.clientId, 'usuario');
+    assert.equal(r.d.audit_id, 'aud-1');   // a auditoria fecha o registro quando o robô responder
     assert.deepEqual(JSON.parse(JSON.stringify(r.d.novos_dados)), { RESPOSTA: 'RESPONDIDO' });
     assert.deepEqual(JSON.parse(JSON.stringify(r.d.identidade)), identidade);
 });
