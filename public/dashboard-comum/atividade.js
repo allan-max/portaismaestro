@@ -37,6 +37,31 @@
     }
 
     const hora = iso => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const quando = iso => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+    // Por robô: a última verificação das respostas e o alerta de inatividade que ainda vale
+    // (some quando um ciclo termina bem depois dele). Eventos do gerenciador: verificacao_concluida, robo_inativo, ciclo.
+    function robos(eventos) {
+        const ultimo = teste => eventos.filter(teste).reduce((a, e) => !a || Date.parse(e.em) > Date.parse(a.em) ? e : a, null);
+        return ['coupa', 'vale'].map(servico => {
+            const verificacao = ultimo(e => e.servico === servico && e.tipo === 'verificacao_concluida');
+            const inativo = ultimo(e => e.servico === servico && e.tipo === 'robo_inativo');
+            const cicloOk = ultimo(e => e.servico === servico && e.tipo === 'ciclo' && e.nivel === 'ok');
+            const resolvido = inativo && cicloOk && Date.parse(cicloOk.em) > Date.parse(inativo.em);
+            return { servico, verificacao, inativo: inativo && !resolvido ? inativo : null };
+        });
+    }
+
+    function htmlRobos(lista) {
+        const linha = r => {
+            const d = (r.verificacao && r.verificacao.detalhe) || {};
+            const verif = r.verificacao
+                ? `Última verificação ${quando(r.verificacao.em)} · ${esc(d.encontradas ?? '?')}/${esc(d.total ?? '?')} pendentes encontradas · ${esc(d.mudancas ?? 0)} status alterados`
+                : 'Nenhuma verificação nos últimos 7 dias';
+            return `<li class="${r.inativo ? 'erro' : 'ok'}"><strong>${esc(SERVICOS[r.servico])}</strong><span>${verif}</span>${r.inativo ? `<span class="tag vermelho">${esc(r.inativo.resumo)}</span>` : ''}</li>`;
+        };
+        return `<section class="panel bloco robos entra" style="--i:5"><div class="panel-head"><div><h2>Robôs</h2><p>Última verificação das respostas e alertas de robô parado</p></div></div><ul class="robos-lista">${lista.map(linha).join('')}</ul></section>`;
+    }
     const valor = v => Array.isArray(v) ? v.join(', ') : v && typeof v === 'object' ? JSON.stringify(v) : v;
 
     function htmlGrupo(g) {
@@ -68,14 +93,14 @@
         const corpo = lista.length ? `<ol class="linha-tempo">${porDia(agrupar(lista)).map(d => `<li class="dia">${esc(d.dia)}</li>${d.grupos.map(htmlGrupo).join('')}`).join('')}</ol>`
             : `<p class="vazio">${eventos.length ? 'Nada com este filtro.' : 'Nenhum evento nos últimos 7 dias.'}</p>`;
         const mais = eventos.length >= limite && limite < 500 ? '<button class="button" data-acao="mais">Carregar mais</button>' : '';
-        return `${topo}${cards}<section class="panel bloco entra" style="--i:4"><div class="panel-head"><div><h2>Linha do tempo</h2><p>Gerenciador, Coupa, Vale, cadastro, NF e sync planilha num lugar só. Eventos iguais em sequência ficam juntos.</p></div></div>
+        return `${topo}${cards}${htmlRobos(robos(eventos))}<section class="panel bloco entra" style="--i:4"><div class="panel-head"><div><h2>Linha do tempo</h2><p>Gerenciador, Coupa, Vale, cadastro, NF e sync planilha num lugar só. Eventos iguais em sequência ficam juntos.</p></div></div>
             <div class="filtros"><label class="field"><span class="field-label">Serviço</span><select id="filtro-at-servico" data-filtro="servico"><option value="">Todos</option>${Object.entries(SERVICOS).map(([k, v]) => `<option value="${k}" ${f.servico === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
             <label class="field"><span class="field-label">Nível</span><select id="filtro-at-nivel" data-filtro="nivel"><option value="">Todos</option>${Object.entries(NIVEIS).map(([k, v]) => `<option value="${k}" ${f.nivel === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
             <label class="field search-field"><span class="field-label">Buscar</span><span class="search-box"><input id="filtro-at-busca" type="search" data-filtro="busca" placeholder="Cotação, pedido, mensagem…" value="${esc(f.busca)}"></span></label></div>
             ${corpo}<div class="lista-rodape"><span>${lista.length} de ${eventos.length} evento(s)</span>${mais}</div></section>`;
     }
 
-    const api = { filtrar, agrupar, porDia, pagina, SERVICOS };
+    const api = { filtrar, agrupar, porDia, pagina, robos, SERVICOS };
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
     else root.DashAtividade = api;
 

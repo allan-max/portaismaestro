@@ -94,6 +94,12 @@ button.barra:hover .barra-trilho { background: #2a3850; }
 .tag { display: inline-flex; align-items: center; gap: 5px; font-size: 9px; padding: 2px 7px; border-radius: 5px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
 .tag.vermelho { color: var(--red); border-color: #6b3434; } .tag.amarelo { color: var(--amber); border-color: #705536; }
 .tag.verde { color: var(--green); border-color: #2b5e4b; } .tag.azul { color: var(--blue); border-color: #2b4a6e; }
+/* Atividade: painel Robôs (última verificação e robô parado) */
+.robos-lista { list-style: none; margin: 0; padding: 4px 18px 14px; display: grid; gap: 8px; }
+.robos-lista li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; }
+.robos-lista li strong { min-width: 52px; }
+.robos-lista li span:not(.tag) { color: var(--muted); }
+.robos-lista li.erro { border-color: #6b3434; }
 
 details.recolhido > summary { list-style: none; padding: 16px 21px; display: flex; justify-content: space-between; align-items: center; }
 details.recolhido > summary::-webkit-details-marker { display: none; }
