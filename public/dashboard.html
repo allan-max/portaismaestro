@@ -3,8 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Painel Admin - Controle de Acessos</title>
+  <title>Maestro Admin - Painel de Controle</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg-root: #070b14;
+      --bg-sidebar: #090d18;
+      --bg-main: #0b101e;
+      --bg-card: #101729;
+      --bg-card-hover: #151e34;
+      --bg-input: #0d1323;
+      --border-subtle: #1b253b;
+      --border-card: #1e2942;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-purple: #5b5ef4;
+      --accent-purple-hover: #4f52e0;
+      --accent-purple-light: #818cf8;
+      --accent-green: #2dd48f;
+      --accent-green-hover: #22c55e;
+      --danger: #f87171;
+      --warning: #facc15;
+    }
+
     * {
       margin: 0;
       padding: 0;
@@ -12,50 +36,464 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-      background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--bg-root);
+      color: var(--text-primary);
       min-height: 100vh;
-      color: #e4e4e7;
-      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* TOPBAR */
+    .topbar {
+      height: 60px;
+      background-color: var(--bg-sidebar);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text-primary);
+    }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .brand-title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: #ffffff;
+    }
+
+    .brand-title span {
+      color: #6366f1;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .notif-btn {
+      position: relative;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      border-radius: 8px;
+      transition: color 0.2s, background 0.2s;
+    }
+
+    .notif-btn:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .notif-dot {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      width: 7px;
+      height: 7px;
+      background-color: #6366f1;
+      border-radius: 50%;
+    }
+
+    .topbar-divider {
+      width: 1px;
+      height: 24px;
+      background-color: var(--border-subtle);
+    }
+
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+
+    .user-profile:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .user-avatar-top {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #313a5a;
+      border: 1px solid rgba(129, 140, 248, 0.3);
+      color: #e0e7ff;
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-transform: uppercase;
+    }
+
+    .user-name-top {
+      font-size: 13px;
+      font-weight: 500;
+      color: #cbd5e1;
+      max-width: 180px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* LAYOUT SHELL */
+    .layout-shell {
+      display: flex;
+      flex: 1;
+      min-height: calc(100vh - 60px);
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 240px;
+      background-color: var(--bg-sidebar);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 20px 12px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 14px;
+      border-radius: 10px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13.5px;
+      font-weight: 500;
+      border: 1px solid transparent;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .sidebar-link svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      color: var(--text-secondary);
+      transition: color 0.2s ease;
+    }
+
+    .sidebar-link:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .sidebar-link:hover svg {
+      color: var(--text-primary);
+    }
+
+    .sidebar-link.active {
+      background: linear-gradient(90deg, rgba(91, 94, 244, 0.22) 0%, rgba(91, 94, 244, 0.08) 100%);
+      border-color: rgba(99, 102, 241, 0.35);
+      color: #ffffff;
+    }
+
+    .sidebar-link.active svg {
+      color: #818cf8;
+    }
+
+    .sidebar-divider {
+      height: 1px;
+      background-color: var(--border-subtle);
+      margin: 10px 8px;
+    }
+
+    .sidebar-footer {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 10px 4px;
+    }
+
+    .sidebar-footer-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: rgba(99, 102, 241, 0.16);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #818cf8;
+    }
+
+    .sidebar-footer-text {
+      display: flex;
+      flex-direction: column;
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.35;
+    }
+
+    .sidebar-footer-text strong {
+      color: #cbd5e1;
+      font-weight: 500;
+    }
+
+    /* MAIN CONTENT */
+    .main-wrapper {
+      flex: 1;
+      background-color: var(--bg-main);
+      padding: 32px 36px;
+      overflow-x: auto;
     }
 
     .container {
-      max-width: 1400px;
+      max-width: 1440px;
       margin: 0 auto;
     }
 
-    header {
-      margin-bottom: 32px;
+    /* HEADER */
+    .page-header {
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
       flex-wrap: wrap;
-      gap: 16px;
+      gap: 20px;
+      margin-bottom: 28px;
     }
 
-    header h1 {
+    .page-title-group h1 {
       font-size: 28px;
       font-weight: 700;
-      color: #fff;
-      margin-bottom: 8px;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
     }
 
-    header p {
-      color: #a1a1aa;
-      font-size: 14px;
+    .page-title-group h1 .highlight {
+      color: #6366f1;
     }
 
+    .page-title-group p {
+      color: var(--text-secondary);
+      font-size: 13.5px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 9px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #e2e8f0;
+      background-color: #131c31;
+      border: 1px solid #22304f;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .action-btn svg {
+      width: 16px;
+      height: 16px;
+      color: #94a3b8;
+      transition: color 0.2s;
+    }
+
+    .action-btn:hover {
+      background-color: #1a2540;
+      border-color: #31446e;
+      color: #ffffff;
+    }
+
+    .action-btn:hover svg {
+      color: #ffffff;
+    }
+
+    .action-btn.primary {
+      background-color: var(--accent-purple);
+      border-color: #6d70f7;
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(91, 94, 244, 0.35);
+    }
+
+    .action-btn.primary svg {
+      color: #ffffff;
+    }
+
+    .action-btn.primary:hover {
+      background-color: var(--accent-purple-hover);
+    }
+
+    /* STATS & SEARCH ROW */
+    .toolbar-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .stats-cards {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .stat-card {
+      background: linear-gradient(145deg, #11192e 0%, #0d1424 100%);
+      border: 1px solid var(--border-card);
+      border-radius: 12px;
+      padding: 18px 22px;
+      min-width: 280px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .stat-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .stat-icon.purple {
+      background: rgba(99, 102, 241, 0.16);
+      border: 1px solid rgba(99, 102, 241, 0.28);
+      color: #818cf8;
+    }
+
+    .stat-icon.green {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.28);
+      color: #34d399;
+    }
+
+    .stat-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .stat-label {
+      font-size: 12.5px;
+      color: #cbd5e1;
+      font-weight: 500;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.15;
+    }
+
+    .stat-sub {
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+
+    /* SEARCH BOX */
+    .search-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 290px;
+    }
+
+    .search-wrapper svg {
+      position: absolute;
+      left: 13px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 15px;
+      height: 15px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .search-input {
+      width: 100%;
+      background-color: #0e1526;
+      border: 1px solid var(--border-card);
+      color: var(--text-primary);
+      padding: 10px 14px 10px 36px;
+      border-radius: 9px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .search-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .search-input:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    }
+
+    /* TABLE CARD */
     .card {
-      background: rgba(30, 30, 50, 0.8);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      padding: 24px;
-      backdrop-filter: blur(10px);
-      animation: fadeIn 0.4s ease-out forwards;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.28);
+      animation: fadeIn 0.35s ease-out forwards;
     }
 
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(15px); }
+      from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
@@ -66,132 +504,497 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 16px;
     }
 
     th, td {
-      padding: 14px 16px;
+      padding: 15px 20px;
       text-align: left;
+      vertical-align: middle;
+    }
+
+    thead tr {
+      background-color: #0d1424;
+      border-bottom: 1px solid var(--border-card);
     }
 
     th {
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 600;
-      color: #a1a1aa;
+      color: #94a3b8;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      letter-spacing: 0.6px;
+      white-space: nowrap;
+    }
+
+    th .th-muted {
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid rgba(30, 41, 66, 0.7);
+      transition: background-color 0.15s ease;
+    }
+
+    tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    tbody tr:hover {
+      background-color: rgba(255, 255, 255, 0.025);
     }
 
     td {
-      font-size: 14px;
-      color: #e4e4e7;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 13.5px;
+      color: var(--text-primary);
     }
 
-    tr:hover td {
-      background: rgba(255, 255, 255, 0.08);
+    /* USER CELL */
+    .user-cell {
+      display: flex;
+      align-items: center;
+      gap: 14px;
     }
 
+    .user-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background-color: #233156;
+      border: 1px solid rgba(129, 140, 248, 0.25);
+      color: #c7d2fe;
+      font-size: 12.5px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      text-transform: uppercase;
+    }
+
+    .user-details {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .user-email-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .user-email {
+      font-weight: 500;
+      color: #f1f5f9;
+      font-size: 13.5px;
+    }
+
+    .badge-admin {
+      background-color: #5b5ef4;
+      color: #ffffff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+
+    .badge-unverified {
+      background-color: rgba(248, 113, 113, 0.16);
+      border: 1px solid rgba(248, 113, 113, 0.35);
+      color: #f87171;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+      letter-spacing: 0.3px;
+    }
+
+    .role-pill {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 9px;
+      border-radius: 6px;
+      background-color: #1c2742;
+      color: #94a3b8;
+    }
+
+    .role-pill.admin-role {
+      background-color: #292759;
+      color: #a5b4fc;
+    }
+
+    /* VENDEDOR INPUT GROUP */
+    .vendedor-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: 310px;
+    }
+
+    .vendedor-input-wrap {
+      position: relative;
+      flex: 1;
+    }
+
+    .vendedor-input {
+      width: 100%;
+      background-color: #0c1222;
+      border: 1px solid #22304f;
+      color: #e2e8f0;
+      padding: 8px 28px 8px 12px;
+      border-radius: 7px;
+      font-size: 12.5px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .vendedor-input::placeholder {
+      color: #64748b;
+    }
+
+    .vendedor-input:focus {
+      border-color: #6366f1;
+    }
+
+    .vendedor-chevron {
+      position: absolute;
+      right: 9px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 13px;
+      height: 13px;
+      color: #64748b;
+      pointer-events: none;
+    }
+
+    .btn-salvar {
+      background-color: var(--accent-green);
+      color: #06281e;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 7px;
+      font-weight: 600;
+      font-size: 12.5px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background-color 0.2s, transform 0.1s;
+    }
+
+    .btn-salvar:hover {
+      background-color: var(--accent-green-hover);
+    }
+
+    .btn-salvar:active {
+      transform: scale(0.98);
+    }
+
+    /* STATUS TEXT */
+    .status-admin {
+      color: #34d399;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .status-restrito {
+      color: #94a3b8;
+      font-size: 13px;
+    }
+
+    /* TOGGLE SWITCH */
     .toggle-switch {
       position: relative;
       display: inline-block;
-      width: 44px;
-      height: 24px;
+      width: 42px;
+      height: 22px;
     }
+
     .toggle-switch input {
       opacity: 0;
       width: 0;
       height: 0;
     }
+
     .slider {
       position: absolute;
       cursor: pointer;
       top: 0; left: 0; right: 0; bottom: 0;
-      background-color: rgba(255,255,255,0.2);
-      transition: .3s;
+      background-color: #26324d;
+      transition: 0.25s;
       border-radius: 34px;
     }
+
     .slider:before {
       position: absolute;
       content: "";
-      height: 18px;
-      width: 18px;
+      height: 16px;
+      width: 16px;
       left: 3px;
       bottom: 3px;
-      background-color: white;
-      transition: .3s;
+      background-color: #cbd5e1;
+      transition: 0.25s;
       border-radius: 50%;
     }
+
     input:checked + .slider {
-      background-color: #818cf8;
+      background-color: var(--accent-purple);
     }
+
     input:checked + .slider:before {
       transform: translateX(20px);
+      background-color: #ffffff;
+    }
+
+    input:disabled + .slider {
+      opacity: 0.85;
+      cursor: not-allowed;
+    }
+
+    /* ROW ACTIONS */
+    .row-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .icon-action-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 7px;
+      background-color: #151f36;
+      border: 1px solid #233152;
+      color: #94a3b8;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .icon-action-btn:hover {
+      background-color: #1e2c4c;
+      color: #ffffff;
+      border-color: #364975;
+    }
+
+    .icon-action-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    @media (max-width: 960px) {
+      .sidebar {
+        display: none;
+      }
+      .main-wrapper {
+        padding: 20px 16px;
+      }
+      .search-wrapper {
+        max-width: 100%;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <div style="display: flex; align-items: center; gap: 16px;">
-        <button onclick="window.location.href='index.html?portais=1'" style="background: rgba(255,255,255,0.1); color: white; border: none; padding: 10px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; transition: 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.2);" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'" title="Voltar">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-            <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
-          </svg>
-        </button>
-        <div>
-          <h1>Painel de Controle Admin</h1>
-          <p>Gerencie as contas cadastradas, vendedores vinculados e privilégios</p>
-        </div>
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <a href="index.html?portais=1" class="brand" title="Voltar aos Portais">
+      <div class="brand-icon">
+        <svg viewBox="0 0 36 36" width="30" height="30" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M5 7L15.5 30H20.5L31 7H24.5L18 22.5L11.5 7H5Z" fill="url(#ventura_grad)"/>
+          <path d="M18 7L22.5 17.5L27 7H18Z" fill="#4f46e5" opacity="0.7"/>
+          <defs>
+            <linearGradient id="ventura_grad" x1="5" y1="7" x2="31" y2="30" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#818cf8"/>
+              <stop offset="1" stop-color="#4f46e5"/>
+            </linearGradient>
+          </defs>
+        </svg>
       </div>
-      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-        <!-- Dashboards (só admin; o servidor confere de novo em cada página) -->
-        <a href="dashboard2.html" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px 14px; border-radius: 8px; font-weight: bold; text-decoration: none;">📊 Cotações</a>
-        <a href="sync.html" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px 14px; border-radius: 8px; font-weight: bold; text-decoration: none;">🔄 Sincronização</a>
-        <a href="nfs.html" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px 14px; border-radius: 8px; font-weight: bold; text-decoration: none;">🧾 NFs</a>
-        <a href="atividade.html" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px 14px; border-radius: 8px; font-weight: bold; text-decoration: none;">📈 Atividade</a>
-        <button onclick="abrirConfiguracoes()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
-          ⚙️ CONFIGURAÇÕES
-        </button>
-      </div>
-    </header>
+      <div class="brand-title">Maestro <span>Admin</span></div>
+    </a>
 
-    <!-- MODAL CONFIGURACOES -->
-    <div id="modal-config" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15, 12, 41, 0.95); z-index:9999; justify-content:center; align-items:center; backdrop-filter:blur(10px);">
-      <div style="background: rgba(30, 30, 50, 0.95); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 30px; max-width: 600px; width: 90%; text-align:left;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-          <h2 style="color: #fff;">⚙️ Variáveis do Robô (CONFIG.json)</h2>
-          <button onclick="document.getElementById('modal-config').style.display='none'" style="background:transparent; border:none; color:#f87171; font-size:24px; cursor:pointer;">&times;</button>
-        </div>
-        <div id="config-form" style="max-height: 60vh; overflow-y: auto; padding-right: 10px;"></div>
-        <button onclick="salvarConfiguracoes()" style="margin-top:20px; width:100%; background:#34d399; color:#000; border:none; padding:15px; border-radius:8px; font-weight:bold; cursor:pointer;">💾 SALVAR CONFIGURAÇÕES NO ROBÔ</button>
+    <div class="topbar-right">
+      <button class="notif-btn" title="Notificações" onclick="carregarUsuarios()">
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+        <span class="notif-dot"></span>
+      </button>
+      <div class="topbar-divider"></div>
+      <div class="user-profile" onclick="window.location.href='index.html?portais=1'" title="Voltar ao Maestro">
+        <div class="user-avatar-top" id="topUserInitials">AD</div>
+        <span class="user-name-top" id="topUserName">Administrador</span>
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
       </div>
     </div>
+  </div>
 
-    <section class="card">
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-        <h2 style="font-size: 18px;">Contas e Permissões</h2>
-        <input type="text" id="pesquisaUsuario" placeholder="🔍 Buscar usuário..." oninput="filtrarUsuarios()" style="background: rgba(15,15,26,0.8); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 8px 12px; border-radius: 6px; outline: none; width: 100%; max-width: 300px;">
-      </div>
+  <div class="layout-shell">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="sidebar-link active" aria-current="page">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          <span>Contas</span>
+        </a>
+        <a href="dashboard2.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="8" y1="13" x2="16" y2="13"/>
+            <line x1="8" y1="17" x2="13" y2="17"/>
+          </svg>
+          <span>Cotações</span>
+        </a>
+        <a href="sync.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+            <path d="M3 3v5h5"/>
+            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+            <path d="M16 16h5v5"/>
+          </svg>
+          <span>Sincronização</span>
+        </a>
+        <a href="nfs.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="8" y1="13" x2="16" y2="13"/>
+            <line x1="8" y1="17" x2="13" y2="17"/>
+          </svg>
+          <span>NFs</span>
+        </a>
+        <a href="atividade.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+          <span>Atividade</span>
+        </a>
+        <div class="sidebar-divider"></div>
+        <button type="button" onclick="abrirConfiguracoes()" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          <span>Configurações</span>
+        </button>
+      </nav>
 
-      <div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>Usuário (E-mail)</th>
-              <th>Vendedor Vinculado (Planilha)</th>
-              <th>Estatísticas</th>
-              <th>Planilha Geral</th>
-              <th>Portais (Robôs)</th>
-            </tr>
-          </thead>
-          <tbody id="usersTableBody">
-            <tr><td colspan="5" style="text-align:center; padding: 20px;">Carregando dados...</td></tr>
-          </tbody>
-        </table>
+      <div class="sidebar-footer">
+        <div class="sidebar-footer-icon">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+        </div>
+        <div class="sidebar-footer-text">
+          <strong>Maestro Admin</strong>
+          <span>v1.0.0</span>
+        </div>
       </div>
-    </section>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-wrapper">
+      <div class="container">
+        <header class="page-header">
+          <div class="page-title-group">
+            <h1>Painel <span class="highlight">de</span> Controle Admin</h1>
+            <p>Gerencie as contas cadastradas, vendedores vinculados e privilégios.</p>
+          </div>
+        </header>
+
+        <!-- KPI CARDS + SEARCH -->
+        <div class="toolbar-row">
+          <div class="stats-cards">
+            <div class="stat-card">
+              <div class="stat-icon purple">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+              </div>
+              <div class="stat-info">
+                <span class="stat-label">Contas cadastradas</span>
+                <strong class="stat-value" id="totalUsuariosCount">0</strong>
+                <span class="stat-sub">total de usuários no sistema</span>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon green">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  <polyline points="9 12 11 14 15 10"/>
+                </svg>
+              </div>
+              <div class="stat-info">
+                <span class="stat-label">Administradores</span>
+                <strong class="stat-value" id="totalAdminsCount">0</strong>
+                <span class="stat-sub">com acesso total</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="search-wrapper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" id="pesquisaUsuario" class="search-input" placeholder="Buscar usuário..." oninput="filtrarUsuarios()">
+          </div>
+        </div>
+
+        <!-- MODAL CONFIGURACOES -->
+        <div id="modal-config" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(7, 11, 20, 0.88); z-index:9999; justify-content:center; align-items:center; backdrop-filter:blur(8px);">
+          <div style="background: #101729; border: 1px solid #1e2942; border-radius: 16px; padding: 30px; max-width: 600px; width: 90%; text-align:left; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+              <h2 style="color: #fff; font-size: 18px;">⚙️ Variáveis do Robô (CONFIG.json)</h2>
+              <button onclick="document.getElementById('modal-config').style.display='none'" style="background:transparent; border:none; color:#f87171; font-size:24px; cursor:pointer;">&times;</button>
+            </div>
+            <div id="config-form" style="max-height: 60vh; overflow-y: auto; padding-right: 10px;"></div>
+            <button onclick="salvarConfiguracoes()" style="margin-top:20px; width:100%; background:#2dd48f; color:#06281e; border:none; padding:14px; border-radius:8px; font-weight:700; cursor:pointer;">💾 SALVAR CONFIGURAÇÕES NO ROBÔ</button>
+          </div>
+        </div>
+
+        <!-- TABLE SECTION -->
+        <section class="card">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Usuário (E-mail)</th>
+                  <th>Vendedor Vinculado (Planilha)</th>
+                  <th>Permissões <span class="th-muted">· Estatísticas</span></th>
+                  <th>Permissões <span class="th-muted">· Planilha Geral</span></th>
+                  <th>Permissões <span class="th-muted">· Portais (Robôs)</span></th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody">
+                <tr><td colspan="6" style="text-align:center; padding: 28px; color: #94a3b8;">Carregando dados...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
@@ -199,6 +1002,18 @@
     if (localStorage.getItem('maestro_admin') !== 'true') {
         window.location.href = 'index.html';
     }
+
+    // Preenche usuário logado no topo
+    (function preencherTopoUsuario() {
+        const userEmail = localStorage.getItem('maestro_user') || 'Admin';
+        const nomeEl = document.getElementById('topUserName');
+        const initEl = document.getElementById('topUserInitials');
+        if (nomeEl) nomeEl.textContent = userEmail;
+        if (initEl) {
+            const limpo = userEmail.split('@')[0].replace(/[^a-zA-Z0-9]/g, '');
+            initEl.textContent = (limpo.slice(0, 2) || 'AD').toUpperCase();
+        }
+    })();
 
     const sessionAtual = localStorage.getItem('maestro_session');
     const socket = io({ 
@@ -223,9 +1038,9 @@
         setTimeout(() => {
             const tbody = document.getElementById("usersTableBody");
             if (todosUsuarios.length === 0 && tbody && tbody.innerText.includes("Carregando")) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px; color: #facc15;">
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 24px; color: #facc15;">
                     O servidor está demorando para responder.
-                    <button onclick="carregarUsuarios()" style="background:#3b82f6; color:#fff; border:none; padding:6px 14px; border-radius:6px; cursor:pointer; font-weight:bold; margin-left:10px;">Tentar novamente</button>
+                    <button onclick="carregarUsuarios()" style="background:#5b5ef4; color:#fff; border:none; padding:7px 14px; border-radius:6px; cursor:pointer; font-weight:600; margin-left:10px;">Tentar novamente</button>
                 </td></tr>`;
             }
         }, 5000);
@@ -242,16 +1057,24 @@
         window.location.href = "index.html"; 
     });
 
+    function atualizarContadores() {
+        const totalEl = document.getElementById('totalUsuariosCount');
+        const adminsEl = document.getElementById('totalAdminsCount');
+        if (totalEl) totalEl.textContent = todosUsuarios.length;
+        if (adminsEl) adminsEl.textContent = todosUsuarios.filter(u => u.admin === true).length;
+    }
+
     socket.on('admin_receber_usuarios', (resposta) => {
         const tbody = document.getElementById("usersTableBody");
         if (resposta && resposta.sucesso === false) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px; color: #f87171;">${escapeHtml(resposta.erro || 'Erro ao carregar usuários.')}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 24px; color: #f87171;">${escapeHtml(resposta.erro || 'Erro ao carregar usuários.')}</td></tr>`;
             return;
         }
         const usuariosJson = (resposta && resposta.usuarios) ? resposta.usuarios : (resposta || {});
         todosUsuarios = Object.entries(usuariosJson)
             .map(([email, dados]) => ({ email, ...dados }))
             .sort((a, b) => a.email.localeCompare(b.email));
+        atualizarContadores();
         filtrarUsuarios();
     });
 
@@ -259,10 +1082,23 @@
         return String(txt).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     }
 
+    function obterIniciais(email) {
+        const local = String(email || '').split('@')[0].replace(/[^a-zA-Z0-9]/g, '');
+        return (local.slice(0, 2) || 'US').toUpperCase();
+    }
+
+    function focarVendedorInput(inputId) {
+        const el = document.getElementById(inputId);
+        if (el) {
+            el.focus();
+            el.select();
+        }
+    }
+
     function renderizarTabela(lista) {
         const tbody = document.getElementById("usersTableBody");
         if (lista.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color: #a1a1aa;">Nenhum usuário encontrado.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 28px; color: #94a3b8;">Nenhum usuário encontrado.</td></tr>';
             return;
         }
 
@@ -273,26 +1109,40 @@
             const disabledAttr = user.admin ? 'disabled title="Administradores sempre têm acesso total"' : '';
             const email = escapeHtml(user.email);
             const vendedorAtual = escapeHtml(user.vendedor || '');
+            const iniciais = escapeHtml(obterIniciais(user.email));
             
             html += `
               <tr>
                 <td>
-                  <strong>${email}</strong>
-                  ${user.admin ? '<span style="color:#fbbf24; font-size:11px; margin-left:6px;">[ADMIN]</span>' : ''}
-                  ${user.verificado === false ? '<span style="color:#f87171; font-size:11px; margin-left:6px;" title="Ainda não clicou no link de ativação">[NÃO VERIFICADO]</span>' : ''}
+                  <div class="user-cell">
+                    <div class="user-avatar">${iniciais}</div>
+                    <div class="user-details">
+                      <div class="user-email-row">
+                        <span class="user-email">${email}</span>
+                        ${user.admin ? '<span class="badge-admin">ADMIN</span>' : ''}
+                        ${user.verificado === false ? '<span class="badge-unverified" title="Ainda não clicou no link de ativação">NÃO VERIFICADO</span>' : ''}
+                      </div>
+                      <span class="role-pill ${user.admin ? 'admin-role' : ''}">${user.admin ? 'Administrador' : 'Vendedor'}</span>
+                    </div>
+                  </div>
                 </td>
                 <td>
-                  <div style="display: flex; gap: 8px; align-items: center; max-width: 260px;">
-                    <input type="text" id="vend_${idx}" value="${vendedorAtual}" placeholder="Ex: JOÃO (vazio = sem vínculo)" 
-                      style="background: rgba(15,15,26,0.8); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 13px; width: 100%; outline: none;">
-                    <button onclick="salvarVendedorUsuario('${email}', 'vend_${idx}')" 
-                      style="background: #34d399; color: #000; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; white-space: nowrap;">
+                  <div class="vendedor-group">
+                    <div class="vendedor-input-wrap">
+                      <input type="text" id="vend_${idx}" class="vendedor-input" value="${vendedorAtual}" placeholder="Ex: JOÃO (vazio = sem vínculo)">
+                      <svg class="vendedor-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"/>
+                      </svg>
+                    </div>
+                    <button onclick="salvarVendedorUsuario('${email}', 'vend_${idx}')" class="btn-salvar">
                       Salvar
                     </button>
                   </div>
                 </td>
                 <td>
-                  <span title="Estatísticas é exclusiva de administradores">${user.admin === true ? 'Administrador' : 'Restrito'}</span>
+                  <span class="${user.admin === true ? 'status-admin' : 'status-restrito'}" title="Estatísticas é exclusiva de administradores">
+                    ${user.admin === true ? 'Administrador' : 'Restrito'}
+                  </span>
                 </td>
                 <td>
                   <label class="toggle-switch">
@@ -305,6 +1155,23 @@
                     <input type="checkbox" onchange="toggleAccess('${email}', 'portais_access', this.checked)" ${hasPortais ? 'checked' : ''} ${disabledAttr}>
                     <span class="slider"></span>
                   </label>
+                </td>
+                <td>
+                  <div class="row-actions">
+                    <button type="button" class="icon-action-btn" onclick="focarVendedorInput('vend_${idx}')" title="Editar vendedor vinculado">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 20h9"/>
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                      </svg>
+                    </button>
+                    <button type="button" class="icon-action-btn" onclick="salvarVendedorUsuario('${email}', 'vend_${idx}')" title="Salvar vínculo do usuário">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="1"/>
+                        <circle cx="19" cy="12" r="1"/>
+                        <circle cx="5" cy="12" r="1"/>
+                      </svg>
+                    </button>
+                  </div>
                 </td>
               </tr>
             `;
@@ -367,7 +1234,7 @@
             let div = document.createElement('div');
             div.style.marginBottom = "15px";
             let label = document.createElement('label');
-            label.style.color = "#a1a1aa";
+            label.style.color = "#94a3b8";
             label.style.fontSize = "12px";
             label.style.display = "block";
             label.style.marginBottom = "5px";
@@ -375,10 +1242,10 @@
             let input = document.createElement('input');
             input.style.width = "100%";
             input.style.padding = "10px";
-            input.style.background = "rgba(0,0,0,0.5)";
-            input.style.border = "1px solid rgba(255,255,255,0.2)";
+            input.style.background = "#0b101e";
+            input.style.border = "1px solid #22304f";
             input.style.color = "#fff";
-            input.style.borderRadius = "6px";
+            input.style.borderRadius = "7px";
             input.style.fontFamily = "monospace";
             input.id = "config_" + key;
             input.value = config[key];
