@@ -3,9 +3,11 @@
     const STATUS = {
         responded: { label: 'Resposta registrada', short: 'Resposta registrada', color: 'green' },
         pending: { label: 'Não respondida registrada', short: 'Não respondida', color: 'blue' },
+        draft: { label: 'Rascunho salvo, não enviado', short: 'Rascunho', color: 'cyan' },
         unknown: { label: 'Sem informação', short: 'Sem informação', color: 'muted' },
         invalid: { label: 'Status não reconhecido', short: 'Não reconhecido', color: 'amber' }
     };
+    const PENDENTES = ['pending', 'unknown', 'draft'];   // sem resposta enviada: rascunho ainda não foi ao cliente
     const canonical = value => String(value ?? '').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     function campo(row, ...names) {
         const keys = Object.keys(row);
@@ -46,6 +48,7 @@
     function normalize(value) {
         const status = canonical(value);
         if (['RESPONDIDO', 'RESPONDIDA'].includes(status)) return 'responded';
+        if (status === 'RASCUNHO') return 'draft';   // o robô salvou o rascunho no portal; falta alguém enviar
         if (['NÃO RESPONDIDO', 'NÃO RESPONDIDA', 'NAO RESPONDIDO', 'NAO RESPONDIDA', 'NÃƒO RESPONDIDO', 'NÃƒO RESPONDIDA'].map(canonical).includes(status)) return 'pending';
         return status ? 'invalid' : 'unknown';
     }
@@ -93,7 +96,7 @@
         if (filters.from && filters.to && filters.from > filters.to) return [];
         const search = canonical(filters.search), now = today();
         return data.filter(row => {
-            const d = deadline(row, now), pending = ['pending', 'unknown'].includes(row.status);
+            const d = deadline(row, now), pending = PENDENTES.includes(row.status);
             const matchDeadline = !filters.deadline || (filters.deadline === 'active' ? ['today', 'week', 'later'].includes(d) :
                 filters.deadline === 'pendingActive' ? ['today', 'week', 'later'].includes(d) && pending :
                 filters.deadline === 'next7' ? ['today', 'week'].includes(d) && pending :
@@ -108,9 +111,9 @@
     function metrics(data) {
         const now = today();
         const m = { total: data.length, active: 0, pendingActive: 0, today: 0, next7: 0, overdue: 0,
-            responded: 0, unknown: 0, invalid: 0, missing: 0, ambiguous: 0 };
+            responded: 0, draft: 0, unknown: 0, invalid: 0, missing: 0, ambiguous: 0 };
         for (const row of data) {
-            const d = deadline(row, now), pending = ['pending', 'unknown'].includes(row.status);
+            const d = deadline(row, now), pending = PENDENTES.includes(row.status);
             if (['today', 'week', 'later'].includes(d)) { m.active++; if (pending) m.pendingActive++; }
             if (pending && d === 'today') m.today++;
             if (pending && ['today', 'week'].includes(d)) m.next7++;
@@ -118,6 +121,7 @@
             if (d === 'missing') m.missing++;
             if (row.dateProblem === 'ambiguous') m.ambiguous++;
             if (row.status === 'responded') m.responded++;
+            if (row.status === 'draft') m.draft++;
             if (row.status === 'unknown') m.unknown++;
             if (row.status === 'invalid') m.invalid++;
         }

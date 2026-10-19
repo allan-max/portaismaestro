@@ -26,7 +26,7 @@ h2 { font-size: 15px; letter-spacing: -.25px; font-weight: 600; }
 h3 { font-size: 14px; font-weight: 600; }
 small { font-size: 11px; color: var(--muted); }
 .muted { color: var(--muted); }
-.green { color: var(--green); } .blue { color: var(--blue); } .amber { color: var(--amber); } .red { color: var(--red); }
+.green { color: var(--green); } .blue { color: var(--blue); } .cyan { color: var(--cyan); } .amber { color: var(--amber); } .red { color: var(--red); }
 .number { font-variant-numeric: tabular-nums; }
 .sr-only { clip-path: inset(50%); position: absolute; width: 1px; height: 1px; overflow: hidden; white-space: nowrap; }
 .skip-link { position: fixed; top: -80px; left: 20px; z-index: 100; background: #fff; color: #10141b; padding: 12px; }
@@ -116,7 +116,7 @@ input::placeholder { color: #8b9eb3; }
 .chip svg { height: 11px; width: 11px; }
 .error-text { color: var(--red); font-size: 11px; margin-bottom: 12px; }
 
-.metrics { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 11px; margin-bottom: 22px; }
+.metrics { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 11px; margin-bottom: 22px; }
 .metric { position: relative; min-height: 122px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; text-align: left; padding: 15px 16px 13px; display: flex; flex-direction: column; }
 .metric:hover { border-color: #4d657e; background: #202b3b; }
 .metric.selected { border-color: var(--cyan); background: #183047; }
@@ -141,6 +141,7 @@ input::placeholder { color: #8b9eb3; }
 .swatch.green, .segment.green { background: var(--green); }
 .swatch.muted, .segment.muted { background: #7588a0; }
 .swatch.amber, .segment.amber { background: var(--amber); }
+.swatch.cyan, .segment.cyan { background: var(--cyan); }
 .seller-bars { display: flex; flex-direction: column; gap: 4px; }
 .seller-bar { display: grid; grid-template-columns: 64px 1fr 25px; gap: 10px; min-height: 30px; align-items: center; background: transparent; border-radius: 5px; text-align: left; padding: 3px 0; font-size: 10px; }
 .seller-bar:hover { background: #ffffff08; }

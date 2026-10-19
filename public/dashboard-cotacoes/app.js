@@ -91,6 +91,7 @@
       ['today', 'Vencem hoje', 'clock', 'amber', 'sem resposta registrada'],
       ['next7', 'Próximos 7 dias', 'calendar', '', `${date(D.TODAY)} a ${date(D.day(D.TODAY, 7))} · inclusive`],
       ['overdue', 'Vencidas sem resposta registrada', 'alert', 'red', 'prazo anterior a hoje'],
+      ['draft', 'Rascunhos a enviar', 'inbox', 'cyan', 'salvos pelo robô; falta enviar ao cliente'],
       ['responded', 'Resposta registrada', 'check', 'green', 'no recorte selecionado']
     ].map(([key, label, glyph, color, foot]) => `<button class="metric ${state.deadline === key || state.status === key ? 'selected' : ''}" data-metric="${key}" aria-pressed="${state.deadline === key || state.status === key}" title="Aplicar filtro: ${label}. Unidade: registros de cotação."><span class="metric-label">${label}</span><span class="metric-icon">${icon(glyph)}</span><strong class="metric-value number ${color}">${number(m[key])}</strong><span class="metric-foot">${foot}</span></button>`).join('')}</section>`;
   }
@@ -101,13 +102,13 @@
     const groups = allGroups.slice(0, 8);
     const max = Math.max(1, ...groups.map(s => s.rows.length));
     return `<section class="panel"><div class="panel-head"><div><h2>Carteira por vendedor</h2><p>Distribuição dos registros por status</p></div><button class="panel-link" data-view="vendors" aria-label="Ver todos os vendedores">Ver equipe ${icon('arrow')}</button></div>
-      <div class="panel-body"><div class="legend"><span><i class="swatch green"></i>Resposta</span><span><i class="swatch"></i>Não respondida</span><span><i class="swatch muted"></i>Sem informação</span><span><i class="swatch amber"></i>Não reconhecido</span></div>
+      <div class="panel-body"><div class="legend"><span><i class="swatch green"></i>Resposta</span><span><i class="swatch"></i>Não respondida</span><span><i class="swatch cyan"></i>Rascunho</span><span><i class="swatch muted"></i>Sem informação</span><span><i class="swatch amber"></i>Não reconhecido</span></div>
       <div class="seller-bars">${groups.map(s => `<button class="seller-bar ${state.sellers.includes(s.name) ? 'selected' : ''}" data-select-seller="${esc(s.name)}" aria-label="Filtrar ${esc(s.name)}: ${s.rows.length} registros, ${D.metrics(s.rows).responded} com resposta registrada"><span>${esc(s.name)}</span><span class="bar-track" style="width:${s.rows.length / max * 100}%">${Object.keys(D.STATUS).map((k, i) => segment(k, counts(s.rows)[i], s.rows.length)).join('')}</span><span class="total number">${number(s.rows.length)}</span></button>`).join('') || '<p class="muted">Sem registros neste recorte.</p>'}</div><p class="chart-caption">${groups.length} de ${allGroups.length} carteiras por volume. Todas estão na aba Vendedores.</p></div></section>`;
   }
   function deadlineChart(data) {
     const groups = Array.from({ length: 8 }, (_, i) => { const due = D.day(D.TODAY, i); return { date: due, rows: data.filter(r => r.due === due) }; });
     const max = Math.max(1, ...groups.map(g => g.rows.length));
-    return `<section class="panel"><div class="panel-head"><div><h2>Próximos vencimentos</h2><p>${date(D.TODAY)}–${date(D.day(D.TODAY, 7))} · inclusive</p></div>${icon('calendar')}</div><div class="panel-body"><div class="legend"><span><i class="swatch green"></i>Resposta</span><span><i class="swatch"></i>Não respondida</span><span><i class="swatch muted"></i>Sem informação</span><span><i class="swatch amber"></i>Não reconhecido</span></div>
+    return `<section class="panel"><div class="panel-head"><div><h2>Próximos vencimentos</h2><p>${date(D.TODAY)}–${date(D.day(D.TODAY, 7))} · inclusive</p></div>${icon('calendar')}</div><div class="panel-body"><div class="legend"><span><i class="swatch green"></i>Resposta</span><span><i class="swatch"></i>Não respondida</span><span><i class="swatch cyan"></i>Rascunho</span><span><i class="swatch muted"></i>Sem informação</span><span><i class="swatch amber"></i>Não reconhecido</span></div>
       <div class="deadline-chart" aria-label="Vencimentos de hoje até sete dias à frente, inclusive">${groups.map((g, i) => `<button class="day-column ${i === 0 ? 'today' : ''}" data-day="${g.date}" aria-label="Vencimento ${date(g.date)}: ${g.rows.length} registros"><span class="bar-value number">${g.rows.length}</span><span class="column-stack" style="height:${g.rows.length / max * 114}px">${Object.entries(D.STATUS).map(([k, v]) => `<span class="segment ${v.color}" style="height:${g.rows.length ? g.rows.filter(r => r.status === k).length / g.rows.length * 100 : 0}%;width:100%"></span>`).join('')}</span><span class="date-label">${g.date.slice(8)}/${g.date.slice(5, 7)}</span></button>`).join('')}</div><div class="chart-bottom"></div><p class="chart-caption">Os demais vencimentos continuam na lista de cotações.</p></div></section>`;
   }
   function statusChart(data) {
@@ -220,7 +221,7 @@
     if (element.dataset.page) { state.page = Number(element.dataset.page); render(); return; }
     if (element.dataset.metric) {
       const key = element.dataset.metric;
-      if (key === 'responded') return changeFilters({ status: state.status === 'responded' ? '' : 'responded' });
+      if (key === 'responded' || key === 'draft') return changeFilters({ status: state.status === key ? '' : key });
       return changeFilters({ deadline: state.deadline === key ? '' : key });
     }
     switch (element.dataset.action) {
