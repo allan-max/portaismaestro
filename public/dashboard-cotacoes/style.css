@@ -440,3 +440,23 @@ tbody tr:hover { background: #ffffff04; }
   th, td { font-size: 8px; padding: 7px; }
   .quote-ref { color: #111; }
 }
+
+/* ===== Controle → Auditoria / Usuários (dashboard-cotacoes/auditoria.js) ===== */
+.metrics.aud-metrics { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.analysis-grid.aud-grid { grid-template-columns: 1.4fr 1fr; }
+.aud-bars .seller-bar { grid-template-columns: minmax(110px, 1fr) 2fr 37px !important; }
+.aud-pessoa { display: flex; flex-direction: column; min-width: 0; }
+.aud-pessoa b { font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px; }
+.aud-pessoa small { font-size: 9px; color: var(--dim); }
+.aud-table td:first-child { white-space: nowrap; }
+.aud-apelido { display: flex; gap: 6px; align-items: center; }
+.aud-apelido input { width: 170px; min-height: 30px; background: #101722; border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 5px 9px; font-size: 11px; }
+.aud-apelido input:focus { border-color: var(--cyan); outline: none; }
+.aud-online { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; color: var(--dim); }
+.aud-online::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #4a5a6e; }
+.aud-online.on { color: var(--green); }
+.aud-online.on::before { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.sidebar .subnav + .eyebrow { margin-top: 6px; }
+@media (max-width: 1250px) { .metrics.aud-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 900px) { .analysis-grid.aud-grid { grid-template-columns: 1fr; } }
+@media (max-width: 650px) { .metrics.aud-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .aud-apelido input { width: 120px; } }
