@@ -1027,3 +1027,93 @@ test('gerarDocxCotacaoCoupaBlob funciona 100% sem JSZip usando gerador ZIP nativ
 
 
 
+
+test('parseItensCotacao, Word e Planilha Base não confundem código de modelo/material no início do item com quantidade', async () => {
+    const env = setupMinhasCotacoesEnv();
+    const { context, downloads } = env;
+
+    // Caso 1: Código de modelo no início do ITEM (padrão Vale/Coupa: "13091680 || MOUSE...")
+    const cotacaoModeloInicio = {
+        'COTAÇÃO': '310150',
+        'VENCIMENTO': '25/10/2026',
+        'LOCALIDADE': 'PARAUAPEBAS-PA',
+        'ITEM': '13091680 || MOUSE C/FIO OPTICO 1000DPI USB PRETO; CONEXAO: USB; COR: PRETO',
+        'QUANTIDADE': '10 EA-cada',
+        'MODELOS': '13091680',
+        'MARCA': 'LOGITECH'
+    };
+
+    const itens1 = context.parseItensCotacao(cotacaoModeloInicio);
+    assert.equal(itens1.length, 1);
+    assert.equal(itens1[0].quantidade, 10, 'Quantidade deve ser 10 e não o código do modelo 13091680');
+    assert.ok(itens1[0].produto.includes('13091680 || MOUSE C/FIO OPTICO'), 'Código do modelo deve permanecer na descrição do produto');
+
+    // Verifica no Word XML (formato: <w:t xml:space="preserve">QTD: </w:t></w:r><w:r><w:t>10 - LOCAL: ...)
+    const xml1 = context.gerarDocxCotacaoCoupaXml(cotacaoModeloInicio);
+    assert.ok(xml1.includes('10 - LOCAL: PARAUAPEBAS-PA'), 'Word deve exibir 10 no campo QTD');
+    assert.ok(!xml1.includes('13091680 - LOCAL:'), 'Word não deve colocar o modelo no campo QTD');
+
+    // Verifica na Planilha Base
+    await context.exportarCotacaoPlanilhaBase(cotacaoModeloInicio);
+    assert.equal(downloads.length, 1);
+
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(downloads[0].buffer);
+    const ws = wb.getWorksheet('ORÇAMENTO');
+    assert.equal(ws.getCell('B2').value, 10, 'Célula B2 (QTD) na Planilha Base deve ser 10 e não 13091680');
+    assert.ok(String(ws.getCell('A2').value).includes('13091680 || MOUSE'), 'Célula A2 deve conter o produto completo');
+});
+
+test('parseItensCotacao, Word e Planilha Base associam quantidades empilhadas linha a linha (ex: 05 und.\\n10 und.) na ordem de cada item', async () => {
+    const env = setupMinhasCotacoesEnv();
+    const { context, downloads } = env;
+
+    // Caso reportado pelo usuário: múltiplos itens com quantidades uma embaixo da outra ("05 und.\n10 und.")
+    const cotacaoEmpilhada = {
+        'COTAÇÃO': 'PPG0236196',
+        'VENCIMENTO': '28/10/2026',
+        'LOCALIDADE': 'RIO DE JANEIRO-RJ',
+        'ITEM': 'ITEM 1 - Trilho Gancheira de 1M em inox para cortina pvc frigorífica \nITEM 2 - Cortina Frigorífica PVC Transparente 200mm',
+        'QUANTIDADE': '05 und.\n10 und.',
+        'MARCA': 'N/A'
+    };
+
+    const itens = context.parseItensCotacao(cotacaoEmpilhada);
+    assert.equal(itens.length, 2, 'Deve extrair 2 itens');
+    assert.equal(itens[0].produto, 'Trilho Gancheira de 1M em inox para cortina pvc frigorífica');
+    assert.equal(itens[0].quantidade, 5);
+    assert.equal(itens[1].produto, 'Cortina Frigorífica PVC Transparente 200mm');
+    assert.equal(itens[1].quantidade, 10);
+
+    // Verifica exportação para Word
+    const xml = context.gerarDocxCotacaoCoupaXml(cotacaoEmpilhada);
+    assert.ok(xml.includes('5 - LOCAL: RIO DE JANEIRO-RJ'), 'Item 1 no Word deve ter QTD 5');
+    assert.ok(xml.includes('10 - LOCAL: RIO DE JANEIRO-RJ'), 'Item 2 no Word deve ter QTD 10');
+
+    // Verifica exportação para Planilha Base
+    await context.exportarCotacaoPlanilhaBase(cotacaoEmpilhada);
+    assert.equal(downloads.length, 1);
+
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(downloads[0].buffer);
+    const ws = wb.getWorksheet('ORÇAMENTO');
+    assert.equal(ws.getCell('A2').value, 'Trilho Gancheira de 1M em inox para cortina pvc frigorífica');
+    assert.equal(ws.getCell('B2').value, 5, 'Item 1 na Planilha Base (B2) deve ter quantidade 5');
+    assert.equal(ws.getCell('A3').value, 'Cortina Frigorífica PVC Transparente 200mm');
+    assert.equal(ws.getCell('B3').value, 10, 'Item 2 na Planilha Base (B3) deve ter quantidade 10');
+
+    // Caso adicional: múltiplos itens com "(Item 1)" + código de modelo + quantidades empilhadas "(Item 1) 1 UN\n(Item 2) 4 UN"
+    const cotacaoMultiComModelo = {
+        'COTAÇÃO': '296196',
+        'ITEM': '(Item 1) 15392756 || MOCHILA NOTEBOOK EXECUTIVA\n(Item 2) 13091680 || MOUSE OPTICO USB',
+        'QUANTIDADE': '(Item 1) 1 UN-unidade\n(Item 2) 4 UN-unidade',
+        'MODELOS': '(Item 1) 15392756\n(Item 2) 13091680'
+    };
+
+    const itensMultiModelo = context.parseItensCotacao(cotacaoMultiComModelo);
+    assert.equal(itensMultiModelo.length, 2);
+    assert.equal(itensMultiModelo[0].quantidade, 1, 'Item 1 deve ter quantidade 1 e não o modelo 15392756');
+    assert.ok(itensMultiModelo[0].produto.startsWith('15392756 || MOCHILA'));
+    assert.equal(itensMultiModelo[1].quantidade, 4, 'Item 2 deve ter quantidade 4 e não o modelo 13091680');
+    assert.ok(itensMultiModelo[1].produto.startsWith('13091680 || MOUSE'));
+});
