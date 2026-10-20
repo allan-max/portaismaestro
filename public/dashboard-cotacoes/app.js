@@ -3,7 +3,10 @@
   'use strict';
   const D = window.DashboardData;
   const state = { view: 'overview', sellers: [], status: '', deadline: '', from: '', to: '', search: '', sort: 'asc', page: 1, dateMode: 'safe' };
-  const prazoUrl = new URLSearchParams(location.search).get('prazo');   // link da faixa de saúde
+  const paramsUrl = new URLSearchParams(location.search);
+  const viewUrl = paramsUrl.get('view');
+  if (['overview', 'vendors', 'quotes', 'history', 'audit', 'users'].includes(viewUrl)) state.view = viewUrl;
+  const prazoUrl = paramsUrl.get('prazo');   // link da faixa de saúde
   if (['today', 'overdue', 'next7'].includes(prazoUrl)) Object.assign(state, { deadline: prazoUrl, view: 'quotes' });
   let authorized = false, accessState = 'checking', sourceState = 'loading', sourceError = '', rawRows = [], lastSuccess = null;
   let account = '', socket, requestId = '', sequence = 0, requestTimer, sessionTimer, exporting = false, reloadAfter = false;
@@ -176,7 +179,8 @@
     const sourceNotice = sourceState === 'error' ? `<div class="source-notice" role="alert">${icon('alert')}<span>${esc(sourceError)} ${lastSuccess ? `Exibindo a última leitura de ${timestamp(lastSuccess)} (horário de Brasília), que pode estar desatualizada.` : 'Os indicadores serão exibidos depois de uma leitura válida.'}</span>${btn('refresh', 'Tentar novamente', 'refresh', 'small')}</div>` : sourceState === 'loading' && lastSuccess ? `<div class="source-notice" role="status">${icon('refresh')}<span>Atualizando. Até a confirmação, os dados exibidos são da leitura de ${timestamp(lastSuccess)} (horário de Brasília).</span></div>` : '';
     const controle = A.ativa(state.view);
     const content = controle ? A.conteudo(state.view) : lastSuccess ? loadedContent :`<section class="panel empty" role="status">${icon(sourceState === 'error' ? 'alert' : 'refresh')}<h2>${sourceState === 'error' ? 'Base indisponível' : 'Consultando as cotações…'}</h2><p>${sourceState === 'error' ? 'Use Atualizar para tentar uma nova leitura.' : 'Aguarde a confirmação do gerenciador.'}</p></section>`;
-    app.innerHTML = `${portal()}<div class="page-wrap workspace"><aside class="sidebar"><div class="eyebrow">Gestão comercial</div>${nav()}${A.nav(state.view)}<div class="sidebar-bottom">${icon('shield')}<p>Visão administrativa</p><small>Consulta da carteira e evidências</small></div></aside><main class="page-main" id="main" tabindex="-1">${controle ? A.heading(state.view) + A.aviso() + A.filtros(state.view) : heading() + sourceNotice + filters()}<div id="content" aria-busy="${sourceState === 'loading'}">${content}</div><footer class="footer"><span>MAESTRO <span class="muted">/ Gestão comercial</span></span><span>Somente consulta · dados de resposta conforme evidência</span></footer></main></div>`;
+    const menuLateral = window.Dash && window.Dash.sidebar ? window.Dash.sidebar('cotacoes', { view: state.view, quotesCount: D.select(D.rows, state).length }) : `<aside class="sidebar"><div class="eyebrow">Gestão comercial</div>${nav()}${A.nav(state.view)}<div class="sidebar-bottom">${icon('shield')}<p>Visão administrativa</p><small>Consulta da carteira e evidências</small></div></aside>`;
+    app.innerHTML = `${portal()}<div class="page-wrap workspace">${menuLateral}<main class="page-main" id="main" tabindex="-1">${controle ? A.heading(state.view) + A.aviso() + A.filtros(state.view) : heading() + sourceNotice + filters()}<div id="content" aria-busy="${sourceState === 'loading'}">${content}</div><footer class="footer"><span>MAESTRO <span class="muted">/ Gestão comercial</span></span><span>Somente consulta · dados de resposta conforme evidência</span></footer></main></div>`;
     document.querySelectorAll('[data-action="export"], [data-action="print"]').forEach(b => { b.disabled = !data.length || sourceState !== 'ready' || exporting; });
     if (vendorOpen) document.getElementById('vendor-picker').open = true;
     const target = focused && document.getElementById(focused);
@@ -307,7 +311,7 @@
       if (!Number.isFinite(reply.expires) || reply.expires <= Date.now()) return invalidate();
       authorized = true; account = String(reply.email || '');
       clearTimeout(sessionTimer); sessionTimer = setTimeout(() => { invalidate(); socket.disconnect(); }, reply.expires - Date.now());
-      socket.emit('sou_frontend', { usuario: account }); requestData();
+      socket.emit('sou_frontend', { usuario: account }); requestData(); if (A.ativa(state.view)) A.carregar(false);
     });
     socket.on('retorno_dashboard_cotacoes', reply => {
       if (!authorized || !reply || reply.requestId !== requestId) return;

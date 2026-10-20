@@ -15,7 +15,8 @@ const arquivoEnvMaestro = path.join(__dirname, '.env');
 const segredoRoboConfigurado = process.env.ROBO_SECRET ?? (fs.existsSync(arquivoEnvMaestro)
     ? require('dotenv').parse(fs.readFileSync(arquivoEnvMaestro)).ROBO_SECRET : '');
 const { criarDashboardCotacoes } = require('./lib/dashboard-cotacoes');
-const { lerSessao } = require('./lib/dashboard-cotacoes');
+const { lerSessao, autorizarAdmin } = require('./lib/dashboard-cotacoes');
+const { lerLogPorId, resumirArquivosLog } = require('./lib/logs-txt');
 const { criarDashboardFontes } = require('./lib/dashboard-fontes');
 const { criarAuditoria } = require('./lib/auditoria');
 const { criarDashboardAuditoria, ipDe } = require('./lib/dashboard-auditoria');
@@ -130,7 +131,14 @@ function marcarConexao(nome, online) {
 const dashboardFontes = criarDashboardFontes({
     sessoes: cofreSessoes, io, obterSocket: id => io.sockets.sockets.get(id),
     obterRobo: () => bot_socket_id, obterSync: () => sync_socket_id,
-    obterConexoes: () => JSON.parse(JSON.stringify(conexoes))
+    obterConexoes: () => JSON.parse(JSON.stringify(conexoes)),
+    obterRobos: () => ({ global: JSON.parse(JSON.stringify(estado_global)), me: JSON.parse(JSON.stringify(estado_me)), ariba: JSON.parse(JSON.stringify(estado_ariba)) }),
+    obterArquivosLog: () => resumirArquivosLog(),
+    obterEventosExtras: () => {
+        const hoje = new Date(), inicio = new Date(hoje.getTime() - 7 * 24 * 3600 * 1000), iso = d => d.toISOString().slice(0, 10);
+        const NOMES = { robo_ligar_robo: 'Robô iniciado pelo portal', robo_desligar_robo: 'Robô desligado pelo portal', robo_extrair: 'Extração iniciada pelo portal', robo_verificar: 'Verificação iniciada pelo portal', robo_solicitar_parada: 'Parada solicitada pelo portal', robo_parar_extracao: 'Extração interrompida pelo portal', robo_forcar_troca: 'Troca de robô acionada pelo portal', robo_mover_anexos_findes: 'Movimentação de anexos Findes', imprimir: 'Impressão em lote solicitada', cancelar_evento: 'Evento cancelado da fila' };
+        return auditoria.ler(iso(inicio), iso(hoje)).filter(r => r.area === 'portal').map(r => ({ em: r.data_hora, servico: r.acao === 'imprimir' ? 'impressao' : (r.portal || 'gerenciador'), tipo: r.acao || 'portal', nivel: r.status === 'erro' ? 'erro' : r.status === 'sem_resposta' ? 'aviso' : 'ok', resumo: (NOMES[r.acao] || r.acao || 'Ação no portal') + (r.portal ? ` (${String(r.portal).toUpperCase()})` : ''), ref: r.alvo || null, detalhe: r.detalhes || {} }));
+    }
 });
 
 // 🛡️ AUDITORIA: quem mudou o quê (docs/auditoria/plano.md). Admins na sala 'auditoria' recebem ao vivo.
@@ -235,7 +243,28 @@ io.on('connection', (socket) => {
     });
     // Respostas das fontes para os dashboards (Sync, NFs, Atividade): só o socket certo é aceito.
     for (const evento of ['retorno_sync_planilha_painel', 'retorno_nf_painel', 'retorno_eventos_nf', 'retorno_eventos']) {
-        socket.on(evento, (dados = {}) => dashboardFontes.receber(evento, socket.id, dados));
+        socket.on(evento, (dados = {}) => { dashboardFontes.receber(evento, socket.id, dados);
+    });
+    }
+    socket.on('solicitar_log_txt', (dados = {}) => {
+        const requestId = typeof dados?.requestId === 'string' ? dados.requestId.slice(0, 80) : '';
+        if (!autorizarAdmin(cofreSessoes, socket, 'retorno_log_txt', requestId)) return;
+        const idLog = String(dados?.id || dados?.modulo || dados?.arquivo || '').slice(0, 80);
+        const linhas = Math.max(20, Math.min(Number(dados?.linhas) || 400, 3000));
+        const local = lerLogPorId(idLog, { linhas });
+        if (local.sucesso || !bot_socket_id) {
+            socket.emit('retorno_log_txt', { ...local, requestId });
+            return;
+        }
+        io.to(bot_socket_id).emit('comando_ler_log_txt', { id: idLog, linhas, clientId: socket.id, requestId });
+    });
+    socket.on('retorno_ler_log_txt', (dados = {}) => {
+        if (socket.id !== bot_socket_id || !dados?.clientId) return;
+        const destino = io.sockets.sockets.get(dados.clientId);
+        if (!destino || !autorizarAdmin(cofreSessoes, destino, 'retorno_log_txt', dados.requestId || '')) return;
+        destino.emit('retorno_log_txt', dados);
+    });
+    if (false) {
     }
 
     // Cancelar Evento da Fila

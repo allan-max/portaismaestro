@@ -2,7 +2,7 @@
 (function (root) {
     'use strict';
     const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-    const SERVICOS = { gerenciador: 'Gerenciador', coupa: 'Coupa', vale: 'Vale', cadastro: 'Cadastro', nf: 'NF', sync_planilha: 'Sync planilha' };
+    const SERVICOS = { gerenciador: 'Gerenciador', coupa: 'Coupa', vale: 'Vale', ariba: 'SAP Ariba', me: 'Mercado Eletrônico', findes: 'Findes', cadastro: 'Cadastro', nf: 'NF', sync_planilha: 'Sync planilha', impressao: 'Impressão' };
     const NIVEIS = { erro: 'Erro', aviso: 'Aviso', ok: 'OK', info: 'Info' };
     const COR = { erro: 'vermelho', aviso: 'amarelo', ok: 'verde', info: 'azul' };
     const JUNTAR_MIN = 10;

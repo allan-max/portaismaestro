@@ -5,6 +5,10 @@ const path = require('node:path');
 const S = require('../public/dashboard-comum/saude.js');
 const N = require('../public/dashboard-comum/nfs.js');
 const A = require('../public/dashboard-comum/atividade.js');
+const M = require('../public/dashboard-comum/monitoramento.js');
+const C = require('../public/dashboard-comum/contas.js');
+const B = require('../public/dashboard-comum/base.js');
+const L = require('../lib/logs-txt.js');
 
 const AGORA = new Date(2026, 9, 15, 15, 0);   // quinta, 15/10/2026 15:00
 const ctx = { agora: () => AGORA, icone: () => '', hora: v => String(v), data: S.hora, num: (n, c = '') => `<strong class="${c}">${n}</strong>` };
@@ -126,13 +130,122 @@ test('atividade: filtro por serviço, nível e busca; erros no topo; fonte que c
 // -- páginas ------------------------------------------------------------------------
 test('as 4 páginas têm a barra, a faixa e só scripts locais; dashboard2 mudou o mínimo', () => {
   const pub = p => fs.readFileSync(path.join(__dirname, '../public', p), 'utf8');
-  for (const [arq, nome] of [['sync.html', 'sync'], ['nfs.html', 'nfs'], ['atividade.html', 'atividade'], ['dashboard2.html', 'cotacoes']]) {
+  for (const [arq, nome] of [['dashboard.html', 'contas'], ['sync.html', 'sync'], ['nfs.html', 'nfs'], ['atividade.html', 'atividade'], ['dashboard2.html', 'cotacoes'], ['monitoramento.html', 'monitoramento']]) {
     const html = pub(arq);
     assert.match(html, new RegExp(`data-dashboard="${nome}"`)); assert.match(html, /<div id="dash-topo"><\/div>/);
     assert.match(html, /dashboard-comum\/base\.js/); assert.match(html, /dashboard-comum\/comum\.css/);
     assert.doesNotMatch(html, /<script>/);                                             // nada inline
   }
   assert.match(pub('dashboard2.html'), /dashboard-cotacoes\/app\.js/);
-  for (const href of ['dashboard2.html', 'sync.html', 'nfs.html', 'atividade.html']) assert.match(pub('dashboard.html'), new RegExp(`href="${href}"`));
+  assert.match(pub('dashboard.html'), /dashboard-comum\/contas\.js/);
+  const sb = B.sidebar('monitoramento');
+  for (const href of ['dashboard2.html', 'sync.html', 'nfs.html', 'atividade.html', 'monitoramento.html', 'dashboard.html']) assert.match(sb, new RegExp(`href="${href}`));
+  for (const sec of ['Gestão comercial', 'Operação e robôs', 'Pedidos e planilha', 'Controle e admin']) assert.match(sb, new RegExp(sec));
+  const htmlContas = C.pagina({ usuarios: { 'ana@teste.com': { admin: true, vendedor: 'ANA', planilha_access: true, portais_access: true } } }, ctx, {}, { configAberta: true, configDados: { INTERVALO_VERIFICACAO: 300 } });
+  assert.match(htmlContas, /Contas e privilégios/);
+  assert.match(htmlContas, /ana@teste\.com/);
+  assert.match(htmlContas, /Variáveis do robô \(CONFIG\.json\)/);
   assert.match(pub('dashboard-comum/comum.css'), /prefers-reduced-motion: reduce/);
+
+  const dados = {
+    conexoes: { gerenciador: online, nf: online },
+    estado_nf: estadoNf({ sync_planilha_portal: { adiado: true, aviso: 'Planilha em modo somente leitura', gerado_em: '15/10/2026 14:30:00' } }),
+    robos: { global: { status: 'extraindo', portal_atual: 'coupa' }, me: { status: 'ocioso' }, ariba: { status: 'ocioso' } },
+    eventos: [
+      ev(5, { servico: 'vale', tipo: 'robo_inativo', nivel: 'erro', resumo: 'Timeout na requisição - API <Vale>' }),
+      ev(12, { servico: 'coupa', tipo: 'ciclo', nivel: 'ok', resumo: 'Cotação 4387 processada' }),
+      ev(20, { servico: 'ariba', tipo: 'ciclo', nivel: 'ok', resumo: 'Extração AEGEA concluída' }),
+      ev(25, { servico: 'me', tipo: 'ciclo', nivel: 'ok', resumo: 'Extração Mercado Eletrônico concluída' }),
+      ev(30, { servico: 'findes', tipo: 'ciclo', nivel: 'ok', resumo: 'Coleta CDE Findes concluída' }),
+    ],
+  };
+  const sis = M.sistemas(dados, AGORA);
+  assert.equal(sis.length, 10);
+  assert.equal(sis.find(s => s.id === 'coupa').status, 'Em execução');
+  assert.equal(sis.find(s => s.id === 'vale').cor, 'vermelho');
+  assert.equal(sis.find(s => s.id === 'sync_planilha').cor, 'amarelo');
+  for (const id of ['gerenciador', 'nf', 'cadastro', 'ariba', 'me', 'findes', 'impressao']) {
+    assert.equal(sis.find(s => s.id === id).cor, 'verde');
+  }
+  const html = M.pagina(dados, ctx);
+  assert.match(html, /Status dos sistemas e robôs/);
+  assert.match(html, /Gráfico de execuções/);
+  assert.match(html, /Logs recentes/);
+  assert.match(html, /Alertas que exigem atenção/);
+  assert.match(html, /Robô SAP Ariba/);
+  assert.match(html, /Mercado Eletrônico/);
+  assert.match(html, /Robô Findes/);
+  assert.doesNotMatch(html, /<Vale>/);
+  assert.match(html, /&lt;Vale&gt;/);
+  assert.match(html, /log-coupa\.txt/);
+  assert.match(html, /mercadoeletronico\.txt/);
+  const htmlComModal = M.pagina(dados, ctx, undefined, {
+    logAberto: true,
+    logModulo: 'coupa',
+    logResposta: {
+      sucesso: true, id: 'coupa', nome: 'Robô Coupa', arquivo: 'log-coupa.txt',
+      caminho: '\\\\SERVIDOR2\\Publico\\ALLAN\\Logs\\log-coupa.txt',
+      tamanho: 44239701, modificado_em: '2026-10-20T10:25:47',
+      linhas: ['10:25:45 [INFO] Paragem/Extração concluída! <teste>'],
+    },
+  });
+  assert.match(htmlComModal, /class="mon-log-modal"/);
+  assert.match(htmlComModal, /\\\\SERVIDOR2\\Publico\\ALLAN\\Logs\\log-coupa\.txt/);
+  assert.match(htmlComModal, /Paragem\/Extração concluída! &lt;teste&gt;/);
+  assert.doesNotMatch(htmlComModal, /<teste>/);
+  assert.doesNotMatch(htmlComModal, /stopPropagation/);
+  assert.match(htmlComModal, /data-acao="log-anterior"/);
+  assert.match(htmlComModal, /data-acao="log-proximo"/);
+  assert.match(htmlComModal, /data-acao="fechar-log"/);
+  assert.equal(M.proximoModuloLog('coupa', 1), 'me');
+  assert.match(html, /Total crescente/);
+  assert.match(html, /mon-line azul/);
+  assert.match(html, /mon-line amarelo/);
+
+  // Detecção de sessão finalizada (Offline), retomada (Online) e erros pelo arquivo TXT
+  const estFim = L.analisarEstadoLog(['Processamento concluído com sucesso!', '=== SESSÃO FINALIZADA ==='], new Date(), { id: 'me', modulo: 'me', arquivo: 'mercadoeletronico.txt' });
+  assert.equal(estFim.estado_log, 'offline');
+  const estVoltou = L.analisarEstadoLog(['=== SESSÃO FINALIZADA ===', '11:02:26 [INFO] Iniciando Login Inteligente'], new Date(), { id: 'coupa', modulo: 'coupa', arquivo: 'log-coupa.txt' });
+  assert.equal(estVoltou.estado_log, 'online');
+  const estErro = L.analisarEstadoLog(['10:58:19 [INFO] Robo pausado', '11:01:20 [ERROR] Erro na verificação: Tempo esgotado! O código OTP não foi inserido.'], new Date(), { id: 'vale', modulo: 'vale', arquivo: 'log-vale.txt' });
+  assert.equal(estErro.estado_log, 'erro');
+  assert.match(estErro.ultimo_erro, /Tempo esgotado/);
+
+  const sisComLogs = M.sistemas({
+    conexoes: { gerenciador: online, nf: online },
+    arquivos_log: {
+      me: { id: 'me', modulo: 'me', arquivo: 'mercadoeletronico.txt', disponivel: true, modificado_em: AGORA.toISOString(), estado_log: 'offline' },
+      findes: { id: 'findes', modulo: 'findes', arquivo: 'findes.txt', disponivel: true, modificado_em: AGORA.toISOString(), estado_log: 'online' },
+      ariba: { id: 'ariba', modulo: 'ariba', arquivo: 'aribasourcing.txt', disponivel: true, modificado_em: AGORA.toISOString(), estado_log: 'erro', ultimo_erro: 'Falha no login na conta 2' },
+    },
+  }, AGORA);
+  assert.equal(sisComLogs.find(s => s.id === 'me').status, 'Offline');
+  assert.equal(sisComLogs.find(s => s.id === 'findes').status, 'Online');
+  assert.equal(sisComLogs.find(s => s.id === 'ariba').status, 'Erro');
+  const alertasLog = M.alertasAtivos({
+    arquivos_log: {
+      ariba: { id: 'ariba', modulo: 'ariba', arquivo: 'aribasourcing.txt', disponivel: true, modificado_em: AGORA.toISOString(), estado_log: 'erro', ultimo_erro: 'Falha no login na conta 2' },
+    },
+  }, sisComLogs, AGORA);
+  assert.equal(alertasLog.some(a => /aribasourcing\.txt/.test(a.titulo) && /Falha no login/.test(a.texto)), true);
+  assert.equal(L.formatarNomeRoboDeArquivo('log-petrobras.txt').nome, 'Robô Petrobras');
+  const dadosComRoboNovo = {
+    ...dados,
+    arquivos_log: {
+      robo_petrobras: {
+        id: 'robo_petrobras', modulo: 'robo_petrobras', nome: 'Robô Petrobras',
+        arquivo: 'log-petrobras.txt', disponivel: true, auto: true,
+        modificado_em: AGORA.toISOString(), estado_log: 'online',
+      },
+    },
+  };
+  const sisAuto = M.sistemas(dadosComRoboNovo, AGORA);
+  assert.equal(sisAuto.length, 11);
+  assert.equal(sisAuto.some(s => s.id === 'robo_petrobras' && s.nome === 'Robô Petrobras' && s.auto), true);
+  assert.equal(M.proximoRoboGrafico('', 1, sisAuto), 'gerenciador');
+  const htmlGraficoCoupa = M.pagina(dadosComRoboNovo, ctx, { periodo: '24h', servico: '', nivel: '', categoria: '', busca: '', roboGrafico: 'coupa' });
+  assert.match(htmlGraficoCoupa, /Gráfico de execuções · Robô Coupa/);
+  assert.match(htmlGraficoCoupa, /data-acao="grafico-robo-ant"/);
+  assert.match(htmlGraficoCoupa, /data-acao="grafico-robo-prox"/);
+  assert.match(htmlGraficoCoupa, /log-petrobras\.txt/);
 });
