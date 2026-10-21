@@ -284,6 +284,8 @@
         });
 
         // Mini Terminal
+        // Texto vindo do robô/portal entra na tela como texto, nunca como HTML
+        const escHtml = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
         function addLog(msg) {
             const term = document.getElementById('mini-terminal');
             if (term) {
@@ -291,7 +293,7 @@
                 const hora = now.getHours().toString().padStart(2, '0') + ':' + 
                              now.getMinutes().toString().padStart(2, '0');
                 
-                term.innerHTML += `<div class="log-line"><span class="log-time">[${hora}]</span> ${msg}</div>`;
+                term.innerHTML += `<div class="log-line"><span class="log-time">[${hora}]</span> ${escHtml(msg)}</div>`;
                 while (term.childElementCount > 50) term.removeChild(term.firstChild);
                 term.scrollTop = term.scrollHeight;
             }
