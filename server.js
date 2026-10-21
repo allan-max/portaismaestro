@@ -242,7 +242,7 @@ io.on('connection', (socket) => {
         if (nome) conexoes[nome].visto_em = new Date().toISOString();
     });
     // Respostas das fontes para os dashboards (Sync, NFs, Atividade): só o socket certo é aceito.
-    for (const evento of ['retorno_sync_planilha_painel', 'retorno_nf_painel', 'retorno_eventos_nf', 'retorno_eventos']) {
+    for (const evento of ['retorno_sync_planilha_painel', 'retorno_nf_painel', 'retorno_eventos_nf', 'retorno_eventos', 'retorno_servidor_metricas']) {
         socket.on(evento, (dados = {}) => { dashboardFontes.receber(evento, socket.id, dados);
     });
     }
