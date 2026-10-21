@@ -1101,10 +1101,10 @@
             const term = q('#mon-log-terminal');
             if (term) {
                 aplicarScrollTerminal(term, op);
-                if (op.logNoFinal !== false && typeof requestAnimationFrame === 'function') {
+                if (typeof requestAnimationFrame === 'function') {
                     requestAnimationFrame(() => {
                         const termAtual = document.getElementById('mon-log-terminal');
-                        if (termAtual && op.logNoFinal !== false) aplicarScrollTerminal(termAtual, op);
+                        if (termAtual) aplicarScrollTerminal(termAtual, op);
                     });
                 }
             }
@@ -1201,6 +1201,15 @@
             if (refDesenhar) refDesenhar();
         }
 
+        const dentroTerminalLog = e => !!(e.target && e.target.closest && e.target.closest('#mon-log-terminal'));
+        const marcarInteracaoLog = e => { if (dentroTerminalLog(e)) op.logInteracaoEm = Date.now(); };
+        ['wheel', 'touchstart', 'touchmove'].forEach(ev => document.addEventListener(ev, marcarInteracaoLog, { passive: true, capture: true }));
+        document.addEventListener('pointerdown', e => { if (dentroTerminalLog(e)) { op.logPonteiroAtivo = true; op.logInteracaoEm = Date.now(); } }, true);
+        ['pointerup', 'pointercancel'].forEach(ev => document.addEventListener(ev, () => { if (op.logPonteiroAtivo) { op.logPonteiroAtivo = false; op.logInteracaoEm = Date.now(); } }, true));
+        document.addEventListener('keydown', e => {
+            if (op.logAberto && ['PageUp', 'PageDown', 'Home', 'End', 'ArrowUp', 'ArrowDown', ' '].includes(e.key)) op.logInteracaoEm = Date.now();
+        }, true);
+
         document.addEventListener('keydown', e => {
             if (!op.logAberto) return;
             const tag = (e.target && e.target.tagName) || '';
@@ -1248,6 +1257,8 @@
                 const el = e && e.target;
                 if (!el || !el.id) return;
                 if (el.id === 'mon-log-terminal') {
+                    // Só conta como "usuário rolou" se houve interação real; rolagens causadas por redesenho/remontagem do DOM são ignoradas
+                    if (!op.logPonteiroAtivo && Date.now() - (op.logInteracaoEm || 0) > 1500) return;
                     atualizarEstadoScrollLog(op, {
                         scrollTop: el.scrollTop,
                         scrollHeight: el.scrollHeight,
@@ -1278,6 +1289,12 @@
                 socket.on('connect', () => {
                     if (op.logAberto) setTimeout(() => requisitarLogTxt(op.logModulo, { manterPosicao: true }), 300);
                 });
+                // Tempo real: re-pede o log aberto sem redesenhar (a resposta atualiza o terminal no lugar)
+                setInterval(() => {
+                    if (!op.logAberto || op.logCarregando || !socket.connected || !op.logResposta || !op.logResposta.id) return;
+                    reqLogAtual = `log-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+                    socket.emit('solicitar_log_txt', { id: op.logResposta.id, linhas: op.linhasLog, requestId: reqLogAtual });
+                }, 4000);
             },
             controles: ctx => `<label class="mon-periodo-select">${ctx.icone('calendario')}<select id="filtro-mon-periodo" data-filtro="periodo" aria-label="Período">${Object.entries(PERIODOS).map(([k, [rotulo]]) => `<option value="${k}" ${f.periodo === k ? 'selected' : ''}>${rotulo}</option>`).join('')}</select></label>`,
             render: (d, ctx) => {
