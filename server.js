@@ -346,6 +346,7 @@ io.on('connection', (socket) => {
     socket.on('contagem_coupa_vale', (dados) => io.to('frontend').emit('atualizar_contagem_coupa_vale', dados));
 
     socket.on('clique_no_captcha', (dados) => {
+        if (!socket.autenticado) return;
         // Repassa o clique do usuário diretamente para o robô local
         if (bot_socket_id) {
             io.to(bot_socket_id).emit('executar_clique', dados);
@@ -627,6 +628,7 @@ io.on('connection', (socket) => {
     function lerUsuariosLocais() {
         const possiveisCaminhos = [
             path.join(__dirname, '..', 'senhas gerenciador', 'banco_usuarios.json'),
+            path.join(__dirname, '..', 'gerenciador-maestro', 'banco_usuarios.json'),
             path.join(__dirname, '..', 'gerenciador', 'banco_usuarios.json')
         ];
         let db = null;
