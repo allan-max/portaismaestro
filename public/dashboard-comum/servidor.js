@@ -36,6 +36,45 @@
         return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img" aria-label="Consumo do servidor ao longo do tempo">${grade}${marcas}${linhas}</svg>`;
     }
 
+    function fmtUptime(s) {
+        s = Number(s) || 0;
+        const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+        return d ? `${d}d ${h}h ${m}min` : h ? `${h}h ${m}min` : `${m}min`;
+    }
+    const fmtKbs = v => Number(v || 0) >= 1024 ? `${(v / 1024).toFixed(1).replace('.', ',')} MB/s` : `${Number(v || 0).toFixed(0)} KB/s`;
+    const corTemp = (t, aviso, critico) => t >= critico ? 'vermelho' : t >= aviso ? 'amarelo' : 'verde';
+
+    function cartaoTemp(rotulo, temp, detalhe, aviso, critico, i) {
+        if (temp == null) return `<div class="card-num entra" style="--i:${i}"><small>${esc(rotulo)}</small><strong>—</strong><em>${esc(detalhe)}</em></div>`;
+        const c = corTemp(temp, aviso, critico);
+        return `<div class="card-num entra" style="--i:${i}"><small>${esc(rotulo)}</small>
+            <strong style="color:${HEX[c]}">${fmt(temp)}°C</strong>
+            <div class="barra-trilho" style="margin:6px 0 4px"><i class="${c}" style="--w:${Math.min(100, Math.max(0, temp))}%"></i></div>
+            <em>${esc(detalhe)}</em></div>`;
+    }
+
+    function diagnostico(a) {
+        const avisos = Array.isArray(a.diagnostico) ? a.diagnostico : [];
+        const itens = avisos.length
+            ? avisos.map(v => `<li><span class="rotulo">${v.nivel === 'critico' ? 'Crítico' : 'Atenção'}</span><div class="principal"><p>${esc(v.texto)}</p></div><span class="lado"><span class="tag ${v.nivel === 'critico' ? 'vermelho' : 'amarelo'}">${v.nivel === 'critico' ? 'Crítico' : 'Atenção'}</span></span></li>`).join('')
+            : '<li><span class="rotulo">Tudo certo</span><div class="principal"><p>Nenhum problema detectado nas leituras atuais.</p></div></li>';
+        const discos = (a.discos || []).map(d => `<li><span class="rotulo">Disco ${esc(d.ponto)}</span><div class="principal"><p>${fmtGb(d.usado_gb)} de ${fmtGb(d.total_gb)}</p>
+            <div class="barra-trilho" style="margin:4px 0"><i class="${cor(d.percentual)}" style="--w:${Math.min(100, d.percentual)}%"></i></div></div><span class="lado"><b>${fmt(d.percentual)}%</b></span></li>`).join('');
+        const proc = (lista, campo, fmtVal) => (lista || []).map(p => `<li><span class="rotulo">${esc(p.nome)}</span><span class="lado"><b>${fmtVal(p[campo])}</b></span></li>`).join('') || '<li><span class="rotulo">Sem dados</span></li>';
+        const rede = a.rede || {};
+        const info = [
+            ['Computador', a.host], ['Sistema', a.sistema], ['Ligado há', fmtUptime(a.uptime_s)],
+            ['Processador', a.cpu_nucleos ? `${a.cpu_nucleos} núcleos / ${a.cpu_threads} threads${a.cpu_freq_mhz ? ` · ${a.cpu_freq_mhz} MHz` : ''}` : null],
+            ['Memória virtual', a.swap_total_gb ? `${fmtGb(a.swap_usada_gb)} de ${fmtGb(a.swap_total_gb)} (${fmt(a.swap_percentual)}%)` : 'Desativada'],
+            ['Rede', `↓ ${fmtKbs(rede.rec_kbs)} · ↑ ${fmtKbs(rede.env_kbs)}`],
+        ].filter(i => i[1]).map(i => `<li><span class="rotulo">${esc(i[0])}</span><div class="principal"><p>${esc(i[1])}</p></div></li>`).join('');
+        return `<section class="panel bloco entra" style="--i:6"><div class="panel-head"><div><h2>Diagnóstico geral</h2><p>Avisos automáticos com base nas leituras atuais.</p></div></div><ul class="lista">${itens}</ul></section>
+            <section class="panel bloco entra" style="--i:7"><div class="panel-head"><div><h2>Informações do servidor</h2></div></div><ul class="lista">${info}</ul></section>
+            <section class="panel bloco entra" style="--i:8"><div class="panel-head"><div><h2>Discos</h2></div></div><ul class="lista">${discos || '<li><span class="rotulo">Sem dados</span></li>'}</ul></section>
+            <section class="panel bloco entra" style="--i:9"><div class="panel-head"><div><h2>Processos que mais consomem</h2><p>Por CPU e por memória RAM.</p></div></div>
+                <ul class="lista">${proc((a.processos || {}).cpu, 'cpu', v => fmt(v) + '% CPU')}</ul><ul class="lista">${proc((a.processos || {}).ram, 'ram_mb', v => Math.round(v) + ' MB')}</ul></section>`;
+    }
+
     function pagina(dados, ctx, visiveis) {
         const a = dados.atual || {};
         const hist = Array.isArray(dados.historico) ? dados.historico : [];
@@ -43,7 +82,9 @@
         const cards = cartao('CPU', a.cpu, 'Processador', 0) + cartao('RAM', a.ram, `${fmtGb(a.ram_usada_gb)} de ${fmtGb(a.ram_total_gb)}`, 1)
             + (gpuOk ? cartao('GPU', a.gpu, a.gpu_nome || 'Placa de vídeo', 2)
                 + cartao('VRAM', a.vram, `${fmtGb(a.vram_usada_gb)} de ${fmtGb(a.vram_total_gb)}`, 3)
-                : '<div class="card-num entra" style="--i:2"><small>GPU / VRAM</small><strong>—</strong><em>GPU NVIDIA não detectada no servidor</em></div>');
+                : '<div class="card-num entra" style="--i:2"><small>GPU / VRAM</small><strong>—</strong><em>GPU NVIDIA não detectada no servidor</em></div>')
+            + cartaoTemp('Temperatura CPU', a.cpu_temp, a.cpu_temp != null ? `Fonte: ${a.cpu_temp_origem}` : 'Sensor indisponível (abra o LibreHardwareMonitor no servidor)', 80, 90, 4)
+            + (a.gpu_temp != null ? cartaoTemp('Temperatura GPU', a.gpu_temp, a.gpu_nome || 'Placa de vídeo', 75, 85, 5) : '');
         const maximo = k => hist.length ? Math.max(...hist.map(p => Number(p[k]) || 0)) : 0;
         const media = k => hist.length ? hist.reduce((s, p) => s + (Number(p[k]) || 0), 0) / hist.length : 0;
         const chips = SERIES.filter(s => s.chave === 'cpu' || s.chave === 'ram' || gpuOk).map(s =>
@@ -56,7 +97,7 @@
                 <p>Últimas ${hist.length} leituras (~${Math.round(hist.length * 4.5 / 60)} min)${temp}. Atualiza a cada 5 s.</p></div><div>${chips}</div></div>
                 <div class="panel-body">${hist.length > 1 ? grafico(hist, visiveis) : '<p class="vazio">Coletando leituras…</p>'}</div></section>
             <section class="panel bloco entra" style="--i:5"><div class="panel-head"><div><h2>Resumo do período</h2></div></div>
-                <ul class="lista">${resumo}</ul></section>`;
+                <ul class="lista">${resumo}</ul></section>${diagnostico(a)}`;
     }
 
     const api = { pagina, cor };
