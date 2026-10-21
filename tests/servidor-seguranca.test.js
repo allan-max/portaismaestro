@@ -25,7 +25,7 @@ async function portFree() {
 test('servidor real: eventos do robô, fila de extração, clientId e /api/responder', async t => {
   const port = await portFree(), secret = crypto.randomBytes(32).toString('hex'), sockets = [];
   const child = spawn(process.execPath, ['server.js'], { cwd: root,
-    env: { ...process.env, HOST: '127.0.0.1', PORT: String(port), ROBO_SECRET: secret, MASTER_SECRET: crypto.randomBytes(32).toString('hex') }, stdio: ['ignore', 'pipe', 'pipe'] });
+    env: { ...process.env, HOST: '127.0.0.1', PORT: String(port), ROBO_SECRET: secret, SYNC_NF_TOKEN: 'token-nf-de-teste', MASTER_SECRET: crypto.randomBytes(32).toString('hex') }, stdio: ['ignore', 'pipe', 'pipe'] });
   t.after(() => { sockets.forEach(s => s.disconnect()); child.kill(); });
   await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('Servidor não iniciou.')), 10000);
@@ -72,6 +72,12 @@ test('servidor real: eventos do robô, fila de extração, clientId e /api/respo
   bot.emit('atualizar_fila_extracao', { fila: [] }); await fila;
   await pausa(200);
   assert.equal(doVisitante.includes('atualizar_fila_extracao'), false);
+
+  // Token do serviço de NF com caractere multibyte (mesmo nº de caracteres): recusa e desconecta
+  const falsoNf = await client();
+  const recusado = event(falsoNf, 'sync_nf_recusado');
+  falsoNf.emit('sou_o_sync_nf', { token: 'token-nf-de-testé' });
+  await recusado;
 
   // obter_fila_extracao exige login
   visitante.emit('obter_fila_extracao', {}); await pausa(200);

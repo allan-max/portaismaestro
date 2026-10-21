@@ -863,7 +863,8 @@ io.on('connection', (socket) => {
     socket.on('sou_o_sync_nf', (dados = {}) => {
         const esperado = String(process.env.SYNC_NF_TOKEN || '');
         const recebido = String(dados.token || '');
-        const ok = esperado.length > 0 && esperado.length === recebido.length &&
+        // Tamanho em bytes: com caractere multibyte o timingSafeEqual lançaria em vez de recusar
+        const ok = esperado.length > 0 && Buffer.byteLength(esperado) === Buffer.byteLength(recebido) &&
             crypto.timingSafeEqual(Buffer.from(esperado), Buffer.from(recebido));
         if (!ok) {
             console.log("⛔ Serviço de NF recusado (SYNC_NF_TOKEN ausente ou diferente).");
