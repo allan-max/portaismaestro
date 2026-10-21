@@ -109,7 +109,18 @@ function setupMinhasCotacoesEnv(options = {}) {
         removeItem() {}
     };
 
+    // `hoje` congela o relógio da página: status e ordenação dependem da data corrente
+    const extras = {};
+    if (options.hoje) {
+        const fixo = new Date(options.hoje).getTime();
+        extras.Date = class extends Date {
+            constructor(...args) { super(...(args.length ? args : [fixo])); }
+            static now() { return fixo; }
+        };
+    }
+
     const context = vm.createContext({
+        ...extras,
         window: {
             location: { href: '' },
             addEventListener() {}
@@ -221,7 +232,7 @@ test('minhas_cotacoes.html contém botão de exportação e inclui ExcelJS', () 
 });
 
 test('exportarMinhasCotacoesExcel gera arquivo .xlsx válido com status e colunas formatadas', async () => {
-    const env = setupMinhasCotacoesEnv({ vendedor: 'Carlos Alberto' });
+    const env = setupMinhasCotacoesEnv({ vendedor: 'Carlos Alberto', hoje: '2026-10-16T12:00:00-03:00' });
     const { context, downloads } = env;
 
     context.window.cotacoesFiltradas = [
@@ -330,7 +341,7 @@ test('minhas_cotacoes.html contém elementos de filtro de vencimento na coluna e
 });
 
 test('filtro de vencimento: aplicarFiltroPeriodo recorta cotações pelo intervalo de datas e reflete no Excel', async () => {
-    const env = setupMinhasCotacoesEnv({ vendedor: 'Lucas Vendas' });
+    const env = setupMinhasCotacoesEnv({ vendedor: 'Lucas Vendas', hoje: '2026-10-16T12:00:00-03:00' });
     const { context, elements, downloads } = env;
 
     context.window.todasCotacoes = [
