@@ -198,9 +198,7 @@ function fecharPorCliente(tipo, clientId, dados) {
 }
 const dashboardAuditoria = criarDashboardAuditoria({ sessoes: cofreSessoes, auditoria, registrar: registrarAuditoria });
 
-// Respostas e relatos que só o gerenciador emite. Vindos de qualquer outro socket (inclusive sem login)
-// são descartados: antes, qualquer visitante podia esvaziar a fila, trocar o estado dos robôs,
-// mandar mensagens falsas às telas ou responder no lugar do robô para outro clientId.
+// Respostas e relatos que só o gerenciador emite; de qualquer outro socket são descartados.
 const EVENTOS_DO_ROBO = new Set([
     'imagem_captcha_do_robo', 'contagem_coupa_vale', 'contagem_me', 'contagem_ariba',
     'relatar_progresso', 'relatar_progresso_me', 'relatar_progresso_coupa', 'relatar_progresso_vale',
@@ -423,8 +421,7 @@ io.on('connection', (socket) => {
             return;
         }
         socket.join('frontend');
-        // Quem está online vem da sessão, não do nome que a tela manda (antes dava para "ficar online" como outro).
-        // O antigo 'alerta_admin_cifrado' ia para todos os sockets, inclusive sem login, e nenhuma tela o lia.
+        // Quem está online vem da sessão, não do nome que a tela manda.
         const emailSessao = socket.usuarioLogado?.email;
         if (emailSessao) usuarios_logados[emailSessao] = socket.id;
         socket.emit('sincronizar_estado', { estado: estado_global, mensagem: "Conectado com segurança." });
