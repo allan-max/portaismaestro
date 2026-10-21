@@ -585,7 +585,7 @@
                 </div>
             </div>
             <div class="mon-chart-subbar">
-                <div class="mon-chart-chips" role="tablist" aria-label="Alternar robô no gráfico">${chipsRobos}</div>
+                <div class="mon-chart-chips" id="mon-chart-chips" role="tablist" aria-label="Alternar robô no gráfico">${chipsRobos}</div>
                 <div class="mon-legend">
                     <span><i class="mon-dot azul"></i>Total crescente</span>
                     <span><i class="mon-dot verde"></i>Sucessos (acum.)</span>
@@ -732,7 +732,7 @@
                     <button type="button" class="button small" data-acao="abrir-log" data-modulo="coupa" title="Ver arquivos de log em \\\\SERVIDOR2\\Publico\\ALLAN\\Logs">${svg('terminal')}<span>Logs TXT</span></button>
                 </div>
             </div>
-            <div class="table-scroll mon-table-wrap mon-sis-table-wrap">
+            <div class="table-scroll mon-table-wrap mon-sis-table-wrap" id="mon-sis-table-wrap">
                 <table class="mon-table">
                     <thead>
                         <tr>
@@ -798,7 +798,7 @@
                     <a class="panel-link" href="atividade.html"><span>Ver todos os logs</span>${svg('setaDir')}</a>
                 </div>
             </div>
-            ${visiveis.length ? `<div class="table-scroll mon-table-wrap">
+            ${visiveis.length ? `<div class="table-scroll mon-table-wrap" id="mon-logs-table-wrap">
                 <table class="mon-table mon-logs-table">
                     <thead>
                         <tr>
@@ -957,8 +957,9 @@
         const corDiag = diag.estado === 'erro' ? 'vermelho' : diag.estado === 'offline' ? 'cinza' : 'verde';
         const rotuloDiag = diag.estado === 'erro' ? 'Erro no log' : diag.estado === 'offline' ? 'Offline (Sessão finalizada)' : 'Online (Em atividade)';
         const bannerErro = diag.erro ? `<div class="mon-log-alert-banner">${svg('erro')}<div><strong>Erro detectado neste log:</strong> <span>${esc(diag.erro)}</span></div></div>` : '';
+        const logKey = `${idAtivo}|${carregando ? 1 : 0}|${(resposta && resposta.modificado_em) || ''}|${linhasFiltradas.length}|${busca}|${soAlertas ? 1 : 0}|${qtdLinhas}`;
 
-        return `<div class="drawer-shade mon-log-shade" data-acao="fechar-log">
+        return `<div class="drawer-shade mon-log-shade" data-acao="fechar-log" data-log-key="${esc(logKey)}" data-log-modulo="${esc(idAtivo)}">
             <section class="mon-log-modal" role="dialog" aria-modal="true" aria-labelledby="mon-log-title">
                 <header class="mon-log-header">
                     <div class="mon-log-title-wrap">
@@ -983,7 +984,7 @@
                         <button type="button" class="button small mon-btn-fechar" data-acao="fechar-log" aria-label="Fechar visualizador de log">${svg('fechar')}<span>Fechar</span></button>
                     </div>
                 </header>
-                <div class="mon-log-tabs-bar" aria-label="Arquivos de log em \\\\SERVIDOR2\\Publico\\ALLAN\\Logs">
+                <div class="mon-log-tabs-bar" id="mon-log-tabs-bar" aria-label="Arquivos de log em \\\\SERVIDOR2\\Publico\\ALLAN\\Logs">
                     ${abasArquivos}
                 </div>
                 <div class="mon-log-toolbar">
@@ -1004,7 +1005,7 @@
                     </label>` : ''}
                 </div>
                 ${bannerErro}
-                <div class="mon-log-terminal" id="mon-log-terminal">
+                <div class="mon-log-terminal" id="mon-log-terminal" data-scroll-final="${op.logNoFinal !== false ? '1' : '0'}">
                     ${corpoTerminal}
                 </div>
                 <footer class="mon-log-footer">
@@ -1017,6 +1018,31 @@
                 </footer>
             </section>
         </div>`;
+    }
+
+    function atualizarEstadoScrollLog(op, metricas) {
+        if (!op || !metricas || !metricas.temLinhas) return op;
+        const scrollTop = Math.max(0, Number(metricas.scrollTop) || 0);
+        const scrollHeight = Math.max(0, Number(metricas.scrollHeight) || 0);
+        const clientHeight = Math.max(0, Number(metricas.clientHeight) || 0);
+        if (scrollHeight <= 0) return op;
+        const distFim = Math.max(0, scrollHeight - scrollTop - clientHeight);
+        op.logScrollTop = scrollTop;
+        op.logNoFinal = distFim <= 28;
+        return op;
+    }
+
+    function aplicarScrollTerminal(term, op) {
+        if (!term || !op) return;
+        const temLinhas = !!(term.querySelector ? term.querySelector('#mon-log-lines') : term.hasLines);
+        if (!temLinhas) return;
+        if (op.logNoFinal !== false) {
+            term.scrollTop = term.scrollHeight;
+            op.logScrollTop = term.scrollTop;
+            op.logNoFinal = true;
+        } else if (typeof op.logScrollTop === 'number' && op.logScrollTop >= 0) {
+            term.scrollTop = op.logScrollTop;
+        }
     }
 
     const PERIODOS = { '24h': ['Últimas 24 horas', DIA], 'hoje': ['Hoje', DIA], '7d': ['Últimos 7 dias', 7 * DIA] };
@@ -1035,7 +1061,7 @@
             ${htmlModalLog(dados, op)}`;
     }
 
-    const api = { MODULOS, ARQUIVOS_LOG_REDE, obterModulos, obterArquivosLogRede, proximoModuloLog, proximoRoboGrafico, unificarEventos, sistemas, calcularKpis, alertasAtivos, filtrarLogs, montarSerieGrafico, htmlModalLog, pagina };
+    const api = { MODULOS, ARQUIVOS_LOG_REDE, obterModulos, obterArquivosLogRede, proximoModuloLog, proximoRoboGrafico, unificarEventos, sistemas, calcularKpis, alertasAtivos, filtrarLogs, montarSerieGrafico, htmlModalLog, atualizarEstadoScrollLog, aplicarScrollTerminal, pagina };
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
     else root.DashMonitoramento = api;
 
@@ -1050,32 +1076,118 @@
             buscaLog: '',
             soAlertasLog: false,
             linhasLog: 400,
+            logNoFinal: true,
+            logScrollTop: null,
+            sisScrollTop: 0,
+            logsScrollTop: 0,
+            tabsScrollLeft: 0,
+            chipsScrollLeft: 0,
         };
         let reqLogAtual = '';
         let refSocket = null;
         let refDesenhar = null;
         let ultimosDados = {};
 
-        function rolarTerminalParaFinal() {
-            requestAnimationFrame(() => {
-                const term = document.getElementById('mon-log-terminal');
-                if (term) term.scrollTop = term.scrollHeight;
-            });
+        function sincronizarScrollMonitoramento(raiz = document) {
+            const q = sel => (raiz && raiz.querySelector ? raiz.querySelector(sel) : document.querySelector(sel));
+            const sisWrap = q('#mon-sis-table-wrap');
+            if (sisWrap && typeof op.sisScrollTop === 'number') sisWrap.scrollTop = op.sisScrollTop;
+            const logsWrap = q('#mon-logs-table-wrap');
+            if (logsWrap && typeof op.logsScrollTop === 'number') logsWrap.scrollTop = op.logsScrollTop;
+            const tabsBar = q('#mon-log-tabs-bar');
+            if (tabsBar && typeof op.tabsScrollLeft === 'number') tabsBar.scrollLeft = op.tabsScrollLeft;
+            const chipsBar = q('#mon-chart-chips');
+            if (chipsBar && typeof op.chipsScrollLeft === 'number') chipsBar.scrollLeft = op.chipsScrollLeft;
+            const term = q('#mon-log-terminal');
+            if (term) {
+                aplicarScrollTerminal(term, op);
+                if (op.logNoFinal !== false && typeof requestAnimationFrame === 'function') {
+                    requestAnimationFrame(() => {
+                        const termAtual = document.getElementById('mon-log-terminal');
+                        if (termAtual && op.logNoFinal !== false) aplicarScrollTerminal(termAtual, op);
+                    });
+                }
+            }
         }
 
-        function requisitarLogTxt(moduloId) {
+        // Atualiza só o conteúdo do terminal (sem recriar o modal) para que a posição de rolagem do usuário seja preservada.
+        function atualizarLogNoLugar() {
+            if (!op.logAberto || typeof document === 'undefined' || typeof document.createElement !== 'function') return false;
+            const shade = document.querySelector('.mon-log-shade[data-log-key]');
+            const termVivo = shade && shade.querySelector('#mon-log-terminal');
+            if (!termVivo || !termVivo.querySelector('#mon-log-lines') || shade.dataset.logModulo !== String(op.logModulo)) return false;
+            const tpl = document.createElement('template');
+            tpl.innerHTML = htmlModalLog(ultimosDados, op);
+            const novo = tpl.content.querySelector('.mon-log-shade');
+            const termNovo = novo && novo.querySelector('#mon-log-terminal');
+            if (!termNovo || !termNovo.querySelector('#mon-log-lines')) return false;
+
+            const noFinal = op.logNoFinal !== false;
+            let ancora = null;
+            if (!noFinal) {
+                const topo = termVivo.getBoundingClientRect().top;
+                for (const linha of termVivo.querySelectorAll('.mon-log-line')) {
+                    const rect = linha.getBoundingClientRect();
+                    if (rect.bottom > topo) {
+                        const numEl = linha.querySelector('.mon-log-num');
+                        ancora = { num: numEl ? numEl.textContent : '', desloc: rect.top - topo };
+                        break;
+                    }
+                }
+            }
+            const topoAnterior = termVivo.scrollTop;
+
+            termVivo.innerHTML = termNovo.innerHTML;
+            for (const sel of ['.mon-log-path', '.mon-log-alert-banner']) {
+                const a = shade.querySelector(sel);
+                const b = novo.querySelector(sel);
+                if (a && b) a.innerHTML = b.innerHTML;
+            }
+            shade.dataset.logKey = novo.dataset.logKey;
+
+            if (noFinal) {
+                termVivo.scrollTop = termVivo.scrollHeight;
+            } else {
+                let alvo = null;
+                if (ancora && ancora.num) {
+                    alvo = Array.from(termVivo.querySelectorAll('.mon-log-line')).find(l => {
+                        const n = l.querySelector('.mon-log-num');
+                        return n && n.textContent === ancora.num;
+                    });
+                }
+                if (alvo) {
+                    const topo = termVivo.getBoundingClientRect().top;
+                    termVivo.scrollTop += (alvo.getBoundingClientRect().top - topo) - ancora.desloc;
+                } else {
+                    termVivo.scrollTop = topoAnterior;
+                }
+                op.logScrollTop = termVivo.scrollTop;
+            }
+            termVivo.dataset.scrollFinal = noFinal ? '1' : '0';
+            return true;
+        }
+
+        function requisitarLogTxt(moduloId, opcoes = {}) {
             const modulosDin = obterModulos(ultimosDados);
             const listaLogsRede = obterArquivosLogRede(ultimosDados);
             const mod = modulosDin.find(m => m.id === moduloId);
             const itemRede = listaLogsRede.find(a => a.id === moduloId);
             const idRede = (mod && mod.idLog) || (itemRede && itemRede.txt ? itemRede.id : null);
+            const trocouModulo = !op.logAberto || op.logModulo !== moduloId;
+            const manterPosicao = Boolean(opcoes && opcoes.manterPosicao) && !trocouModulo;
+
             op.logAberto = true;
             op.logModulo = moduloId;
+            if (!manterPosicao) {
+                op.logNoFinal = true;
+                op.logScrollTop = null;
+            }
+
             if (!idRede) {
                 op.logCarregando = false;
                 op.logResposta = null;
                 if (refDesenhar) refDesenhar();
-                rolarTerminalParaFinal();
+                sincronizarScrollMonitoramento();
                 return;
             }
             if (!refSocket || !refSocket.connected) {
@@ -1114,6 +1226,44 @@
             subtitulo: 'Visão geral de páginas, robôs, serviços e logs em \\\\SERVIDOR2\\Publico\\ALLAN\\Logs.',
             parametros: () => ({ limite: 500 }),
             extrair: r => r,
+            antesDesenhar: app => {
+                if (!app || !app.querySelector) return;
+                const sisWrap = app.querySelector('#mon-sis-table-wrap');
+                if (sisWrap) op.sisScrollTop = sisWrap.scrollTop;
+                const logsWrap = app.querySelector('#mon-logs-table-wrap');
+                if (logsWrap) op.logsScrollTop = logsWrap.scrollTop;
+                const tabsBar = app.querySelector('#mon-log-tabs-bar');
+                if (tabsBar) op.tabsScrollLeft = tabsBar.scrollLeft;
+                const chipsBar = app.querySelector('#mon-chart-chips');
+                if (chipsBar) op.chipsScrollLeft = chipsBar.scrollLeft;
+                const term = app.querySelector('#mon-log-terminal');
+                if (term && term.querySelector('#mon-log-lines') && op.logNoFinal === false) {
+                    op.logScrollTop = term.scrollTop;
+                }
+            },
+            posDesenhar: app => {
+                sincronizarScrollMonitoramento(app);
+            },
+            aoRolar: e => {
+                const el = e && e.target;
+                if (!el || !el.id) return;
+                if (el.id === 'mon-log-terminal') {
+                    atualizarEstadoScrollLog(op, {
+                        scrollTop: el.scrollTop,
+                        scrollHeight: el.scrollHeight,
+                        clientHeight: el.clientHeight,
+                        temLinhas: !!(el.querySelector && el.querySelector('#mon-log-lines')),
+                    });
+                } else if (el.id === 'mon-sis-table-wrap') {
+                    op.sisScrollTop = el.scrollTop;
+                } else if (el.id === 'mon-logs-table-wrap') {
+                    op.logsScrollTop = el.scrollTop;
+                } else if (el.id === 'mon-log-tabs-bar') {
+                    op.tabsScrollLeft = el.scrollLeft;
+                } else if (el.id === 'mon-chart-chips') {
+                    op.chipsScrollLeft = el.scrollLeft;
+                }
+            },
             ouvirSocket: (socket, _estado, desenhar) => {
                 refSocket = socket;
                 refDesenhar = desenhar;
@@ -1121,11 +1271,12 @@
                     if (!r || (r.requestId && r.requestId !== reqLogAtual)) return;
                     op.logCarregando = false;
                     op.logResposta = r;
+                    if (atualizarLogNoLugar()) return;
                     desenhar();
-                    rolarTerminalParaFinal();
+                    sincronizarScrollMonitoramento();
                 });
                 socket.on('connect', () => {
-                    if (op.logAberto) setTimeout(() => requisitarLogTxt(op.logModulo), 300);
+                    if (op.logAberto) setTimeout(() => requisitarLogTxt(op.logModulo, { manterPosicao: true }), 300);
                 });
             },
             controles: ctx => `<label class="mon-periodo-select">${ctx.icone('calendario')}<select id="filtro-mon-periodo" data-filtro="periodo" aria-label="Período">${Object.entries(PERIODOS).map(([k, [rotulo]]) => `<option value="${k}" ${f.periodo === k ? 'selected' : ''}>${rotulo}</option>`).join('')}</select></label>`,
@@ -1148,7 +1299,7 @@
                     op.logAberto = false;
                 },
                 'recarregar-log': () => {
-                    requisitarLogTxt(op.logModulo);
+                    requisitarLogTxt(op.logModulo, { manterPosicao: true });
                 },
                 'toggle-alertas-log': el => {
                     op.soAlertasLog = !!el.checked;
@@ -1175,12 +1326,15 @@
                 },
                 servico: el => { f.servico = f.servico === el.dataset.servico ? '' : el.dataset.servico; },
                 nivel: el => { f.nivel = f.nivel === el.dataset.nivel ? '' : el.dataset.nivel; },
-                categoria: el => { f.categoria = f.categoria === el.dataset.categoria ? '' : el.dataset.categoria; },
-                limpar: () => { f.servico = ''; f.nivel = ''; f.categoria = ''; f.busca = ''; f.roboGrafico = ''; },
+                categoria: el => {
+                    f.categoria = f.categoria === el.dataset.categoria ? '' : el.dataset.categoria;
+                    op.sisScrollTop = 0;
+                },
+                limpar: () => { f.servico = ''; f.nivel = ''; f.categoria = ''; f.busca = ''; f.roboGrafico = ''; op.sisScrollTop = 0; },
             },
             filtrar: (k, v) => {
                 if (k === 'buscaLog') { op.buscaLog = v; return; }
-                if (k === 'linhasLog') { op.linhasLog = Number(v) || 400; requisitarLogTxt(op.logModulo); return; }
+                if (k === 'linhasLog') { op.linhasLog = Number(v) || 400; requisitarLogTxt(op.logModulo, { manterPosicao: true }); return; }
                 f[k] = v;
             },
         });

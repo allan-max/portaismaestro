@@ -150,10 +150,36 @@
             return s.join('');
         }
 
+        function capturarScrolls(raiz) {
+            const mapa = {};
+            if (!raiz || !raiz.querySelectorAll) return mapa;
+            const seletores = ['#mon-log-terminal', '#mon-sis-table-wrap', '.mon-sis-table-wrap', '#mon-logs-table-wrap', '#mon-log-tabs-bar', '.mon-log-tabs-bar', '#mon-chart-chips', '.mon-chart-chips', '.sidebar'];
+            for (const sel of seletores) {
+                const el = raiz.querySelector(sel);
+                if (el) mapa[sel] = { top: el.scrollTop, left: el.scrollLeft, height: el.scrollHeight, client: el.clientHeight };
+            }
+            return mapa;
+        }
+
+        function restaurarScrolls(raiz, mapa) {
+            if (!raiz || !raiz.querySelectorAll || !mapa) return;
+            for (const [sel, pos] of Object.entries(mapa)) {
+                const el = raiz.querySelector(sel);
+                if (el && pos) {
+                    if (sel === '#mon-log-terminal' && el.dataset && el.dataset.scrollFinal === '1') continue;
+                    if (typeof pos.top === 'number') el.scrollTop = pos.top;
+                    if (typeof pos.left === 'number') el.scrollLeft = pos.left;
+                }
+            }
+        }
+
         function desenhar() {
             desenharTopo();
             if (!app) return;
             if (!estado.autorizado) return telaAcesso();
+            if (cfg.antesDesenhar) cfg.antesDesenhar(app, ctx, estado);
+            const scrolls = capturarScrolls(app);
+            const modalVivo = app.querySelector ? app.querySelector('.mon-log-shade[data-log-key]') : null;
             const foco = document.activeElement && document.activeElement.id;
             const pos = foco && document.activeElement.selectionStart;
             const aviso = estado.erro ? `<div class="source-notice" role="alert">${icone('alerta')}<span>${esc(estado.erro)} ${estado.dados
@@ -166,6 +192,14 @@
             app.innerHTML = `<div class="page-wrap workspace">${sidebar(cfg.pagina, opSidebar)}<main id="main" class="page-main dash-main${estado.desenhou ? ' sem-anima' : ''}" tabindex="-1"><div class="dash-titulo"><div><div class="breadcrumb">${esc(breadcrumb)}</div><h1>${esc(cfg.titulo)}</h1><p>${esc(cfg.subtitulo)}</p></div>
                 <div class="dash-estado">${selos()}${cfg.controles ? cfg.controles(ctx) : ''}<button class="button" data-acao="atualizar">${icone('atualizar')}<span>Atualizar</span></button></div></div>${aviso}<div id="conteudo">${corpo}</div>
                 <footer class="footer"><span>MAESTRO <span class="muted">/ ${esc(cfg.titulo)}</span></span><span>${esc(rodapeNota)}</span></footer></main></div>`;
+            if (modalVivo && app.querySelector) {
+                const modalNovo = app.querySelector('.mon-log-shade[data-log-key]');
+                if (modalNovo && modalNovo.dataset.logKey === modalVivo.dataset.logKey && modalNovo.replaceWith) {
+                    modalNovo.replaceWith(modalVivo);
+                }
+            }
+            restaurarScrolls(app, scrolls);
+            if (cfg.posDesenhar) cfg.posDesenhar(app, ctx, estado);
             if (estado.dados && !estado.desenhou) { estado.desenhou = true; contar(app); }
             const alvo = foco && document.getElementById(foco);
             if (alvo) { alvo.focus({ preventScroll: true }); if (typeof pos === 'number' && alvo.setSelectionRange) alvo.setSelectionRange(pos, pos); }
@@ -246,6 +280,9 @@
                 const el = e.target.closest('[data-filtro]');
                 if (el && cfg.filtrar) { cfg.filtrar(el.dataset.filtro, el.value); desenhar(); }
             });
+            app.addEventListener('scroll', e => {
+                if (cfg.aoRolar) cfg.aoRolar(e, app, ctx, estado);
+            }, true);
         }
         desenhar();
         conectar();

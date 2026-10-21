@@ -249,3 +249,44 @@ test('as 4 páginas têm a barra, a faixa e só scripts locais; dashboard2 mudou
   assert.match(htmlGraficoCoupa, /data-acao="grafico-robo-prox"/);
   assert.match(htmlGraficoCoupa, /log-petrobras\.txt/);
 });
+
+
+test('monitoramento: log inicia no final ao abrir e preserva scroll quando o usuário sobe ou rola Status dos sistemas e robôs', () => {
+  const opModal = {
+    logAberto: true,
+    logModulo: 'coupa',
+    logNoFinal: true,
+    logResposta: {
+      sucesso: true, id: 'coupa', nome: 'Robô Coupa', arquivo: 'log-coupa.txt',
+      caminho: '\\\\SERVIDOR2\\Publico\\ALLAN\\Logs\\log-coupa.txt',
+      linhas: ['Linha 1', 'Linha 2', 'Linha final'],
+    },
+  };
+  const html = M.pagina({}, ctx, undefined, opModal);
+  assert.match(html, /id="mon-sis-table-wrap"/);
+  assert.match(html, /id="mon-log-tabs-bar"/);
+  assert.match(html, /id="mon-chart-chips"/);
+  assert.match(html, /data-log-key="coupa\|0\|\|3\|\|0\|400"/);
+  assert.match(html, /data-scroll-final="1"/);
+
+  // Ao abrir o log, começa no final (scrollTop = scrollHeight)
+  const estadoScroll = { logNoFinal: true, logScrollTop: null };
+  const fakeTerm = { scrollTop: 0, scrollHeight: 5000, clientHeight: 500, hasLines: true };
+  M.aplicarScrollTerminal(fakeTerm, estadoScroll);
+  assert.equal(fakeTerm.scrollTop, 5000, 'Ao entrar no log deve posicionar direto no final');
+  assert.equal(estadoScroll.logNoFinal, true);
+
+  // Usuário rola para cima (ex: scrollTop = 1200)
+  M.atualizarEstadoScrollLog(estadoScroll, { scrollTop: 1200, scrollHeight: 5000, clientHeight: 500, temLinhas: true });
+  assert.equal(estadoScroll.logNoFinal, false, 'Ao subir no log, desativa auto-scroll para o final');
+  assert.equal(estadoScroll.logScrollTop, 1200);
+
+  // Mesmo após novo render (onde novo elemento começaria em 0), aplica a posição salva (1200) sem voltar ao topo nem pular para o fim
+  const fakeTermReRender = { scrollTop: 0, scrollHeight: 5200, clientHeight: 500, hasLines: true };
+  M.aplicarScrollTerminal(fakeTermReRender, estadoScroll);
+  assert.equal(fakeTermReRender.scrollTop, 1200, 'Não deve resetar para o topo (0) nem forçar para o final quando o usuário subiu');
+
+  // Se o usuário rolar de volta até o final, volta a acompanhar o final automaticamente
+  M.atualizarEstadoScrollLog(estadoScroll, { scrollTop: 4700, scrollHeight: 5200, clientHeight: 500, temLinhas: true });
+  assert.equal(estadoScroll.logNoFinal, true);
+});
