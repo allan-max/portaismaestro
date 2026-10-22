@@ -332,6 +332,16 @@
             border-color: #10b981 !important;
         }
 
+        .btn-top-export-word {
+            border-color: rgba(56, 189, 248, 0.4) !important;
+            color: #7dd3fc !important;
+        }
+
+        .btn-top-export-word:hover {
+            background: rgba(56, 189, 248, 0.14) !important;
+            border-color: #38bdf8 !important;
+        }
+
         /* Section Heading */
         .section-title {
             font-size: 1.35rem;
@@ -987,6 +997,9 @@
                 <button id="btn-top-exportar" class="btn-top btn-top-export" onclick="exportarMinhasCotacoesExcel()" title="Exportar cotações para Excel">
                     <i class="fa-solid fa-file-excel"></i> Exportar Excel
                 </button>
+                <button id="btn-top-exportar-word" class="btn-top btn-top-export-word" onclick="exportarMinhasCotacoesWord()" title="Exportar todas as cotações exibidas para Word (.docx)">
+                    <i class="fa-solid fa-file-word"></i> Exportar Word
+                </button>
                 <a id="btn-nav-planilha" href="planilha_vale.html" class="btn-top" style="display: none;" title="Ver Planilha Geral">
                     <i class="fa-solid fa-table"></i> Planilha Geral
                 </a>
@@ -1101,7 +1114,7 @@
                         </th>
                         <th style="width: 25%;">Descrição</th>
                         <th style="width: 10%;">Status</th>
-                        <th style="width: 12%;">Exportar Word</th>
+                        <th style="width: 12%;">Responder cotação</th>
                     </tr>
                 </thead>
                 <tbody id="tbody-cotacoes">
@@ -2088,8 +2101,8 @@
                         </td>
                         <td>${statusHtml}</td>
                         <td onclick="event.stopPropagation();">
-                            <button class="btn-exportar-word" onclick="exportarCotacaoWord(${idx})" title="Exportar cotação #${escHtml(c['COTAÇÃO'] || '')} para Word (.docx)">
-                                <i class="fa-solid fa-file-word"></i> Exportar Word
+                            <button class="btn-responder" onclick="abrirDetalhes(${idx})" title="Responder cotação #${escHtml(c['COTAÇÃO'] || '')}">
+                                <i class="fa-solid fa-reply"></i> Responder cotação
                             </button>
                         </td>
                     </tr>
@@ -2835,6 +2848,39 @@ ${paragraphs.join('\n')}
             await exportarCotacaoWordCore(c, btn);
         }
 
+        async function exportarMinhasCotacoesWord() {
+            const registros = Array.isArray(window.cotacoesFiltradas)
+                ? window.cotacoesFiltradas
+                : (cotacoesFiltradas || []);
+            if (!registros.length) {
+                alert('Nenhuma cotação encontrada para exportar com os filtros atuais.');
+                return;
+            }
+            const btn = document.getElementById('btn-top-exportar-word');
+            let origHtml = null;
+            if (btn) {
+                btn.disabled = true;
+                origHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Gerando...';
+            }
+            try {
+                const vendedorSanitizado = String(vendedorLogado || 'vendedor').trim().toLowerCase()
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^a-z0-9]/g, '_') || 'vendedor';
+                const hojeIso = new Date().toISOString().slice(0, 10);
+                const blob = await gerarDocxCotacaoCoupaBlob(registros);
+                baixarBlob(blob, `cotacoes_${vendedorSanitizado}_${hojeIso}.docx`);
+            } catch (err) {
+                console.error('Erro ao exportar cotações para Word:', err);
+                alert('Não foi possível gerar o documento Word: ' + (err.message || 'Erro desconhecido'));
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    if (origHtml) btn.innerHTML = origHtml;
+                }
+            }
+        }
+
         async function exportarCotacaoModalWord() {
             const c = window.cotacaoModalAtual || cotacaoModalAtual;
             if (!c) {
@@ -2862,6 +2908,7 @@ ${paragraphs.join('\n')}
         window.gerarDocxCotacaoCoupaBlob = gerarDocxCotacaoCoupaBlob;
         window.exportarCotacaoWord = exportarCotacaoWord;
         window.exportarCotacaoModalWord = exportarCotacaoModalWord;
+        window.exportarMinhasCotacoesWord = exportarMinhasCotacoesWord;
 
         function obterTextoStatus(c) {
             if (isRespondida(c)) return 'Respondida';
