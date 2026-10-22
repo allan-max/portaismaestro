@@ -371,4 +371,12 @@ button.mon-kpi:hover { border-color: #4d657e; background: #202b3b; transform: tr
 .mon-btn-fechar { border-color: #5b2831; color: #fda4af; }
 .mon-btn-fechar:hover { background: #3b1c22; border-color: var(--red); color: #fff; }
 
+/* Rodar agora (sincronizar.html) */
+.rodar-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); gap: 14px; }
+.rodar-card .panel-head { align-items: flex-start; gap: 12px; }
+.rodar-msg { min-height: 2.6em; margin: 0 0 8px; overflow-wrap: anywhere; }
+.rodar-msg.erro { color: var(--red); }
+.rodar-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.confirmar { color: var(--amber); margin: 10px 0 0; }
+
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
