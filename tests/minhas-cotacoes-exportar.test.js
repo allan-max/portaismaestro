@@ -811,14 +811,15 @@ test('minhas_cotacoes.html contém botão Exportar Word com estilo azul suave, i
     assert.ok(html.includes('#7dd3fc') || html.includes('#38bdf8'), 'Deve conter tom azul suave (#7dd3fc ou #38bdf8)');
 
     // Verifica cabeçalho da tabela
-    assert.ok(html.includes('Exportar Word'), 'Cabeçalho da tabela deve conter a coluna "Exportar Word"');
+    assert.ok(html.includes('Responder cotação'), 'Cabeçalho da tabela deve conter a coluna "Responder cotação"');
+    assert.ok(html.includes('id="btn-top-exportar-word"') && html.includes('exportarMinhasCotacoesWord()'), 'Topo deve ter o botão Exportar Word de todas as cotações exibidas');
 
     // Verifica botão no modal
     assert.ok(html.includes('id="btn-exportar-modal-word"'), 'Modal de detalhes deve conter o botão #btn-exportar-modal-word');
     assert.ok(html.includes('exportarCotacaoModalWord()'), 'Botão do modal deve chamar exportarCotacaoModalWord()');
 });
 
-test('renderizarTabela inclui o botão Exportar Word em cada linha da tabela', () => {
+test('renderizarTabela troca o Exportar Word por "Responder cotação" em cada linha da tabela', () => {
     const env = setupMinhasCotacoesEnv();
     const { context, elements } = env;
 
@@ -832,10 +833,11 @@ test('renderizarTabela inclui o botão Exportar Word em cada linha da tabela', (
     context.renderizarTabela();
 
     const tbodyHtml = elements['tbody-cotacoes'].innerHTML;
-    assert.ok(tbodyHtml.includes('btn-exportar-word'), 'Tabela deve conter botões .btn-exportar-word');
-    assert.ok(tbodyHtml.includes('exportarCotacaoWord(0)'), 'Primeira linha deve chamar exportarCotacaoWord(0)');
-    assert.ok(tbodyHtml.includes('exportarCotacaoWord(1)'), 'Segunda linha deve chamar exportarCotacaoWord(1)');
-    assert.ok(tbodyHtml.includes('fa-file-word'), 'Deve exibir ícone do Word');
+    assert.ok(tbodyHtml.includes('btn-responder'), 'Tabela deve conter botões .btn-responder');
+    assert.ok(tbodyHtml.includes('Responder cotação'), 'Botão da linha deve se chamar "Responder cotação"');
+    assert.ok(tbodyHtml.includes('abrirDetalhes(0)'), 'Primeira linha deve chamar abrirDetalhes(0)');
+    assert.ok(tbodyHtml.includes('abrirDetalhes(1)'), 'Segunda linha deve chamar abrirDetalhes(1)');
+    assert.ok(!tbodyHtml.includes('btn-exportar-word'), 'Linha não deve mais ter o botão Exportar Word');
 });
 
 test('gerarDocxCotacaoCoupaXml gera formato idêntico ao Coupa com margens, cabeçalho, assinaturas, frete e itens', () => {
