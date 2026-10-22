@@ -201,9 +201,6 @@
                 <i class="fa-solid fa-users-gear"></i> Painel Admin
             </button>
             
-            <button id="btn-painel-dev" class="btn-drawer" style="background: #9b59b6; color: #fff; display: none;" onclick="window.open('dev.html', '_blank')">
-                <i class="fa-solid fa-code"></i> Painel DEV
-            </button>
         </div>
     </div>
 
@@ -213,20 +210,17 @@
 
         function atualizarGavetaNoLoad() {
             const isAdmin = localStorage.getItem('maestro_admin') === 'true';
-            const isDev = localStorage.getItem('maestro_dev') === 'true';
             const hasDashboard = window.maestroEstatisticasPermitidas === true;
 
-            if (isAdmin || isDev || hasDashboard) {
+            if (isAdmin || hasDashboard) {
                 if (gaveta) gaveta.style.display = 'block';
             } else {
                 if (gaveta) gaveta.style.display = 'none';
             }
 
             const btnAdmin = document.getElementById('btn-painel-admin');
-            const btnDev = document.getElementById('btn-painel-dev');
 
             if (btnAdmin) btnAdmin.style.display = isAdmin ? 'flex' : 'none';
-            if (btnDev) btnDev.style.display = isDev ? 'flex' : 'none';
             document.querySelectorAll('[data-estatisticas]').forEach(btn => {
                 btn.style.display = hasDashboard ? 'flex' : 'none';
             });
@@ -737,153 +731,8 @@ if (localStorage.getItem('maestro_session')) {
                 } else if (urlParams.get('action') === 'reset') alternarTelas('nova-senha');
             } else { document.getElementById('loading-txt').innerText = res.erro || "Link inválido."; }
         });
-        // ==========================================
-        // ⚙️ LÓGICA DO PAINEL DEV
-        // ==========================================
-
-        function abrirPainelDev() {
-            document.getElementById('modal-dev').style.display = 'flex';
-            document.getElementById('lista-usuarios-dev').innerHTML = '<p style="color: #a1a1aa; text-align: center; margin-top: 20px;"><i class="fa-solid fa-circle-notch fa-spin"></i> A carregar base de dados...</p>';
-            
-            // Pede a lista completa ao servidor
-            socket.emit('pedir_dados_dev');
-        }
-
-        function fecharPainelDev() {
-            document.getElementById('modal-dev').style.display = 'none';
-        }
-
-        // Recebe a lista do Node.js e desenha no ecrã com segurança (Zero XSS)
-        socket.on('dados_dev_prontos', (usuarios) => {
-            const divLista = document.getElementById('lista-usuarios-dev');
-            divLista.innerHTML = ''; 
-
-            for (let email in usuarios) {
-                let dados = usuarios[email];
-                
-                const card = document.createElement('div');
-                card.style.cssText = "background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;";
-
-                const info = document.createElement('div');
-                
-                const userLine = document.createElement('div');
-                userLine.style.cssText = "color: #fff; font-weight: 500; font-size: 15px; margin-bottom: 8px; font-family: 'Roboto Mono', monospace;";
-                userLine.textContent = email;
-
-                if (dados.admin) {
-                    const badge = document.createElement('span');
-                    badge.style.cssText = "background: rgba(251, 191, 36, 0.2); color: #fbbf24; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 10px;";
-                    badge.textContent = "ADMIN";
-                    userLine.appendChild(badge);
-                }
-
-                const statusLine = document.createElement('div');
-                statusLine.style.cssText = "display: flex; gap: 20px; font-size: 12px; color: #a1a1aa;";
-                statusLine.textContent = dados.online ? "● Online" : "○ Offline";
-                statusLine.style.color = dados.online ? "#34d399" : "#f87171";
-
-                info.appendChild(userLine);
-                info.appendChild(statusLine);
-
-                const actions = document.createElement('div');
-                if (!dados.admin) {
-                    const btn = document.createElement('button');
-                    btn.className = "btn-entrar";
-                    btn.style.cssText = "background: #34d399; border: none; padding: 6px 12px; font-size: 11px; width: auto; margin: 0; color: #000;";
-                    btn.textContent = "TORNAR ADMIN";
-                    btn.onclick = () => darPrivilegioAdmin(email);
-                    actions.appendChild(btn);
-                }
-
-                card.appendChild(info);
-                card.appendChild(actions);
-                divLista.appendChild(card);
-            }
-        });
-
-        // Função que envia a ordem de promoção
-        function darPrivilegioAdmin(emailDoUsuario) {
-            if(confirm(`👑 Tem a certeza que deseja promover o utilizador ${emailDoUsuario} a Administrador do sistema?`)) {
-                socket.emit('promover_usuario', { alvo: emailDoUsuario });
-            }
-        }
-
-        // Ouve a resposta da promoção e recarrega a lista automaticamente
-        socket.on('resposta_promocao', (res) => {
-            if(res.sucesso) {
-                // Pede a lista novamente para atualizar o visual instantaneamente
-                socket.emit('pedir_dados_dev'); 
-            } else {
-                alert("❌ Erro ao promover: " + res.erro);
-            }
-        });
     </script>
     <script src="chat.js"></script>
 
-    <div id="zona-fantasma" style="position: fixed; bottom: 0; right: 0; width: 60px; height: 60px; z-index: 999999; cursor: default;"></div>
-
-
-<script>
-// ==========================================
-// 🕵️ GATILHOS SECRETOS (MODO CHEAT CODE)
-// ==========================================
-
-const ADMIN_EMAIL = 'admin@venturainformatica.com.br';
-
-// Gatilho 1: Digitar "painel" no teclado (PC) 100% SILENCIOSO
-let bufferTeclado = '';
-const palavraSecreta = 'painel';
-
-document.addEventListener('keydown', (e) => {
-    // 1. Ignora se estiver digitando senhas ou e-mails
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return; 
-    
-    // 2. Só aceita a tecla se for uma única letra
-    if (e.key.length === 1) {
-        bufferTeclado += e.key.toLowerCase();
-        
-        // Mantém o buffer
-        if (bufferTeclado.length > palavraSecreta.length) {
-            bufferTeclado = bufferTeclado.slice(-palavraSecreta.length);
-        }
-        
-        // 3. Verifica a palavra
-        if (bufferTeclado === palavraSecreta) {
-            const usuarioAtual = (localStorage.getItem('maestro_user') || '').trim().toLowerCase();
-            
-            // Permite acesso se for o Admin ou se tiver a tag de DEV no localStorage
-            if (usuarioAtual === ADMIN_EMAIL || localStorage.getItem('maestro_dev') === 'true') {
-                window.open('dev.html', '_blank'); // Abre o painel DEV em uma nova guia
-                bufferTeclado = ''; // Reseta após abrir
-            } else {
-                bufferTeclado = ''; // Apenas reseta silenciosamente
-            }
-        }
-    }
-});
-
-// Gatilho 2: 5 Toques rápidos no canto inferior direito (Mobile)
-let contadorToques = 0;
-let tempoToque;
-
-document.getElementById('zona-fantasma').addEventListener('click', () => {
-    const usuarioAtual = (localStorage.getItem('maestro_user') || '').trim().toLowerCase();
-    
-    // Verifica se é Admin OU se tem a tag de Desenvolvedor
-    if (usuarioAtual !== ADMIN_EMAIL && localStorage.getItem('maestro_dev') !== 'true') return;
-    
-    contadorToques++;
-    clearTimeout(tempoToque);
-    
-    // Se demorar mais de 1.5s entre os cliques, zera o contador
-    tempoToque = setTimeout(() => { contadorToques = 0; }, 1500); 
-    
-    if (contadorToques === 5) {
-        window.open('dev.html', '_blank'); // Redireciona para o painel DEV
-        contadorToques = 0; // Zera o contador
-    }
-});
-
-</script>
 </body>
 </html>

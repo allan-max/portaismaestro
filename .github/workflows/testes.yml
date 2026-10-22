@@ -1,0 +1,35 @@
+name: testes
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  windows-node16:
+    # Produção: Windows Server 2012 R2 com Node 16.20.2. O servidor (server.js) roda no Node 16
+    # nos testes de integração; o executor de testes é o Node 18 (o node:test do 16 não tem t.after).
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 16.20.2
+      - run: npm ci --ignore-scripts
+      - run: echo "NODE_DO_SERVIDOR=$(node -p process.execPath)" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - run: npm test
+  ubuntu-node22:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - run: npm audit --omit=dev --audit-level=high

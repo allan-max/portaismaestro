@@ -46,7 +46,8 @@ test('preserva menu, painel, robôs e coluna NF da versão boa 43b6c21', () => {
     const blocks = [
         ['<body>', '    <div id="menu-filtro-periodo"', 'd9e3c23fc9521315b50a2ea5ea4bf17a6499bb30d046950d6204cf99e198128c'],
         ['    <div id="modal-sync-nf"', '    <script src=', 'bd4b84956e4f8194c6c8f43c5276dbdb781323bf3720486823cf27fe05d7a639'],
-        ['        const sessionAtual =', '        window.filteredCotacoes = [];', '487ef5d11039c1378c5451a412d0b2a7692ca95fa48d1fe639ff651732153cd2'],
+        // b34566a: edição de linha mantém números como número (manterTipo); o resto do bloco segue igual a 43b6c21
+        ['        const sessionAtual =', '        window.filteredCotacoes = [];', 'c314cb6b1070b83634b580d41074b1f5da4cea3882860e792f6fd983abdc002b'],
         ['        window.pageCota = 0;', '    // Add logic for global search', '1a61f28dadd760a25858e085bc5ec4dc67007b7468dc40b00ebfb5528df038fb']
     ];
     for (const [start, end, expected] of blocks) {

@@ -26,7 +26,7 @@ test('servidor real: botão "Rodar agora" só para admin, vai à fonte certa e v
   const port = await portFree(), secret = crypto.randomBytes(32).toString('hex'), tokenNf = crypto.randomBytes(16).toString('hex');
   const auditDir = fs.mkdtempSync(path.join(os.tmpdir(), 'maestro-auditoria-'));
   const sockets = [];
-  const child = spawn(process.execPath, ['server.js'], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'],
+  const child = spawn(process.env.NODE_DO_SERVIDOR || process.execPath, ['server.js'], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env, HOST: '127.0.0.1', PORT: String(port), ROBO_SECRET: secret, SYNC_NF_TOKEN: tokenNf,
       AUDITORIA_DIR: auditDir, MASTER_SECRET: crypto.randomBytes(32).toString('hex') } });
   t.after(() => { sockets.forEach(s => s.disconnect()); child.kill(); fs.rmSync(auditDir, { recursive: true, force: true }); });

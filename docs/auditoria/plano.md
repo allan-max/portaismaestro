@@ -35,7 +35,7 @@ Grupo **Controle** no menu lateral do `dashboard2.html` (só admin), com duas te
 | portal | `cancelar_evento` | `remover_da_fila` | imediato |
 | portal | `robo_<modo>` | `comando_direto` (ligar/desligar, forçar troca, parada, extrair, verificar, mover anexos) | imediato |
 | portal | `extracao_fila` / `imprimir` | `iniciar_extracao_fila` / `solicitar_impressao` | imediato |
-| admin | `promover_usuario` / `salvar_config` (só nomes das chaves) | eventos de mesmo nome | imediato |
+| admin | `salvar_config` (só nomes das chaves) | evento de mesmo nome | imediato |
 | admin | `acesso_<campo>` | `admin_alterar_acesso_dashboard` | `admin_resposta_acesso` |
 | admin | `vincular_vendedor` | `admin_alterar_vendedor_usuario` | `admin_resposta_vendedor` |
 | admin | `definir_apelido` | `admin_definir_apelido` | imediato |

@@ -3,7 +3,6 @@ const http = require('http');
 const { Server } = require('socket.io');
 const multer = require('multer');
 const path = require('path');
-const nodemailer = require('nodemailer');
 const helmet = require('helmet');
 const cors = require('cors');
 const crypto = require('crypto');
@@ -98,6 +97,13 @@ const upload = multer({
 
 const { v4: uuidv4 } = require('uuid');
 const cofreSessoes = new Map();
+// Sessões vencidas saem do cofre (sem isso o Map só cresce até o processo reiniciar)
+setInterval(() => {
+    const agora = Date.now();
+    for (const [id, raw] of cofreSessoes) {
+        try { if (!(JSON.parse(raw).expires > agora)) cofreSessoes.delete(id); } catch { cofreSessoes.delete(id); }
+    }
+}, 10 * 60 * 1000).unref();
 
 require('dns').setDefaultResultOrder('ipv4first');
 
@@ -198,6 +204,19 @@ const sincronizacao = criarSincronizacao({
     registrar: registrarAuditoria, fechar: (id, dados) => fecharPelaResposta(id, dados)
 });
 
+// Respostas e relatos que só o gerenciador emite; de qualquer outro socket são descartados.
+const EVENTOS_DO_ROBO = new Set([
+    'imagem_captcha_do_robo', 'contagem_coupa_vale', 'contagem_me', 'contagem_ariba',
+    'relatar_progresso', 'relatar_progresso_me', 'relatar_progresso_coupa', 'relatar_progresso_vale',
+    'relatar_progresso_findes', 'relatar_progresso_ariba', 'sincronizar_estado_me', 'sincronizar_estado_ariba',
+    'tarefa_concluida', 'resultado_login', 'resposta_cadastro',
+    'resultado_verificacao_token', 'resposta_recuperacao_solicitada', 'resultado_nova_senha', 'receber_config_admin',
+    'admin_resposta_usuarios', 'admin_resposta_acesso', 'admin_resposta_vendedor', 'resposta_acao_linha',
+    'retorno_planilha_json', 'retorno_dados_dashboard', 'retorno_ler_log_txt',
+    'retorno_registro_vendedor_cotacao', 'status_registro_vendedor_cotacao', 'resposta_registro_pedido_manual',
+    'retorno_registro_cotacao_manual', 'atualizar_fila_extracao', 'progresso_fila_extracao'
+]);
+
 function notificar_todos(mensagem = null) {
     estado_global.tamanho_fila = fila_respostas.length;
     io.to('frontend').emit('sincronizar_estado', { estado: estado_global, mensagem: mensagem });
@@ -236,6 +255,17 @@ io.use((socket, next) => {
 });
 
 io.on('connection', (socket) => {
+    socket.use(([evento], next) => {
+        if (EVENTOS_DO_ROBO.has(evento) && socket.id !== bot_socket_id) return;
+        next();
+    });
+    // A ficha lida no handshake não expira sozinha: cada ação confere de novo a sessão no cofre
+    // (vencida, bloqueada ou removida deixa de valer na hora, sem precisar reconectar).
+    const autenticadoNoHandshake = socket.autenticado === true;
+    Object.defineProperty(socket, 'autenticado', { configurable: true, set() {},
+        get: () => socket.id === bot_socket_id || (autenticadoNoHandshake && !!lerSessao(cofreSessoes, socket)) });
+    Object.defineProperty(socket, 'usuarioLogado', { configurable: true, set() {},
+        get: () => lerSessao(cofreSessoes, socket) || undefined });
     dashboardCotacoes.conectar(socket);
     dashboardFontes.conectar(socket);
     dashboardAuditoria.conectar(socket);
@@ -301,8 +331,8 @@ io.on('connection', (socket) => {
     
     const checkRole = (role) => {
         if (!socket.autenticado) return false;
-        if (role === 'admin' && !socket.usuarioLogado.admin) return false;
-        if (role === 'dev' && !socket.usuarioLogado.dev) return false;
+        if (role === 'admin' && !socket.usuarioLogado?.admin) return false;
+        if (role === 'dev' && !socket.usuarioLogado?.dev) return false;
         return true;
     };
 
@@ -311,7 +341,9 @@ io.on('connection', (socket) => {
         bot_socket_id = socket.id; marcarConexao('gerenciador', true);
         socket.autenticado = true; socket.join('backend');
         console.log("🤖 Robô Local Conectado.");
-        io.emit('sincronizar_estado', { estado: estado_global, mensagem: "Robô operacional e conectado!" });
+        const pronto = { estado: estado_global, mensagem: "Robô operacional e conectado!" };
+        socket.emit('sincronizar_estado', pronto);   // confirmação ao próprio robô
+        io.to('frontend').emit('sincronizar_estado', pronto);
     });
 
 
@@ -324,6 +356,7 @@ io.on('connection', (socket) => {
     socket.on('contagem_coupa_vale', (dados) => io.to('frontend').emit('atualizar_contagem_coupa_vale', dados));
 
     socket.on('clique_no_captcha', (dados) => {
+        if (!socket.autenticado) return;
         // Repassa o clique do usuário diretamente para o robô local
         if (bot_socket_id) {
             io.to(bot_socket_id).emit('executar_clique', dados);
@@ -400,48 +433,12 @@ io.on('connection', (socket) => {
             return;
         }
         socket.join('frontend');
-        if (dados && dados.usuario) {
-            usuarios_logados[dados.usuario] = socket.id;
-            const alerta = encrypt(`🔵 Usuário ${dados.usuario} Online`);
-            io.emit('alerta_admin_cifrado', { payload: alerta });
-        }
+        // Quem está online vem da sessão, não do nome que a tela manda.
+        const emailSessao = socket.usuarioLogado?.email;
+        if (emailSessao) usuarios_logados[emailSessao] = socket.id;
         socket.emit('sincronizar_estado', { estado: estado_global, mensagem: "Conectado com segurança." });
         socket.emit('sincronizar_estado_me', estado_me);
         socket.emit('sincronizar_estado_ariba', estado_ariba);
-    });
-
-    socket.on('pedir_dados_dev_seguro', (dados) => {
-        // Agora permite se for Dev OU Admin
-        if (!checkRole('dev') && !checkRole('admin')) return; 
-        
-        if (bot_socket_id) {
-            io.to(bot_socket_id).emit('pedir_dados_dev_seguro', { 
-                payload_cifrado: dados.payload_cifrado, 
-                online_users: Object.keys(usuarios_logados),
-                clientId: socket.id 
-            });
-        }
-    });
-
-    socket.on('comando_dev_acao_seguro', (dados) => {
-        // Agora permite se for Dev OU Admin
-        if (!checkRole('dev') && !checkRole('admin')) return; 
-        
-        if (bot_socket_id) {
-            io.to(bot_socket_id).emit('comando_dev_acao_seguro', { payload_cifrado: dados.payload_cifrado, clientId: socket.id });
-        }
-    });
-
-    socket.on('resposta_painel_dev_cifrado', (dados) => {
-        io.to(dados.clientId).emit('dados_dev_prontos_cifrados', dados.payload);
-    });
-
-    socket.on('promover_usuario', (dados) => {
-        if (!checkRole('admin')) return;
-        if (bot_socket_id) {
-            audit('admin', 'promover_usuario', { alvo: dados.alvo, detalhes: { depois: 'admin' }, status: 'sucesso' });
-            io.to(bot_socket_id).emit('comando_promover_usuario', { ...dados, clientId: socket.id });
-        }
     });
 
     socket.on('solicitar_impressao', (dados) => {
@@ -610,6 +607,7 @@ io.on('connection', (socket) => {
     function lerUsuariosLocais() {
         const possiveisCaminhos = [
             path.join(__dirname, '..', 'senhas gerenciador', 'banco_usuarios.json'),
+            path.join(__dirname, '..', 'gerenciador-maestro', 'banco_usuarios.json'),
             path.join(__dirname, '..', 'gerenciador', 'banco_usuarios.json')
         ];
         let db = null;
@@ -844,7 +842,8 @@ io.on('connection', (socket) => {
     socket.on('sou_o_sync_nf', (dados = {}) => {
         const esperado = String(process.env.SYNC_NF_TOKEN || '');
         const recebido = String(dados.token || '');
-        const ok = esperado.length > 0 && esperado.length === recebido.length &&
+        // Tamanho em bytes: com caractere multibyte o timingSafeEqual lançaria em vez de recusar
+        const ok = esperado.length > 0 && Buffer.byteLength(esperado) === Buffer.byteLength(recebido) &&
             crypto.timingSafeEqual(Buffer.from(esperado), Buffer.from(recebido));
         if (!ok) {
             console.log("⛔ Serviço de NF recusado (SYNC_NF_TOKEN ausente ou diferente).");
@@ -928,7 +927,7 @@ io.on('connection', (socket) => {
         if (!socket.autenticado) return socket.emit('sessao_invalida');
         if (bot_socket_id) {
             const reg = audit('planilha', 'atribuir_vendedor', { alvo: dados.vendedor, detalhes: { cotacoes: dados.cotacoes } });
-            io.to(bot_socket_id).emit('comando_registrar_vendedor_cotacao', { clientId: socket.id, ...dados, audit_id: reg && reg.id });
+            io.to(bot_socket_id).emit('comando_registrar_vendedor_cotacao', { ...dados, clientId: socket.id, audit_id: reg && reg.id });
         } else {
             socket.emit('resposta_registro_vendedor_cotacao', { sucesso: false, erro: "O Robô (Gerenciador Python) está offline. Inicie o script no seu computador." });
         }
@@ -976,7 +975,7 @@ io.on('connection', (socket) => {
         if (bot_socket_id) {
             const numeros = (Array.isArray(dados.cotacoes) ? dados.cotacoes : []).map(c => c && c.cotacao).filter(Boolean);
             const reg = audit('planilha', 'cotacao_manual', { alvo: numeros.join(', '), detalhes: { qtd: numeros.length, cotacoes: numeros } });
-            io.to(bot_socket_id).emit('comando_registrar_cotacao_manual', { clientId: socket.id, ...dados, audit_id: reg && reg.id });
+            io.to(bot_socket_id).emit('comando_registrar_cotacao_manual', { ...dados, clientId: socket.id, audit_id: reg && reg.id });
         } else {
             socket.emit('resposta_registro_cotacao_manual', { sucesso: false, erro: "O Robô (Gerenciador Python) está offline." });
         }
@@ -991,17 +990,21 @@ io.on('connection', (socket) => {
     });
 
     // FILA EXTRAÇÃO
-    socket.on('obter_fila_extracao', (dados) => io.to('backend').emit('obter_fila_extracao', dados));
+    socket.on('obter_fila_extracao', (dados) => {
+        if (!socket.autenticado) return;
+        io.to('backend').emit('obter_fila_extracao', { ...(dados || {}), clientId: socket.id });
+    });
     socket.on('iniciar_extracao_fila', (dados) => {
         if (!socket.autenticado) return;
         audit('portal', 'extracao_fila', { status: 'sucesso' });
         io.to('backend').emit('iniciar_extracao_fila', dados);
     });
+    // Só para telas logadas (sala 'frontend'), não para qualquer socket conectado
     socket.on('atualizar_fila_extracao', (dados) => {
-        io.emit('atualizar_fila_extracao', dados);
+        io.to('frontend').emit('atualizar_fila_extracao', dados);
     });
     socket.on('progresso_fila_extracao', (dados) => {
-        io.emit('progresso_fila_extracao', dados);
+        io.to('frontend').emit('progresso_fila_extracao', dados);
     });
 
     // Python devolve os dados prontos, o Node envia de volta para a aba exata do site
@@ -1038,50 +1041,57 @@ function processarProximoDaFila() {
 // =======================================================
 // ROTA: RECEBER EVENTOS DO COUPA E MANDAR PARA O ROBÔ
 // =======================================================
-app.post('/api/responder', upload.fields([{ name: 'datasheet' }, { name: 'dav' }]), (req, res) => {
+// Número do evento vira id da fila, texto na tela e argumento de onclick: só caracteres de identificador
+const EVENTO_VALIDO = /^[A-Za-z0-9][A-Za-z0-9._\/-]{0,59}$/;
+const PORTAIS_RESPOSTA = new Set(['coupa', 'vale']);
+const uploadResposta = upload.fields([{ name: 'datasheet', maxCount: 30 }, { name: 'dav', maxCount: 30 }]);
+function listaDoFormulario(texto) {
+    const lista = JSON.parse(texto || '[]');
+    if (!Array.isArray(lista) || lista.length > 500) throw new Error('lista inválida');
+    return lista;
+}
+
+app.post('/api/responder', (req, res, next) => uploadResposta(req, res, err => {
+    if (err) return res.status(400).json({ error: 'Anexos inválidos: ' + err.message });
+    next();
+}), (req, res) => {
+    // Os anexos já estão no disco antes de qualquer validação: saem dele em todos os caminhos (finally)
+    const arquivos = Object.values(req.files || {}).flat();
     try {
         const sessionId = req.body.sessionId;
-        if (!cofreSessoes.has(sessionId)) return res.status(401).json({ error: "Sessão inválida" });
-        const autor = JSON.parse(cofreSessoes.get(sessionId)).email;
+        const ficha = typeof sessionId === 'string' ? lerSessao(cofreSessoes, { sessionId }) : null;
+        if (!ficha) return res.status(401).json({ error: "Sessão inválida ou expirada. Entre novamente." });
+        const autor = ficha.email;
 
-        const evento = req.body.evento;
-        const precos = JSON.parse(req.body.precos || '[]');
-        const prazos = JSON.parse(req.body.prazos || '[]');
-        const origens = JSON.parse(req.body.origens || '[]');
-        const icms = JSON.parse(req.body.icms || '[]');
-
-        // FUNÇÃO NOVA: Lê do Disco HD, converte e apaga a prova do crime
-        const processarArquivos = (filesArray) => {
-            const result = [];
-            if (filesArray) {
-                filesArray.forEach(file => {
-                    try {
-                        // 1. Lê o arquivo direto do HD
-                        const fileData = fs.readFileSync(file.path);
-                        // 2. Transforma em Base64 para o Python
-                        result.push({ name: file.originalname, data: fileData.toString('base64') });
-                        
-                        // 3. Apaga o arquivo do HD para manter o servidor limpo!
-                        fs.unlinkSync(file.path);
-                    } catch (err) {
-                        console.error(`Erro ao processar arquivo ${file.originalname}:`, err);
-                    }
-                });
-            }
-            return result;
-        };
-
-        // Transforma os Datasheets e DAVs usando a nova função (MANTIDO INTACTO)
-        const datasheets = processarArquivos(req.files['datasheet']);
-        const davs = processarArquivos(req.files['dav']);
-
-        // 👇 AQUI: Extrai o portal que vem do site (se não vier, assume coupa por segurança)
+        const evento = String(req.body.evento || '').trim();
+        if (!EVENTO_VALIDO.test(evento)) return res.status(400).json({ error: "Número do evento inválido." });
+        // 👇 Extrai o portal que vem do site (se não vier, assume coupa por segurança)
         const portal_origem = req.body.portal || 'coupa';
+        if (!PORTAIS_RESPOSTA.has(portal_origem)) return res.status(400).json({ error: "Portal inválido." });
+        // Mesmo evento duas vezes na fila = o robô responderia duas vezes no portal
+        if (fila_respostas.some(e => e.id === evento)) return res.status(409).json({ error: "Este evento já está na fila." });
+
+        let precos, prazos, origens, icms;
+        try {
+            precos = listaDoFormulario(req.body.precos);
+            prazos = listaDoFormulario(req.body.prazos);
+            origens = listaDoFormulario(req.body.origens);
+            icms = listaDoFormulario(req.body.icms);
+        } catch {
+            return res.status(400).json({ error: "Itens do evento inválidos." });
+        }
+
+        // Lê do disco e converte para Base64 para o Python (o arquivo é apagado no finally)
+        const processarArquivos = (filesArray) => (filesArray || []).map(file =>
+            ({ name: file.originalname, data: fs.readFileSync(file.path).toString('base64') }));
+
+        const datasheets = processarArquivos(req.files && req.files['datasheet']);
+        const davs = processarArquivos(req.files && req.files['dav']);
 
         // 1. Cria o pacote com todos os dados
         const payload = {
             modo: 'responder', 
-            portal: portal_origem, // 👈 Usa a variável dinâmica aqui!
+            portal: portal_origem,
             evento: evento,
             precos: precos, 
             prazos: prazos, 
@@ -1118,7 +1128,9 @@ app.post('/api/responder', upload.fields([{ name: 'datasheet' }, { name: 'dav' }
 
     } catch (error) {
         console.error("Erro no /api/responder:", error);
-        res.status(500).json({ error: "Erro interno no servidor." });
+        if (!res.headersSent) res.status(500).json({ error: "Erro interno no servidor." });
+    } finally {
+        for (const file of arquivos) fs.unlink(file.path, () => {});
     }
 });
 

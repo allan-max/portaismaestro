@@ -27,7 +27,7 @@ test('servidor real: admin exclusivo, origem do robô, correlação, JSON intact
   const records = [{ 'COTAÇÃO': '001', VENCIMENTO: '20/10/2026', VENDEDOR: 'GUSTAVO', RESPOSTA: 'NÃO RESPONDIDO' }];
   fs.writeFileSync(fixture, JSON.stringify({ 'COTAÇÃO': records }));
   const before = fs.readFileSync(fixture), sockets = [], commands = [];
-  const child = spawn(process.execPath, ['server.js'], { cwd: root,
+  const child = spawn(process.env.NODE_DO_SERVIDOR || process.execPath, ['server.js'], { cwd: root,
     env: { ...process.env, HOST: '127.0.0.1', PORT: String(port), ROBO_SECRET: secret, MASTER_SECRET: crypto.randomBytes(32).toString('hex') }, stdio: ['ignore', 'pipe', 'pipe'] });
   t.after(() => { sockets.forEach(s => s.disconnect()); child.kill(); fs.unlinkSync(fixture); fs.rmdirSync(temporary); });
   await new Promise((resolve, reject) => {
