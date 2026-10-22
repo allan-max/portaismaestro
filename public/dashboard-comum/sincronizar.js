@@ -28,7 +28,7 @@
     function status(c, dados, vivo) {
         const v = vivo[c.id] || {}, est = doEstado(c, dados);
         const fonte = c.fonte === 'local' ? { status: 'ok' } : (((dados && dados.fontes) || {})[c.fonte] || { status: 'offline' });
-        if (v.rodando || (est && (est.rodando || []).includes(c.id))) return { id: 'rodando', texto: v.mensagem || 'Rodando…' };
+        if (v.rodando || (est && Array.isArray(est.rodando) && est.rodando.includes(c.id))) return { id: 'rodando', texto: v.mensagem || 'Rodando…' };
         if (fonte.status !== 'ok') {
             return { id: 'offline', texto: fonte.status === 'tempo'
                 ? `${fonte.erro || 'Não respondeu.'} Pode estar numa versão sem este botão.` : (fonte.erro || 'Indisponível.') };

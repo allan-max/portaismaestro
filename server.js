@@ -333,8 +333,9 @@ io.on('connection', (socket) => {
     // === PONTES DE RELATÓRIOS (ROBÔ -> SITES) ===
     socket.on('relatar_progresso', (dados) => io.to('frontend').emit('relatar_progresso', dados));
     socket.on('relatar_progresso_me', (dados) => io.to('frontend').emit('relatar_progresso_me', dados));
-    socket.on('relatar_progresso_coupa', (dados) => io.to('frontend').emit('relatar_progresso_coupa', dados));
-    socket.on('relatar_progresso_vale', (dados) => io.to('frontend').emit('relatar_progresso_vale', dados));
+    // só o gerenciador fala pelos robôs (a tela "Rodar agora" mostra estas mensagens no cartão do ciclo)
+    socket.on('relatar_progresso_coupa', (dados) => { if (doRobo()) io.to('frontend').emit('relatar_progresso_coupa', dados); });
+    socket.on('relatar_progresso_vale', (dados) => { if (doRobo()) io.to('frontend').emit('relatar_progresso_vale', dados); });
     socket.on('relatar_progresso_findes', (dados) => io.to('frontend').emit('relatar_progresso_findes', dados));
     socket.on('relatar_progresso_ariba', (dados) => io.to('frontend').emit('relatar_progresso_ariba', dados));
 
@@ -595,10 +596,12 @@ io.on('connection', (socket) => {
         dashboardFontes.limparCliente(socket.id);
         if (socket.id === bot_socket_id) {
             bot_socket_id = null; marcarConexao('gerenciador', false);
+            sincronizacao.fonteCaiu('robo');
             console.log("❌ Ligação com o Robô Local perdida.");
         }
         if (socket.id === sync_socket_id) {
             sync_socket_id = null; marcarConexao('nf', false);
+            sincronizacao.fonteCaiu('sync');
             console.log("❌ Serviço de NF desconectado.");
         }
     });

@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { criarSincronizacao, SERVICOS, doConsole } = require('../lib/sincronizacao');
+const { criarSincronizacao, SERVICOS, doConsole, SCHTASKS } = require('../lib/sincronizacao');
 
 test('mensagem do Windows em cp850 (console em português) vira texto certo', () => {
   assert.equal(doConsole(Buffer.from([0x45, 0x52, 0x52, 0x4f, 0x3a, 0x20, 0x6e, 0xc6, 0x6f, 0x20, 0x87, 0xc6, 0x6f, 0x20, 0x82, 0xa0, 0x90])), 'ERRO: não ção éáÉ');
@@ -45,7 +45,7 @@ test('ciclo e backup vão para o gerenciador; NF e sync para o serviço de NF, c
     [['robo', 'ciclo_coupa'], ['robo', 'ciclo_vale'], ['robo', 'backup'], ['nf', 'nf_completo'], ['nf', 'sync_planilha']]);
   const cmd = s.enviados[0];
   assert.equal(cmd.e, 'comando_sincronizacao');
-  assert.deepEqual(cmd.d, { servico: 'ciclo_coupa', clientId: 'cliente', audit_id: 'aud-1', usuario: 'admin@example.test' });
+  assert.deepEqual(cmd.d, { servico: 'ciclo_coupa', clientId: 'cliente', usuario: 'admin@example.test' });   // o id da auditoria fica no servidor
   assert.deepEqual(s.auditados[0], { email: 'admin@example.test', ip: '10.0.0.9', area: 'admin', acao: 'rodar_agora',
     alvo: 'Ciclo Coupa', detalhes: { servico: 'ciclo_coupa' } });
   // todos os admins veem que começou; o vendedor não recebe nada
@@ -72,13 +72,17 @@ test('fonte offline responde erro claro e fecha a auditoria como erro', () => {
   assert.deepEqual(s.fechados, [{ id: 'aud-1', dados: { sucesso: false, erro: r.d.erro } }]);
 });
 
-test('só o socket certo responde por cada serviço; o resultado vai para os admins e fecha a auditoria', () => {
+test('só o socket certo responde por cada serviço; o resultado vai para os admins e fecha a auditoria do disparo', () => {
   const s = setup();
-  const resposta = { servico: 'ciclo_coupa', sucesso: true, mensagem: 'Ciclo manual do Coupa terminou', audit_id: 'aud-7', clientId: 'cliente' };
+  s.pedir({ servico: 'ciclo_coupa' });                                                // auditoria aud-1, guardada no servidor
+  const resposta = { servico: 'ciclo_coupa', sucesso: true, mensagem: 'Ciclo manual do Coupa terminou', audit_id: 'aud-de-outro', clientId: 'cliente' };
   assert.equal(s.sinc.receber('retorno_sincronizacao', 'nf', resposta), true);       // o serviço de NF não fala pelo gerenciador
   assert.equal(s.fechados.length, 0);
   assert.equal(s.sinc.receber('retorno_sincronizacao', 'robo', resposta), true);
-  assert.deepEqual(s.fechados, [{ id: 'aud-7', dados: { sucesso: true, mensagem: 'Ciclo manual do Coupa terminou' } }]);
+  // fecha o registro do disparo, nunca o audit_id que veio na resposta
+  assert.deepEqual(s.fechados, [{ id: 'aud-1', dados: { sucesso: true, mensagem: 'Ciclo manual do Coupa terminou' } }]);
+  s.sinc.receber('retorno_sincronizacao', 'robo', resposta);                          // resposta repetida não fecha de novo
+  assert.equal(s.fechados.length, 1);
   const r = s.recebidos.cliente.at(-1);
   assert.deepEqual(r, { e: 'retorno_sincronizacao', d: { servico: 'ciclo_coupa', sucesso: true, mensagem: 'Ciclo manual do Coupa terminou' } });
   assert.equal(s.recebidos.outro.length, 0);
@@ -87,10 +91,45 @@ test('só o socket certo responde por cada serviço; o resultado vai para os adm
   assert.equal(s.sinc.receber('retorno_eventos', 'robo', {}), false);                // não é deste módulo
 });
 
+test('clique repetido com o serviço ainda rodando é recusado no servidor, sem novo disparo nem auditoria', () => {
+  const s = setup();
+  s.pedir({ servico: 'backup' });
+  s.pedir({ servico: 'backup', requestId: 'r2' });
+  assert.equal(s.enviados.length, 1);
+  assert.equal(s.auditados.length, 1);
+  const r = s.recebidos.cliente.filter(m => m.e === 'retorno_sincronizacao').at(-1);
+  assert.equal(r.d.sucesso, false); assert.match(r.d.erro, /já está rodando/); assert.equal(r.d.requestId, 'r2');
+  s.sinc.receber('retorno_sincronizacao', 'robo', { servico: 'backup', sucesso: true, mensagem: 'ok' });
+  s.pedir({ servico: 'backup' });                                                     // terminou: pode de novo
+  assert.equal(s.enviados.length, 2);
+});
+
+test('fonte que cai no meio fecha o que estava rodando nela como erro', () => {
+  const s = setup();
+  s.pedir({ servico: 'ciclo_vale' });
+  s.pedir({ servico: 'nf_completo' });
+  s.sinc.fonteCaiu('robo');
+  assert.deepEqual(s.fechados.map(f => [f.id, f.dados.sucesso]), [['aud-1', false]]);
+  assert.match(s.fechados[0].dados.erro, /desconectou/);
+  s.pedir({ servico: 'ciclo_vale' });                                                 // liberado
+  assert.equal(s.enviados.filter(x => x.d.servico === 'ciclo_vale').length, 2);
+});
+
+test('servico com chave de protótipo é descartado na resposta', () => {
+  const s = setup();
+  s.pedir({ servico: 'nf_completo' });
+  for (const servico of ['__proto__', 'constructor', 'toString', ['nf_completo']]) {
+    s.sinc.receber('retorno_sincronizacao', 'nf', { servico, sucesso: true, mensagem: 'x' });
+  }
+  assert.equal(s.fechados.length, 0);
+  assert.ok(!s.recebidos.cliente.some(m => m.e === 'retorno_sincronizacao'));
+});
+
 test('atualizador roda a tarefa do Agendador e diz que só foi disparado', () => {
   const s = setup();
   s.pedir({ servico: 'atualizador' });
-  assert.deepEqual(s.execucoes, [{ cmd: 'schtasks', args: ['/Run', '/TN', 'Maestro Atualizador'] }]);
+  assert.deepEqual(s.execucoes, [{ cmd: SCHTASKS, args: ['/Run', '/TN', 'Maestro Atualizador'] }]);
+  assert.ok(require('node:path').isAbsolute(SCHTASKS));                             // nunca o schtasks da pasta atual
   assert.equal(s.enviados.length, 0);
   const r = s.recebidos.cliente.filter(m => m.e === 'retorno_sincronizacao').at(-1);
   assert.equal(r.d.sucesso, true);

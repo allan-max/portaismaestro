@@ -76,7 +76,8 @@ test('servidor real: botão "Rodar agora" só para admin, vai à fonte certa e v
   await new Promise(r => setTimeout(r, 200));
   assert.equal(comandosBot.length, 1); assert.equal(comandosNf.length, 0);
   const cmd = comandosBot[0];
-  assert.equal(cmd.servico, 'ciclo_coupa'); assert.equal(cmd.usuario, 'admin@example.test'); assert.ok(cmd.audit_id);
+  assert.equal(cmd.servico, 'ciclo_coupa'); assert.equal(cmd.usuario, 'admin@example.test');
+  assert.equal(cmd.audit_id, undefined);                                              // o id da auditoria não sai do servidor
 
   // o serviço de NF tentando responder pelo gerenciador é ignorado; o gerenciador responde
   nf.emit('retorno_sincronizacao', { servico: 'ciclo_coupa', sucesso: false, erro: 'forjado', audit_id: cmd.audit_id });
@@ -107,7 +108,9 @@ test('servidor real: botão "Rodar agora" só para admin, vai à fonte certa e v
   assert.equal(vendedorViu, 0);
   const linhas = fs.readdirSync(auditDir, { recursive: true }).filter(f => String(f).endsWith('.jsonl'))
     .flatMap(f => fs.readFileSync(path.join(auditDir, f), 'utf8').trim().split('\n')).map(l => JSON.parse(l));
-  const doCiclo = linhas.filter(l => l.acao === 'rodar_agora' || l.id === cmd.audit_id);
-  assert.ok(doCiclo.some(l => l.email === 'admin@example.test' && l.alvo === 'Ciclo Coupa'));
-  assert.ok(doCiclo.some(l => l.status === 'sucesso'));
+  const porId = new Map();                                                            // registro + fechamento, como a auditoria lê
+  for (const l of linhas) porId.set(l.id, { ...porId.get(l.id), ...Object.fromEntries(Object.entries(l).filter(([, v]) => v != null)) });
+  const ciclo = [...porId.values()].find(r => r.acao === 'rodar_agora' && r.alvo === 'Ciclo Coupa');
+  assert.equal(ciclo.email, 'admin@example.test');
+  assert.equal(ciclo.status, 'sucesso');                                             // fechado pela resposta do gerenciador, não pela forjada
 });
