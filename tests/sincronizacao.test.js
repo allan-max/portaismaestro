@@ -129,7 +129,7 @@ test('atualizador roda a tarefa do Agendador e diz que só foi disparado', () =>
   const s = setup();
   s.pedir({ servico: 'atualizador' });
   assert.deepEqual(s.execucoes, [{ cmd: SCHTASKS, args: ['/Run', '/TN', 'Maestro Atualizador'] }]);
-  assert.ok(require('node:path').isAbsolute(SCHTASKS));                             // nunca o schtasks da pasta atual
+  assert.ok(require('node:path').win32.isAbsolute(SCHTASKS));                       // nunca o schtasks da pasta atual (caminho do Windows, vale em qualquer SO)
   assert.equal(s.enviados.length, 0);
   const r = s.recebidos.cliente.filter(m => m.e === 'retorno_sincronizacao').at(-1);
   assert.equal(r.d.sucesso, true);
