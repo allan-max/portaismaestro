@@ -20,6 +20,7 @@ const { lerLogPorId, resumirArquivosLog } = require('./lib/logs-txt');
 const { criarDashboardFontes } = require('./lib/dashboard-fontes');
 const { criarAuditoria } = require('./lib/auditoria');
 const { criarDashboardAuditoria, ipDe } = require('./lib/dashboard-auditoria');
+const { criarSincronizacao } = require('./lib/sincronizacao');
 
 
 // 🛡️ AIRBAG ANTI-CRASH (Impede o servidor de morrer por erros invisíveis)
@@ -142,7 +143,7 @@ const dashboardFontes = criarDashboardFontes({
 });
 
 // 🛡️ AUDITORIA: quem mudou o quê (docs/auditoria/plano.md). Admins na sala 'auditoria' recebem ao vivo.
-const auditoria = criarAuditoria({ dir: path.join(__dirname, '..', 'auditoria'), uuid: uuidv4 });
+const auditoria = criarAuditoria({ dir: process.env.AUDITORIA_DIR || path.join(__dirname, '..', 'auditoria'), uuid: uuidv4 });   // AUDITORIA_DIR: testes não sujam a real
 const emailsPendentes = new Map();      // clientId -> e-mail digitado no login/cadastro, até o robô responder
 const auditPorCliente = new Map();      // `${tipo}:${clientId}` -> id do registro, para respostas sem audit_id
 const MODOS_AUDITADOS = new Set(['ligar_robo', 'desligar_robo', 'forcar_troca', 'solicitar_parada', 'parar_extracao', 'extrair', 'verificar', 'mover_anexos_findes']);
@@ -191,6 +192,11 @@ function fecharPorCliente(tipo, clientId, dados) {
     auditPorCliente.delete(chave);
 }
 const dashboardAuditoria = criarDashboardAuditoria({ sessoes: cofreSessoes, auditoria, registrar: registrarAuditoria });
+// Botões "Rodar agora" (docs/sincronizacao/plano.md): admin -> gerenciador / serviço de NF / Agendador
+const sincronizacao = criarSincronizacao({
+    sessoes: cofreSessoes, io, obterRobo: () => bot_socket_id, obterSync: () => sync_socket_id,
+    registrar: registrarAuditoria, fechar: (id, dados) => fecharPelaResposta(id, dados)
+});
 
 function notificar_todos(mensagem = null) {
     estado_global.tamanho_fila = fila_respostas.length;
@@ -233,6 +239,10 @@ io.on('connection', (socket) => {
     dashboardCotacoes.conectar(socket);
     dashboardFontes.conectar(socket);
     dashboardAuditoria.conectar(socket);
+    sincronizacao.conectar(socket);
+    for (const evento of ['progresso_sincronizacao', 'retorno_sincronizacao']) {
+        socket.on(evento, (dados = {}) => sincronizacao.receber(evento, socket.id, dados));
+    }
     const audit = (area, acao, extra = {}) => registrarAuditoria({
         email: socket.usuarioLogado ? socket.usuarioLogado.email : null, ip: ipDe(socket), area, acao, ...extra
     });
@@ -242,7 +252,7 @@ io.on('connection', (socket) => {
         if (nome) conexoes[nome].visto_em = new Date().toISOString();
     });
     // Respostas das fontes para os dashboards (Sync, NFs, Atividade): só o socket certo é aceito.
-    for (const evento of ['retorno_sync_planilha_painel', 'retorno_nf_painel', 'retorno_eventos_nf', 'retorno_eventos', 'retorno_servidor_metricas']) {
+    for (const evento of ['retorno_sync_planilha_painel', 'retorno_nf_painel', 'retorno_eventos_nf', 'retorno_eventos', 'retorno_servidor_metricas', 'retorno_sincronizacao_estado']) {
         socket.on(evento, (dados = {}) => { dashboardFontes.receber(evento, socket.id, dados);
     });
     }

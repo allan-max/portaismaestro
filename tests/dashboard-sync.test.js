@@ -91,7 +91,7 @@ test('próxima rodada segue a tarefa (dias úteis, 12:37–17:57, para depois de
 test('server.js: as respostas dos dashboards só passam pelo dashboard-fontes (admin, requestId, origem)', () => {
     const server = fs.readFileSync(path.join(__dirname, '../server.js'), 'utf8');
     assert.doesNotMatch(server, /solicitar_sync_planilha_painel/);                  // o atalho antigo, sem requestId, não existe
-    assert.match(server, /for \(const evento of \['retorno_sync_planilha_painel', 'retorno_nf_painel', 'retorno_eventos_nf', 'retorno_eventos', 'retorno_servidor_metricas'\]\)/);
+    assert.match(server, /for \(const evento of \['retorno_sync_planilha_painel', 'retorno_nf_painel', 'retorno_eventos_nf', 'retorno_eventos', 'retorno_servidor_metricas', 'retorno_sincronizacao_estado'\]\)/);
     assert.match(server, /dashboardFontes\.receber\(evento, socket\.id, dados\)/);
     assert.match(server, /if \(dashboardFontes\.receber\('retorno_sync_nf_estado', socket\.id, dados\)\) return;/);
 });

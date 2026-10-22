@@ -76,6 +76,7 @@
                 ${itemPagina('monitoramento', 'Monitoramento', 'monitoramento.html', 'monitoramento')}
                 ${itemPagina('atividade', 'Atividade', 'atividade.html', 'atividade')}
                 ${itemPagina('servidor', 'Servidor', 'servidor.html', 'servidor')}
+                ${itemPagina('sincronizar', 'Rodar agora', 'sincronizar.html', 'atualizar')}
             </nav>
             <div class="eyebrow">Pedidos e planilha</div>
             <nav class="subnav" aria-label="Pedidos e planilha">

@@ -137,3 +137,31 @@ test('saúde junta o estado dos sockets e o estado do serviço de NF', () => {
   assert.equal(r.sucesso, true); assert.equal(r.estado_nf, null); assert.match(r.estado_nf_erro, /offline/);
   s.fontes.fechar();
 });
+
+test('sincronizar: pede o estado ao gerenciador e ao serviço de NF; cada um só responde pela sua parte', () => {
+  const s = setup();
+  s.handlers.solicitar_dashboard_sincronizar({ requestId: 'k' });
+  assert.deepEqual(s.enviados.map(x => [x.id, x.e]), [['robo', 'comando_sincronizacao_estado'], ['nf', 'comando_sincronizacao_estado']]);
+  const [robo, nf] = s.enviados.map(x => x.d.clientId);
+  const estadoRobo = { rodando: ['ciclo_coupa'], ultimas: {} };
+  s.fontes.receber('retorno_sincronizacao_estado', 'nf', { sucesso: true, clientId: robo, estado: { rodando: ['forjado'] } });
+  assert.equal(s.messages.length, 0);                                       // o serviço de NF não responde pelo gerenciador
+  s.fontes.receber('retorno_sincronizacao_estado', 'robo', { sucesso: true, clientId: robo, estado: estadoRobo });
+  s.fontes.receber('retorno_sincronizacao_estado', 'nf', { sucesso: false, clientId: nf, erro: 'pasta de dados fora' });
+  const r = s.messages.at(-1);
+  assert.equal(r.e, 'retorno_dashboard_sincronizar');
+  assert.equal(r.d.sucesso, true);
+  assert.deepEqual(r.d.estado, { gerenciador: estadoRobo, nf: null });
+  assert.deepEqual(r.d.fontes, { gerenciador: { status: 'ok' }, nf: { status: 'erro', erro: 'pasta de dados fora' } });
+  s.fontes.fechar();
+});
+
+test('sincronizar com as duas fontes fora ainda responde (os cartões mostram offline)', () => {
+  const s = setup({ robo: null, sync: null });
+  s.handlers.solicitar_dashboard_sincronizar({ requestId: 'k' });
+  const r = s.messages.at(-1).d;
+  assert.equal(r.sucesso, true);
+  assert.match(r.fontes.gerenciador.erro, /gerenciador está offline/);
+  assert.match(r.fontes.nf.erro, /serviço de NF está offline/);
+  s.fontes.fechar();
+});

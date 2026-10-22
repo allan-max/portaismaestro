@@ -12,7 +12,8 @@
     robo_verificar: 'Iniciou verificação', robo_mover_anexos_findes: 'Moveu anexos Findes', promover_usuario: 'Promoveu a admin',
     acesso_dashboard: 'Alterou acesso ao dashboard', acesso_planilha: 'Alterou acesso à planilha', acesso_portais: 'Alterou acesso aos portais',
     vincular_vendedor: 'Vinculou vendedor ao usuário', salvar_config: 'Salvou configuração', definir_apelido: 'Definiu apelido',
-    login: 'Entrou no portal', login_falha: 'Falha de login', cadastro: 'Cadastrou-se', troca_senha: 'Trocou a senha'
+    login: 'Entrou no portal', login_falha: 'Falha de login', cadastro: 'Cadastrou-se', troca_senha: 'Trocou a senha',
+    rodar_agora: 'Rodou agora (sincronização)'
   };
   const AREAS = { planilha: ['Planilha', ''], portal: ['Portais', 'green'], admin: ['Admin', 'amber'], conta: ['Conta', 'muted'] };
   const STATUS = { sucesso: ['Sucesso', 'green'], erro: ['Erro', 'red'], pendente: ['Aguardando robô', 'amber'], sem_resposta: ['Sem resposta', 'amber'] };
