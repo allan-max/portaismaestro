@@ -24,7 +24,7 @@ async function portFree() {
 
 test('servidor real: eventos do robô, fila de extração, clientId e /api/responder', async t => {
   const port = await portFree(), secret = crypto.randomBytes(32).toString('hex'), sockets = [];
-  const child = spawn(process.execPath, ['server.js'], { cwd: root,
+  const child = spawn(process.env.NODE_DO_SERVIDOR || process.execPath, ['server.js'], { cwd: root,
     env: { ...process.env, HOST: '127.0.0.1', PORT: String(port), ROBO_SECRET: secret, SYNC_NF_TOKEN: 'token-nf-de-teste', MASTER_SECRET: crypto.randomBytes(32).toString('hex') }, stdio: ['ignore', 'pipe', 'pipe'] });
   t.after(() => { sockets.forEach(s => s.disconnect()); child.kill(); });
   await new Promise((resolve, reject) => {
