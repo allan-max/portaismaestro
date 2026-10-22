@@ -88,10 +88,6 @@ test('servidor real: eventos do robô, fila de extração, clientId e /api/respo
   tela.emit('solicitar_registro_vendedor_cotacao', { vendedor: 'ANA', cotacoes: ['1'], clientId: visitante.id });
   assert.equal((await pedido).clientId, tela.id);
 
-  // Usuário comum não chega ao painel dev
-  const dev = event(bot, 'pedir_dados_dev_seguro', 1000).catch(() => null);
-  assert.equal(await dev, null);
-
   // /api/responder
   const marca = 'teste-' + crypto.randomUUID() + '.pdf';
   async function responder(campos, comArquivo = true) {

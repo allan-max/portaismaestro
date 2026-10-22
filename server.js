@@ -203,7 +203,7 @@ const EVENTOS_DO_ROBO = new Set([
     'imagem_captcha_do_robo', 'contagem_coupa_vale', 'contagem_me', 'contagem_ariba',
     'relatar_progresso', 'relatar_progresso_me', 'relatar_progresso_coupa', 'relatar_progresso_vale',
     'relatar_progresso_findes', 'relatar_progresso_ariba', 'sincronizar_estado_me', 'sincronizar_estado_ariba',
-    'tarefa_concluida', 'resposta_painel_dev_cifrado', 'resultado_login', 'resposta_cadastro',
+    'tarefa_concluida', 'resultado_login', 'resposta_cadastro',
     'resultado_verificacao_token', 'resposta_recuperacao_solicitada', 'resultado_nova_senha', 'receber_config_admin',
     'admin_resposta_usuarios', 'admin_resposta_acesso', 'admin_resposta_vendedor', 'resposta_acao_linha',
     'retorno_planilha_json', 'retorno_dados_dashboard', 'retorno_ler_log_txt',
@@ -428,40 +428,6 @@ io.on('connection', (socket) => {
         socket.emit('sincronizar_estado', { estado: estado_global, mensagem: "Conectado com segurança." });
         socket.emit('sincronizar_estado_me', estado_me);
         socket.emit('sincronizar_estado_ariba', estado_ariba);
-    });
-
-    socket.on('pedir_dados_dev_seguro', (dados) => {
-        // Agora permite se for Dev OU Admin
-        if (!checkRole('dev') && !checkRole('admin')) return; 
-        
-        if (bot_socket_id) {
-            io.to(bot_socket_id).emit('pedir_dados_dev_seguro', { 
-                payload_cifrado: dados.payload_cifrado, 
-                online_users: Object.keys(usuarios_logados),
-                clientId: socket.id 
-            });
-        }
-    });
-
-    socket.on('comando_dev_acao_seguro', (dados) => {
-        // Agora permite se for Dev OU Admin
-        if (!checkRole('dev') && !checkRole('admin')) return; 
-        
-        if (bot_socket_id) {
-            io.to(bot_socket_id).emit('comando_dev_acao_seguro', { payload_cifrado: dados.payload_cifrado, clientId: socket.id });
-        }
-    });
-
-    socket.on('resposta_painel_dev_cifrado', (dados) => {
-        io.to(dados.clientId).emit('dados_dev_prontos_cifrados', dados.payload);
-    });
-
-    socket.on('promover_usuario', (dados) => {
-        if (!checkRole('admin')) return;
-        if (bot_socket_id) {
-            audit('admin', 'promover_usuario', { alvo: dados.alvo, detalhes: { depois: 'admin' }, status: 'sucesso' });
-            io.to(bot_socket_id).emit('comando_promover_usuario', { ...dados, clientId: socket.id });
-        }
     });
 
     socket.on('solicitar_impressao', (dados) => {
