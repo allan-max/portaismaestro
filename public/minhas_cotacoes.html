@@ -365,6 +365,8 @@
             throw new Error('Template da Planilha Base não encontrado.');
         }
 
+        const MAX_ITENS_PLANILHA_BASE = 24;
+
         async function exportarCotacaoPlanilhaBase(cota) {
             if (!cota) {
                 alert('Nenhuma cotação selecionada para exportar.');
@@ -392,25 +394,19 @@
                     throw new Error('Aba ORÇAMENTO não encontrada na Planilha Base.');
                 }
 
-                const itens = parseItensCotacao(cota);
+                const todosItens = parseItensCotacao(cota);
+                // v3: itens nas linhas 2..25 (24 itens); abaixo ficam OBSERVAÇÕES (26) e INFORMAÇÕES ESSENCIAIS (29+)
+                const itens = todosItens.slice(0, MAX_ITENS_PLANILHA_BASE);
 
-                // Preenche cada item na sua linha correspondente: linha 2 = item 1, linha 3 = item 2, etc.
+                // Linha 2 = item 1, linha 3 = item 2, etc. As fórmulas H–J já vêm no template.
                 itens.forEach((item, idx) => {
                     const rowNum = 2 + idx;
-
-                    // Coluna A (PRODUTO)
                     ws.getCell('A' + rowNum).value = item.produto;
-
-                    // Coluna B (QUANTIDADE)
                     ws.getCell('B' + rowNum).value = item.quantidade;
-
-                    // Se exceder as linhas pré-configuradas do template, adiciona as fórmulas padrão
-                    if (rowNum > 25) {
-                        ws.getCell('H' + rowNum).value = { formula: `(C${rowNum}+(D${rowNum}/B${rowNum})+(E${rowNum}/B${rowNum})+(F${rowNum}))*B${rowNum}` };
-                        ws.getCell('I' + rowNum).value = { formula: `(H${rowNum}*G${rowNum}/100)+H${rowNum}` };
-                        ws.getCell('J' + rowNum).value = { formula: `I${rowNum}/B${rowNum}` };
-                    }
                 });
+
+                const obs = cota['OBSERVAÇÕES'] || cota['OBSERVACOES'];
+                if (obs) ws.getCell('B26').value = String(obs);
 
                 const idCotacao = String(cota['COTAÇÃO'] || cota['COTACAO'] || cota['NUMERO'] || cota['ID'] || 'cotacao')
                     .replace(/[^a-zA-Z0-9_-]/g, '_') || 'cotacao';
@@ -419,6 +415,13 @@
                 const buffer = await wb.xlsx.writeBuffer();
                 const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
                 baixarBlob(blob, nomeArquivo);
+
+                // ExcelJS descarta as listas suspensas (validações x14) da v3 ao gravar
+                const avisos = ['As listas de seleção (vendedor, pagamento…) não vêm no arquivo exportado: use o modelo do Gerar DAV se precisar delas.'];
+                if (todosItens.length > MAX_ITENS_PLANILHA_BASE) {
+                    avisos.unshift(`Esta cotação tem ${todosItens.length} itens, mas a planilha comporta ${MAX_ITENS_PLANILHA_BASE} itens: os ${todosItens.length - MAX_ITENS_PLANILHA_BASE} últimos ficaram de fora.`);
+                }
+                alert(avisos.join('\n\n'));
             } catch (err) {
                 console.error('Erro ao exportar para Planilha Base:', err);
                 alert('Não foi possível exportar para a Planilha Base: ' + (err.message || 'Erro desconhecido'));

@@ -442,7 +442,7 @@ test('exportarCotacaoPlanilhaBase preenche produto em A2, quantidade em B2 e pre
 
     // Valida abas originais preservadas
     const sheetNames = wb.worksheets.map(w => w.name);
-    assert.deepEqual(sheetNames, ['ORÇAMENTO', 'COTAÇÃO', 'FRETE']);
+    assert.deepEqual(sheetNames, ['ORÇAMENTO', 'COTAÇÃO', 'FRETE', 'LISTAS']);
 
     const ws = wb.getWorksheet('ORÇAMENTO');
     assert.ok(ws, 'Aba ORÇAMENTO deve existir');
@@ -452,9 +452,9 @@ test('exportarCotacaoPlanilhaBase preenche produto em A2, quantidade em B2 e pre
     assert.equal(ws.getCell('B2').value, 6);
 
     // Valida fórmulas intactas na linha 2 e totais
-    assert.equal(ws.getCell('H2').value?.formula, '(C2+(D2/B2)+(E2/B2)+(F2))*B2');
-    assert.equal(ws.getCell('I2').value?.formula, '(H2*G2/100)+H2');
-    assert.equal(ws.getCell('J2').value?.formula, 'I2/B2');
+    assert.equal(ws.getCell('H2').value?.formula, 'SUM(C2*B2+(D2+E2+F2))');
+    assert.equal(ws.getCell('I2').value?.formula, 'SUM((C2*B2)+D2+E2+F2)*G2%+H2');
+    assert.equal(ws.getCell('J2').value?.formula, 'SUM(I2/B2)');
     assert.equal(ws.getCell('I26').value?.formula, 'SUM(I2:I25)');
 });
 
@@ -520,7 +520,7 @@ test('exportarCotacaoPlanilhaBase exporta múltiplos itens para linhas sucessiva
     // Linha 2 (Item 1)
     assert.equal(ws.getCell('A2').value, 'Impressora Zebra ZD230 USB + Ethernet');
     assert.equal(ws.getCell('B2').value, 1);
-    assert.equal(ws.getCell('H2').value?.formula, '(C2+(D2/B2)+(E2/B2)+(F2))*B2');
+    assert.equal(ws.getCell('H2').value?.formula, 'SUM(C2*B2+(D2+E2+F2))');
 
     // Linha 3 (Item 2)
     assert.equal(ws.getCell('A3').value, 'Leitor código barras Zebra DS2208 Kit com suporte');
@@ -536,7 +536,7 @@ test('exportarCotacaoPlanilhaBase exporta múltiplos itens para linhas sucessiva
 
     // Fórmulas da soma total e abas
     assert.equal(ws.getCell('I26').value?.formula, 'SUM(I2:I25)');
-    assert.deepEqual(wb.worksheets.map(w => w.name), ['ORÇAMENTO', 'COTAÇÃO', 'FRETE']);
+    assert.deepEqual(wb.worksheets.map(w => w.name), ['ORÇAMENTO', 'COTAÇÃO', 'FRETE', 'LISTAS']);
 });
 
 
