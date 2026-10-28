@@ -453,7 +453,7 @@
         main.innerHTML = `
             <div class="dash-titulo ${primeira ? 'entra' : ''}"><div><div class="eyebrow">Área do vendedor</div><h1>Minhas cotações</h1>
                 <p>Comece por <b class="red">Vence hoje</b>. Clique num cartão para ver os produtos e exportar.</p></div>
-                <div class="dash-estado"><button type="button" class="button" data-acao="atualizar" title="Buscar de novo na planilha">${icone('atualizar')}Atualizar</button>
+                <div class="dash-estado"><a class="button" href="https://cotafrete.ventura.inf.br/dav" target="_blank" rel="noopener" title="Abrir o Gerar DAV no Cotafrete">GERAR DAV</a><button type="button" class="button" data-acao="atualizar" title="Buscar de novo na planilha">${icone('atualizar')}Atualizar</button>
                     <div class="b-hoje"><small><span>Meta de hoje</span><span><b>${feitasHoje}</b> de ${n.hoje} respondidas</span></small><div class="barra-trilho"><i style="--w:${pct}%"></i></div></div></div></div>
             ${cards(n)}
             <details class="b-visao" id="b-visao" ${visaoAberta ? 'open' : ''}><summary>${icone('seta')}Visão geral</summary>
