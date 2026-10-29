@@ -150,6 +150,9 @@ test('PLANILHA BASE.xlsx e o template embutido sao a v3 (mesmo conteudo)', async
         await wb.xlsx.load(buf);
         assert.equal(wb.worksheets[0].name, 'ORÇAMENTO');
         assert.equal(wb.worksheets[0].getCell('K1').value, 'CÓDIGO HSE');
+        assert.equal(wb.worksheets[0].getCell('R1').value, 'DESCRIÇÃO NO DAV');
+        assert.equal(wb.worksheets[0].getCell('A38').value, 'Frete');
+        assert.equal(wb.worksheets[0].getCell('A39').value, 'ITEM 1');
     }
 });
 
