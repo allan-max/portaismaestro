@@ -115,6 +115,42 @@ let fila_respostas = [];
 let bot_socket_id = null;
 let sync_socket_id = null;   // serviço de NF (cruzar_nf/servico.py)
 let usuarios_logados = {};
+
+// Armazenamento persistente das prints dos itens respondidos por evento
+const caminhoPrintsRespostas = process.env.PRINTS_RESPOSTAS_FILE || path.join(__dirname, 'dados', 'prints_respostas.json');
+let printsPorEvento = {};
+try {
+    if (fs.existsSync(caminhoPrintsRespostas)) {
+        printsPorEvento = JSON.parse(fs.readFileSync(caminhoPrintsRespostas, 'utf8')) || {};
+    }
+} catch (e) {
+    printsPorEvento = {};
+}
+
+function salvarPrintsEvento(eventoId, prints) {
+    const chave = String(eventoId || '').trim();
+    if (!chave || !Array.isArray(prints) || !prints.length) return;
+    printsPorEvento[chave] = prints;
+    try {
+        fs.mkdirSync(path.dirname(caminhoPrintsRespostas), { recursive: true });
+        fs.writeFileSync(caminhoPrintsRespostas, JSON.stringify(printsPorEvento), 'utf8');
+    } catch (e) {
+        console.error('Aviso ao gravar prints_respostas.json:', e.message);
+    }
+    io.to('frontend').emit('prints_evento_atualizados', { evento: chave, prints });
+}
+
+function obterPrintsParaCotacoes(cotacoes) {
+    const mapa = {};
+    if (!Array.isArray(cotacoes)) return mapa;
+    for (const c of cotacoes) {
+        const bruto = String((c && c['COTAÇÃO']) || '').trim();
+        const limpo = bruto.replace(/\D+/g, '') || bruto;
+        if (printsPorEvento[bruto]) mapa[bruto] = printsPorEvento[bruto];
+        else if (printsPorEvento[limpo]) mapa[limpo] = printsPorEvento[limpo];
+    }
+    return mapa;
+}
 const dashboardCotacoes = criarDashboardCotacoes({
     sessoes: cofreSessoes, io, obterRobo: () => bot_socket_id,
     obterSocket: id => io.sockets.sockets.get(id)
@@ -312,6 +348,9 @@ io.on('connection', (socket) => {
         socket.autenticado = true; socket.join('backend');
         console.log("🤖 Robô Local Conectado.");
         io.emit('sincronizar_estado', { estado: estado_global, mensagem: "Robô operacional e conectado!" });
+        if (fila_respostas.length > 0) {
+            processarProximoDaFila();
+        }
     });
 
 
@@ -319,6 +358,15 @@ io.on('connection', (socket) => {
     socket.on('imagem_captcha_do_robo', (dados) => {
         // Envia a imagem do desafio para todos os navegadores na sala frontend
         io.to('frontend').emit('nova_imagem', dados);
+    });
+
+    socket.on('captcha_resolvido_do_robo', (dados) => {
+        io.to('frontend').emit('captcha_resolvido', dados || {});
+    });
+
+    socket.on('prints_resposta_evento', (dados = {}) => {
+        if (!doRobo()) return;
+        salvarPrintsEvento(dados.evento, dados.prints);
     });
 
     socket.on('contagem_coupa_vale', (dados) => io.to('frontend').emit('atualizar_contagem_coupa_vale', dados));
@@ -352,6 +400,9 @@ io.on('connection', (socket) => {
 
             const respondido = fila_respostas.find(e => e.id === eventoId);
             if (respondido && doRobo()) fecharPelaResposta(respondido.audit_id, dados);
+            if (doRobo() && Array.isArray(dados.prints) && dados.prints.length) {
+                salvarPrintsEvento(eventoId, dados.prints);
+            }
 
             // 1. Remove da Fila Pendente
             fila_respostas = fila_respostas.filter(e => e.id !== eventoId);
@@ -370,6 +421,7 @@ io.on('connection', (socket) => {
             // 3. PUXA O PRÓXIMO DA FILA
             processarProximoDaFila();
             notificar_todos();
+            io.to('frontend').emit('tarefa_concluida', dados);
 
         } else {
             // 👇 ROTINA ORIGINAL PARA AS OUTRAS TAREFAS 👇
@@ -380,11 +432,15 @@ io.on('connection', (socket) => {
                 if (estado_me.status !== 'desligado') estado_me.status = 'ocioso';
                 io.to('frontend').emit('sincronizar_estado_me', estado_me);
             } else {
-                if (dados.evento === 'Login do Robô') {
-                    if (dados.sucesso) estado_global.status = 'ocioso';
-                    else { estado_global.status = 'desligado'; estado_global.portal_atual = null; }
+                if (dados.evento === 'Login do Robô' || dados.evento === 'Login do Robo') {
+                    if (dados.sucesso) {
+                        if (fila_respostas.length === 0) estado_global.status = 'ocioso';
+                    } else if (fila_respostas.length === 0) {
+                        estado_global.status = 'desligado';
+                        estado_global.portal_atual = null;
+                    }
                 } else {
-                    if (estado_global.status !== 'desligado') {
+                    if (estado_global.status !== 'desligado' && fila_respostas.length === 0) {
                         estado_global.status = 'ocioso';
                     }
                 }
@@ -833,6 +889,9 @@ io.on('connection', (socket) => {
     socket.on('retorno_planilha_json', (dados) => {
         if (socket.id !== bot_socket_id) return;
         if (dashboardCotacoes.receber(socket.id, dados)) return;
+        if (dados && Array.isArray(dados.cotacoes)) {
+            dados.prints_robo = { ...(dados.prints_robo || {}), ...obterPrintsParaCotacoes(dados.cotacoes) };
+        }
         if (dados.clientId) {
             io.to(dados.clientId).emit('retorno_planilha_json', dados);
         }
@@ -1047,6 +1106,7 @@ app.post('/api/responder', upload.fields([{ name: 'datasheet' }, { name: 'dav' }
         const evento = req.body.evento;
         const precos = JSON.parse(req.body.precos || '[]');
         const prazos = JSON.parse(req.body.prazos || '[]');
+        const ncms = JSON.parse(req.body.ncms || '[]');
         const origens = JSON.parse(req.body.origens || '[]');
         const icms = JSON.parse(req.body.icms || '[]');
 
@@ -1085,6 +1145,7 @@ app.post('/api/responder', upload.fields([{ name: 'datasheet' }, { name: 'dav' }
             evento: evento,
             precos: precos, 
             prazos: prazos, 
+            ncms: ncms,
             origens: origens,
             icms: icms, 
             datasheets: datasheets, 
@@ -1098,11 +1159,18 @@ app.post('/api/responder', upload.fields([{ name: 'datasheet' }, { name: 'dav' }
             area: 'portal', acao: 'responder_evento', portal: portal_origem, alvo: evento,
             detalhes: { qtd_itens: precos.length, tem_datasheet: datasheets.length > 0, tem_dav: davs.length > 0 }
         });
-        fila_respostas.push({ id: evento, payload: payload, audit_id: reg && reg.id });
+        const idxExistente = fila_respostas.findIndex(e => e.id === evento);
+        if (idxExistente >= 0) {
+            fila_respostas[idxExistente] = { id: evento, payload: payload, audit_id: reg && reg.id };
+        } else {
+            fila_respostas.push({ id: evento, payload: payload, audit_id: reg && reg.id });
+        }
         
         // 3. Adiciona à fila visual para aparecer no site
         if (!estado_global.fila_pendente) estado_global.fila_pendente = [];
-        estado_global.fila_pendente.push(evento);
+        if (!estado_global.fila_pendente.includes(evento)) {
+            estado_global.fila_pendente.push(evento);
+        }
 
         // 4. Responde ao site IMEDIATAMENTE dizendo que deu certo (libera a interface do utilizador)
         res.json({ sucesso: true, mensagem: "Evento adicionado à fila." });
@@ -1110,7 +1178,7 @@ app.post('/api/responder', upload.fields([{ name: 'datasheet' }, { name: 'dav' }
         // 5. O GESTOR DE FILA ENTRA EM AÇÃO:
         // Se o robô estiver parado (ocioso), acorda-o para começar a fila.
         // Se já estiver a trabalhar, apenas avisa na tela que entrou na espera.
-        if (estado_global.status !== 'respondendo') {
+        if (estado_global.status !== 'respondendo' || fila_respostas.length === 1 || idxExistente === 0) {
             processarProximoDaFila();
         } else {
             notificar_todos(`📥 Evento ${evento} entrou na fila de espera.`);

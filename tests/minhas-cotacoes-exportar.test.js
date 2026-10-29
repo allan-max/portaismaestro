@@ -805,3 +805,194 @@ test('parseItensCotacao, Word e Planilha Base associam quantidades empilhadas li
     assert.equal(itensMultiModelo[1].quantidade, 4, 'Item 2 deve ter quantidade 4 e não o modelo 13091680');
     assert.ok(itensMultiModelo[1].produto.startsWith('13091680 || MOUSE'));
 });
+
+
+test('tela: botão Responder aparece apenas ao abrir cotação do Coupa ou Vale, ao lado do botão Planilha Base', () => {
+    const { context, handlers } = setupMinhasCotacoesEnv();
+    const Tela = context.window.Tela;
+
+    handlers.retorno_planilha_json({
+        sucesso: true,
+        portais_robo: {
+            '800123': 'coupa',
+            '310150': 'vale'
+        },
+        cotacoes: [
+            { 'COTAÇÃO': '800123', 'VENCIMENTO': dataRel(1), 'LOCALIDADE': 'TUBARÃO', 'ITEM': 'ITEM COUPA' },
+            { 'COTAÇÃO': '310150', 'VENCIMENTO': dataRel(2), 'LOCALIDADE': 'PARAUAPEBAS', 'ITEM': 'ITEM VALE' },
+            { 'COTAÇÃO': '999000', 'VENCIMENTO': dataRel(3), 'LOCALIDADE': 'VITÓRIA', 'ITEM': 'ITEM OUTRO' }
+        ]
+    });
+
+    const [cCoupa, cVale, cOutro] = Tela.estado.lista;
+    assert.equal(Tela.portalRobo(cCoupa), 'coupa');
+    assert.equal(Tela.portalRobo(cVale), 'vale');
+    assert.equal(Tela.portalRobo(cOutro), '');
+
+    const htmlCoupa = Tela.detalhe(cCoupa);
+    assert.ok(htmlCoupa.includes('id="btn-responder-cotacao"'), 'Cotação Coupa aberta deve ter botão Responder');
+    assert.ok(htmlCoupa.includes('data-portal="coupa"'), 'Botão Responder deve indicar portal coupa');
+    assert.match(
+        htmlCoupa,
+        /id="btn-exportar-planilha-base"[^>]*>[\s\S]*?<\/button>\s*<button[^>]*id="btn-responder-cotacao"/,
+        'Botão Responder deve ficar imediatamente ao lado do botão Planilha Base'
+    );
+
+    const htmlVale = Tela.detalhe(cVale);
+    assert.ok(htmlVale.includes('id="btn-responder-cotacao"'), 'Cotação Vale aberta deve ter botão Responder');
+    assert.ok(htmlVale.includes('data-portal="vale"'), 'Botão Responder deve indicar portal vale');
+
+    const htmlOutro = Tela.detalhe(cOutro);
+    assert.ok(!htmlOutro.includes('id="btn-responder-cotacao"'), 'Cotação fora de Coupa/Vale não deve exibir botão Responder');
+
+    const codigoTela = fs.readFileSync(path.join(__dirname, '../public/minhas-cotacoes/tela.js'), 'utf8');
+    const blocoCartao = codigoTela.slice(codigoTela.indexOf('function cartao('), codigoTela.indexOf('function quadro('));
+    assert.ok(!blocoCartao.includes('btn-responder-cotacao'), 'Cartão da lista principal não deve exibir o botão antes de abrir a cotação');
+});
+
+test('tela: clicar em Responder exibe os 3 campos de arraste (Planilha Base, DAV, Datasheet) e carregar a Planilha Base mostra os dados editáveis', async () => {
+    const { context, handlers } = setupMinhasCotacoesEnv();
+    const Tela = context.window.Tela;
+
+    handlers.retorno_planilha_json({
+        sucesso: true,
+        portais_robo: { '800123': 'coupa' },
+        cotacoes: [
+            {
+                'COTAÇÃO': '800123',
+                'VENCIMENTO': dataRel(1),
+                'LOCALIDADE': 'TUBARÃO',
+                'ITEM': '(Item 1) BOMBA CENTRÍFUGA\n(Item 2) SELO MECÂNICO',
+                'QUANTIDADE': '(Item 1) 2 UN\n(Item 2) 5 UN'
+            }
+        ]
+    });
+
+    const cCoupa = Tela.estado.lista[0];
+    Tela.estado.aberta = Tela.id(cCoupa);
+    Tela.estado.respondendoPortal = true;
+
+    const htmlAberto = Tela.detalhe(cCoupa);
+    assert.ok(htmlAberto.includes('id="painel-responder-cotacao"'), 'Deve renderizar o painel de resposta');
+    assert.ok(htmlAberto.includes('id="drop-planilha-base"'), 'Deve ter campo de arraste da Planilha Base');
+    assert.ok(htmlAberto.includes('id="drop-dav"'), 'Deve ter campo de arraste do DAV');
+    assert.ok(htmlAberto.includes('id="drop-datasheet"'), 'Deve ter campo de arraste do Datasheet');
+
+    // Prepara uma Planilha Base preenchida pelo vendedor
+    const templateBuf = fs.readFileSync(path.join(__dirname, '../public/PLANILHA BASE.xlsx'));
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(templateBuf);
+    const ws = wb.getWorksheet('ORÇAMENTO');
+    ws.getCell('A2').value = 'BOMBA CENTRÍFUGA';
+    ws.getCell('B2').value = 2;
+    ws.getCell('C2').value = 1000; // Custo 1000, margem padrão 45% => 1450,00
+    ws.getCell('L2').value = '84137090';
+    ws.getCell('M2').value = 'SP';
+    ws.getCell('N2').value = 12;
+
+    ws.getCell('A3').value = 'SELO MECÂNICO';
+    ws.getCell('B3').value = 5;
+    ws.getCell('C3').value = 200; // Custo 200, margem padrão 45% => 290,00
+    ws.getCell('L3').value = '84842000';
+    ws.getCell('M3').value = 'MG';
+    ws.getCell('N3').value = 18;
+
+    ws.getCell('B32').value = 15; // Prazo de entrega (Dias)
+    const bufferPreenchido = await wb.xlsx.writeBuffer();
+
+    await Tela.receberArquivosResposta(Tela.id(cCoupa), 'planilha', [{
+        name: '800123 - TUBARÃO.xlsx',
+        arrayBuffer: async () => bufferPreenchido
+    }]);
+
+    const resp = Tela.dadosResposta(cCoupa);
+    assert.equal(resp.itens.length, 2, 'Deve extrair os 2 itens preenchidos na planilha');
+    assert.equal(resp.itens[0].preco, '1450,00');
+    assert.equal(resp.itens[0].prazo, '15');
+    assert.equal(resp.itens[0].ncm, '84137090');
+    assert.equal(resp.itens[0].origem, 'SP');
+    assert.equal(resp.itens[0].icms, '12');
+
+    assert.equal(resp.itens[1].preco, '290,00');
+    assert.equal(resp.itens[1].prazo, '15');
+    assert.equal(resp.itens[1].ncm, '84842000');
+    assert.equal(resp.itens[1].origem, 'MG');
+    assert.equal(resp.itens[1].icms, '18');
+
+    const htmlComPlanilha = Tela.detalhe(cCoupa);
+    assert.ok(htmlComPlanilha.includes('id="pc-resp-itens-preview"'), 'Deve mostrar as informações da planilha na tela');
+    assert.ok(htmlComPlanilha.includes('data-resp-campo="preco"'), 'Deve exibir campo editável de preço');
+    assert.ok(htmlComPlanilha.includes('data-resp-campo="prazo"'), 'Deve exibir campo editável de prazo');
+    assert.ok(htmlComPlanilha.includes('data-resp-campo="ncm"'), 'Deve exibir campo editável de NCM');
+    assert.ok(htmlComPlanilha.includes('data-resp-campo="origem"'), 'Deve exibir campo editável de origem');
+    assert.ok(htmlComPlanilha.includes('data-resp-campo="icms"'), 'Deve exibir campo editável de ICMS');
+    assert.ok(htmlComPlanilha.includes('value="1450,00"'), 'Deve preencher o valor unitário calculado da planilha');
+    assert.ok(htmlComPlanilha.includes('value="84137090"'), 'Deve preencher o NCM lido da planilha');
+});
+
+test('Exibe prints de cada item respondido/salvo no card do evento e mostra Captcha na tela principal para todos os vendedores', () => {
+    const { context, handlers, emitted } = setupMinhasCotacoesEnv();
+    const Tela = context.window.Tela;
+
+    handlers.retorno_planilha_json({
+        sucesso: true,
+        portais_robo: { '800123': 'coupa' },
+        cotacoes: [
+            {
+                'COTAÇÃO': '800123',
+                'VENCIMENTO': dataRel(1),
+                'LOCALIDADE': 'TUBARÃO',
+                'ITEM': '(Item 1) BOMBA CENTRÍFUGA\n(Item 2) SELO MECÂNICO',
+                'QUANTIDADE': '(Item 1) 2 UN\n(Item 2) 5 UN'
+            }
+        ]
+    });
+
+    const cCoupa = Tela.estado.lista[0];
+
+    // Antes de receber prints, não deve mostrar seção de prints
+    assert.ok(!Tela.cartao(cCoupa, 0).includes('b-prints-card'), 'Card não deve exibir prints antes da resposta');
+    assert.ok(!Tela.detalhe(cCoupa).includes('id="prints-itens-respondidos"'), 'Modal não deve exibir prints antes da resposta');
+
+    // Simula recebimento dos prints pelo socket (prints_evento_atualizados)
+    assert.equal(typeof handlers.prints_evento_atualizados, 'function', 'Deve escutar prints_evento_atualizados');
+    handlers.prints_evento_atualizados({
+        evento: '800123',
+        prints: [
+            { item: 1, imagem: 'iVBORw0KGgoAAAANSUhEUg==', preco: '1450,00', prazo: '15' },
+            { item: 2, imagem: 'iVBORw0KGgoAAAANSUhEUg==', preco: '290,00', prazo: '15' }
+        ]
+    });
+
+    const htmlCard = Tela.cartao(cCoupa, 0);
+    assert.ok(htmlCard.includes('class="b-prints-card"'), 'Card do evento deve mostrar os prints dos itens respondidos');
+    assert.ok(htmlCard.includes('2 itens salvos'), 'Card deve indicar a quantidade de itens salvos');
+    assert.ok(htmlCard.includes('data:image/png;base64,iVBORw0KGgoAAAANSUhEUg=='), 'Card deve renderizar a miniatura de cada item salvo');
+
+    const htmlDetalhe = Tela.detalhe(cCoupa);
+    assert.ok(htmlDetalhe.includes('id="prints-itens-respondidos"'), 'Detalhe do evento deve mostrar a galeria de prints dos itens respondidos');
+    assert.ok(htmlDetalhe.includes('Item 1'), 'Galeria deve identificar o Item 1');
+    assert.ok(htmlDetalhe.includes('Item 2'), 'Galeria deve identificar o Item 2');
+
+    // Captcha na tela principal para todos os vendedores
+    assert.equal(typeof handlers.nova_imagem, 'function', 'Deve escutar nova_imagem para Captcha global');
+    assert.equal(typeof handlers.captcha_resolvido, 'function', 'Deve escutar captcha_resolvido');
+    assert.equal(Tela.painelCaptchaGlobal(), '', 'Sem Captcha ativo não deve renderizar o painel');
+
+    handlers.nova_imagem({ imagem: 'iVBORw0KGgoCAPTCHA==' });
+    assert.equal(Tela.estado.captchaImagem, 'iVBORw0KGgoCAPTCHA==', 'Deve armazenar a imagem do Captcha no estado');
+
+    const htmlCaptcha = Tela.painelCaptchaGlobal();
+    assert.ok(htmlCaptcha.includes('id="painel-captcha-vendedores"'), 'Deve renderizar o painel de Captcha na tela principal');
+    assert.ok(htmlCaptcha.includes('id="imagem-captcha-vendedor"'), 'Deve exibir a imagem clicável do Captcha para os vendedores');
+
+    context.clicarCaptchaGlobal(140, 95);
+    const ultimoEmit = emitted[emitted.length - 1];
+    assert.equal(ultimoEmit[0], 'clique_no_captcha', 'Clique do vendedor deve enviar clique_no_captcha');
+    assert.equal(ultimoEmit[1].x, 140, 'Coordenada X enviada corretamente');
+    assert.equal(ultimoEmit[1].y, 95, 'Coordenada Y enviada corretamente');
+
+    handlers.captcha_resolvido();
+    assert.equal(Tela.estado.captchaImagem, '', 'Quando o Captcha for resolvido, deve limpar a imagem do Captcha');
+    assert.equal(Tela.painelCaptchaGlobal(), '', 'Quando o Captcha for resolvido, deve ocultar o banner da tela principal');
+});

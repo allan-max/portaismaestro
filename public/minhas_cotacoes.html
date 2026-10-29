@@ -54,6 +54,62 @@
         let cotacoesFiltradas = [];
         window.todasCotacoes = todasCotacoes;
         window.cotacoesFiltradas = cotacoesFiltradas;
+        let portaisRobo = {};
+        window.portaisRobo = portaisRobo;
+        let printsRobo = {};
+        window.printsRobo = printsRobo;
+
+        function clicarCaptchaGlobal(x, y) {
+            socket.emit('clique_no_captcha', { x: Math.round(Number(x) || 0), y: Math.round(Number(y) || 0) });
+        }
+        window.clicarCaptchaGlobal = clicarCaptchaGlobal;
+
+        socket.on('nova_imagem', (dados) => {
+            if (dados && dados.imagem && window.Tela && typeof window.Tela.receberCaptcha === 'function') {
+                window.Tela.receberCaptcha(dados.imagem);
+            }
+        });
+
+        socket.on('captcha_resolvido', () => {
+            if (window.Tela && typeof window.Tela.fecharCaptcha === 'function') {
+                window.Tela.fecharCaptcha();
+            }
+        });
+
+        socket.on('prints_evento_atualizados', (dados) => {
+            if (!dados || !dados.evento || !Array.isArray(dados.prints)) return;
+            printsRobo[String(dados.evento).trim()] = dados.prints;
+            if (window.Tela && typeof window.Tela.receberPrintsEvento === 'function') {
+                window.Tela.receberPrintsEvento(dados.evento, dados.prints);
+            }
+        });
+
+        socket.on('relatar_progresso', (dados) => {
+            if (!dados || !dados.mensagem || !window.Tela || typeof window.Tela.toast !== 'function') return;
+            const msg = String(dados.mensagem).replace(/<[^>]+>/g, '').trim();
+            if (!msg) return;
+            if (msg.includes('🚀') || msg.includes('🔐') || msg.includes('🔄') || msg.includes('❌') || msg.includes('Erro')) {
+                window.Tela.toast(msg.replace(/[&<>"']/g, ''));
+            }
+        });
+
+        socket.on('tarefa_concluida', (dados) => {
+            if (!dados || !dados.evento || !String(dados.evento).startsWith('Evento ')) return;
+            const evId = String(dados.evento).replace(/^Evento\s+/i, '').trim();
+            if (Array.isArray(dados.prints) && dados.prints.length) {
+                printsRobo[evId] = dados.prints;
+                if (window.Tela && typeof window.Tela.receberPrintsEvento === 'function') {
+                    window.Tela.receberPrintsEvento(evId, dados.prints);
+                }
+            }
+            if (window.Tela && typeof window.Tela.toast === 'function') {
+                if (dados.sucesso) {
+                    window.Tela.toast(`✅ Evento <b>${evId.replace(/[&<>"']/g, '')}</b> respondido e salvo!`);
+                } else if (dados.erro) {
+                    window.Tela.toast(`❌ Falha ao responder evento ${evId.replace(/[&<>"']/g, '')}: ${String(dados.erro).replace(/[&<>"']/g, '')}`);
+                }
+            }
+        });
 
         function carregarMinhasCotacoes() {
             socket.emit('solicitar_planilha_json', { origem: 'todas', apenas_meu_vendedor: true });
@@ -124,7 +180,13 @@
                 return tVenc !== null && tVenc >= hoje;
             });
             window.todasCotacoes = todasCotacoes;
-            if (window.Tela) window.Tela.receber(todasCotacoes);
+            portaisRobo = (res.portais_robo && typeof res.portais_robo === 'object') ? res.portais_robo : {};
+            window.portaisRobo = portaisRobo;
+            if (res.prints_robo && typeof res.prints_robo === 'object') {
+                printsRobo = { ...printsRobo, ...res.prints_robo };
+                window.printsRobo = printsRobo;
+            }
+            if (window.Tela) window.Tela.receber(todasCotacoes, portaisRobo, printsRobo);
         });
 
         function marcarComoRespondida(c) {
@@ -865,7 +927,232 @@ ${paragraphs.join('\n')}
         window.obterJSZip = obterJSZip;
         window.gerarDocxCotacaoCoupaXml = gerarDocxCotacaoCoupaXml;
         window.gerarDocxCotacaoCoupaBlob = gerarDocxCotacaoCoupaBlob;
+        function portalRoboDaCotacao(c) {
+            if (!c) return '';
+            const mapa = (typeof window !== 'undefined' && window.portaisRobo) || portaisRobo || {};
+            const bruto = String(c['COTAÇÃO'] ?? '').trim();
+            const limpo = bruto.split('>').pop().replace(/^\s*cota[çc][ãa]o\s*[:/\-]?\s*/i, '').trim();
+            const p = String(mapa[bruto] || mapa[limpo] || c.PORTAL || c.portal || '').trim().toLowerCase();
+            return (p === 'coupa' || p === 'vale') ? p : '';
+        }
+
+        function extrairValorCelulaExcel(cell) {
+            if (!cell || cell.value === null || cell.value === undefined) return null;
+            const v = cell.value;
+            if (typeof v === 'object') {
+                if (v.result !== undefined && v.result !== null && typeof v.result !== 'object') return v.result;
+                if (Array.isArray(v.richText)) return v.richText.map(t => t.text || '').join('');
+                if (v.text !== undefined) return v.text;
+                if (v.formula || v.sharedFormula) return null;
+            }
+            return v;
+        }
+
+        function converterNumeroExcel(val) {
+            if (typeof val === 'number') return isFinite(val) ? val : null;
+            if (val === null || val === undefined) return null;
+            let s = String(val).replace(/R\$\s*/gi, '').replace(/%/g, '').trim();
+            if (!s) return null;
+            if (/\d+\.\d+,\d+/.test(s)) s = s.replace(/\./g, '').replace(',', '.');
+            else if (/\d+,\d+/.test(s)) s = s.replace(',', '.');
+            const n = parseFloat(s);
+            return isFinite(n) ? n : null;
+        }
+
+        function formatarMoedaBr(num) {
+            if (typeof num !== 'number' || !isFinite(num) || num <= 0) return '';
+            return num.toFixed(2).replace('.', ',');
+        }
+
+        async function lerPlanilhaBaseResposta(arquivoOuBuffer, cota = null) {
+            if (typeof ExcelJS === 'undefined') {
+                throw new Error('Biblioteca ExcelJS não carregada.');
+            }
+            let buffer = arquivoOuBuffer;
+            if (arquivoOuBuffer && typeof arquivoOuBuffer.arrayBuffer === 'function') {
+                buffer = await arquivoOuBuffer.arrayBuffer();
+            }
+            const wb = new ExcelJS.Workbook();
+            await wb.xlsx.load(buffer);
+
+            const ws = wb.getWorksheet('ORÇAMENTO') || wb.worksheets[0];
+            if (!ws) {
+                throw new Error('Aba ORÇAMENTO não encontrada na planilha.');
+            }
+
+            // Descobre colunas na linha 1 (mantendo padrão da Planilha Base v3)
+            let colProduto = 1, colQtd = 2, colCusto = 3, colFreteVir = 4, colFreteDella = 5,
+                colMadeira = 6, colMargem = 7, colVendaUnit = 10, colNcm = 12, colOrigem = 13, colIcms = 14, colPrazoItem = 0;
+
+            const rowHeader = ws.getRow(1);
+            for (let c = 1; c <= Math.max(ws.columnCount || 17, 17); c++) {
+                const h = String(extrairValorCelulaExcel(rowHeader.getCell(c)) || '').trim().toUpperCase()
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                if (!h) continue;
+                if (h === 'PRODUTO' || h === 'ITEM' || h === 'DESCRICAO') colProduto = c;
+                else if (h.startsWith('QUANT')) colQtd = c;
+                else if (h === 'CUSTO') colCusto = c;
+                else if (h.includes('FRETE PARA VIR')) colFreteVir = c;
+                else if (h.includes('FRETE DELLA')) colFreteDella = c;
+                else if (h === 'MADEIRA') colMadeira = c;
+                else if (h.startsWith('MARGEM')) colMargem = c;
+                else if (h.includes('VENDA UNITARIO') || h.includes('UNITARIO DE VENDA') || h === 'VALOR UNITARIO') colVendaUnit = c;
+                else if (h === 'NCM' || h.startsWith('NCM')) colNcm = c;
+                else if (h.startsWith('ORIGEM')) colOrigem = c;
+                else if (h.startsWith('ICMS')) colIcms = c;
+                else if (h.startsWith('PRAZO')) colPrazoItem = c;
+            }
+
+            // Busca o Prazo de entrega (Dias) nas Informações Essenciais (ex: linha 32 -> B32)
+            let prazoGlobal = '';
+            for (let r = 26; r <= 45; r++) {
+                const rotulo = String(extrairValorCelulaExcel(ws.getRow(r).getCell(1)) || '').trim().toLowerCase()
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                if (rotulo.includes('prazo')) {
+                    for (let c = 2; c <= 6; c++) {
+                        const v = extrairValorCelulaExcel(ws.getRow(r).getCell(c));
+                        if (v !== null && v !== undefined && String(v).trim() !== '') {
+                            const m = String(v).trim().match(/\d+/);
+                            prazoGlobal = m ? m[0] : String(v).trim();
+                            break;
+                        }
+                    }
+                    if (prazoGlobal) break;
+                }
+            }
+
+            const itensCotacao = cota ? parseItensCotacao(cota) : [];
+            const linhasExtraidas = [];
+            let ultimoIndiceComDados = -1;
+
+            for (let idx = 0; idx < MAX_ITENS_PLANILHA_BASE; idx++) {
+                const r = 2 + idx;
+                const row = ws.getRow(r);
+
+                const prodPlanilha = String(extrairValorCelulaExcel(row.getCell(colProduto)) ?? '').trim();
+                const qtdNum = converterNumeroExcel(extrairValorCelulaExcel(row.getCell(colQtd)));
+                const custoNum = converterNumeroExcel(extrairValorCelulaExcel(row.getCell(colCusto)));
+                const freteVirNum = converterNumeroExcel(extrairValorCelulaExcel(row.getCell(colFreteVir))) || 0;
+                const freteDellaNum = converterNumeroExcel(extrairValorCelulaExcel(row.getCell(colFreteDella))) || 0;
+                const madeiraNum = converterNumeroExcel(extrairValorCelulaExcel(row.getCell(colMadeira))) || 0;
+
+                const cellMargem = row.getCell(colMargem);
+                let margemNum = converterNumeroExcel(extrairValorCelulaExcel(cellMargem));
+                if (margemNum !== null && margemNum > 0 && margemNum < 1 && String(cellMargem.numFmt || '').includes('%')) {
+                    margemNum = margemNum * 100;
+                }
+
+                // Valor Unitário de Venda: usa resultado da coluna J ou calcula pela fórmula da Planilha Base
+                const cellUnit = row.getCell(colVendaUnit);
+                let vendaUnitNum = converterNumeroExcel(extrairValorCelulaExcel(cellUnit));
+                if ((vendaUnitNum === null || vendaUnitNum <= 0) && (custoNum !== null && custoNum > 0)) {
+                    const q = (qtdNum !== null && qtdNum > 0) ? qtdNum : 1;
+                    const m = (margemNum !== null) ? margemNum : 45;
+                    const custoTotal = (custoNum * q) + freteVirNum + freteDellaNum + madeiraNum;
+                    const valorTotalVenda = custoTotal * (1 + m / 100);
+                    vendaUnitNum = valorTotalVenda / q;
+                }
+
+                const rawNcm = extrairValorCelulaExcel(row.getCell(colNcm));
+                const ncmStr = (rawNcm !== null && rawNcm !== undefined) ? String(rawNcm).trim() : '';
+
+                const rawOrigem = extrairValorCelulaExcel(row.getCell(colOrigem));
+                const origemStr = (rawOrigem !== null && rawOrigem !== undefined) ? String(rawOrigem).trim() : '';
+
+                const cellIcms = row.getCell(colIcms);
+                const rawIcms = extrairValorCelulaExcel(cellIcms);
+                let icmsStr = '';
+                if (typeof rawIcms === 'number' && isFinite(rawIcms)) {
+                    const valIcms = (rawIcms > 0 && rawIcms < 1 && String(cellIcms.numFmt || '').includes('%'))
+                        ? Math.round(rawIcms * 10000) / 100
+                        : rawIcms;
+                    icmsStr = String(valIcms).replace('.', ',');
+                } else if (rawIcms !== null && rawIcms !== undefined) {
+                    icmsStr = String(rawIcms).replace(/%/g, '').trim();
+                }
+
+                let prazoItemStr = '';
+                if (colPrazoItem > 0) {
+                    const rawPrazo = extrairValorCelulaExcel(row.getCell(colPrazoItem));
+                    if (rawPrazo !== null && rawPrazo !== undefined && String(rawPrazo).trim() !== '') {
+                        const mp = String(rawPrazo).trim().match(/\d+/);
+                        prazoItemStr = mp ? mp[0] : String(rawPrazo).trim();
+                    }
+                }
+
+                const temDadoNaLinha = Boolean(
+                    prodPlanilha ||
+                    (custoNum !== null && custoNum > 0) ||
+                    (vendaUnitNum !== null && vendaUnitNum > 0) ||
+                    ncmStr !== '' ||
+                    origemStr !== '' ||
+                    icmsStr !== '' ||
+                    prazoItemStr !== ''
+                );
+                if (temDadoNaLinha) ultimoIndiceComDados = idx;
+
+                const fallbackItem = itensCotacao[idx] || null;
+                const precoFormatado = formatarMoedaBr(vendaUnitNum);
+                const temValorVendaOuDados = Boolean(precoFormatado || ncmStr || origemStr || icmsStr || prazoItemStr);
+                linhasExtraidas.push({
+                    n: idx + 1,
+                    produto: prodPlanilha || (fallbackItem ? fallbackItem.produto : `Item ${idx + 1}`),
+                    quantidade: (qtdNum !== null && qtdNum > 0) ? qtdNum : (fallbackItem ? fallbackItem.quantidade : 1),
+                    preco: precoFormatado,
+                    prazo: prazoItemStr || (temValorVendaOuDados ? prazoGlobal : '') || '',
+                    ncm: precoFormatado ? ncmStr : (ncmStr || ''),
+                    origem: precoFormatado ? origemStr : (origemStr || ''),
+                    icms: precoFormatado ? icmsStr : (icmsStr || '')
+                });
+            }
+
+            const totalItens = Math.max(itensCotacao.length, ultimoIndiceComDados + 1, 1);
+            return {
+                prazoGlobal,
+                itens: linhasExtraidas.slice(0, Math.min(totalItens, MAX_ITENS_PLANILHA_BASE))
+            };
+        }
+
+        async function enviarRespostaCotacaoPortal(dados) {
+            const itens = Array.isArray(dados && dados.itens) ? dados.itens : [];
+            const algumComPreco = itens.some(it => String(it.preco ?? '').trim() !== '');
+            const precos = itens.map(it => String(it.preco ?? '').trim());
+            const prazos = itens.map(it => {
+                const temPreco = String(it.preco ?? '').trim() !== '';
+                const p = String(it.prazo ?? '').trim();
+                return (!algumComPreco || temPreco) ? p : '';
+            });
+            const ncms = itens.map(it => String(it.ncm ?? '').trim());
+            const origens = itens.map(it => String(it.origem ?? '').trim());
+            const icms = itens.map(it => String(it.icms ?? '').trim());
+
+            const formData = new FormData();
+            formData.append('sessionId', localStorage.getItem('maestro_session') || '');
+            formData.append('portal', (dados && dados.portal) || 'coupa');
+            formData.append('evento', String((dados && dados.evento) || '').trim());
+            formData.append('precos', JSON.stringify(precos));
+            formData.append('prazos', JSON.stringify(prazos));
+            formData.append('ncms', JSON.stringify(ncms));
+            formData.append('origens', JSON.stringify(origens));
+            formData.append('icms', JSON.stringify(icms));
+
+            const datasheets = Array.isArray(dados && dados.datasheets) ? dados.datasheets : [];
+            const davs = Array.isArray(dados && dados.davs) ? dados.davs : [];
+            datasheets.forEach(f => formData.append('datasheet', f));
+            davs.forEach(f => formData.append('dav', f));
+
+            const resp = await fetch('/api/responder', { method: 'POST', body: formData });
+            const json = await resp.json().catch(() => ({}));
+            if (!resp.ok || json.error || json.sucesso === false) {
+                throw new Error(json.error || json.erro || `Falha ao enviar resposta (HTTP ${resp.status})`);
+            }
+            return json;
+        }
+
         window.exportarMinhasCotacoesWord = exportarMinhasCotacoesWord;
+        window.portalRoboDaCotacao = portalRoboDaCotacao;
+        window.lerPlanilhaBaseResposta = lerPlanilhaBaseResposta;
+        window.enviarRespostaCotacaoPortal = enviarRespostaCotacaoPortal;
 
         function obterTextoStatus(c) {
             if (isRespondida(c)) return 'Respondida';

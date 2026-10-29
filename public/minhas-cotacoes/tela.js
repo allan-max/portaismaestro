@@ -67,6 +67,26 @@
         return { num: num || s, origem };
     }
 
+    // portal de origem vindo do gerenciador (só Coupa e Vale exibem o botão Responder na cotação aberta)
+    function portalRobo(c) {
+        if (!c) return '';
+        const mapa = (typeof window !== 'undefined' && window.portaisRobo && Object.keys(window.portaisRobo).length ? window.portaisRobo : null) || estado.portais || {};
+        const bruto = String(c['COTAÇÃO'] ?? '').trim();
+        const limpo = numero(c).num;
+        const p = String(mapa[bruto] || mapa[limpo] || c.PORTAL || c.portal || '').trim().toLowerCase();
+        return (p === 'coupa' || p === 'vale') ? p : '';
+    }
+
+    function printsDe(c) {
+        if (!c) return [];
+        const mapaWin = (typeof window !== 'undefined' && window.printsRobo && typeof window.printsRobo === 'object') ? window.printsRobo : {};
+        const mapa = { ...mapaWin, ...(estado.printsRobo || {}) };
+        const bruto = String(c['COTAÇÃO'] ?? '').trim();
+        const limpo = numero(c).num;
+        const listaPrints = mapa[bruto] || mapa[limpo] || [];
+        return Array.isArray(listaPrints) ? listaPrints : [];
+    }
+
     // ---------- prazo e status ----------
     function dias(c) {
         const t = parseDataVenc(c.VENCIMENTO);
@@ -101,8 +121,26 @@
         lista: [], carregado: false, erro: '', busca: '', status: lembrado.status || 'pendentes',
         prazo: lembrado.prazo === 'dia' ? '' : lembrado.prazo || '', dia: null, de: lembrado.de || '', ate: lembrado.ate || '',
         locais: arr(lembrado.locais), marcas: arr(lembrado.marcas), ordem: lembrado.ordem || 'prioridade',
-        selecionadas: new Set(), aberta: null, confirmando: false, respondeuAgora: null, novos: new Set(), pop: null,
+        selecionadas: new Set(), aberta: null, confirmando: false, respondeuAgora: null, novos: new Set(), pop: null, portais: {},
+        respondendoPortal: false, respostas: {}, printsRobo: {}, captchaImagem: '',
     };
+    function dadosResposta(c) {
+        if (!c) return null;
+        const k = id(c);
+        if (!estado.respostas[k]) {
+            estado.respostas[k] = {
+                planilhaNome: '',
+                planilhaErro: '',
+                carregandoPlanilha: false,
+                davs: [],
+                datasheets: [],
+                itens: [],
+                enviando: false,
+                enviado: false,
+            };
+        }
+        return estado.respostas[k];
+    }
     const lembrar = () => gravar(CHAVE, JSON.stringify(Object.fromEntries(LEMBRAR.map(k => [k, estado[k]]))));
     const LIMITE_PRAZO = { hoje: 0, '7': 7, '15': 15, '30': 30 };
     function passaPrazo(c) {
@@ -151,6 +189,7 @@
         word: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13l1.5 5 2.5-4 2.5 4 1.5-5"/>',
         base: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/>',
         copiar: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+        responder: '<path d="M9 17 4 12l5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/>',
         ok: '<path d="m5 12 4 4L19 6"/>',
         fechar: '<path d="m6 6 12 12M6 18 18 6"/>',
         mais: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
@@ -167,6 +206,9 @@
         sair: '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>',
         atualizar: '<path d="M20 7a8.1 8.1 0 0 0-14-2L3 8M3 3v5h5M4 17a8.1 8.1 0 0 0 14 2l3-3M16 16h5v5"/>',
         cotacoes: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/>',
+        upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5M12 3v12"/>',
+        pdf: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15h6M9 11h3"/>',
+        enviar: '<path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4 20-7z"/>',
     };
     const icone = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONES[n] || ''}</svg>`;
 
@@ -273,8 +315,151 @@
             : `<button type="button" class="button pc-resp" data-acao="responder" data-id="${id(c)}">${icone('ok')}Marcar como respondida</button>`;
     }
 
+    function painelResponderPortal(c, portal) {
+        if (!portal || !estado.respondendoPortal) return '';
+        const k = id(c), d = dadosResposta(c);
+        const listaArq = (arrArq, tipo) => arrArq.length
+            ? `<div class="pc-drop-arquivos">${arrArq.map((a, idx) => `
+                <div class="pc-drop-arq">
+                    <span title="${esc(a.name)}">${icone('pdf')}<b>${esc(a.name)}</b></span>
+                    <button type="button" class="pc-drop-rem" data-acao="remover-arq-resp" data-tipo="${tipo}" data-idx="${idx}" data-id="${k}" title="Remover arquivo" aria-label="Remover ${esc(a.name)}">${icone('fechar')}</button>
+                </div>`).join('')}</div>`
+            : '';
+
+        const secaoItens = d.itens.length
+            ? `<div class="pc-resp-itens-wrap" id="pc-resp-itens-preview">
+                <div class="pc-resp-itens-head">
+                    <h4>Informações da Planilha Base <span class="nav-count">${d.itens.length} ${d.itens.length === 1 ? 'item' : 'itens'}</span></h4>
+                    <small>Confira os valores lidos da planilha ou edite qualquer campo abaixo antes de enviar.</small>
+                </div>
+                <div class="pc-resp-itens-lista">
+                    ${d.itens.map((it, idx) => `
+                        <div class="pc-resp-item-card" data-item-idx="${idx}">
+                            <div class="pc-resp-item-topo">
+                                <span class="pc-item-n">${idx + 1}</span>
+                                <strong>${esc(it.produto || `Item ${idx + 1}`)}</strong>
+                                <span class="pc-qtd">Qtd: ${esc(it.quantidade ?? 1)}</span>
+                            </div>
+                            <div class="pc-resp-campos-grid">
+                                <label class="pc-resp-campo">
+                                    <span>Valor Unitário de Venda (R$)</span>
+                                    <input type="text" data-resp-campo="preco" data-id="${k}" data-idx="${idx}" value="${esc(it.preco)}" placeholder="0,00">
+                                </label>
+                                <label class="pc-resp-campo">
+                                    <span>Prazo (Dias)</span>
+                                    <input type="text" inputmode="numeric" data-resp-campo="prazo" data-id="${k}" data-idx="${idx}" value="${esc(it.prazo)}" placeholder="Ex: 15">
+                                </label>
+                                <label class="pc-resp-campo">
+                                    <span>NCM</span>
+                                    <input type="text" data-resp-campo="ncm" data-id="${k}" data-idx="${idx}" value="${esc(it.ncm || '')}" placeholder="Ex: 8413.70.90">
+                                </label>
+                                <label class="pc-resp-campo">
+                                    <span>Origem</span>
+                                    <input type="text" data-resp-campo="origem" data-id="${k}" data-idx="${idx}" value="${esc(it.origem)}" placeholder="Ex: 0 ou Nacional">
+                                </label>
+                                <label class="pc-resp-campo">
+                                    <span>ICMS (%)</span>
+                                    <input type="text" data-resp-campo="icms" data-id="${k}" data-idx="${idx}" value="${esc(it.icms)}" placeholder="Ex: 18">
+                                </label>
+                            </div>
+                        </div>`).join('')}
+                </div>
+            </div>`
+            : '';
+
+        return `<section class="pc-det-sec pc-resp-painel" id="painel-responder-cotacao" aria-label="Responder cotação">
+            <div class="pc-resp-painel-topo">
+                <div>
+                    <h3>Responder no portal <span class="tag">${esc(portal.toUpperCase())}</span></h3>
+                    <p>Arraste a Planilha Base, o DAV e o Datasheet nos campos abaixo.</p>
+                </div>
+                <button type="button" class="button text small" data-acao="fechar-resp-portal" data-id="${k}">Fechar</button>
+            </div>
+            <div class="pc-drop-grid">
+                <div class="pc-drop-col">
+                    <label class="pc-dropzone ${d.planilhaNome ? 'preenchido' : ''}" id="drop-planilha-base" data-drop-tipo="planilha" data-id="${k}">
+                        <input type="file" id="input-resp-planilha" data-resp-file="planilha" data-id="${k}" accept=".xlsx,.xls" hidden>
+                        <span class="pc-drop-icone">${icone('base')}</span>
+                        <strong>Arraste a Planilha Base</strong>
+                        <small>${d.carregandoPlanilha ? 'Lendo planilha…' : 'ou clique para selecionar (.xlsx)'}</small>
+                    </label>
+                    ${d.planilhaNome ? `<div class="pc-drop-arquivos"><div class="pc-drop-arq ok"><span title="${esc(d.planilhaNome)}">${icone('excel')}<b>${esc(d.planilhaNome)}</b></span><button type="button" class="pc-drop-rem" data-acao="limpar-planilha-resp" data-id="${k}" title="Remover planilha" aria-label="Remover planilha">${icone('fechar')}</button></div></div>` : ''}
+                    ${d.planilhaErro ? `<small class="pc-drop-erro">${esc(d.planilhaErro)}</small>` : ''}
+                </div>
+                <div class="pc-drop-col">
+                    <label class="pc-dropzone ${d.davs.length ? 'preenchido' : ''}" id="drop-dav" data-drop-tipo="dav" data-id="${k}">
+                        <input type="file" id="input-resp-dav" data-resp-file="dav" data-id="${k}" accept=".pdf" multiple hidden>
+                        <span class="pc-drop-icone">${icone('upload')}</span>
+                        <strong>Arraste o DAV</strong>
+                        <small>ou clique para selecionar (.pdf)</small>
+                    </label>
+                    ${listaArq(d.davs, 'dav')}
+                </div>
+                <div class="pc-drop-col">
+                    <label class="pc-dropzone ${d.datasheets.length ? 'preenchido' : ''}" id="drop-datasheet" data-drop-tipo="datasheet" data-id="${k}">
+                        <input type="file" id="input-resp-datasheet" data-resp-file="datasheet" data-id="${k}" accept=".pdf" multiple hidden>
+                        <span class="pc-drop-icone">${icone('upload')}</span>
+                        <strong>Arraste o Datasheet</strong>
+                        <small>ou clique para selecionar (.pdf)</small>
+                    </label>
+                    ${listaArq(d.datasheets, 'datasheet')}
+                </div>
+            </div>
+            ${secaoItens}
+            <div class="pc-resp-rodape">
+                <button type="button" class="button text" data-acao="fechar-resp-portal" data-id="${k}">Cancelar</button>
+                <button type="button" class="button primary" id="btn-enviar-resposta-portal" data-acao="enviar-resp-portal" data-id="${k}" ${d.enviando || !d.itens.length ? 'disabled' : ''}>
+                    ${icone('enviar')}<span>${d.enviando ? 'Enviando para a fila…' : 'Enviar Resposta'}</span>
+                </button>
+            </div>
+        </section>`;
+    }
+
+    function secaoPrintsEvento(c) {
+        const prints = printsDe(c);
+        if (!prints.length) return '';
+        return `<section class="pc-det-sec pc-prints-sec" id="prints-itens-respondidos" aria-label="Prints dos itens respondidos">
+            <h3>Prints dos itens respondidos <span class="nav-count">${prints.length} ${prints.length === 1 ? 'item' : 'itens'}</span></h3>
+            <div class="pc-prints-grid">
+                ${prints.map((p, idx) => {
+                    const numItem = p.item || (idx + 1);
+                    const src = String(p.imagem || '').startsWith('data:image') ? p.imagem : `data:image/png;base64,${p.imagem || ''}`;
+                    return `<figure class="pc-print-card" data-print-item="${numItem}">
+                        <figcaption>
+                            <b>Item ${esc(numItem)}</b>
+                            <span>${p.preco ? `R$ ${esc(p.preco)}` : ''}${p.preco && p.prazo ? ' · ' : ''}${p.prazo ? `${esc(p.prazo)}d` : ''}</span>
+                        </figcaption>
+                        <a href="${esc(src)}" target="_blank" rel="noopener" title="Abrir print do Item ${esc(numItem)} em tamanho original">
+                            <img src="${esc(src)}" alt="Print do Item ${esc(numItem)} respondido" loading="lazy">
+                        </a>
+                    </figure>`;
+                }).join('')}
+            </div>
+        </section>`;
+    }
+
+    function painelCaptchaGlobal() {
+        if (!estado.captchaImagem) return '';
+        const src = String(estado.captchaImagem).startsWith('data:image')
+            ? estado.captchaImagem
+            : `data:image/png;base64,${estado.captchaImagem}`;
+        return `<section class="panel pc-captcha-banner" id="painel-captcha-vendedores" role="alert" aria-live="assertive">
+            <div class="pc-captcha-topo">
+                <div>
+                    <div class="eyebrow">Intervenção de segurança solicitada pelo portal</div>
+                    <h2>⚠️ Desafio Captcha Detectado</h2>
+                    <p>Qualquer vendedor pode clicar na imagem abaixo para responder ao Captcha e liberar o robô.</p>
+                </div>
+                <button type="button" class="button text small" data-acao="fechar-captcha">Ocultar</button>
+            </div>
+            <div class="pc-captcha-palco">
+                <img id="imagem-captcha-vendedor" src="${esc(src)}" alt="Desafio Captcha do Portal">
+            </div>
+        </section>`;
+    }
+
     function detalhe(c) {
-        const p = prazo(c), its = itens(c), resp = respondida(c), { num, origem } = numero(c);
+        const p = prazo(c), its = itens(c), resp = respondida(c), { num, origem } = numero(c), portal = portalRobo(c);
         return `<div class="pc-det">
             <header class="pc-det-topo">
                 <div class="eyebrow">Cotação · ${esc(localDe(c))}${origem ? ` · ${esc(origem)}` : ''}</div>
@@ -287,8 +472,11 @@
                 <button type="button" class="button" data-acao="copiar" data-id="${id(c)}">${icone('copiar')}Copiar itens</button>
                 <button type="button" class="button" data-acao="word" data-id="${id(c)}">${icone('word')}Word Coupa</button>
                 <button type="button" class="button" id="btn-exportar-planilha-base" data-acao="base" data-id="${id(c)}">${icone('base')}Planilha Base</button>
+                ${portal ? `<button type="button" class="button ${estado.respondendoPortal ? 'primary' : ''}" id="btn-responder-cotacao" data-acao="responder-portal" data-portal="${portal}" data-id="${id(c)}" aria-pressed="${estado.respondendoPortal}">${icone('responder')}Responder</button>` : ''}
                 ${botaoResposta(c)}
             </div>
+            ${painelResponderPortal(c, portal)}
+            ${secaoPrintsEvento(c)}
             <section class="pc-det-sec">
                 <h3>Produtos <span class="nav-count">${its.length} ${its.length === 1 ? 'item' : 'itens'}</span></h3>
                 ${itensTabela(c)}
@@ -385,6 +573,22 @@
     function cartao(c, i) {
         const p = prazo(c), its = itens(c), resp = respondida(c), { num, origem } = numero(c), k = id(c), novo = estado.novos.has(k);
         const qtd = its.length > 1 ? `${its.length} itens` : its[0].qtd;
+        const prints = printsDe(c);
+        const blocoPrintsCard = prints.length
+            ? `<div class="b-prints-card" id="prints-card-${k}" aria-label="Prints dos itens respondidos">
+                <div class="b-prints-titulo"><span>📸 ${prints.length} ${prints.length === 1 ? 'item salvo' : 'itens salvos'}</span></div>
+                <div class="b-prints-lista">
+                    ${prints.map((pr, idx) => {
+                        const nItem = pr.item || (idx + 1);
+                        const src = String(pr.imagem || '').startsWith('data:image') ? pr.imagem : `data:image/png;base64,${pr.imagem || ''}`;
+                        return `<div class="b-print-thumb" title="Item ${esc(nItem)}${pr.preco ? ` · R$ ${esc(pr.preco)}` : ''}">
+                            <img src="${esc(src)}" alt="Print Item ${esc(nItem)}" loading="lazy">
+                            <span>Item ${esc(nItem)}</span>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>`
+            : '';
         return `<article class="b-card ${resp ? 'feita' : ''} ${novo ? 'pc-novo' : ''} ${primeira ? 'entra' : ''}" style="--i:${Math.min(i, 10) + 6};--cor:${resp ? 'var(--green)' : COR[p.cls]}" data-acao="abrir" data-id="${k}" tabindex="0" aria-label="Cotação ${esc(num)}: ${esc(its[0].nome)}">
             <div class="b-num-linha">
                 <span class="b-num" title="${esc(c['COTAÇÃO'])}">${esc(num)}</span>
@@ -397,6 +601,7 @@
                 ${resp ? '' : `<div class="pc-urg ${p.cls}"><i style="--w:${Math.round(p.urg * 100)}%"></i></div>`}</div>
             <div class="b-nome">${esc(its[0].nome)}</div>
             <div class="b-chips"><span class="pc-qtd">${esc(qtd)}</span>${its[0].codigo ? `<span class="pc-cod">${esc(its[0].codigo)}</span>` : ''}${marcasDe(c) ? `<span class="tag">${esc(marcasDe(c))}</span>` : ''}${its.length > 1 ? `<span class="pc-mais" style="font-size:10px">+${its.length - 1} produto(s)</span>` : ''}</div>
+            ${blocoPrintsCard}
             <div class="b-pe"><span class="lugar">${icone('local')}${esc(localDe(c))}</span>
                 <button type="button" class="button small" data-acao="copiar" data-id="${k}">${icone('copiar')}Copiar itens</button>
                 <details class="pc-pop b-mais" id="menu-${k}" ${estado.pop === 'menu-' + k ? 'open' : ''}>
@@ -444,13 +649,14 @@
 
     function render(main) {
         if (estado.erro && !estado.carregado) {
-            main.innerHTML = `<div class="mc-estado erro"><p>Não foi possível carregar suas cotações: ${esc(estado.erro)}</p><button type="button" class="button" data-acao="atualizar">Tentar de novo</button></div>`;
+            main.innerHTML = `${painelCaptchaGlobal()}<div class="mc-estado erro"><p>Não foi possível carregar suas cotações: ${esc(estado.erro)}</p><button type="button" class="button" data-acao="atualizar">Tentar de novo</button></div>`;
             return;
         }
-        if (!estado.carregado) { main.innerHTML = '<div class="mc-estado">Carregando suas cotações…</div>'; return; }
+        if (!estado.carregado) { main.innerHTML = `${painelCaptchaGlobal()}<div class="mc-estado">Carregando suas cotações…</div>`; return; }
         const n = contagem(), l = filtradas();
         const feitasHoje = n.hoje - n.hojePend, pct = Math.round(feitasHoje / Math.max(1, n.hoje) * 100);
         main.innerHTML = `
+            ${painelCaptchaGlobal()}
             <div class="dash-titulo ${primeira ? 'entra' : ''}"><div><div class="eyebrow">Área do vendedor</div><h1>Minhas cotações</h1>
                 <p>Comece por <b class="red">Vence hoje</b>. Clique num cartão para ver os produtos e exportar.</p></div>
                 <div class="dash-estado"><a class="button" href="https://cotafrete.ventura.inf.br/dav" target="_blank" rel="noopener" title="Abrir o Gerar DAV no Cotafrete">GERAR DAV</a><button type="button" class="button" data-acao="atualizar" title="Buscar de novo na planilha">${icone('atualizar')}Atualizar</button>
@@ -499,7 +705,11 @@
     }
 
     // ---------- dados do socket ----------
-    function receber(novaLista) {
+    function receber(novaLista, portais, prints) {
+        if (portais && typeof portais === 'object') estado.portais = portais;
+        else if (typeof window !== 'undefined' && window.portaisRobo && typeof window.portaisRobo === 'object') estado.portais = window.portaisRobo;
+        if (prints && typeof prints === 'object') estado.printsRobo = { ...estado.printsRobo, ...prints };
+        else if (typeof window !== 'undefined' && window.printsRobo && typeof window.printsRobo === 'object') estado.printsRobo = { ...estado.printsRobo, ...window.printsRobo };
         const antes = new Set(estado.lista.map(id));
         estado.lista = registrar(novaLista || []);
         const agora = new Set(estado.lista.map(id));
@@ -512,6 +722,52 @@
         estado.selecionadas = new Set([...estado.selecionadas].filter(k => agora.has(k)));
         estado.carregado = true;
         estado.erro = '';
+        redesenhar();
+    }
+
+    function receberPrintsEvento(eventoId, prints) {
+        const chave = String(eventoId || '').replace(/^Evento\s+/i, '').trim();
+        if (!chave || !Array.isArray(prints)) return;
+        estado.printsRobo[chave] = prints;
+        if (typeof window !== 'undefined' && window.printsRobo) {
+            window.printsRobo[chave] = prints;
+        }
+        redesenhar();
+    }
+
+    let timerCaptchaGlobal = null;
+    function receberCaptcha(imagemB64) {
+        if (!imagemB64) return;
+        const jaEstavaAberto = Boolean(estado.captchaImagem);
+        const novaSrc = String(imagemB64).startsWith('data:image')
+            ? String(imagemB64)
+            : `data:image/png;base64,${imagemB64}`;
+        estado.captchaImagem = String(imagemB64);
+        const imgExistente = document.getElementById('imagem-captcha-vendedor');
+        if (jaEstavaAberto && imgExistente) {
+            imgExistente.src = novaSrc;
+        } else {
+            // Garante que o Captcha apareça na tela principal de minhas_cotacoes.html (fechando qualquer modal por cima)
+            estado.aberta = null;
+            estado.respondendoPortal = false;
+            redesenhar();
+            toast('⚠️ <b>Captcha detectado!</b> Clique na imagem do Captcha na tela principal para liberar o robô.');
+            const painel = document.getElementById('painel-captcha-vendedores');
+            if (painel && typeof painel.scrollIntoView === 'function') {
+                painel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+        clearTimeout(timerCaptchaGlobal);
+        timerCaptchaGlobal = setTimeout(() => {
+            fecharCaptcha();
+        }, 8000);
+    }
+
+    function fecharCaptcha() {
+        clearTimeout(timerCaptchaGlobal);
+        timerCaptchaGlobal = null;
+        if (!estado.captchaImagem) return;
+        estado.captchaImagem = '';
         redesenhar();
     }
     function falhou(msg) {
@@ -527,8 +783,8 @@
     }
 
     // ---------- ações ----------
-    function abrir(v) { estado.aberta = Number(v); estado.confirmando = false; estado.respondeuAgora = null; estado.novos.delete(Number(v)); redesenhar(); }
-    function fechar() { estado.aberta = null; estado.confirmando = false; estado.respondeuAgora = null; redesenhar(); }
+    function abrir(v) { estado.aberta = Number(v); estado.confirmando = false; estado.respondeuAgora = null; estado.respondendoPortal = false; estado.novos.delete(Number(v)); redesenhar(); }
+    function fechar() { estado.aberta = null; estado.confirmando = false; estado.respondeuAgora = null; estado.respondendoPortal = false; redesenhar(); }
     function navegar(passo) {
         const l = filtradas();
         if (!l.length) return;
@@ -558,6 +814,79 @@
         toast(`Cotação <b>${esc(numero(c).num)}</b> marcada como respondida.`);
     }
 
+    async function receberArquivosResposta(k, tipo, fileList) {
+        const c = porId(k);
+        if (!c || !fileList || !fileList.length) return;
+        const d = dadosResposta(c);
+        const arquivos = Array.from(fileList);
+
+        if (tipo === 'planilha') {
+            const arq = arquivos[0];
+            d.planilhaNome = arq.name || 'planilha_base.xlsx';
+            d.planilhaErro = '';
+            d.carregandoPlanilha = true;
+            redesenhar();
+            try {
+                if (typeof lerPlanilhaBaseResposta !== 'function') {
+                    throw new Error('Leitor de Planilha Base indisponível.');
+                }
+                const lido = await lerPlanilhaBaseResposta(arq, c);
+                d.itens = Array.isArray(lido && lido.itens) ? lido.itens : [];
+                d.carregandoPlanilha = false;
+                d.enviado = false;
+                redesenhar();
+                toast(`Planilha <b>${esc(d.planilhaNome)}</b> carregada (${d.itens.length} ${d.itens.length === 1 ? 'item' : 'itens'}). Confira os dados abaixo.`);
+            } catch (err) {
+                d.carregandoPlanilha = false;
+                d.planilhaErro = (err && err.message) ? err.message : 'Erro ao ler a planilha.';
+                redesenhar();
+                toast(`Não foi possível ler a planilha: ${esc(d.planilhaErro)}`);
+            }
+        } else if (tipo === 'dav') {
+            arquivos.forEach(f => d.davs.push(f));
+            redesenhar();
+        } else if (tipo === 'datasheet') {
+            arquivos.forEach(f => d.datasheets.push(f));
+            redesenhar();
+        }
+    }
+
+    async function enviarRespostaDoModal(c) {
+        if (!c) return;
+        const d = dadosResposta(c);
+        if (!d.itens.length) {
+            toast('Arraste a Planilha Base primeiro para carregar os itens da resposta.');
+            return;
+        }
+        const temAlgumValor = d.itens.some(it => String(it.preco ?? '').trim() !== '' || String(it.prazo ?? '').trim() !== '');
+        if (!temAlgumValor) {
+            toast('Preencha ao menos o Valor Unitário de Venda ou Prazo de um item antes de enviar.');
+            return;
+        }
+        d.enviando = true;
+        redesenhar();
+        try {
+            const portal = portalRobo(c) || 'coupa';
+            const num = numero(c).num;
+            await enviarRespostaCotacaoPortal({
+                portal,
+                evento: num,
+                itens: d.itens,
+                davs: d.davs,
+                datasheets: d.datasheets,
+            });
+            d.enviando = false;
+            d.enviado = true;
+            estado.respondendoPortal = false;
+            redesenhar();
+            toast(`Cotação <b>${esc(num)}</b> enviada para a fila de resposta do robô!`);
+        } catch (err) {
+            d.enviando = false;
+            redesenhar();
+            toast(`Falha ao enviar resposta: ${esc((err && err.message) || 'erro desconhecido')}`);
+        }
+    }
+
     const ACOES = {
         abrir: el => abrir(el.dataset.id),
         fechar,
@@ -577,6 +906,24 @@
         base: (el, c) => exportarCotacaoPlanilhaBase(c),
         copiar: (el, c) => copiarItens(c),
         'copiar-num': (el, c) => copiar(numero(c).num, `Número <b>${esc(numero(c).num)}</b> copiado.`),
+        'responder-portal': () => { estado.respondendoPortal = !estado.respondendoPortal; redesenhar(); },
+        'fechar-resp-portal': () => { estado.respondendoPortal = false; redesenhar(); },
+        'limpar-planilha-resp': (el, c) => {
+            const d = dadosResposta(c);
+            d.planilhaNome = '';
+            d.planilhaErro = '';
+            d.itens = [];
+            redesenhar();
+        },
+        'remover-arq-resp': (el, c) => {
+            const d = dadosResposta(c);
+            const idx = Number(el.dataset.idx);
+            const lista = el.dataset.tipo === 'dav' ? d.davs : d.datasheets;
+            if (Array.isArray(lista) && idx >= 0 && idx < lista.length) lista.splice(idx, 1);
+            redesenhar();
+        },
+        'enviar-resp-portal': (el, c) => enviarRespostaDoModal(c),
+        'fechar-captcha': () => fecharCaptcha(),
         responder: () => { estado.confirmando = true; redesenhar(); },
         'cancelar-resp': () => { estado.confirmando = false; redesenhar(); },
         'confirmar-resp': (el, c) => confirmarResposta(c),
@@ -584,9 +931,21 @@
         'exp-word': () => exportarLista('word'),
     };
     // ações sobre uma cotação que sumiu numa recarga do socket não fazem nada
-    const PRECISA_COTACAO = ['word', 'base', 'copiar', 'copiar-num', 'confirmar-resp'];
+    const PRECISA_COTACAO = ['word', 'base', 'copiar', 'copiar-num', 'confirmar-resp', 'limpar-planilha-resp', 'remover-arq-resp', 'enviar-resp-portal'];
 
     document.addEventListener('click', e => {
+        if (e.target && e.target.id === 'imagem-captcha-vendedor') {
+            const img = e.target;
+            img.style.opacity = '0.5';
+            setTimeout(() => { img.style.opacity = '1'; }, 150);
+            const rect = img.getBoundingClientRect ? img.getBoundingClientRect() : { width: 1, height: 1 };
+            const escalaX = (img.naturalWidth || rect.width || 1) / (rect.width || 1);
+            const escalaY = (img.naturalHeight || rect.height || 1) / (rect.height || 1);
+            const x = Math.round((e.offsetX || 0) * escalaX);
+            const y = Math.round((e.offsetY || 0) * escalaY);
+            if (typeof clicarCaptchaGlobal === 'function') clicarCaptchaGlobal(x, y);
+            return;
+        }
         document.querySelectorAll('details.pc-pop[open]').forEach(d => { if (!d.contains(e.target)) d.open = false; });
         const alvo = e.target.closest('[data-acao]');
         if (!alvo) { if (e.target.id === 'pc-modal') fechar(); return; }
@@ -610,7 +969,13 @@
     }, true);
     document.addEventListener('change', e => {
         const t = e.target;
-        if (t.dataset.multi) {
+        if (t.dataset.respFile) {
+            const arquivos = t.files;
+            const k = Number(t.dataset.id);
+            const tipo = t.dataset.respFile;
+            receberArquivosResposta(k, tipo, arquivos);
+            t.value = '';
+        } else if (t.dataset.multi) {
             const v = estado[t.dataset.multi];
             mudar({ [t.dataset.multi]: t.checked ? [...v, t.value] : v.filter(x => x !== t.value) });
         } else if (t.dataset.data) {
@@ -624,6 +989,14 @@
     });
     document.addEventListener('input', e => {
         const t = e.target;
+        if (t.dataset && t.dataset.respCampo) {
+            const c = porId(t.dataset.id);
+            if (!c) return;
+            const d = dadosResposta(c);
+            const idx = Number(t.dataset.idx);
+            if (d.itens[idx]) d.itens[idx][t.dataset.respCampo] = t.value;
+            return;
+        }
         if (t.hasAttribute('data-pop-busca')) {
             const q = t.value.trim().toLowerCase();
             t.parentElement.querySelectorAll('.pc-pop-lista label').forEach(l => { l.hidden = !!q && !l.dataset.valor.includes(q); });
@@ -635,6 +1008,27 @@
         redesenhar();
         const novo = document.getElementById('pc-busca');
         if (novo) { novo.focus(); novo.setSelectionRange(pos, pos); }
+    });
+    document.addEventListener('dragover', e => {
+        const dz = e.target.closest && e.target.closest('.pc-dropzone[data-drop-tipo]');
+        if (!dz) return;
+        e.preventDefault();
+        dz.classList.add('arrastando');
+    });
+    document.addEventListener('dragleave', e => {
+        const dz = e.target.closest && e.target.closest('.pc-dropzone[data-drop-tipo]');
+        if (!dz) return;
+        if (!dz.contains(e.relatedTarget)) dz.classList.remove('arrastando');
+    });
+    document.addEventListener('drop', e => {
+        const dz = e.target.closest && e.target.closest('.pc-dropzone[data-drop-tipo]');
+        if (!dz) return;
+        e.preventDefault();
+        dz.classList.remove('arrastando');
+        const files = e.dataTransfer && e.dataTransfer.files;
+        if (files && files.length) {
+            receberArquivosResposta(Number(dz.dataset.id), dz.dataset.dropTipo, files);
+        }
     });
     document.addEventListener('keydown', e => {
         const digitando = /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName);
@@ -655,5 +1049,5 @@
     if (topo) topo.innerHTML = nav();
     redesenhar();
 
-    window.Tela = { estado, filtradas, contagem, itens, numero, dias, alvoExportacao, exportarLista, receber, falhou, conexao, toast, abrir, id };
+    window.Tela = { estado, filtradas, contagem, itens, numero, portalRobo, printsDe, dadosResposta, receberArquivosResposta, enviarRespostaDoModal, receberPrintsEvento, receberCaptcha, fecharCaptcha, painelCaptchaGlobal, cartao, detalhe, dias, alvoExportacao, exportarLista, receber, falhou, conexao, toast, abrir, id };
 })();
