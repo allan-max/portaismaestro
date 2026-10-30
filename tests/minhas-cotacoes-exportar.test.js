@@ -393,6 +393,35 @@ test('socket: vencidas ficam fora da tela e marcar como respondida envia a ident
     assert.equal(Tela.estado.erro, 'planilha indisponível');
 });
 
+test('socket: cotações da Planilha Anmyna aparecem em minhas_cotacoes e marcar como respondida usa comando_marcar_respondida_anmyna', () => {
+    const { context, handlers, emitted } = setupMinhasCotacoesEnv();
+    const Tela = context.window.Tela;
+
+    handlers.retorno_planilha_json({
+        sucesso: true,
+        cotacoes: [
+            {
+                'COTAÇÃO': 'ANM-9001',
+                'VENCIMENTO': dataRel(2),
+                'ITEM': 'PRODUTO ANMYNA 1',
+                'VENDEDOR': 'MARCIA',
+                'LOCALIDADE': 'NESTLE',
+                'ORIGEM_PLANILHA': 'anmyna',
+                'ABA_ANMYNA': 'COTAÇÕES 2025'
+            }
+        ]
+    });
+    assert.deepEqual(Tela.estado.lista.map(c => c['COTAÇÃO']), ['ANM-9001']);
+    assert.equal(Tela.estado.carregado, true);
+
+    context.marcarComoRespondida(Tela.estado.lista[0]);
+    const envio = emitted.find(e => e[0] === 'comando_marcar_respondida_anmyna');
+    assert.ok(envio, 'Deve emitir comando_marcar_respondida_anmyna');
+    assert.equal(envio[1].chave, 'ANM-9001');
+    assert.equal(envio[1].aba, 'COTAÇÕES 2025');
+    assert.equal(envio[1].respondido, 'SIM');
+});
+
 test('minhas_cotacoes.html inclui template_planilha_base.js e a tela exporta Word Coupa e Planilha Base por cotação', () => {
     const html = fs.readFileSync(path.join(__dirname, '../public/minhas_cotacoes.html'), 'utf8');
     const tela = fs.readFileSync(path.join(__dirname, '../public/minhas-cotacoes/tela.js'), 'utf8');

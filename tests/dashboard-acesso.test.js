@@ -13,12 +13,16 @@ function setup(user = { admin: true }) {
   dashboard.conectar(socket);
   return { sessions, handlers, messages, pending, dashboard, socket };
 }
-test('somente admin da sessão real pode pedir dados; flags do cliente não concedem acesso', () => {
-  for (const user of [{ admin: false }, { admin: false, dashboard_access: true }, { admin: false, dev: true }]) {
+test('somente admin ou dashboard_access da sessão real pode pedir dados; flags do cliente não concedem acesso', () => {
+  for (const user of [{ admin: false }, { admin: false, portais_access: true }, { admin: false, dev: true }]) {
     const s = setup(user); s.handlers.solicitar_dashboard_cotacoes({ admin: true, clientId: 'alvo' });
     assert.equal(s.pending.length, 0); assert.equal(s.messages.at(-1).d.codigo, 'SEM_PERMISSAO');
     s.dashboard.fechar();
   }
+  const sOk = setup({ admin: false, dashboard_access: true });
+  sOk.handlers.solicitar_dashboard_cotacoes({});
+  assert.equal(sOk.pending.length, 1);
+  sOk.dashboard.fechar();
 });
 test('sessão expirada e sessão removida não chegam ao robô', () => {
   for (const expired of [true, false]) {

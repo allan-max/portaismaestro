@@ -1,0 +1,2150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAESTRO | Planilha Anmyna</title>
+    <link rel="icon" type="image/png" href="favicon-32x32.png">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+
+    <script>
+        if (!localStorage.getItem('maestro_session')) {
+            window.location.href = 'index.html';
+        }
+    </script>
+    
+    <style>
+        :root {
+            --bg-body: #10141b;
+            --bg-navbar: #161b22;
+            --bg-card: #1c2433;
+            --bg-card-hover: #212b3d;
+            --bg-search: #161b22;
+            --text-main: #f8fafc;
+            --text-muted: #8b9eb3;
+            --accent-blue: #2563eb;
+            --accent-green: #10b981;
+            --accent-purple: #8b5cf6;
+            --accent-red: #ef4444;
+            --accent-amber: #f59e0b;
+            --border-color: #2a3441;
+        }
+        
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            background-color: var(--bg-body) !important;
+            color: var(--text-main) !important;
+            overflow-y: scroll;
+        }
+
+        /* Top Navbar */
+        .top-navbar {
+            display: flex;
+            align-items: center;
+            background-color: var(--bg-navbar);
+            padding: 0 20px;
+            height: 60px;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .menu-icon {
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            margin-right: 20px;
+            cursor: pointer;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-right: auto;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .tab-btn.active {
+            background-color: var(--accent-purple);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        }
+        
+        .tab-btn:not(.active) {
+            background-color: rgba(255,255,255,0.03);
+            border-color: rgba(255,255,255,0.05);
+        }
+        .tab-btn:not(.active):hover {
+            color: #ffffff;
+            background-color: rgba(255,255,255,0.08);
+        }
+
+        /* Page Content */
+        .page-content {
+            padding: 30px 40px 100px 40px;
+            max-width: 1650px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+            color: #ffffff;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.35);
+            flex-shrink: 0;
+        }
+
+        .header-text h1 {
+            margin: 0 0 5px 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .header-text p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Summary KPI Cards */
+        .kpi-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .kpi-card {
+            flex: 1;
+            min-width: 180px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .kpi-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+        .kpi-icon.purple { background: rgba(139, 92, 246, 0.15); color: #8b5cf6; }
+        .kpi-icon.green { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        .kpi-icon.amber { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+        .kpi-icon.blue { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+
+        .kpi-data {
+            display: flex;
+            flex-direction: column;
+        }
+        .kpi-num {
+            font-size: 1.3rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        .kpi-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        /* Search & Filters */
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex: 2;
+            min-width: 250px;
+            background: var(--bg-search);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .search-box i {
+            color: var(--text-muted);
+        }
+
+        .search-box input {
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            width: 100%;
+            outline: none;
+        }
+        
+        .search-box input::placeholder {
+            color: #4b5563;
+        }
+
+        .select-filter {
+            background: var(--bg-navbar);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 500;
+            outline: none;
+            cursor: pointer;
+        }
+        .select-filter option {
+            background: var(--bg-card);
+            color: var(--text-main);
+        }
+
+        .btn-filter {
+            background: var(--bg-navbar);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 10px 16px;
+            border-radius: 10px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .btn-filter:hover {
+            color: #ffffff;
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.15);
+        }
+
+        .btn-filter.btn-export {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.3);
+            color: #10b981;
+        }
+        .btn-filter.btn-export:hover {
+            background: #10b981;
+            color: #ffffff;
+        }
+
+        .total-records {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-left: auto;
+            white-space: nowrap;
+        }
+        .total-records span {
+            color: var(--text-main);
+            font-weight: 700;
+        }
+
+        /* Table */
+        .modern-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 8px;
+        }
+
+        .modern-table th {
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 0.8rem;
+            padding: 0 14px 6px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            letter-spacing: 0.3px;
+            user-select: none;
+        }
+
+        .modern-table td {
+            background: var(--bg-card);
+            padding: 10px 14px;
+            vertical-align: middle;
+            transition: background 0.15s ease;
+            font-size: 0.8rem;
+        }
+
+        .modern-table tr td:first-child {
+            border-top-left-radius: 10px;
+            border-bottom-left-radius: 10px;
+            position: relative;
+        }
+
+        .modern-table tr td:last-child {
+            border-top-right-radius: 10px;
+            border-bottom-right-radius: 10px;
+        }
+
+        .modern-table tr:hover td {
+            background: var(--bg-card-hover);
+        }
+
+        /* Left Purple Accent on Row */
+        .row-accent td:first-child::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: #8b5cf6;
+            border-top-left-radius: 10px;
+            border-bottom-left-radius: 10px;
+        }
+
+        /* Cell Content Styles */
+        .cell-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .doc-icon {
+            background: rgba(255,255,255,0.05);
+            color: var(--text-main);
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 7px;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+
+        .cell-main-text {
+            font-weight: 600;
+            font-size: 0.82rem;
+            color: var(--text-main);
+            line-height: 1.25;
+            word-break: break-all;
+        }
+
+        .cell-sub-text {
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            line-height: 1.25;
+            margin-top: 2px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .cotacao-clicavel {
+            color: #c4b5fd;
+            transition: color 0.15s, text-decoration 0.15s;
+        }
+        .cotacao-clicavel:hover {
+            color: #a78bfa !important;
+            text-decoration: underline;
+        }
+
+        /* Badges & Pills */
+        .badge-pill {
+            padding: 2px 6px;
+            border-radius: 5px;
+            font-size: 0.68rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .badge-portal {
+            background: rgba(139, 92, 246, 0.15);
+            color: #a78bfa;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+        .badge-empresa {
+            background: rgba(56, 189, 248, 0.12);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.25);
+        }
+        .badge-resp-sim {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .badge-resp-nao {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .venc-tag {
+            font-size: 0.68rem;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        .venc-hoje { background: #dc2626; color: #fff; }
+        .venc-passado { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+        .venc-futuro { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+
+        .action-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: var(--text-muted);
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-left: 3px;
+        }
+        .action-btn:hover {
+            background: rgba(255,255,255,0.15);
+            color: var(--text-main);
+        }
+        .action-btn.check:hover {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            border-color: rgba(16, 185, 129, 0.4);
+        }
+        .action-btn.edit:hover {
+            background: rgba(56, 189, 248, 0.2);
+            color: #38bdf8;
+            border-color: rgba(56, 189, 248, 0.4);
+        }
+
+        /* Modais */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000000;
+            padding: 20px;
+        }
+        .modal-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            width: min(650px, 95vw);
+            max-height: 88vh;
+            overflow-y: auto;
+            position: relative;
+            color: var(--text-main);
+            box-shadow: 0 20px 45px rgba(0,0,0,0.6);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .modal-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-fechar {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.4rem;
+            cursor: pointer;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+        .btn-fechar:hover { color: #ffffff; }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        .form-control {
+            width: 100%;
+            box-sizing: border-box;
+            background: var(--bg-body);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 9px 12px;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            outline: none;
+        }
+        .form-control:focus {
+            border-color: var(--accent-purple);
+        }
+
+        /* Floating Navbar */
+        .floating-navbar {
+            position: fixed !important; top: 25px !important; left: 50% !important; transform: translateX(-50%) !important;
+            background: rgba(15, 17, 21, 0.85) !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important; border-radius: 40px !important; padding: 6px 10px !important;
+            display: flex !important; gap: 5px !important; z-index: 999999 !important; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6) !important;
+        }
+        .nav-item {
+            color: #9aa0a6 !important; text-decoration: none !important; padding: 8px 12px !important;
+            border-radius: 30px !important; font-family: 'Inter', sans-serif !important; font-size: 11px !important;
+            font-weight: 600 !important; text-transform: uppercase !important; letter-spacing: 0.5px !important;
+            display: flex !important; align-items: center !important; gap: 8px !important; transition: all 0.2s !important;
+        }
+        .nav-item:hover { color: #fff !important; background: rgba(255, 255, 255, 0.1) !important; }
+        .nav-item.active.nav-anmyna { background: #8b5cf6 !important; color: #fff !important; box-shadow: 0 0 15px rgba(139, 92, 246, 0.4) !important; }
+        .nav-item.nav-voltar { color: #f87171 !important; }
+
+        /* Detail field item */
+        .detail-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+        .detail-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+        .detail-value {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-main);
+            text-align: right;
+            word-break: break-word;
+            max-width: 65%;
+        }
+        .btn-copy-field {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            margin-left: 8px;
+            font-size: 0.85rem;
+        }
+        .btn-copy-field:hover { color: #38bdf8; }
+
+        /* Column Hide CSS */
+        #view-anmyna.hide-col-0 th:nth-child(1), #view-anmyna.hide-col-0 td:nth-child(1) { display: none !important; }
+        #view-anmyna.hide-col-1 th:nth-child(2), #view-anmyna.hide-col-1 td:nth-child(2) { display: none !important; }
+        #view-anmyna.hide-col-2 th:nth-child(3), #view-anmyna.hide-col-2 td:nth-child(3) { display: none !important; }
+        #view-anmyna.hide-col-3 th:nth-child(4), #view-anmyna.hide-col-3 td:nth-child(4) { display: none !important; }
+        #view-anmyna.hide-col-4 th:nth-child(5), #view-anmyna.hide-col-4 td:nth-child(5) { display: none !important; }
+        #view-anmyna.hide-col-5 th:nth-child(6), #view-anmyna.hide-col-5 td:nth-child(6) { display: none !important; }
+        #view-anmyna.hide-col-6 th:nth-child(7), #view-anmyna.hide-col-6 td:nth-child(7) { display: none !important; }
+        #view-anmyna.hide-col-7 th:nth-child(8), #view-anmyna.hide-col-7 td:nth-child(8) { display: none !important; }
+
+        /* Estilos dos inputs nos modais de formulário */
+        .manual-input {
+            width: 100%;
+            box-sizing: border-box;
+            background: #161b22;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            border-radius: 4px;
+            padding: 6px 8px;
+            font-size: 0.8rem;
+            font-family: inherit;
+        }
+        .manual-input:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.25);
+        }
+
+        /* ================= RESPONSIVIDADE ================= */
+        @media (max-width: 900px) {
+            .page-content {
+                padding: 15px 15px 95px 15px;
+            }
+            .kpi-container {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+            .toolbar {
+                gap: 8px;
+            }
+            .search-box {
+                min-width: 100%;
+                flex: 1 1 100%;
+            }
+            .select-filter, .btn-filter, .btn-export {
+                flex: 1 1 auto;
+                font-size: 0.8rem;
+                padding: 6px 10px;
+            }
+            .total-records {
+                width: 100%;
+                margin-left: 0;
+                text-align: right;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            .header-left {
+                width: 100%;
+            }
+            .header-text h1 {
+                font-size: 1.2rem;
+            }
+            .header-text p {
+                font-size: 0.8rem;
+            }
+            .kpi-card {
+                padding: 10px 12px;
+            }
+            .kpi-icon {
+                width: 34px;
+                height: 34px;
+                font-size: 0.95rem;
+            }
+            .kpi-num {
+                font-size: 1.15rem;
+            }
+            .kpi-label {
+                font-size: 0.7rem;
+            }
+            .floating-navbar {
+                top: auto !important;
+                bottom: 12px !important;
+                width: max-content !important;
+                max-width: 95% !important;
+                padding: 5px 8px !important;
+                gap: 4px !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+            .floating-navbar .nav-item {
+                padding: 6px 8px !important;
+                font-size: 0.75rem !important;
+            }
+            .floating-navbar .nav-item span {
+                display: none !important;
+            }
+            .floating-navbar .nav-item i {
+                font-size: 1.05rem !important;
+            }
+            #modal-detalhes > div, #container-forms-modal > div {
+                width: 95% !important;
+                padding: 16px !important;
+                max-height: 92vh !important;
+            }
+            #tabela-cotacoes-manuais, #tabela-pedidos-manuais {
+                font-size: 0.75rem !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .kpi-container {
+                grid-template-columns: 1fr;
+            }
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .select-filter, .btn-filter, .btn-export {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Top Navbar -->
+    <nav class="top-navbar">
+        <i class="fa-solid fa-bars menu-icon" onclick="toggleDropdownMenu()" title="Opções"></i>
+        
+        <div class="nav-tabs" id="abas-container"></div>
+
+        <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
+            <button class="btn-filter" onclick="carregarBancoDados()" title="Atualizar Base de Dados">
+                <i class="fa-solid fa-rotate" id="icon-refresh"></i> Atualizar
+            </button>
+        </div>
+    </nav>
+
+    <!-- Page Content -->
+    <div class="page-content">
+        
+        <!-- Header -->
+        <div class="page-header">
+            <div class="header-left">
+                <div class="header-icon">
+                    <i class="fa-solid fa-table-list"></i>
+                </div>
+                <div class="header-text">
+                    <h1 id="page-title">Planilha Anmyna</h1>
+                    <p id="page-subtitle">Controle de cotações da base Anmyna com filtros avançados, pesquisa e exportação.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary KPI Cards -->
+        <div class="kpi-container">
+            <div class="kpi-card">
+                <div class="kpi-icon purple"><i class="fa-solid fa-file-lines"></i></div>
+                <div class="kpi-data">
+                    <div class="kpi-num" id="kpi-total">0</div>
+                    <div class="kpi-label">Total Cotações</div>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon green"><i class="fa-solid fa-check-double"></i></div>
+                <div class="kpi-data">
+                    <div class="kpi-num" id="kpi-respondidas">0</div>
+                    <div class="kpi-label">Respondidas</div>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon amber"><i class="fa-solid fa-clock"></i></div>
+                <div class="kpi-data">
+                    <div class="kpi-num" id="kpi-pendentes">0</div>
+                    <div class="kpi-label">Pendentes</div>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon blue"><i class="fa-solid fa-users"></i></div>
+                <div class="kpi-data">
+                    <div class="kpi-num" id="kpi-vendedores">0</div>
+                    <div class="kpi-label">Vendedores</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search & Toolbar -->
+        <div class="toolbar">
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="global-search" placeholder="Buscar por cotação, cliente, vendedor, produto..." onkeyup="aplicarFiltros()">
+            </div>
+
+            <!-- Filtro Portal -->
+            <select id="filtro-portal" class="select-filter" onchange="aplicarFiltros()">
+                <option value="">Portal: Todos</option>
+            </select>
+
+            <!-- Filtro Status -->
+            <select id="filtro-status" class="select-filter" onchange="aplicarFiltros()">
+                <option value="">Status: Todos</option>
+                <option value="SIM">Respondidas</option>
+                <option value="NAO">Pendentes</option>
+            </select>
+            
+            <!-- Visualização Colunas -->
+            <button class="btn-filter" onclick="toggleDropdownVis()">
+                <i class="fa-solid fa-eye"></i> Colunas <i class="fa-solid fa-chevron-down" style="font-size: 0.7rem;"></i>
+            </button>
+
+            <!-- Exportar Excel -->
+            <button id="btn-exportar-excel" class="btn-filter btn-export" onclick="exportarExcel()" title="Exportar registros filtrados para Excel">
+                <i class="fa-solid fa-file-excel"></i> Exportar Excel
+            </button>
+
+            <div class="total-records">Exibindo: <span id="total-count">0</span> registros</div>
+
+            <!-- Dropdown Opções -->
+            <div id="dropdown-menu" style="display: none; position: absolute; left: 20px; top: 55px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; flex-direction: column; min-width: 220px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 10000;">
+                <a href="#" onclick="abrirForm('vendedor'); return false;" style="padding: 12px 15px; color: var(--text-main); text-decoration: none; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-user-tag" style="width: 20px; text-align: center;"></i> Registro de Vendedor</a>
+                <a href="#" onclick="abrirForm('cotacao'); return false;" style="padding: 12px 15px; color: var(--text-main); text-decoration: none; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-list-check" style="width: 20px; text-align: center;"></i> Registro de Cotação</a>
+                <a href="#" onclick="abrirForm('pedido'); return false;" style="padding: 12px 15px; color: var(--text-main); text-decoration: none; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-cart-shopping" style="width: 20px; text-align: center;"></i> Registro de Pedido</a>
+                <a href="planilha_vale.html" style="padding: 12px 15px; color: var(--text-main); text-decoration: none; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-file-excel" style="width: 20px; text-align: center; color: #10b981;"></i> Abrir Planilha Vale</a>
+                <button onclick="carregarBancoDados(); toggleDropdownMenu();" style="width: 100%; background: var(--accent-purple); color: white; border: none; padding: 12px; cursor: pointer; font-weight: bold; border-radius: 0 0 8px 8px; text-align: left; display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-rotate"></i> Atualizar Dados</button>
+            </div>
+
+            <!-- Dropdown Visibilidade Colunas -->
+            <div id="dropdown-vis" style="display: none; position: absolute; right: 40px; top: 220px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; flex-direction: column; min-width: 200px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 10000; padding: 12px;">
+                <h4 style="color: #cdd9e5; margin: 0 0 10px 0; padding-bottom: 5px; border-bottom: 1px solid var(--border-color); font-size: 0.85rem;">Colunas Visíveis</h4>
+                <label style="color: #adbac7; display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 0.8rem; cursor: pointer;">
+                    <input type="checkbox" checked onchange="toggleColuna(0, this.checked)"> Cotação
+                </label>
+                <label style="color: #adbac7; display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 0.8rem; cursor: pointer;">
+                    <input type="checkbox" checked onchange="toggleColuna(1, this.checked)"> Cliente
+                </label>
+                <label style="color: #adbac7; display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 0.8rem; cursor: pointer;">
+                    <input type="checkbox" checked onchange="toggleColuna(2, this.checked)"> Vendedor
+                </label>
+                <label style="color: #adbac7; display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 0.8rem; cursor: pointer;">
+                    <input type="checkbox" checked onchange="toggleColuna(3, this.checked)"> Produto
+                </label>
+                <label style="color: #adbac7; display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 0.8rem; cursor: pointer;">
+                    <input type="checkbox" checked onchange="toggleColuna(4, this.checked)"> Vencimento
+                </label>
+                <label style="color: #adbac7; display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 0.8rem; cursor: pointer;">
+                    <input type="checkbox" checked onchange="toggleColuna(5, this.checked)"> Entrega
+                </label>
+                <label style="color: #adbac7; display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 0.8rem; cursor: pointer;">
+                    <input type="checkbox" checked onchange="toggleColuna(6, this.checked)"> Status
+                </label>
+                <label style="color: #768390; display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 0.8rem; cursor: not-allowed;">
+                    <input type="checkbox" checked disabled> Ações
+                </label>
+            </div>
+        </div>
+
+        <!-- Tabela Anmyna -->
+        <div id="view-anmyna" style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%;">
+            <table class="modern-table">
+                <thead>
+                    <tr>
+                        <th style="width: 22%;">Cotação</th>
+                        <th style="width: 15%; cursor: pointer;" onclick="abrirFiltroCliente(event)" title="Clique para filtrar por Cliente"><i class="fa-regular fa-building" style="margin-right:6px;"></i>Cliente <i class="fa-solid fa-filter" style="margin-left:4px; font-size: 0.75em; color: #8b9eb3;"></i></th>
+                        <th style="width: 13%; cursor: pointer;" onclick="abrirFiltroVendedor(event)" title="Clique para filtrar por Vendedor"><i class="fa-regular fa-user" style="margin-right:6px;"></i>Vendedor <i class="fa-solid fa-filter" style="margin-left:4px; font-size: 0.75em; color: #8b9eb3;"></i></th>
+                        <th style="width: 19%;"><i class="fa-solid fa-box" style="margin-right:6px;"></i>Produto</th>
+                        <th style="width: 13%; cursor: pointer;" onclick="abrirFiltroPeriodo(event)" title="Clique para filtrar por Vencimento"><i class="fa-regular fa-calendar" style="margin-right:6px;"></i>Vencimento <i class="fa-solid fa-filter" style="margin-left:4px; font-size: 0.75em; color: #8b9eb3;"></i></th>
+                        <th style="width: 8%;"><i class="fa-solid fa-truck" style="margin-right:6px;"></i>Entrega</th>
+                        <th style="width: 5%; text-align: center;">Status</th>
+                        <th style="width: 5%; text-align: right;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-anmyna">
+                    <tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 40px;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando Planilha Anmyna...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+    </div>
+
+    <!-- Popup Filtro Cliente -->
+    <div id="menu-filtro-cliente" style="display: none; position: absolute; background: #2d333b; border: 1px solid #444c56; border-radius: 8px; padding: 12px; width: 250px; box-shadow: 0 10px 25px rgba(0,0,0,0.6); z-index: 100001; font-family: 'Inter', sans-serif;">
+        <h4 style="color: #cdd9e5; margin: 0 0 10px 0; font-size: 0.85rem;">Filtrar Cliente</h4>
+        <input type="text" id="input-busca-cliente" placeholder="Buscar cliente..." onkeyup="filtrarListaClientes()" style="width: 100%; box-sizing: border-box; background: #22272e; border: 1px solid #444c56; color: #adbac7; padding: 7px; border-radius: 6px; font-size: 0.8rem; margin-bottom: 8px; outline: none;">
+        <div style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+            <label style="font-size: 0.75rem; color: #adbac7; display: flex; gap: 5px; align-items: center; cursor: pointer;">
+                <input type="checkbox" id="chk-todos-clientes" onchange="toggleTodosClientes(this.checked)"> (Selecionar Tudo)
+            </label>
+            <button onclick="limparFiltroCliente()" style="background: transparent; border: none; color: #f87171; cursor: pointer; font-size: 0.75rem;"><i class="fa-solid fa-eraser"></i> Limpar</button>
+        </div>
+        <div id="lista-filtro-cliente" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; border-top: 1px solid #444c56; padding-top: 6px;"></div>
+        <button onclick="aplicarFiltroCliente()" style="width: 100%; background: var(--accent-purple); color: #fff; border: none; padding: 8px; border-radius: 6px; margin-top: 10px; cursor: pointer; font-weight: bold; font-size: 0.8rem;">APLICAR</button>
+    </div>
+
+    <!-- Popup Filtro Vendedor -->
+    <div id="menu-filtro-vendedor" style="display: none; position: absolute; background: #2d333b; border: 1px solid #444c56; border-radius: 8px; padding: 12px; width: 240px; box-shadow: 0 10px 25px rgba(0,0,0,0.6); z-index: 100001; font-family: 'Inter', sans-serif;">
+        <h4 style="color: #cdd9e5; margin: 0 0 10px 0; font-size: 0.85rem;">Filtrar Vendedor</h4>
+        <input type="text" id="input-busca-vendedor" placeholder="Buscar vendedor..." onkeyup="filtrarListaVendedores()" style="width: 100%; box-sizing: border-box; background: #22272e; border: 1px solid #444c56; color: #adbac7; padding: 7px; border-radius: 6px; font-size: 0.8rem; margin-bottom: 8px; outline: none;">
+        <div style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+            <label style="font-size: 0.75rem; color: #adbac7; display: flex; gap: 5px; align-items: center; cursor: pointer;">
+                <input type="checkbox" id="chk-todos-vendedores" onchange="toggleTodosVendedores(this.checked)"> (Selecionar Tudo)
+            </label>
+            <button onclick="limparFiltroVendedor()" style="background: transparent; border: none; color: #f87171; cursor: pointer; font-size: 0.75rem;"><i class="fa-solid fa-eraser"></i> Limpar</button>
+        </div>
+        <div id="lista-filtro-vendedor" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; border-top: 1px solid #444c56; padding-top: 6px;"></div>
+        <button onclick="aplicarFiltroVendedor()" style="width: 100%; background: var(--accent-purple); color: #fff; border: none; padding: 8px; border-radius: 6px; margin-top: 10px; cursor: pointer; font-weight: bold; font-size: 0.8rem;">APLICAR</button>
+    </div>
+
+    <!-- Popup Filtro Período -->
+    <div id="menu-filtro-periodo" style="display: none; position: absolute; background: #2d333b; border: 1px solid #444c56; border-radius: 8px; padding: 14px; width: 250px; box-shadow: 0 10px 25px rgba(0,0,0,0.6); z-index: 100001; font-family: 'Inter', sans-serif;">
+        <h4 style="color: #cdd9e5; margin: 0 0 10px 0; font-size: 0.85rem;">Filtrar Vencimento</h4>
+        <label style="display: block; font-size: 0.75rem; color: #768390; margin-bottom: 4px;">Ordenação:</label>
+        <select id="filtro-ordem-vencimento" style="width: 100%; box-sizing: border-box; background: #22272e; border: 1px solid #444c56; color: #adbac7; padding: 7px; border-radius: 6px; font-size: 0.8rem; margin-bottom: 10px; outline: none;">
+            <option value="0">Ordem Padrão da Planilha</option>
+            <option value="1">Crescente (mais antigas primeiro)</option>
+            <option value="-1">Decrescente (mais recentes primeiro)</option>
+        </select>
+        <label style="display: block; font-size: 0.75rem; color: #768390; margin-bottom: 4px;">Data Inicial:</label>
+        <input type="date" id="filtro-data-inicio" style="width: 100%; box-sizing: border-box; background: #22272e; border: 1px solid #444c56; color: #adbac7; padding: 7px; border-radius: 6px; font-size: 0.8rem; margin-bottom: 10px; outline: none;">
+        
+        <label style="display: block; font-size: 0.75rem; color: #768390; margin-bottom: 4px;">Data Final:</label>
+        <input type="date" id="filtro-data-fim" style="width: 100%; box-sizing: border-box; background: #22272e; border: 1px solid #444c56; color: #adbac7; padding: 7px; border-radius: 6px; font-size: 0.8rem; margin-bottom: 12px; outline: none;">
+        
+        <div style="display: flex; gap: 8px;">
+            <button onclick="limparFiltroPeriodo()" style="flex: 1; background: transparent; border: 1px solid #444c56; color: #adbac7; padding: 7px; border-radius: 6px; cursor: pointer; font-size: 0.75rem;">Limpar</button>
+            <button onclick="aplicarFiltroPeriodo()" style="flex: 1; background: var(--accent-purple); color: #fff; border: none; padding: 7px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.75rem;">Aplicar</button>
+        </div>
+    </div>
+
+    <!-- Modal Detalhes -->
+    <div id="modal-detalhes" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fa-solid fa-circle-info" style="color: #8b5cf6;"></i> Detalhes da Cotação</div>
+                <button type="button" class="btn-fechar" onclick="fecharModalDetalhes()">&times;</button>
+            </div>
+            <div id="conteudo-detalhes"></div>
+        </div>
+    </div>
+
+    <!-- Modal Edição -->
+    <div id="modal-edicao" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fa-solid fa-pen-to-square" style="color: #38bdf8;"></i> Editar Registro</div>
+                <button type="button" class="btn-fechar" onclick="fecharModalEdicao()">&times;</button>
+            </div>
+            <form id="form-edicao" onsubmit="salvarEdicao(event)">
+                <input type="hidden" id="edit-chave">
+                <div class="form-group">
+                    <label>Número da Cotação</label>
+                    <input type="text" id="edit-cotacao" class="form-control" readonly style="opacity: 0.8;">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>Portal</label>
+                        <input type="text" id="edit-portal" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Empresa</label>
+                        <input type="text" id="edit-empresa" class="form-control">
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>Cliente</label>
+                        <input type="text" id="edit-cliente" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Vendedor</label>
+                        <input type="text" id="edit-vendedor" class="form-control">
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>Data Vencimento</label>
+                        <input type="text" id="edit-data-venc" class="form-control" placeholder="M/D/YYYY">
+                    </div>
+                    <div class="form-group">
+                        <label>Horário Vencimento</label>
+                        <input type="text" id="edit-hora-venc" class="form-control" placeholder="HH:MM">
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>Data Entrega</label>
+                        <input type="text" id="edit-data-entr" class="form-control" placeholder="M/D/YYYY">
+                    </div>
+                    <div class="form-group">
+                        <label>Status Respondido</label>
+                        <select id="edit-respondido" class="form-control">
+                            <option value="SIM">SIM (Respondido)</option>
+                            <option value="NÃO">NÃO (Pendente)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Produto</label>
+                    <textarea id="edit-produto" class="form-control" style="resize: vertical; min-height: 50px;"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Observações</label>
+                    <textarea id="edit-obs" class="form-control" style="resize: vertical; min-height: 50px;"></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
+                    <button type="button" onclick="fecharModalEdicao()" style="background: transparent; border: 1px solid #444c56; color: #adbac7; padding: 9px 16px; border-radius: 6px; cursor: pointer;">Cancelar</button>
+                    <button type="submit" style="background: var(--accent-purple); color: #fff; border: none; padding: 9px 20px; border-radius: 6px; font-weight: bold; cursor: pointer;"><i class="fa-solid fa-save"></i> Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Formulários Manuais (Vendedor, Cotação, Pedido) -->
+    <div id="container-forms-modal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 9999999; overflow-y: auto;" onclick="if(event.target===this) fecharFormsModal()">
+        <div style="background: var(--bg-card); padding: 25px 30px; border-radius: 12px; width: 90%; max-width: 900px; display: flex; flex-direction: column; gap: 20px; position: relative; border: 1px solid var(--border-color); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+            <button onclick="fecharFormsModal()" style="position: absolute; top: 15px; right: 15px; background: none; border: none; color: #768390; font-size: 1.5rem; cursor: pointer;" title="Fechar">&times;</button>
+            
+            <!-- Form Cotação Manual -->
+            <div id="form-cotacao" style="display: none; position: relative;">
+                <div style="font-size: 2rem; color: #8b5cf6; margin-bottom: 5px;">
+                    <i class="fa-solid fa-list-check"></i>
+                </div>
+                <h2 style="font-size: 1.3rem; margin-bottom: 5px; font-weight: 700; color: #cdd9e5;">Registrar Cotações Manuais</h2>
+                <p style="font-size: 0.85rem; color: #768390; margin-bottom: 20px;">Adicione cotações manualmente na planilha.</p>
+                
+                <div style="overflow-x: auto; max-height: 400px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #444c56; border-radius: 6px;">
+                    <table id="tabela-cotacoes-manuais" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #1c2128; color: #adbac7; font-size: 0.8rem; text-align: left;">
+                                <th style="padding: 8px;">Cotação</th>
+                                <th style="padding: 8px;">Vencimento</th>
+                                <th style="padding: 8px;">Item</th>
+                                <th style="padding: 8px;">Qtd</th>
+                                <th style="padding: 8px;">Localidade</th>
+                                <th style="padding: 8px;">Vendedor</th>
+                                <th style="padding: 8px;">Modelos</th>
+                                <th style="padding: 8px;">Marcas</th>
+                                <th style="width: 30px; padding: 8px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-cotacoes-manuais">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="adicionarLinhaCotacaoManual()" class="btn-filter" style="width: 50px; justify-content: center;" title="Adicionar Linha">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                    <button id="btn-registrar-manuais" onclick="registrarCotacoesManuais()" class="btn-filter" style="flex: 1; background: var(--accent-purple); color: #fff; font-weight: 600; justify-content: center;">
+                        REGISTRAR COTAÇÕES NA PLANILHA
+                    </button>
+                </div>
+                <div id="status-msg-manual" style="margin-top: 12px; font-size: 0.85rem; min-height: 20px; font-weight: 500;"></div>
+            </div>
+
+            <!-- Form Vendedor -->
+            <div id="form-vendedor" style="display: none; position: relative;">
+                <div style="font-size: 2rem; color: #8b5cf6; margin-bottom: 5px;">
+                    <i class="fa-solid fa-user-tag"></i>
+                </div>
+                <h2 style="font-size: 1.3rem; margin-bottom: 5px; font-weight: 700; color: #cdd9e5;">Atribuir Vendedor</h2>
+                <p style="font-size: 0.85rem; color: #768390; margin-bottom: 20px;">Registre o vendedor para as cotações na planilha.</p>
+                
+                <div style="margin-bottom: 15px;">
+                    <input type="text" id="input-vendedor" class="manual-input" placeholder="Ex: João Silva" style="padding: 10px 12px; font-size: 0.9rem;">
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <textarea id="input-cotacoes" class="manual-input" placeholder="Ex: 22222, 33333, 44444&#10;Pode separar por vírgula ou espaço" rows="3" style="resize: none; font-family: monospace; padding: 10px 12px; font-size: 0.9rem;"></textarea>
+                </div>
+
+                <button id="btn-registrar" onclick="registrarVendedor()" class="btn-filter" style="width: 100%; background: var(--accent-purple); color: #fff; font-weight: 600; justify-content: center; padding: 12px;">
+                    ATRIBUIR VENDEDOR NA PLANILHA
+                </button>
+
+                <div id="status-msg" style="margin-top: 12px; font-size: 0.85rem; min-height: 20px; font-weight: 500;"></div>
+            </div>
+
+            <!-- Form Pedido -->
+            <div id="form-pedido" style="display: none; position: relative;">
+                <div style="font-size: 2rem; color: #8b5cf6; margin-bottom: 5px;">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                </div>
+                <h2 style="font-size: 1.3rem; margin-bottom: 5px; font-weight: 700; color: #cdd9e5;">Registrar Pedido Manual</h2>
+                <p style="font-size: 0.85rem; color: #768390; margin-bottom: 20px;">Adicione novos pedidos manualmente na aba de pedidos da planilha.</p>
+                
+                <div style="overflow-x: auto; max-height: 400px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #444c56; border-radius: 6px;">
+                    <table id="tabela-pedidos-manuais" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #1c2128; color: #adbac7; font-size: 0.8rem; text-align: left;">
+                                <th style="padding: 8px;">Cidade</th>
+                                <th style="padding: 8px;">Frete</th>
+                                <th style="padding: 8px;">Pedido</th>
+                                <th style="padding: 8px;">Valor</th>
+                                <th style="padding: 8px;">Produto</th>
+                                <th style="padding: 8px;">Entrega</th>
+                                <th style="padding: 8px;">RFQ</th>
+                                <th style="padding: 8px;">Requisitante</th>
+                                <th style="padding: 8px;">Email</th>
+                                <th style="width: 30px; padding: 8px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-pedidos-manuais">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="adicionarLinhaPedidoManual()" class="btn-filter" style="width: 50px; justify-content: center;" title="Adicionar Linha">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                    <button id="btn-registrar-pedidos" onclick="registrarPedidosManuais()" class="btn-filter" style="flex: 1; background: var(--accent-purple); color: #fff; font-weight: 600; justify-content: center;">
+                        REGISTRAR PEDIDOS NA PLANILHA
+                    </button>
+                </div>
+                <div id="status-msg-pedido" style="margin-top: 12px; font-size: 0.85rem; min-height: 20px; font-weight: 500;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Navbar Maestro -->
+    <nav class="floating-navbar">
+        <a href="javascript:void(0)" onclick="irPara('coupa.html')" class="nav-item"><i class="fa-solid fa-cube"></i> <span>Coupa</span></a>
+        <a href="javascript:void(0)" onclick="irPara('vale.html')" class="nav-item"><i class="fa-solid fa-helmet-safety"></i> <span>Vale</span></a>
+        <a href="javascript:void(0)" onclick="irPara('planilha_vale.html')" class="nav-item"><i class="fa-solid fa-file-excel"></i> <span>Planilha Vale</span></a>
+        <a href="javascript:void(0)" onclick="irPara('planilha_anmyna.html')" class="nav-item active nav-anmyna"><i class="fa-solid fa-table-list"></i> <span>Planilha Anmyna</span></a>
+        <a href="javascript:void(0)" onclick="irPara('me.html')" class="nav-item"><i class="fa-solid fa-shopping-cart"></i> <span>ME</span></a>
+        <a href="javascript:void(0)" onclick="irPara('findes.html')" class="nav-item"><i class="fa-solid fa-industry"></i> <span>Findes</span></a>
+        <a href="javascript:void(0)" onclick="irPara('ariba.html')" class="nav-item"><i class="fa-solid fa-cloud"></i> <span>Ariba</span></a>
+        <a href="index.html" class="nav-item nav-voltar"><i class="fa-solid fa-arrow-left"></i> <span>Voltar</span></a>
+    </nav>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script src="vendor/exceljs-4.4.0.min.js"></script>
+
+    <script>
+        const sessionAtual = localStorage.getItem('maestro_session');
+        const socket = io({ 
+            auth: { sessionId: sessionAtual },
+            transports: ['websocket'],
+            upgrade: false
+        });
+
+        socket.on("sessao_invalida", () => {
+            localStorage.clear();
+            window.location.href = "index.html"; 
+        });
+
+        const PAGE_SIZE = 50;
+        let currentPage = 0;
+        let baseAnmynaCompleta = {};
+        let abaAtiva = "";
+        let registrosOriginais = [];
+        let registrosFiltrados = [];
+        
+        let filtroVendedorAtivo = new Set();
+        let vendedoresUnicos = [];
+        let filtroClienteAtivo = new Set();
+        let clientesUnicos = [];
+        let filtroPeriodoAtivo = { inicio: null, fim: null, ordem: 0 };
+
+        function formatarDataBR(val) {
+            if (!val) return '-';
+            const m = String(val).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (!m) return val;
+            let [, p1, p2, year] = m;
+            let mes = parseInt(p1, 10);
+            let dia = parseInt(p2, 10);
+            // Se o primeiro número for > 12, então é dia/mês
+            if (mes > 12) {
+                return `${String(mes).padStart(2, '0')}/${String(dia).padStart(2, '0')}/${year}`;
+            }
+            return `${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}/${year}`;
+        }
+
+        function parseTimestampVencimento(val) {
+            if (!val) return null;
+            const m = String(val).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (!m) return null;
+            let [, p1, p2, year] = m;
+            let mes = parseInt(p1, 10);
+            let dia = parseInt(p2, 10);
+            let y = parseInt(year, 10);
+            if (mes > 12) {
+                return new Date(y, dia - 1, mes).getTime();
+            }
+            return new Date(y, mes - 1, dia).getTime();
+        }
+
+        function extrairCampos(r) {
+            return {
+                numero: String(r['NÚMERO DA COTAÇÃO'] || r['N\u00daMERO DA COTA\u00c7\u00c3O'] || r['COTAÇÃO'] || '').trim(),
+                portal: String(r['PORTAL'] || '').trim(),
+                cliente: String(r['CLIENTE'] || '').trim(),
+                vendedor: String(r['VENDEDOR '] || r['VENDEDOR'] || '').trim(),
+                produto: String(r['PRODUTO'] || '').trim(),
+                data_venc: String(r['DATA DE VENCIMENTO'] || '').trim(),
+                hora_venc: String(r['HORÁRIO DE VENCIMENTO'] || r['HOR\u00c1RIO DE VENCIMENTO'] || '').trim(),
+                data_entrega: String(r['DATA DE ENTREGA'] || '').trim(),
+                hora_entrega: String(r['HORÁRIO DE ENTREGA'] || r['HOR\u00c1RIO DE ENTREGA'] || '').trim(),
+                empresa: String(r['POR QUAL EMPRESA'] || '').trim(),
+                respondido: String(r['RESPONDIDO'] || '').trim().toUpperCase(),
+                observacoes: String(r['OBSERVAÇÕES'] || r['OBSERVA\u00c7\u00d5ES'] || '').trim(),
+                raw: r
+            };
+        }
+
+        function carregarBancoDados() {
+            const icon = document.getElementById('icon-refresh');
+            if (icon) icon.classList.add('fa-spin');
+            
+            socket.emit('solicitar_planilha_anmyna_json');
+            
+            // Fallback via API caso socket demore
+            setTimeout(() => {
+                if (registrosOriginais.length === 0) {
+                    fetch('/api/planilha-anmyna')
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data && typeof data === 'object') processarDadosRecebidos(data);
+                        })
+                        .catch(() => {});
+                }
+            }, 1200);
+        }
+
+        socket.on('retorno_planilha_anmyna_json', (res) => {
+            const icon = document.getElementById('icon-refresh');
+            if (icon) icon.classList.remove('fa-spin');
+
+            if (!res.sucesso) {
+                document.getElementById('tbody-anmyna').innerHTML = `<tr><td colspan="8" style="text-align: center; color: #ef4444; padding: 30px;"><i class="fa-solid fa-triangle-exclamation"></i> ${res.erro}</td></tr>`;
+                return;
+            }
+            processarDadosRecebidos(res.dados);
+        });
+
+        socket.on('planilha_anmyna_atualizada', () => {
+            carregarBancoDados();
+        });
+
+        function processarDadosRecebidos(dados) {
+            baseAnmynaCompleta = dados || {};
+            const abas = Object.keys(baseAnmynaCompleta);
+            if (!abas.length) {
+                document.getElementById('tbody-anmyna').innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 30px;">Nenhum dado encontrado na planilha.</td></tr>`;
+                return;
+            }
+
+            if (!abaAtiva || !baseAnmynaCompleta[abaAtiva]) {
+                abaAtiva = abas[0];
+            }
+
+            renderizarAbas(abas);
+            carregarAba(abaAtiva);
+        }
+
+        function renderizarAbas(abas) {
+            const container = document.getElementById('abas-container');
+            if (!container) return;
+            // Se tiver apenas 1 aba ou nenhuma, não polui a barra superior com botão redundante
+            if (!abas || abas.length <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+            container.innerHTML = abas.map(aba => `
+                <button class="tab-btn ${aba === abaAtiva ? 'active' : ''}" onclick="mudarAba('${aba.replace(/'/g, "\\'")}')">
+                    <i class="fa-solid fa-file-lines"></i> ${aba}
+                </button>
+            `).join('');
+        }
+
+        function mudarAba(novaAba) {
+            abaAtiva = novaAba;
+            document.querySelectorAll('#abas-container .tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.innerText.trim() === novaAba);
+            });
+            carregarAba(abaAtiva);
+        }
+
+        function carregarAba(nomeAba) {
+            const rawList = baseAnmynaCompleta[nomeAba] || [];
+            // Filtra linhas de cabeçalho de seção (como {"NÚMERO DA COTAÇÃO": "JANEIRO"})
+            registrosOriginais = rawList.map(extrairCampos).filter(item => {
+                if (!item.numero) return false;
+                // Ignora linhas que são só nomes de meses
+                if (!item.cliente && !item.portal && !item.produto && item.numero.length > 2 && isNaN(item.numero)) {
+                    const meses = ['JANEIRO','FEVEREIRO','MARCO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
+                    if (meses.includes(item.numero.toUpperCase())) return false;
+                }
+                return true;
+            });
+
+            popularFiltrosDinamicos();
+            atualizarKPIs();
+            aplicarFiltros();
+        }
+
+        function popularFiltrosDinamicos() {
+            // Portais
+            const portaisSet = new Set();
+            const vendSet = new Set();
+            const cliSet = new Set();
+            registrosOriginais.forEach(r => {
+                if (r.portal) portaisSet.add(r.portal);
+                const v = r.vendedor || 'SEM VENDEDOR';
+                vendSet.add(v);
+                const c = r.cliente || 'SEM CLIENTE';
+                cliSet.add(c);
+            });
+
+            const selPortal = document.getElementById('filtro-portal');
+            const portalAtual = selPortal.value;
+            selPortal.innerHTML = '<option value="">Portal: Todos</option>' + 
+                Array.from(portaisSet).sort().map(p => `<option value="${p}" ${p === portalAtual ? 'selected' : ''}>${p}</option>`).join('');
+
+            vendedoresUnicos = Array.from(vendSet).sort();
+            if (filtroVendedorAtivo.size === 0) {
+                vendedoresUnicos.forEach(v => filtroVendedorAtivo.add(v));
+            }
+            renderizarListaVendedores();
+
+            clientesUnicos = Array.from(cliSet).sort();
+            if (filtroClienteAtivo.size === 0) {
+                clientesUnicos.forEach(c => filtroClienteAtivo.add(c));
+            }
+            renderizarListaClientes();
+        }
+
+        function atualizarKPIs() {
+            const total = registrosOriginais.length;
+            let resp = 0;
+            let pend = 0;
+            const vend = new Set();
+
+            registrosOriginais.forEach(r => {
+                if (r.respondido === 'SIM') resp++;
+                else pend++;
+                if (r.vendedor) vend.add(r.vendedor);
+            });
+
+            document.getElementById('kpi-total').innerText = total.toLocaleString('pt-BR');
+            document.getElementById('kpi-respondidas').innerText = resp.toLocaleString('pt-BR');
+            document.getElementById('kpi-pendentes').innerText = pend.toLocaleString('pt-BR');
+            document.getElementById('kpi-vendedores').innerText = vend.size.toLocaleString('pt-BR');
+        }
+
+        function aplicarFiltros() {
+            const busca = (document.getElementById('global-search').value || '').trim().toLowerCase();
+            const portalFiltro = document.getElementById('filtro-portal').value;
+            const statusFiltro = document.getElementById('filtro-status').value;
+
+            registrosFiltrados = registrosOriginais.filter(r => {
+                // Portal
+                if (portalFiltro && r.portal !== portalFiltro) return false;
+
+                // Status Respondido
+                if (statusFiltro === 'SIM' && r.respondido !== 'SIM') return false;
+                if (statusFiltro === 'NAO' && r.respondido === 'SIM') return false;
+
+                // Cliente
+                if (filtroClienteAtivo.size > 0 && filtroClienteAtivo.size !== clientesUnicos.length) {
+                    const c = r.cliente || 'SEM CLIENTE';
+                    if (!filtroClienteAtivo.has(c)) return false;
+                }
+
+                // Vendedor
+                if (filtroVendedorAtivo.size > 0 && filtroVendedorAtivo.size !== vendedoresUnicos.length) {
+                    const v = r.vendedor || 'SEM VENDEDOR';
+                    if (!filtroVendedorAtivo.has(v)) return false;
+                }
+
+                // Período Vencimento
+                if (filtroPeriodoAtivo.inicio || filtroPeriodoAtivo.fim) {
+                    const ts = parseTimestampVencimento(r.data_venc);
+                    if (ts) {
+                        if (filtroPeriodoAtivo.inicio && ts < filtroPeriodoAtivo.inicio) return false;
+                        if (filtroPeriodoAtivo.fim && ts > filtroPeriodoAtivo.fim) return false;
+                    }
+                }
+
+                // Busca Global
+                if (busca) {
+                    const texto = `${r.numero} ${r.cliente} ${r.vendedor} ${r.produto} ${r.portal} ${r.empresa} ${r.observacoes}`.toLowerCase();
+                    if (!texto.includes(busca)) return false;
+                }
+
+                return true;
+            });
+
+            // Ordenação
+            if (filtroPeriodoAtivo.ordem !== 0) {
+                registrosFiltrados.sort((a, b) => {
+                    const tsA = parseTimestampVencimento(a.data_venc) || 0;
+                    const tsB = parseTimestampVencimento(b.data_venc) || 0;
+                    return (tsA - tsB) * filtroPeriodoAtivo.ordem;
+                });
+            }
+
+            currentPage = 0;
+            renderizarTabela(false);
+            document.getElementById('total-count').innerText = registrosFiltrados.length.toLocaleString('pt-BR');
+        }
+
+        function renderizarTabela(append = false) {
+            const tbody = document.getElementById('tbody-anmyna');
+            if (!registrosFiltrados.length) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 40px;"><i class="fa-regular fa-folder-open"></i> Nenhuma cotação encontrada com os filtros aplicados.</td></tr>`;
+                return;
+            }
+
+            const inicio = currentPage * PAGE_SIZE;
+            const fim = inicio + PAGE_SIZE;
+            const lote = registrosFiltrados.slice(inicio, fim);
+
+            const agora = new Date();
+            agora.setHours(0,0,0,0);
+            const hojeTs = agora.getTime();
+
+            const html = lote.map((item, idx) => {
+                const globalIdx = inicio + idx;
+                
+                // Portal badge
+                let portalBadge = '';
+                if (item.portal) {
+                    let corClass = 'badge-portal';
+                    portalBadge = `<span class="badge-pill ${corClass}"><i class="fa-solid fa-globe"></i> ${item.portal}</span>`;
+                }
+
+                // Empresa pill
+                let empresaBadge = item.empresa ? `<span class="badge-pill badge-empresa">${item.empresa}</span>` : '';
+
+                // Vencimento badge
+                let vencBadge = '';
+                if (item.data_venc) {
+                    const ts = parseTimestampVencimento(item.data_venc);
+                    if (ts) {
+                        const diffDias = Math.round((ts - hojeTs) / (1000 * 60 * 60 * 24));
+                        if (diffDias < 0) vencBadge = `<span class="venc-tag venc-passado">Venceu há ${Math.abs(diffDias)}d</span>`;
+                        else if (diffDias === 0) vencBadge = `<span class="venc-tag venc-hoje">VENCE HOJE</span>`;
+                        else if (diffDias <= 3) vencBadge = `<span class="venc-tag venc-hoje">Em ${diffDias}d</span>`;
+                        else vencBadge = `<span class="venc-tag venc-futuro">Em ${diffDias}d</span>`;
+                    }
+                }
+
+                const statusBadge = item.respondido === 'SIM'
+                    ? `<span class="badge-pill badge-resp-sim"><i class="fa-solid fa-check"></i> RESPONDIDO</span>`
+                    : `<span class="badge-pill badge-resp-nao"><i class="fa-solid fa-clock"></i> PENDENTE</span>`;
+
+                const prodCurto = item.produto ? (item.produto.length > 55 ? item.produto.slice(0, 55) + '...' : item.produto) : '-';
+
+                return `
+                    <tr class="row-accent">
+                        <td onclick="abrirDetalhes(${globalIdx})" style="cursor: pointer;" title="Clique para ver detalhes da cotação ${item.numero}">
+                            <div class="cell-content">
+                                <div class="doc-icon"><i class="fa-solid fa-file-invoice"></i></div>
+                                <div>
+                                    <div class="cell-main-text cotacao-clicavel" title="${item.numero}">${item.numero}</div>
+                                    <div class="cell-sub-text">${portalBadge} ${empresaBadge}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="cell-main-text">${item.cliente || '-'}</div>
+                        </td>
+                        <td>
+                            <div class="cell-main-text" style="color: #38bdf8;">${item.vendedor || 'SEM VENDEDOR'}</div>
+                        </td>
+                        <td>
+                            <div class="cell-main-text" title="${item.produto.replace(/"/g, '&quot;')}">${prodCurto}</div>
+                        </td>
+                        <td>
+                            <div class="cell-main-text">${formatarDataBR(item.data_venc)} <span style="font-size:0.75rem; color:var(--text-muted);">${item.hora_venc}</span></div>
+                            <div style="margin-top: 3px;">${vencBadge}</div>
+                        </td>
+                        <td>
+                            <div class="cell-main-text">${formatarDataBR(item.data_entrega)}</div>
+                            <div class="cell-sub-text">${item.hora_entrega || ''}</div>
+                        </td>
+                        <td style="text-align: center;">
+                            ${statusBadge}
+                        </td>
+                        <td style="text-align: right; white-space: nowrap;">
+                            <button class="action-btn" title="Ver Detalhes" onclick="abrirDetalhes(${globalIdx})">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                            <button class="action-btn edit" title="Editar Registro" onclick="abrirEdicao(${globalIdx})">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button class="action-btn check" title="${item.respondido === 'SIM' ? 'Marcar como Pendente' : 'Marcar como Respondido'}" onclick="alternarRespondido(${globalIdx})">
+                                <i class="fa-solid ${item.respondido === 'SIM' ? 'fa-rotate-left' : 'fa-check'}"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            if (append) {
+                tbody.insertAdjacentHTML('beforeend', html);
+            } else {
+                tbody.innerHTML = html;
+            }
+        }
+
+        // Infinite Scroll
+        window.addEventListener('scroll', () => {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 300) {
+                if ((currentPage + 1) * PAGE_SIZE < registrosFiltrados.length) {
+                    currentPage++;
+                    renderizarTabela(true);
+                }
+            }
+        });
+
+        // ==========================================
+        // DETALHES & EDIÇÃO
+        // ==========================================
+        function abrirDetalhes(idx) {
+            const item = registrosFiltrados[idx];
+            if (!item) return;
+
+            const fields = [
+                { label: 'Número da Cotação', val: item.numero },
+                { label: 'Portal', val: item.portal },
+                { label: 'Empresa', val: item.empresa },
+                { label: 'Cliente', val: item.cliente },
+                { label: 'Vendedor', val: item.vendedor },
+                { label: 'Data de Vencimento', val: `${formatarDataBR(item.data_venc)} ${item.hora_venc}`.trim() },
+                { label: 'Data de Entrega', val: `${formatarDataBR(item.data_entrega)} ${item.hora_entrega}`.trim() },
+                { label: 'Status de Resposta', val: item.respondido || 'PENDENTE' },
+                { label: 'Produto', val: item.produto },
+                { label: 'Observações', val: item.observacoes }
+            ];
+
+            const html = fields.filter(f => f.val).map(f => `
+                <div class="detail-row">
+                    <span class="detail-label">${f.label}</span>
+                    <span class="detail-value">
+                        ${f.val}
+                        <button class="btn-copy-field" onclick="copiarTexto('${String(f.val).replace(/'/g, "\\'")}', this)" title="Copiar"><i class="fa-regular fa-copy"></i></button>
+                    </span>
+                </div>
+            `).join('');
+
+            document.getElementById('conteudo-detalhes').innerHTML = html;
+            document.getElementById('modal-detalhes').style.display = 'flex';
+        }
+
+        function fecharModalDetalhes() {
+            document.getElementById('modal-detalhes').style.display = 'none';
+        }
+
+        function abrirEdicao(idx) {
+            const item = registrosFiltrados[idx];
+            if (!item) return;
+
+            document.getElementById('edit-chave').value = item.numero;
+            document.getElementById('edit-cotacao').value = item.numero;
+            document.getElementById('edit-portal').value = item.portal;
+            document.getElementById('edit-empresa').value = item.empresa;
+            document.getElementById('edit-cliente').value = item.cliente;
+            document.getElementById('edit-vendedor').value = item.vendedor;
+            document.getElementById('edit-data-venc').value = item.data_venc;
+            document.getElementById('edit-hora-venc').value = item.hora_venc;
+            document.getElementById('edit-data-entr').value = item.data_entrega;
+            document.getElementById('edit-respondido').value = item.respondido === 'SIM' ? 'SIM' : 'NÃO';
+            document.getElementById('edit-produto').value = item.produto;
+            document.getElementById('edit-obs').value = item.observacoes;
+
+            document.getElementById('modal-edicao').style.display = 'flex';
+        }
+
+        function fecharModalEdicao() {
+            document.getElementById('modal-edicao').style.display = 'none';
+        }
+
+        function salvarEdicao(e) {
+            e.preventDefault();
+            const chave = document.getElementById('edit-chave').value;
+            const novos_dados = {
+                'PORTAL': document.getElementById('edit-portal').value.trim(),
+                'POR QUAL EMPRESA': document.getElementById('edit-empresa').value.trim(),
+                'CLIENTE': document.getElementById('edit-cliente').value.trim(),
+                'VENDEDOR ': document.getElementById('edit-vendedor').value.trim(),
+                'DATA DE VENCIMENTO': document.getElementById('edit-data-venc').value.trim(),
+                'HORÁRIO DE VENCIMENTO': document.getElementById('edit-hora-venc').value.trim(),
+                'DATA DE ENTREGA': document.getElementById('edit-data-entr').value.trim(),
+                'RESPONDIDO': document.getElementById('edit-respondido').value,
+                'PRODUTO': document.getElementById('edit-produto').value.trim(),
+                'OBSERVAÇÕES': document.getElementById('edit-obs').value.trim()
+            };
+
+            socket.emit('comando_editar_linha_anmyna', { aba: abaAtiva, chave, novos_dados });
+            fecharModalEdicao();
+        }
+
+        function alternarRespondido(idx) {
+            const item = registrosFiltrados[idx];
+            if (!item) return;
+            const novo = item.respondido === 'SIM' ? 'NÃO' : 'SIM';
+            if (confirm(`Deseja alterar o status da cotação ${item.numero} para ${novo}?`)) {
+                socket.emit('comando_marcar_respondida_anmyna', { aba: abaAtiva, chave: item.numero, respondido: novo });
+            }
+        }
+
+        socket.on('resposta_acao_linha_anmyna', (res) => {
+            if (res.sucesso) {
+                carregarBancoDados();
+            } else {
+                alert(`Erro: ${res.erro}`);
+            }
+        });
+
+        function copiarTexto(texto, btn) {
+            navigator.clipboard.writeText(texto).then(() => {
+                if (btn) {
+                    const icon = btn.querySelector('i');
+                    if (icon) {
+                        icon.className = 'fa-solid fa-check';
+                        setTimeout(() => { icon.className = 'fa-regular fa-copy'; }, 1000);
+                    }
+                }
+            });
+        }
+
+        // ==========================================
+        // FILTROS POPUP
+        // ==========================================
+        function abrirFiltroCliente(e) {
+            e.stopPropagation();
+            const menu = document.getElementById('menu-filtro-cliente');
+            const rect = e.currentTarget.getBoundingClientRect();
+            menu.style.top = (rect.bottom + window.scrollY + 6) + 'px';
+            menu.style.left = Math.min(rect.left + window.scrollX, window.innerWidth - 270) + 'px';
+            menu.style.display = 'block';
+        }
+
+        function renderizarListaClientes(busca = '') {
+            const lista = document.getElementById('lista-filtro-cliente');
+            if (!lista) return;
+            let html = '';
+            let todos = true;
+
+            clientesUnicos.forEach(c => {
+                if (busca && !c.toLowerCase().includes(busca.toLowerCase())) return;
+                const isChecked = filtroClienteAtivo.has(c);
+                if (!isChecked) todos = false;
+                html += `
+                    <label style="display:flex; gap:6px; font-size:0.8rem; color:#adbac7; cursor:pointer; padding: 2px 0;">
+                        <input type="checkbox" value="${c.replace(/"/g, '&quot;')}" class="chk-cliente" ${isChecked ? 'checked' : ''} onchange="toggleClienteIndividual(this)"> <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${c.replace(/"/g, '&quot;')}">${c}</span>
+                    </label>
+                `;
+            });
+
+            lista.innerHTML = html;
+            const chkTodos = document.getElementById('chk-todos-clientes');
+            if (chkTodos) chkTodos.checked = todos;
+        }
+
+        function filtrarListaClientes() {
+            const termo = document.getElementById('input-busca-cliente').value;
+            renderizarListaClientes(termo);
+        }
+
+        function toggleClienteIndividual(chk) {
+            if (chk.checked) filtroClienteAtivo.add(chk.value);
+            else filtroClienteAtivo.delete(chk.value);
+        }
+
+        function toggleTodosClientes(marcado) {
+            document.querySelectorAll('.chk-cliente').forEach(c => {
+                c.checked = marcado;
+                if (marcado) filtroClienteAtivo.add(c.value);
+                else filtroClienteAtivo.delete(c.value);
+            });
+        }
+
+        function limparFiltroCliente() {
+            filtroClienteAtivo.clear();
+            document.querySelectorAll('.chk-cliente').forEach(c => c.checked = false);
+            const chkTodos = document.getElementById('chk-todos-clientes');
+            if (chkTodos) chkTodos.checked = false;
+        }
+
+        function aplicarFiltroCliente() {
+            document.getElementById('menu-filtro-cliente').style.display = 'none';
+            aplicarFiltros();
+        }
+
+        function abrirFiltroVendedor(e) {
+            e.stopPropagation();
+            const menu = document.getElementById('menu-filtro-vendedor');
+            const rect = e.currentTarget.getBoundingClientRect();
+            menu.style.top = (rect.bottom + window.scrollY + 6) + 'px';
+            menu.style.left = Math.min(rect.left + window.scrollX, window.innerWidth - 260) + 'px';
+            menu.style.display = 'block';
+        }
+
+        function renderizarListaVendedores(busca = '') {
+            const lista = document.getElementById('lista-filtro-vendedor');
+            let html = '';
+            let todos = true;
+
+            vendedoresUnicos.forEach(v => {
+                if (busca && !v.toLowerCase().includes(busca.toLowerCase())) return;
+                const isChecked = filtroVendedorAtivo.has(v);
+                if (!isChecked) todos = false;
+                html += `
+                    <label style="display:flex; gap:6px; font-size:0.8rem; color:#adbac7; cursor:pointer; padding: 2px 0;">
+                        <input type="checkbox" value="${v.replace(/"/g, '&quot;')}" class="chk-vendedor" ${isChecked ? 'checked' : ''} onchange="toggleVendedorIndividual(this)"> ${v}
+                    </label>
+                `;
+            });
+
+            lista.innerHTML = html;
+            document.getElementById('chk-todos-vendedores').checked = todos;
+        }
+
+        function filtrarListaVendedores() {
+            const termo = document.getElementById('input-busca-vendedor').value;
+            renderizarListaVendedores(termo);
+        }
+
+        function toggleVendedorIndividual(chk) {
+            if (chk.checked) filtroVendedorAtivo.add(chk.value);
+            else filtroVendedorAtivo.delete(chk.value);
+        }
+
+        function toggleTodosVendedores(marcado) {
+            document.querySelectorAll('.chk-vendedor').forEach(c => {
+                c.checked = marcado;
+                if (marcado) filtroVendedorAtivo.add(c.value);
+                else filtroVendedorAtivo.delete(c.value);
+            });
+        }
+
+        function limparFiltroVendedor() {
+            filtroVendedorAtivo.clear();
+            document.querySelectorAll('.chk-vendedor').forEach(c => c.checked = false);
+            document.getElementById('chk-todos-vendedores').checked = false;
+        }
+
+        function aplicarFiltroVendedor() {
+            document.getElementById('menu-filtro-vendedor').style.display = 'none';
+            aplicarFiltros();
+        }
+
+        function abrirFiltroPeriodo(e) {
+            e.stopPropagation();
+            const menu = document.getElementById('menu-filtro-periodo');
+            const rect = e.currentTarget.getBoundingClientRect();
+            menu.style.top = (rect.bottom + window.scrollY + 6) + 'px';
+            menu.style.left = Math.min(rect.left + window.scrollX, window.innerWidth - 270) + 'px';
+            menu.style.display = 'block';
+        }
+
+        function aplicarFiltroPeriodo() {
+            const ini = document.getElementById('filtro-data-inicio').value;
+            const fim = document.getElementById('filtro-data-fim').value;
+            const ordem = parseInt(document.getElementById('filtro-ordem-vencimento').value, 10) || 0;
+
+            filtroPeriodoAtivo.inicio = ini ? new Date(ini + 'T00:00:00').getTime() : null;
+            filtroPeriodoAtivo.fim = fim ? new Date(fim + 'T23:59:59').getTime() : null;
+            filtroPeriodoAtivo.ordem = ordem;
+
+            document.getElementById('menu-filtro-periodo').style.display = 'none';
+            aplicarFiltros();
+        }
+
+        function limparFiltroPeriodo() {
+            document.getElementById('filtro-data-inicio').value = '';
+            document.getElementById('filtro-data-fim').value = '';
+            document.getElementById('filtro-ordem-vencimento').value = '0';
+            filtroPeriodoAtivo = { inicio: null, fim: null, ordem: 0 };
+            document.getElementById('menu-filtro-periodo').style.display = 'none';
+            aplicarFiltros();
+        }
+
+        function toggleDropdownVis() {
+            const d = document.getElementById('dropdown-vis');
+            d.style.display = d.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function toggleDropdownMenu() {
+            const d = document.getElementById('dropdown-menu');
+            d.style.display = d.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function toggleColuna(idx, visivel) {
+            const view = document.getElementById('view-anmyna');
+            if (visivel) view.classList.remove(`hide-col-${idx}`);
+            else view.classList.add(`hide-col-${idx}`);
+        }
+
+        window.addEventListener('click', (e) => {
+            const menuC = document.getElementById('menu-filtro-cliente');
+            if (menuC && !menuC.contains(e.target)) menuC.style.display = 'none';
+            const menuV = document.getElementById('menu-filtro-vendedor');
+            if (menuV && !menuV.contains(e.target)) menuV.style.display = 'none';
+            const menuP = document.getElementById('menu-filtro-periodo');
+            if (menuP && !menuP.contains(e.target)) menuP.style.display = 'none';
+            const menuD = document.getElementById('dropdown-menu');
+            if (menuD && !menuD.contains(e.target) && !e.target.classList.contains('menu-icon')) menuD.style.display = 'none';
+            const menuVis = document.getElementById('dropdown-vis');
+            if (menuVis && !menuVis.contains(e.target) && !e.target.closest('.btn-filter')) menuVis.style.display = 'none';
+        });
+
+        // ==========================================
+        // EXPORTAÇÃO EXCEL
+        // ==========================================
+        async function exportarExcel() {
+            if (!registrosFiltrados.length) {
+                alert('Nenhum registro para exportar.');
+                return;
+            }
+
+            const btn = document.getElementById('btn-exportar-excel');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Exportando...';
+
+            try {
+                const workbook = new ExcelJS.Workbook();
+                const worksheet = workbook.addWorksheet(abaAtiva || 'Anmyna', {
+                    views: [{ state: 'frozen', ySplit: 1 }]
+                });
+
+                worksheet.columns = [
+                    { header: 'COTAÇÃO', key: 'numero', width: 35 },
+                    { header: 'PORTAL', key: 'portal', width: 22 },
+                    { header: 'CLIENTE', key: 'cliente', width: 28 },
+                    { header: 'VENDEDOR', key: 'vendedor', width: 20 },
+                    { header: 'PRODUTO', key: 'produto', width: 50 },
+                    { header: 'VENCIMENTO', key: 'vencimento', width: 20 },
+                    { header: 'ENTREGA', key: 'entrega', width: 20 },
+                    { header: 'EMPRESA', key: 'empresa', width: 18 },
+                    { header: 'RESPONDIDO', key: 'respondido', width: 15 },
+                    { header: 'OBSERVAÇÕES', key: 'observacoes', width: 35 }
+                ];
+
+                worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF8B5CF6' } };
+
+                registrosFiltrados.forEach(r => {
+                    worksheet.addRow({
+                        numero: r.numero,
+                        portal: r.portal,
+                        cliente: r.cliente,
+                        vendedor: r.vendedor,
+                        produto: r.produto,
+                        vencimento: `${formatarDataBR(r.data_venc)} ${r.hora_venc}`.trim(),
+                        entrega: `${formatarDataBR(r.data_entrega)} ${r.hora_entrega}`.trim(),
+                        empresa: r.empresa,
+                        respondido: r.respondido || 'NÃO',
+                        observacoes: r.observacoes
+                    });
+                });
+
+                const buffer = await workbook.xlsx.writeBuffer();
+                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Planilha_Anmyna_${new Date().toISOString().slice(0, 10)}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            } catch (err) {
+                console.error('Erro na exportação:', err);
+                alert('Falha ao exportar para Excel.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-file-excel"></i> Exportar Excel';
+            }
+        }
+
+        function irPara(url) {
+            if (typeof socket !== 'undefined' && socket.connected) {
+                socket.disconnect();
+            }
+            setTimeout(() => {
+                window.location.href = url;
+            }, 100);
+        }
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', () => {
+            carregarBancoDados();
+            setInterval(() => { carregarBancoDados(); }, 15000);
+        });
+
+        // ========== FUNÇÕES DE REGISTRO MANUAL (MENU HAMBÚRGUER) ==========
+        function abrirForm(tipo) {
+            const menu = document.getElementById('dropdown-menu');
+            if (menu) menu.style.display = 'none';
+            document.getElementById('form-cotacao').style.display = 'none';
+            document.getElementById('form-vendedor').style.display = 'none';
+            document.getElementById('form-pedido').style.display = 'none';
+            document.getElementById('container-forms-modal').style.display = 'flex';
+            
+            if (tipo === 'cotacao') {
+                document.getElementById('form-cotacao').style.display = 'block';
+                if (document.querySelectorAll('#tbody-cotacoes-manuais tr').length === 0) {
+                    adicionarLinhaCotacaoManual();
+                }
+            }
+            if (tipo === 'vendedor') {
+                document.getElementById('form-vendedor').style.display = 'block';
+            }
+            if (tipo === 'pedido') {
+                document.getElementById('form-pedido').style.display = 'block';
+                if (document.querySelectorAll('#tbody-pedidos-manuais tr').length === 0) {
+                    adicionarLinhaPedidoManual();
+                }
+            }
+        }
+
+        function fecharFormsModal() {
+            const modal = document.getElementById('container-forms-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function criarTextareaAutoResize(classe, placeholder = "") {
+            return `<textarea class="${classe} manual-input" placeholder="${placeholder}" rows="1" style="resize: both; overflow: hidden; line-height: 1.4; min-height: 34px; box-sizing: border-box;" oninput="this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px';"></textarea>`;
+        }
+
+        function templateLinhaManual() {
+            return `
+                <tr style="vertical-align: top; border-bottom: 1px solid #30363d;">
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-cotacao', 'Nº')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-vencimento', 'DD/MM/AAAA')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-item', 'Descrição')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-qtd', 'Qtd')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-local', 'Local')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-vendedor', 'Vendedor')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-modelos', 'Modelos')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-marcas', 'Marcas')}</td>
+                    <td style="padding: 4px; vertical-align: middle; text-align: center;">
+                        <button onclick="this.closest('tr').remove()" style="background: none; border: none; color: #e5534b; cursor: pointer; padding: 4px;" title="Remover"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function adicionarLinhaCotacaoManual() {
+            const tbody = document.getElementById('tbody-cotacoes-manuais');
+            const temp = document.createElement('tbody');
+            temp.innerHTML = templateLinhaManual();
+            tbody.appendChild(temp.firstElementChild);
+        }
+
+        function registrarCotacoesManuais() {
+            const rows = document.querySelectorAll('#tbody-cotacoes-manuais tr');
+            const cotacoes = [];
+            rows.forEach(tr => {
+                const cota = tr.querySelector('.c-cotacao').value.trim();
+                if (cota) {
+                    cotacoes.push({
+                        cotacao: cota,
+                        vencimento: tr.querySelector('.c-vencimento').value.trim(),
+                        item: tr.querySelector('.c-item').value.trim(),
+                        quantidade: tr.querySelector('.c-qtd').value.trim(),
+                        localidade: tr.querySelector('.c-local').value.trim(),
+                        vendedor: tr.querySelector('.c-vendedor').value.trim(),
+                        modelos: tr.querySelector('.c-modelos').value.trim(),
+                        marcas: tr.querySelector('.c-marcas').value.trim()
+                    });
+                }
+            });
+
+            const btn = document.getElementById('btn-registrar-manuais');
+            const msg = document.getElementById('status-msg-manual');
+
+            if (cotacoes.length === 0) {
+                msg.style.color = '#e5534b';
+                msg.innerText = "⚠️ Preencha ao menos uma cotação com número válido.";
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> REGISTRANDO...';
+            msg.style.color = '#e3b341';
+            msg.innerText = "⏳ Enviando para o Robô...";
+
+            socket.emit('solicitar_registro_cotacao_manual', { cotacoes });
+        }
+
+        function adicionarLinhaPedidoManual() {
+            const tbody = document.getElementById('tbody-pedidos-manuais');
+            const tr = document.createElement('tr');
+            tr.style.verticalAlign = 'top';
+            tr.style.borderBottom = '1px solid #30363d';
+            tr.innerHTML = `
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-cidade')}</td>
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-frete')}</td>
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-pedido')}</td>
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-valor')}</td>
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-produto')}</td>
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-entrega', 'DD/MM/AAAA')}</td>
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-rfq')}</td>
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-requisitante')}</td>
+                <td style="padding: 4px;">${criarTextareaAutoResize('p-email')}</td>
+                <td style="padding: 4px; vertical-align: middle; text-align: center;">
+                    <button onclick="this.closest('tr').remove()" style="background: none; border: none; color: #e5534b; cursor: pointer; padding: 4px;" title="Remover"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        function registrarPedidosManuais() {
+            const rows = document.querySelectorAll('#tbody-pedidos-manuais tr');
+            const pedidos = [];
+            rows.forEach(tr => {
+                const pedidoNum = tr.querySelector('.p-pedido').value.trim();
+                const produto = tr.querySelector('.p-produto').value.trim();
+                if (pedidoNum || produto) {
+                    pedidos.push({
+                        cidade_estado: tr.querySelector('.p-cidade').value.trim(),
+                        frete: tr.querySelector('.p-frete').value.trim(),
+                        pedido: pedidoNum,
+                        valor: tr.querySelector('.p-valor').value.trim(),
+                        produto: produto,
+                        entrega: tr.querySelector('.p-entrega').value.trim(),
+                        rfq: tr.querySelector('.p-rfq').value.trim(),
+                        requisitante: tr.querySelector('.p-requisitante').value.trim(),
+                        email_requisitante: tr.querySelector('.p-email').value.trim()
+                    });
+                }
+            });
+
+            const btn = document.getElementById('btn-registrar-pedidos');
+            const msg = document.getElementById('status-msg-pedido');
+
+            if (pedidos.length === 0) {
+                msg.style.color = '#e5534b';
+                msg.innerText = "⚠️ Preencha ao menos uma linha com Pedido ou Produto.";
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> REGISTRANDO...';
+            msg.style.color = '#e3b341';
+            msg.innerText = "⏳ Enviando para o Robô...";
+
+            socket.emit('solicitar_registro_pedido_manual', { pedidos });
+        }
+
+        function registrarVendedor() {
+            const vendedor = document.getElementById('input-vendedor').value.trim();
+            const cotacoes = document.getElementById('input-cotacoes').value.trim();
+            const btn = document.getElementById('btn-registrar');
+            const msg = document.getElementById('status-msg');
+
+            if (!vendedor || !cotacoes) {
+                msg.style.color = '#e5534b';
+                msg.innerText = "⚠️ Preencha o vendedor e as cotações.";
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> REGISTRANDO...';
+            msg.style.color = '#e3b341';
+            msg.innerText = "⏳ Enviando para o Robô...";
+
+            socket.emit('solicitar_registro_vendedor_cotacao', { vendedor, cotacoes });
+        }
+
+        socket.on('status_registro_vendedor', (res) => {
+            const msg = document.getElementById('status-msg');
+            if (msg) {
+                msg.style.color = '#e3b341';
+                msg.innerHTML = '<i class="fa-solid fa-clock"></i> ' + (res.mensagem || '');
+            }
+        });
+
+        socket.on('resposta_registro_vendedor_cotacao', (res) => {
+            const btn = document.getElementById('btn-registrar');
+            const msg = document.getElementById('status-msg');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = 'ATRIBUIR VENDEDOR NA PLANILHA';
+            }
+            if (msg) {
+                if (res.sucesso) {
+                    msg.style.color = '#34d399';
+                    msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + res.mensagem;
+                    document.getElementById('input-vendedor').value = '';
+                    document.getElementById('input-cotacoes').value = '';
+                } else {
+                    msg.style.color = '#e5534b';
+                    msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + res.erro;
+                }
+            }
+        });
+
+        socket.on('resposta_registro_cotacao_manual', (res) => {
+            const btn = document.getElementById('btn-registrar-manuais');
+            const msg = document.getElementById('status-msg-manual');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = 'REGISTRAR COTAÇÕES NA PLANILHA';
+            }
+            if (msg) {
+                if (res.sucesso) {
+                    msg.style.color = '#34d399';
+                    msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + res.mensagem;
+                    document.getElementById('tbody-cotacoes-manuais').innerHTML = '';
+                    adicionarLinhaCotacaoManual();
+                } else {
+                    msg.style.color = '#e5534b';
+                    msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + res.erro;
+                }
+            }
+        });
+
+        socket.on('resposta_registro_pedido_manual', (res) => {
+            const btn = document.getElementById('btn-registrar-pedidos');
+            const msg = document.getElementById('status-msg-pedido');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = 'REGISTRAR PEDIDOS NA PLANILHA';
+            }
+            if (msg) {
+                if (res.sucesso) {
+                    msg.style.color = '#34d399';
+                    msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + res.mensagem;
+                    document.getElementById('tbody-pedidos-manuais').innerHTML = '';
+                    adicionarLinhaPedidoManual();
+                } else {
+                    msg.style.color = '#e5534b';
+                    msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + res.erro;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

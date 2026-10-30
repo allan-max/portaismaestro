@@ -59,8 +59,11 @@
     ].map(([key, label, glyph]) => `<button data-view="${key}" ${state.view === key ? 'class="selected" aria-current="page"' : ''}>${icon(glyph)}${label}${key === 'quotes' ? `<span class="nav-count">${D.select(D.rows, state).length}</span>` : ''}</button>`).join('')}</nav>`;
   }
   function portal() {
+    const isAdm = typeof localStorage !== 'undefined' && localStorage.getItem('maestro_admin') === 'true';
     const status = sourceState === 'ready' ? `Atualizado às ${new Date(lastSuccess).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' })}` : sourceState === 'loading' ? 'Consultando a base…' : 'Dados indisponíveis ou desatualizados';
-    return `<header class="portal-nav"><a href="index.html?portais=1" class="brand" aria-label="Voltar ao portal Maestro"><span class="brand-logo"><img src="img/logo-maestro-dashboard.png" alt=""></span>MAESTRO</a><div class="portal-links"><a class="portal-link" href="index.html?portais=1">${icon('left')}Voltar ao portal</a></div><div class="portal-right"><span class="source-pill ${sourceState === 'error' ? 'amber' : ''}"><span class="status-dot ${sourceState === 'error' ? 'offline' : ''}"></span>${status}</span><div class="admin-account" title="${esc(account)}">${avatar('Admin')}<span>Administrador</span></div></div></header>`;
+    const papel = isAdm ? 'Administrador' : 'Gestão comercial';
+    const avatarTxt = isAdm ? 'Admin' : (account ? account.split('@')[0].slice(0, 2).toUpperCase() : 'GC');
+    return `<header class="portal-nav"><a href="index.html?portais=1" class="brand" aria-label="Voltar ao portal Maestro"><span class="brand-logo"><img src="img/logo-maestro-dashboard.png" alt=""></span>MAESTRO</a><div class="portal-links"><a class="portal-link" href="index.html?portais=1">${icon('left')}Voltar ao portal</a></div><div class="portal-right"><span class="source-pill ${sourceState === 'error' ? 'amber' : ''}"><span class="status-dot ${sourceState === 'error' ? 'offline' : ''}"></span>${status}</span><div class="admin-account" title="${esc(account)}">${avatar(avatarTxt)}<span>${papel}</span></div></div></header>`;
   }
   function heading() {
     return `<div class="heading"><div><div class="breadcrumb">ADMINISTRAÇÃO ${icon('chevron')} ACOMPANHAMENTO DA EQUIPE</div><h1>Gestão de cotações</h1><p>Acompanhe carteira, prazos e respostas da equipe.</p></div>
@@ -171,6 +174,10 @@
   }
   function render() {
     if (!authorized) return accessScreen();
+    const isAdm = typeof localStorage !== 'undefined' && localStorage.getItem('maestro_admin') === 'true';
+    if (!isAdm && ['audit', 'users', 'config'].includes(state.view)) {
+      state.view = 'overview';
+    }
     const focused = document.activeElement?.id;
     const position = ['filter-search', 'aud-busca', 'aud-busca-usuario'].includes(focused) ? document.activeElement.selectionStart : null;
     const vendorOpen = document.getElementById('vendor-picker')?.open;
@@ -213,7 +220,11 @@
   document.addEventListener('click', event => {
     const element = event.target.closest('button, [data-backdrop]'); if (!element) return;
     if (element.hasAttribute('data-close-dialog') || (event.target === element && element.hasAttribute('data-backdrop'))) return closeDrawer();
-    if (element.dataset.view) { state.view = element.dataset.view; state.page = 1; render(); if (A.ativa(state.view)) A.carregar(false); return; }
+    if (element.dataset.view) {
+      const isAdm = typeof localStorage !== 'undefined' && localStorage.getItem('maestro_admin') === 'true';
+      if (!isAdm && ['audit', 'users', 'config'].includes(element.dataset.view)) return;
+      state.view = element.dataset.view; state.page = 1; render(); if (A.ativa(state.view)) A.carregar(false); return;
+    }
     if (!authorized) { if (element.dataset.action === 'refresh') refresh(); return; }
     if (A.clique(element)) return;
     if (element.dataset.quote) return openQuote(element.dataset.quote);
@@ -307,11 +318,16 @@
       requestAccess();
     });
     socket.on('acesso_estatisticas', reply => {
-      if (reply?.sucesso !== true || reply.admin !== true) return invalidate('denied');
+      const hasAccess = reply?.sucesso === true && (reply.admin === true || reply.dashboard_access === true);
+      if (!hasAccess) return invalidate('denied');
       if (!Number.isFinite(reply.expires) || reply.expires <= Date.now()) return invalidate();
       authorized = true; account = String(reply.email || '');
+      if (typeof localStorage !== 'undefined') localStorage.setItem('maestro_admin', reply.admin === true ? 'true' : 'false');
+      if (reply.admin !== true && ['audit', 'users', 'config'].includes(state.view)) {
+        state.view = 'overview';
+      }
       clearTimeout(sessionTimer); sessionTimer = setTimeout(() => { invalidate(); socket.disconnect(); }, reply.expires - Date.now());
-      socket.emit('sou_frontend', { usuario: account }); requestData(); if (A.ativa(state.view)) A.carregar(false);
+      socket.emit('sou_frontend', { usuario: account }); requestData(); if (reply.admin === true && A.ativa(state.view)) A.carregar(false);
     });
     socket.on('retorno_dashboard_cotacoes', reply => {
       if (!authorized || !reply || reply.requestId !== requestId) return;

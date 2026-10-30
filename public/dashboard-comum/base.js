@@ -34,15 +34,19 @@
     const icone = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONES[n] || ''}</svg>`;
 
     function nav() {
-        const email = (typeof localStorage !== 'undefined' && localStorage.getItem('maestro_user')) || 'Administrador';
-        const iniciais = esc(String(email).split('@')[0].replace(/[^a-zA-Z0-9]/g, '').slice(0, 2).toUpperCase() || 'AD');
+        const isAdmin = typeof localStorage !== 'undefined' && localStorage.getItem('maestro_admin') === 'true';
+        const email = (typeof localStorage !== 'undefined' && localStorage.getItem('maestro_user')) || (isAdmin ? 'Administrador' : 'Gestão comercial');
+        const iniciais = esc(String(email).split('@')[0].replace(/[^a-zA-Z0-9]/g, '').slice(0, 2).toUpperCase() || (isAdmin ? 'AD' : 'GC'));
+        const papel = isAdmin ? 'Administrador' : 'Gestão comercial';
+        const pill = isAdmin ? 'Painel administrativo' : 'Gestão comercial';
         return `<nav class="dash-nav" aria-label="Topo do painel"><a class="brand" href="index.html?portais=1"><span class="brand-logo"><img src="img/logo-maestro-dashboard.png" alt=""></span><span class="brand-texto">MAESTRO</span></a>
             <a class="voltar" href="index.html?portais=1">${icone('voltar')}<span>Voltar ao portal</span></a>
-            <div class="dash-nav-right"><span class="source-pill"><span class="status-dot"></span>Painel administrativo</span><div class="admin-account" title="${esc(email)}"><span class="avatar" aria-hidden="true">${iniciais}</span><span>Administrador</span></div></div></nav>`;
+            <div class="dash-nav-right"><span class="source-pill"><span class="status-dot"></span>${pill}</span><div class="admin-account" title="${esc(email)}"><span class="avatar" aria-hidden="true">${iniciais}</span><span>${papel}</span></div></div></nav>`;
     }
 
     // Menu lateral unificado em todas as páginas, dividido em seções com cada rótulo.
     function sidebar(ativa, op = {}) {
+        const isAdmin = op.isAdmin !== undefined ? !!op.isAdmin : (typeof localStorage !== 'undefined' ? localStorage.getItem('maestro_admin') === 'true' : true);
         const naCotacoes = ativa === 'cotacoes';
         const naContas = ativa === 'contas';
         const view = op.view || '';
@@ -62,6 +66,19 @@
         const itemConfig = naContas
             ? `<button type="button" data-acao="abrir-config" ${op.configAberta ? 'class="selected" aria-current="page"' : ''}>${icone('config')}<span>Configurações</span></button>`
             : `<a href="dashboard.html?config=1">${icone('config')}<span>Configurações</span></a>`;
+
+        if (!isAdmin) {
+            return `<aside class="sidebar" aria-label="Menu principal">
+                <div class="eyebrow">Gestão comercial</div>
+                <nav class="subnav" aria-label="Gestão comercial">
+                    ${itemCotacao('overview', 'Visão geral', 'grid')}
+                    ${itemCotacao('vendors', 'Vendedores', 'users')}
+                    ${itemCotacao('quotes', 'Cotações', 'cotacoes', badgeQuotes)}
+                    ${itemCotacao('history', 'Histórico', 'history')}
+                </nav>
+                <div class="sidebar-bottom">${icone('cotacoes')}<p>Gestão comercial</p><small>Painel de cotações</small></div>
+            </aside>`;
+        }
 
         return `<aside class="sidebar" aria-label="Menu principal">
             <div class="eyebrow">Gestão comercial</div>
@@ -237,7 +254,10 @@
             if (cfg.ouvirSocket) cfg.ouvirSocket(socket, estado, desenhar);
             socket.on('connect', () => socket.emit('solicitar_acesso_estatisticas'));
             socket.on('acesso_estatisticas', r => {
-                if (!r || r.sucesso !== true || r.admin !== true) { estado.autorizado = false; estado.acesso = 'negado'; return desenhar(); }
+                const isAdmin = r && r.sucesso === true && r.admin === true;
+                const hasStats = r && r.sucesso === true && (r.admin === true || r.dashboard_access === true);
+                if (typeof localStorage !== 'undefined') localStorage.setItem('maestro_admin', isAdmin ? 'true' : 'false');
+                if (!hasStats || (cfg.pagina !== 'cotacoes' && !isAdmin)) { estado.autorizado = false; estado.acesso = 'negado'; return desenhar(); }
                 estado.autorizado = true;
                 socket.emit('sou_frontend', { usuario: String(r.email || '') });
                 desenhar(); pedir(); pedirSaude(); pedirCotacoes();

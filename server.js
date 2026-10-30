@@ -153,6 +153,92 @@ function obterPrintsParaCotacoes(cotacoes) {
     }
     return mapa;
 }
+
+function obterCaminhoPlanilhaAnmyna() {
+    const caminhoRede = "\\\\SERVIDOR2\\Publico\\ALLAN\\database\\Banco-de-dados\\PLANILHA-ANMYNA.JSON";
+    if (fs.existsSync(caminhoRede)) return caminhoRede;
+    const caminhoLocal = path.resolve(__dirname, '..', 'database', 'Banco-de-dados', 'PLANILHA-ANMYNA.JSON');
+    if (fs.existsSync(caminhoLocal)) return caminhoLocal;
+    return caminhoRede;
+}
+
+function normalizarTextoVendedor(txt) {
+    return String(txt || '').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function vendedorCorresponde(vLinha, vFiltro) {
+    if (!vFiltro) return true;
+    const nLinha = normalizarTextoVendedor(vLinha);
+    const nFiltro = normalizarTextoVendedor(vFiltro);
+    if (!nLinha || !nFiltro) return false;
+    if (nLinha === nFiltro) return true;
+    const partes = nLinha.split(/[\/\-,\s]+/).filter(Boolean);
+    if (partes.includes(nFiltro)) return true;
+    if (nLinha.includes(nFiltro)) return true;
+    return false;
+}
+
+function formatarDataVencimentoParaCotacao(val) {
+    if (!val) return '';
+    const str = String(val).trim();
+    const m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (!m) return str;
+    const p1 = parseInt(m[1], 10);
+    const p2 = parseInt(m[2], 10);
+    const y = parseInt(m[3], 10);
+    let dia, mes;
+    if (p1 > 12) { dia = p1; mes = p2; }
+    else if (p2 > 12) { dia = p2; mes = p1; }
+    else { mes = p1; dia = p2; }
+    return `${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}/${y}`;
+}
+
+function obterCotacoesAnmynaFormatadas(vendedorFiltro) {
+    try {
+        const caminho = obterCaminhoPlanilhaAnmyna();
+        if (!fs.existsSync(caminho)) return [];
+        const conteudo = fs.readFileSync(caminho, 'utf-8');
+        const data = JSON.parse(conteudo);
+        const meses = ['JANEIRO','FEVEREIRO','MARCO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
+        const resultado = [];
+
+        for (const aba in data) {
+            const lista = data[aba] || [];
+            for (const r of lista) {
+                const num = String(r['NÚMERO DA COTAÇÃO'] || r['N\u00daMERO DA COTA\u00c7\u00c3O'] || r['COTAÇÃO'] || '').trim();
+                if (!num) continue;
+                if (meses.includes(num.toUpperCase())) continue;
+
+                const vLinha = String(r['VENDEDOR '] || r['VENDEDOR'] || '').trim();
+                if (!vLinha || ['N/A', 'NÃO RESPONDER', 'NÃO TIRAR', 'NINGUEM'].includes(vLinha.toUpperCase())) continue;
+
+                if (vendedorFiltro && !vendedorCorresponde(vLinha, vendedorFiltro)) continue;
+
+                const local = r['CLIENTE'] ? (r['POR QUAL EMPRESA'] ? `${r['CLIENTE']} (${r['POR QUAL EMPRESA']})` : r['CLIENTE']) : (r['POR QUAL EMPRESA'] || 'Anmyna');
+                resultado.push({
+                    'COTAÇÃO': num,
+                    'VENDEDOR': vLinha,
+                    'VENCIMENTO': formatarDataVencimentoParaCotacao(r['DATA DE VENCIMENTO']),
+                    'HORÁRIO': String(r['HORÁRIO DE VENCIMENTO'] || '').trim(),
+                    'LOCALIDADE': local,
+                    'ITEM': String(r['PRODUTO'] || 'Item não informado').trim(),
+                    'QUANTIDADE': 1,
+                    'RESPOSTA': String(r['RESPONDIDO'] || '').toUpperCase() === 'SIM' ? 'RESPONDIDO' : 'NÃO RESPONDIDO',
+                    'PORTAL': String(r['PORTAL'] || 'Anmyna').trim(),
+                    'ORIGEM_PLANILHA': 'anmyna',
+                    'ABA_ANMYNA': aba,
+                    'CLIENTE': String(r['CLIENTE'] || '').trim(),
+                    'EMPRESA': String(r['POR QUAL EMPRESA'] || '').trim(),
+                    'OBSERVAÇÕES': String(r['OBSERVAÇÕES'] || '').trim()
+                });
+            }
+        }
+        return resultado;
+    } catch (err) {
+        console.error('Erro ao ler cotações Anmyna para vendedor:', err);
+        return [];
+    }
+}
 const dashboardCotacoes = criarDashboardCotacoes({
     sessoes: cofreSessoes, io, obterRobo: () => bot_socket_id,
     obterSocket: id => io.sockets.sockets.get(id)
@@ -585,13 +671,14 @@ io.on('connection', (socket) => {
         if (dados.sucesso) {
             const sessionId = uuidv4();
             const expires = Date.now() + (28800 * 1000); 
+            const hasDashboardAccess = Boolean(dados.hasDashboardAccess);
+            const hasPortaisAccess = Boolean(dados.hasPortaisAccess || dados.hasDashboardAccess || dados.isAdmin);
             cofreSessoes.set(sessionId, JSON.stringify({ 
                 email: dados.user, 
                 admin: dados.isAdmin, 
                 dev: dados.isDev,
-                dashboard_access: dados.hasDashboardAccess,
-                planilha_access: dados.hasPlanilhaAccess, // <-- NOVO
-                portais_access: dados.hasPortaisAccess,   // <-- NOVO
+                dashboard_access: hasDashboardAccess,
+                portais_access: hasPortaisAccess,
                 vendedor: dados.vendedor || '',
                 expires: expires 
             }));
@@ -601,9 +688,8 @@ io.on('connection', (socket) => {
                 sessionId: sessionId,
                 admin: dados.isAdmin, 
                 dev: dados.isDev,
-                dashboard_access: dados.hasDashboardAccess,
-                planilha_access: dados.hasPlanilhaAccess, // <-- NOVO
-                portais_access: dados.hasPortaisAccess,   // <-- NOVO
+                dashboard_access: hasDashboardAccess,
+                portais_access: hasPortaisAccess,
                 vendedor: dados.vendedor || ''
             });
         } else {
@@ -784,6 +870,19 @@ io.on('connection', (socket) => {
     socket.on('admin_resposta_acesso', (dados) => {
         if (socket.id !== bot_socket_id) return; // só o gerenciador responde
         fecharPorCliente('acesso', dados.clientId, dados);
+        if (dados.sucesso && dados.email) {
+            for (const [sId, raw] of cofreSessoes.entries()) {
+                try {
+                    const u = JSON.parse(raw);
+                    if (u.email && u.email.toLowerCase() === dados.email.toLowerCase()) {
+                        if (dados.dashboard_access !== undefined) u.dashboard_access = dados.dashboard_access;
+                        if (dados.portais_access !== undefined) u.portais_access = dados.portais_access;
+                        if (u.dashboard_access) u.portais_access = true;
+                        cofreSessoes.set(sId, JSON.stringify(u));
+                    }
+                } catch {}
+            }
+        }
         io.to(dados.clientId).emit('admin_acesso_alterado', dados);
     });
 
@@ -883,19 +982,32 @@ io.on('connection', (socket) => {
             socket.emit('sessao_invalida');
             return;
         }
-        if (bot_socket_id) {
-            dados.clientId = socket.id;
-            const user = socket.usuarioLogado || {};
-            const vendSessao = (user.vendedor || '').trim();
-            const podeVerPlanilhaGeral = !!(user.admin || user.planilha_access);
+        dados.clientId = socket.id;
+        const user = socket.usuarioLogado || {};
+        const vendSessao = (user.vendedor || '').trim();
+        const podeVerPlanilhaGeral = !!(user.admin || user.planilha_access);
 
-            // Se pediu apenas o vendedor dele OU se não tem permissão de ver a Planilha Geral, trava no vendedor dele
-            if (dados.apenas_meu_vendedor || (vendSessao && !podeVerPlanilhaGeral)) {
-                dados.vendedor_filtro = vendSessao || '__NENHUM__';
-            }
+        // Se pediu apenas o vendedor dele OU se não tem permissão de ver a Planilha Geral, trava no vendedor dele
+        if (dados.apenas_meu_vendedor || (vendSessao && !podeVerPlanilhaGeral)) {
+            dados.vendedor_filtro = vendSessao || '__NENHUM__';
+        }
+
+        if (bot_socket_id) {
             io.to(bot_socket_id).emit('comando_carregar_planilha_json', dados);
         } else {
-            socket.emit('retorno_planilha_json', { sucesso: false, erro: "O Robô está offline." });
+            const vFiltro = dados.vendedor_filtro === '__NENHUM__' ? '' : (dados.vendedor_filtro || vendSessao);
+            const cotacoesAnmyna = obterCotacoesAnmynaFormatadas(vFiltro);
+            if (cotacoesAnmyna.length > 0) {
+                socket.emit('retorno_planilha_json', {
+                    sucesso: true,
+                    cotacoes: cotacoesAnmyna,
+                    pedidos: [],
+                    portais_robo: {},
+                    clientId: socket.id
+                });
+            } else {
+                socket.emit('retorno_planilha_json', { sucesso: false, erro: "O Robô está offline." });
+            }
         }
     });
 
@@ -907,7 +1019,90 @@ io.on('connection', (socket) => {
             dados.prints_robo = { ...(dados.prints_robo || {}), ...obterPrintsParaCotacoes(dados.cotacoes) };
         }
         if (dados.clientId) {
+            const clientSocket = io.sockets.sockets.get(dados.clientId);
+            const user = clientSocket ? clientSocket.usuarioLogado : null;
+            const vendFiltro = dados.vendedor_filtro || (user && user.vendedor) || '';
+            const cotacoesAnmyna = obterCotacoesAnmynaFormatadas(vendFiltro === '__NENHUM__' ? '' : vendFiltro);
+            if (cotacoesAnmyna.length > 0) {
+                const chavesExistentes = new Set((dados.cotacoes || []).map(c => String(c['COTAÇÃO'] || '').trim()));
+                const novasAnmyna = cotacoesAnmyna.filter(c => !chavesExistentes.has(String(c['COTAÇÃO'] || '').trim()));
+                dados.cotacoes = [...novasAnmyna, ...(dados.cotacoes || [])];
+            }
             io.to(dados.clientId).emit('retorno_planilha_json', dados);
+        }
+    });
+
+    // ==========================================
+    // PLANILHA ANMYNA
+    // ==========================================
+    socket.on('solicitar_planilha_anmyna_json', (dados = {}) => {
+        if (!socket.autenticado) {
+            socket.emit('sessao_invalida');
+            return;
+        }
+        try {
+            const caminho = obterCaminhoPlanilhaAnmyna();
+            if (!fs.existsSync(caminho)) {
+                return socket.emit('retorno_planilha_anmyna_json', { sucesso: false, erro: 'Arquivo PLANILHA-ANMYNA.JSON não encontrado.' });
+            }
+            const conteudo = fs.readFileSync(caminho, 'utf-8');
+            const json = JSON.parse(conteudo);
+            socket.emit('retorno_planilha_anmyna_json', { sucesso: true, dados: json });
+        } catch (err) {
+            console.error('Erro ao ler PLANILHA-ANMYNA.JSON:', err);
+            socket.emit('retorno_planilha_anmyna_json', { sucesso: false, erro: err.message });
+        }
+    });
+
+    socket.on('comando_editar_linha_anmyna', (dados = {}) => {
+        if (!socket.autenticado) return socket.emit('sessao_invalida');
+        try {
+            const caminho = obterCaminhoPlanilhaAnmyna();
+            if (!fs.existsSync(caminho)) {
+                return socket.emit('resposta_acao_linha_anmyna', { sucesso: false, erro: 'Arquivo não encontrado.' });
+            }
+            const conteudo = fs.readFileSync(caminho, 'utf-8');
+            const json = JSON.parse(conteudo);
+            const aba = dados.aba || Object.keys(json)[0];
+            const lista = json[aba] || [];
+            const chave = String(dados.chave || '').trim();
+            const index = lista.findIndex(item => String(item['NÚMERO DA COTAÇÃO'] || item['N\u00daMERO DA COTA\u00c7\u00c3O'] || item['COTAÇÃO'] || '').trim() === chave);
+            if (index !== -1) {
+                lista[index] = { ...lista[index], ...(dados.novos_dados || {}) };
+                fs.writeFileSync(caminho, JSON.stringify(json, null, 2), 'utf-8');
+                socket.emit('resposta_acao_linha_anmyna', { sucesso: true, mensagem: 'Registro atualizado com sucesso!' });
+                io.emit('planilha_anmyna_atualizada');
+            } else {
+                socket.emit('resposta_acao_linha_anmyna', { sucesso: false, erro: 'Registro não encontrado.' });
+            }
+        } catch (err) {
+            socket.emit('resposta_acao_linha_anmyna', { sucesso: false, erro: err.message });
+        }
+    });
+
+    socket.on('comando_marcar_respondida_anmyna', (dados = {}) => {
+        if (!socket.autenticado) return socket.emit('sessao_invalida');
+        try {
+            const caminho = obterCaminhoPlanilhaAnmyna();
+            if (!fs.existsSync(caminho)) return socket.emit('resposta_acao_linha_anmyna', { sucesso: false, erro: 'Arquivo não encontrado.' });
+            const conteudo = fs.readFileSync(caminho, 'utf-8');
+            const json = JSON.parse(conteudo);
+            const aba = dados.aba || Object.keys(json)[0];
+            const lista = json[aba] || [];
+            const chave = String(dados.chave || '').trim();
+            const index = lista.findIndex(item => String(item['NÚMERO DA COTAÇÃO'] || item['N\u00daMERO DA COTA\u00c7\u00c3O'] || item['COTAÇÃO'] || '').trim() === chave);
+            if (index !== -1) {
+                const novoStatus = dados.respondido || 'SIM';
+                lista[index]['RESPONDIDO'] = novoStatus;
+                fs.writeFileSync(caminho, JSON.stringify(json, null, 2), 'utf-8');
+                socket.emit('resposta_acao_linha_anmyna', { sucesso: true, mensagem: `Status atualizado para ${novoStatus}!` });
+                io.emit('planilha_anmyna_atualizada');
+                io.emit('planilha_atualizada');
+            } else {
+                socket.emit('resposta_acao_linha_anmyna', { sucesso: false, erro: 'Registro não encontrado.' });
+            }
+        } catch (err) {
+            socket.emit('resposta_acao_linha_anmyna', { sucesso: false, erro: err.message });
         }
     });
 
@@ -1236,6 +1431,20 @@ Regras rígidas:
     } catch (error) {
         console.error("Erro no chat:", error);
         res.status(500).json({ error: "Falha na comunicação com IA." });
+    }
+});
+
+app.get('/api/planilha-anmyna', (req, res) => {
+    try {
+        const caminho = obterCaminhoPlanilhaAnmyna();
+        if (!fs.existsSync(caminho)) {
+            return res.status(404).json({ sucesso: false, erro: 'Arquivo PLANILHA-ANMYNA.JSON não encontrado.' });
+        }
+        const conteudo = fs.readFileSync(caminho, 'utf-8');
+        res.setHeader('Content-Type', 'application/json');
+        res.send(conteudo);
+    } catch (err) {
+        res.status(500).json({ sucesso: false, erro: err.message });
     }
 });
 

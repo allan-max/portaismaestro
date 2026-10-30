@@ -371,9 +371,14 @@
                         </div>
                         <p>Selecione o ambiente para iniciar.</p>
                     </div>
-                    <button onclick="fazerLogout()" style="background: none; border: 1px solid rgba(255,255,255,0.2); color: var(--text-dim); padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; transition: 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-dim)'">
-                        <i class="fa-solid fa-right-from-bracket"></i> Sair
-                    </button>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <a id="btn-voltar-cotacoes" href="minhas_cotacoes.html" style="display: none; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); color: #93c5fd; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; text-decoration: none; align-items: center; gap: 6px; transition: 0.2s;">
+                            <i class="fa-solid fa-arrow-left"></i> Minhas Cotações
+                        </a>
+                        <button onclick="fazerLogout()" style="background: none; border: 1px solid rgba(255,255,255,0.2); color: var(--text-dim); padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; transition: 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-dim)'">
+                            <i class="fa-solid fa-right-from-bracket"></i> Sair
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="form-box" style="margin-top: 20px;">
@@ -382,7 +387,8 @@
                         <option value="" disabled selected>Selecione seu ambiente...</option>
                         <option value="coupa">Coupa Enterprise</option>
                         <option value="vale">Portal Vale Metais</option>
-                        <option value="planilha_vale">Planilha Vale</option>
+                        <option value="planilha_vale">Planilha Vale</option>
+                        <option value="planilha_anmyna">Planilha Anmyna</option>
                         <option value="me">Mercado Eletrônico</option>
                         <option value="findes">Sistema Findes</option>
                         <option value="ariba">SAP Ariba</option>
@@ -413,7 +419,7 @@ socket.on('connect', () => {
     if (socket.auth?.sessionId) socket.emit('solicitar_acesso_estatisticas');
 });
 socket.on('acesso_estatisticas', resposta => {
-    window.maestroEstatisticasPermitidas = resposta?.sucesso === true && resposta.admin === true;
+    window.maestroEstatisticasPermitidas = resposta?.sucesso === true && (resposta.admin === true || resposta.dashboard_access === true);
     atualizarGavetaNoLoad();
 });
 socket.on('disconnect', () => {
@@ -469,6 +475,11 @@ socket.on("sessao_invalida", () => {
             // 3. Mostra apenas a caixa que foi solicitada
             if(document.getElementById('box-' + tela)) {
                 document.getElementById('box-' + tela).style.display = 'block';
+            }
+            if(tela === 'portal') {
+                const vend = (localStorage.getItem('maestro_vendedor') || '').trim();
+                const btnVoltar = document.getElementById('btn-voltar-cotacoes');
+                if (btnVoltar) btnVoltar.style.display = vend ? 'inline-flex' : 'none';
             }
         }
 
@@ -574,24 +585,18 @@ socket.on("sessao_invalida", () => {
         const paramsUrl = new URLSearchParams(window.location.search);
         if (localStorage.getItem('maestro_session')) {
             const vendSalvo = (localStorage.getItem('maestro_vendedor') || '').trim();
-            const podePortais = localStorage.getItem('maestro_admin') === 'true' || localStorage.getItem('maestro_portais') === 'true';
+            const podePortais = localStorage.getItem('maestro_admin') === 'true' || localStorage.getItem('maestro_portais') === 'true' || localStorage.getItem('maestro_dashboard') === 'true';
 
-            // Só deixa abrir ?portais=1 se tiver permissão de Portais (ou for Admin)
+            // Só deixa abrir ?portais=1 se tiver permissão de Portais (ou Estatísticas ou for Admin)
             if (vendSalvo && !(paramsUrl.get('portais') === '1' && podePortais)) {
                 window.location.href = 'minhas_cotacoes.html';
             } else {
                 alternarTelas('portal');
+                verificarPrivilegios();
             }
         } else {
             alternarTelas('login');
         }
-        
-// Mais abaixo no index.html, arrume a checagem inicial também:
-if (localStorage.getItem('maestro_session')) {
-    alternarTelas('portal');
-} else {
-    alternarTelas('login');
-}
 
         function verificarPrivilegios() {
             if (typeof atualizarGavetaNoLoad === 'function') {
@@ -603,9 +608,12 @@ if (localStorage.getItem('maestro_session')) {
             // Limpa TODAS as variáveis de sessão
             localStorage.removeItem('maestro_session');
             localStorage.removeItem('maestro_user');
-            localStorage.removeItem('maestro_admin'); // Apaga privilégio de Admin
-            localStorage.removeItem('maestro_dev');   // Apaga privilégio de Dev
-            localStorage.removeItem('maestro_dashboard'); // Apaga privilégio de Dashboard
+            localStorage.removeItem('maestro_admin');
+            localStorage.removeItem('maestro_dev');
+            localStorage.removeItem('maestro_dashboard');
+            localStorage.removeItem('maestro_portais');
+            localStorage.removeItem('maestro_planilha');
+            localStorage.removeItem('maestro_vendedor');
 
             document.getElementById('log-user').value = '';
             document.getElementById('log-pass').value = '';

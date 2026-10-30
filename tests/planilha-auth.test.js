@@ -8,7 +8,7 @@ const handler = server.match(/socket\.on\('solicitar_planilha_json', (\(dados = 
 
 function request(autenticado, bot) {
     const enviados = [];
-    const context = { dados: { origem: 'todas' }, bot_socket_id: bot,
+    const context = { dados: { origem: 'todas' }, bot_socket_id: bot, obterCotacoesAnmynaFormatadas: () => [],
         socket: { autenticado, id: 'frontend-123', emit(evento, dados) { enviados.push({ destino: 'frontend', evento, dados }); } },
         io: { to(destino) { return { emit(evento, dados) { enviados.push({ destino, evento, dados }); } }; } }
     };

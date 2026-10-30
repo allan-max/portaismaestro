@@ -34,8 +34,9 @@
         }
 
         const isAdmin = localStorage.getItem('maestro_admin') === 'true';
-        const temAcessoPlanilha = isAdmin || localStorage.getItem('maestro_planilha') === 'true';
-        const temAcessoPortais = isAdmin || localStorage.getItem('maestro_portais') === 'true';
+        const temAcessoPlanilha = false;
+        const temAcessoPortais = isAdmin || localStorage.getItem('maestro_portais') === 'true' || localStorage.getItem('maestro_dashboard') === 'true';
+        const temAcessoEstatisticas = isAdmin || localStorage.getItem('maestro_dashboard') === 'true';
 
         const socket = io({ auth: { sessionId: sessionAtual }, transports: ['websocket'], upgrade: false });
 
@@ -47,6 +48,7 @@
         });
 
         socket.on('planilha_atualizada', () => carregarMinhasCotacoes());
+        socket.on('planilha_anmyna_atualizada', () => carregarMinhasCotacoes());
         socket.on('connect', () => window.Tela && window.Tela.conexao(true));
         socket.on('disconnect', () => window.Tela && window.Tela.conexao(false));
 
@@ -177,7 +179,7 @@
             const hoje = getHojeMeiaNoite();
             todasCotacoes = (res.cotacoes || []).filter(c => {
                 const tVenc = parseDataVenc(c['VENCIMENTO']);
-                return tVenc !== null && tVenc >= hoje;
+                return tVenc !== null && (tVenc >= hoje || c.ORIGEM_PLANILHA === 'anmyna');
             });
             window.todasCotacoes = todasCotacoes;
             portaisRobo = (res.portais_robo && typeof res.portais_robo === 'object') ? res.portais_robo : {};
@@ -190,6 +192,15 @@
         });
 
         function marcarComoRespondida(c) {
+            if (c && (c.ORIGEM_PLANILHA === 'anmyna' || c.origem_planilha === 'anmyna')) {
+                const novoStatus = isRespondida(c) ? 'NÃO' : 'SIM';
+                socket.emit('comando_marcar_respondida_anmyna', {
+                    aba: c.ABA_ANMYNA || 'COTAÇÕES 2025',
+                    chave: c['COTAÇÃO'],
+                    respondido: novoStatus
+                });
+                return;
+            }
             const identidade = {
                 'COTAÇÃO': String(c['COTAÇÃO'] ?? ''),
                 'VENDEDOR': String(c['VENDEDOR'] ?? ''),
@@ -202,6 +213,13 @@
 
         // sucesso ou erro, recarrega: a tela marcou como respondida antes da confirmação do servidor
         socket.on('resposta_acao_linha', (res) => {
+            if (!res.sucesso && window.Tela) {
+                window.Tela.toast('Não foi possível marcar como respondida: ' + String(res.erro || 'erro desconhecido').replace(/[&<>"']/g, ''));
+            }
+            carregarMinhasCotacoes();
+        });
+
+        socket.on('resposta_acao_linha_anmyna', (res) => {
             if (!res.sucesso && window.Tela) {
                 window.Tela.toast('Não foi possível marcar como respondida: ' + String(res.erro || 'erro desconhecido').replace(/[&<>"']/g, ''));
             }

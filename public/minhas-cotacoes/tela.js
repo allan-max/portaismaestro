@@ -97,6 +97,9 @@
     function prazo(c) {
         const d = dias(c);
         const urg = Math.max(0.06, Math.min(1, 1 - d / 8));
+        if (d < 0) {
+            return { d, txt: `Venceu há ${Math.abs(d)}d`, sub: c.VENCIMENTO, cls: 'red', urg: 1 };
+        }
         if (d === 0) {
             const fim = new Date(); fim.setHours(23, 59, 0, 0);
             const h = Math.max(0, Math.floor((fim - Date.now()) / 36e5));
@@ -147,7 +150,9 @@
         const p = estado.prazo;
         if (p === 'dia') return dias(c) === estado.dia;
         if (p === 'periodo') { const iso = isoDe(c); return (!estado.de || iso >= estado.de) && (!estado.ate || iso <= estado.ate); }
-        return !(p in LIMITE_PRAZO) || dias(c) <= LIMITE_PRAZO[p];
+        if (p === 'hoje') return dias(c) === 0;
+        if (p in LIMITE_PRAZO) return dias(c) >= 0 && dias(c) <= LIMITE_PRAZO[p];
+        return true;
     }
     function passaStatus(c) {
         const s = estado.status, d = dias(c);
@@ -218,8 +223,8 @@
             <a class="brand" href="minhas_cotacoes.html"><span class="brand-logo"><img src="img/logo-maestro-dashboard.png" alt=""></span><span class="brand-texto">MAESTRO</span></a>
             <div class="dash-nav-links">
                 <a href="minhas_cotacoes.html" aria-current="page">${icone('cotacoes')}<span>Minhas cotações</span></a>
-                ${temAcessoPlanilha ? `<a href="planilha_vale.html">${icone('tabela')}<span>Planilha geral</span></a>` : ''}
-                ${temAcessoPortais ? `<a href="index.html?portais=1">${icone('robo')}<span>Portais</span></a>` : ''}
+                ${(typeof temAcessoPortais !== 'undefined' && temAcessoPortais) ? `<a href="index.html?portais=1">${icone('robo')}<span>Portais</span></a>` : ''}
+                ${(typeof temAcessoEstatisticas !== 'undefined' && temAcessoEstatisticas) ? `<a href="dashboard2.html">${icone('cotacoes')}<span>Estatísticas</span></a>` : ''}
             </div>
             <div class="dash-nav-right">
                 <span class="source-pill off" id="mc-conexao"><span class="status-dot"></span><span>Conectando…</span></span>
@@ -462,7 +467,7 @@
         const p = prazo(c), its = itens(c), resp = respondida(c), { num, origem } = numero(c), portal = portalRobo(c);
         return `<div class="pc-det">
             <header class="pc-det-topo">
-                <div class="eyebrow">Cotação · ${esc(localDe(c))}${origem ? ` · ${esc(origem)}` : ''}</div>
+                <div class="eyebrow">Cotação · ${esc(localDe(c))}${origem ? ` · ${esc(origem)}` : ''}${c.ORIGEM_PLANILHA === 'anmyna' ? ' · Planilha Anmyna' : ''}</div>
                 <div class="pc-det-num"><h2>${esc(num)}</h2><button type="button" class="icon-button" data-acao="copiar-num" data-id="${id(c)}" title="Copiar número">${icone('copiar')}</button></div>
                 ${num !== String(c['COTAÇÃO'] ?? '').trim() ? `<small class="pc-det-orig">Na planilha: ${esc(c['COTAÇÃO'])}</small>` : ''}
                 <div class="pc-det-linha">${statusTag(c)}<span class="pc-prazo ${p.cls}">${icone('relogio')}<b>${p.txt}</b>${p.sub ? ` · ${esc(p.sub)}` : ''}</span></div>
@@ -596,7 +601,7 @@
                 ${novo ? '<span class="pc-selo-novo">NOVA</span>' : ''}
                 <label class="b-sel" data-acao="sel" title="Selecionar para exportar"><input class="pc-check" type="checkbox" data-sel="${k}" ${estado.selecionadas.has(k) ? 'checked' : ''} aria-label="Selecionar cotação ${esc(num)}"></label>
             </div>
-            ${origem ? `<div class="b-origem">${esc(origem)}</div>` : ''}
+            ${origem ? `<div class="b-origem">${esc(origem)}</div>` : (c.ORIGEM_PLANILHA === 'anmyna' ? `<div class="b-origem" style="color: #a78bfa; font-weight: 600;">ANMYNA${c.PORTAL ? ` · ${esc(c.PORTAL)}` : ''}</div>` : '')}
             <div class="b-prazo"><span class="pc-prazo ${resp ? '' : p.cls}">${icone(resp ? 'ok' : 'relogio')}<b>${resp ? 'Respondida' : p.txt}</b>${!resp && p.d === 0 ? ` · ${esc(p.sub)}` : ''}</span>
                 ${resp ? '' : `<div class="pc-urg ${p.cls}"><i style="--w:${Math.round(p.urg * 100)}%"></i></div>`}</div>
             <div class="b-nome">${esc(its[0].nome)}</div>
