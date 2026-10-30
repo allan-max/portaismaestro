@@ -72,6 +72,146 @@
         .led { width: 8px; height: 8px; border-radius: 50%; background-color: #999; transition: 0.3s; }
         .led.running { background-color: #2e8b57; }
 
+        .btn-ligar {
+            width: 100%;
+            padding: 12px; 
+            background-color: #1a36c4;
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem; 
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex; justify-content: center; align-items: center; gap: 8px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 15px rgba(26, 54, 196, 0.3);
+        }
+        .btn-ligar:hover { background-color: #112596; }
+        .btn-ligar:active { transform: translateY(2px); }
+
+        .btn-ligar.running {
+            background-color: #dc3545;
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+        }
+        .btn-ligar.running:hover { background-color: #c82333; }
+
+        .btn-pesquisar {
+            width: 100%;
+            padding: 12px;
+            background-color: #ffffff;
+            color: #1a36c4;
+            border: 2px solid #1a36c4;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        .btn-pesquisar:hover {
+            background-color: #f0f4ff;
+            color: #112596;
+            border-color: #112596;
+            transform: translateY(-1px);
+        }
+        .btn-pesquisar:active {
+            transform: translateY(1px);
+        }
+
+        .btn-link {
+            display: block; width: 100%; text-align: center; background: transparent;
+            color: #ffffff; margin-top: 10px; font-size: 0.85rem; text-decoration: none; 
+            border: none; cursor: pointer; text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            font-weight: 600;
+        }
+        .btn-link:hover { text-decoration: underline; }
+
+        .mini-terminal {
+            margin-top: 20px;
+            background-color: #f8f9fa;
+            border: 1px solid #eaeaea;
+            border-radius: 6px;
+            padding: 12px; 
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.75rem;
+            color: #555;
+            height: 120px; 
+            overflow-y: auto;
+        }
+        .log-line { margin-bottom: 5px; line-height: 1.4; }
+        .log-time { color: #888; margin-right: 6px; }
+
+        /* MODAL DE PESQUISA (ROBÔ ANTIGO) */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100000;
+            padding: 20px;
+        }
+        .modal-overlay.ativo {
+            display: flex;
+        }
+        .modal-box {
+            width: 100%;
+            max-width: 440px;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 20px 45px rgba(0,0,0,0.4);
+            position: relative;
+            animation: modalEntrar 0.22s ease-out;
+        }
+        @keyframes modalEntrar {
+            from { opacity: 0; transform: scale(0.96) translateY(-10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eaeaea;
+        }
+        .modal-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1a36c4;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-fechar-modal {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            color: #888;
+            cursor: pointer;
+            line-height: 1;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: 0.2s;
+        }
+        .btn-fechar-modal:hover {
+            color: #111;
+            background: #f0f0f0;
+        }
+
         .event-group {
             display: flex;
             gap: 8px;
@@ -104,54 +244,6 @@
         }
         .btn-copy:hover { background: #f0f4ff; color: #112596; }
         .btn-copy:active { transform: scale(0.95); }
-
-        .btn-ligar {
-            width: 100%;
-            padding: 12px; 
-            background-color: #1a36c4;
-            color: #ffffff;
-            border: none;
-            border-radius: 6px;
-            font-size: 0.9rem; 
-            font-weight: 700;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex; justify-content: center; align-items: center; gap: 8px;
-            margin-bottom: 15px;
-            box-shadow: 0 4px 15px rgba(26, 54, 196, 0.3);
-        }
-        .btn-ligar:hover { background-color: #112596; }
-        .btn-ligar:active { transform: translateY(2px); }
-
-        .btn-ligar.running {
-            background-color: #dc3545;
-            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
-        }
-        .btn-ligar.running:hover { background-color: #c82333; }
-
-        .btn-link {
-            display: block; width: 100%; text-align: center; background: transparent;
-            color: #ffffff; margin-top: 10px; font-size: 0.85rem; text-decoration: none; 
-            border: none; cursor: pointer; text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-            font-weight: 600;
-        }
-        .btn-link:hover { text-decoration: underline; }
-
-        .mini-terminal {
-            margin-top: 20px;
-            background-color: #f8f9fa;
-            border: 1px solid #eaeaea;
-            border-radius: 6px;
-            padding: 12px; 
-            font-family: 'Roboto Mono', monospace;
-            font-size: 0.75rem;
-            color: #555;
-            height: 110px; 
-            overflow-y: auto;
-        }
-        .log-line { margin-bottom: 5px; line-height: 1.4; }
-        .log-time { color: #888; margin-right: 6px; }
 
         .floating-navbar {
             position: fixed; top: 25px; left: 50%; transform: translateX(-50%);
@@ -249,25 +341,60 @@
             <span id="txt-status">Ocioso</span>
         </div>
 
-        <div class="event-group">
-            <input type="text" id="id-evento" class="event-input" placeholder="Ex: 12345, 23456, 34567">
-            <button class="btn-copy" onclick="copiarDadosEvento()" title="Copiar Mensagens Prontas">
-                <i class="fa-solid fa-copy"></i>
-            </button>
-        </div>
+        <!-- BOTÃO DO ROBÔ NOVO (iniciar_findes.bat / parar_findes.bat) -->
+        <button class="btn-ligar" id="btn-acao-novo" onclick="alternarEstadoFindesNovo()">
+            <i class="fa-solid fa-play"></i> INICIAR FINDES
+        </button>
 
-        <button class="btn-ligar" id="btn-acao" onclick="alternarEstadoFindes()">
-            <i class="fa-solid fa-play"></i> INICIAR MÓDULO
+        <!-- BOTÃO PARA ABRIR O MODAL DE PESQUISA (ROBÔ ANTIGO) -->
+        <button class="btn-pesquisar" id="btn-abrir-pesquisa" onclick="abrirModalPesquisa()">
+            <i class="fa-solid fa-magnifying-glass"></i> PESQUISAR
         </button>
 
         <a href="index.html" class="btn-link">
             <i class="fa-solid fa-arrow-left"></i> Voltar ao Maestro
         </a>
 
+        <!-- MINI-TERMINAL DO ROBÔ NOVO (Lê \\SERVIDOR2\Publico\ALLAN\Logs\findes.txt) -->
         <div class="mini-terminal" id="mini-terminal">
             <div class="log-line"><span class="log-time">[Sys]</span> Conectando ao Maestro...</div>
         </div>
     </main>
+
+    <!-- MODAL DE PESQUISA (ROBÔ ANTIGO COM ENTRADA DE EVENTOS E LOG ANTIGO) -->
+    <div id="modal-pesquisa" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fa-solid fa-magnifying-glass"></i> Pesquisar Eventos (Findes)
+                </div>
+                <button type="button" class="btn-fechar-modal" onclick="fecharModalPesquisa()" title="Fechar">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+
+            <div class="status-container" style="margin-bottom: 14px;">
+                <div class="led" id="led-status-antigo"></div>
+                <span id="txt-status-antigo">Ocioso</span>
+            </div>
+
+            <div class="event-group">
+                <input type="text" id="id-evento" class="event-input" placeholder="Ex: 12345, 23456, 34567">
+                <button class="btn-copy" id="btn-copy-antigo" onclick="copiarDadosEvento()" title="Copiar Mensagens Prontas">
+                    <i class="fa-solid fa-copy"></i>
+                </button>
+            </div>
+
+            <button class="btn-ligar" id="btn-acao-antigo" onclick="alternarEstadoFindesAntigo()">
+                <i class="fa-solid fa-play"></i> INICIAR MÓDULO
+            </button>
+
+            <!-- MINI-TERMINAL DO ROBÔ ANTIGO (Lê \\SERVIDOR2\Publico\ALLAN\Logs\log-findes.txt) -->
+            <div class="mini-terminal" id="mini-terminal-antigo" style="height: 130px; margin-top: 15px;">
+                <div class="log-line"><span class="log-time">[Sys]</span> Módulo de pesquisa pronto. Digite os eventos e clique em Iniciar.</div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
     <script>
@@ -285,186 +412,269 @@
             window.location.href = "index.html"; 
         });
         
-        let isRunning = false;
-        
-        // 👇 NOVA VARIÁVEL QUE GUARDA O TEXTO DO PYTHON 👇
+        let isRunningNovo = false;
+        let isRunningAntigo = false;
         let textoGeradoFindes = "";
 
         function setupPainelFindes() {
             socket.emit('sou_frontend', { usuario: localStorage.getItem('maestro_user') });
-            addLog("Módulo Findes carregado.");
-            addLog("Pode inserir múltiplos eventos separados por vírgula.");
+            socket.emit('pedir_estado_findes');
+            addLogNovo("Módulo Findes carregado.");
         }
 
-        function alternarEstadoFindes() {
-            const btn = document.getElementById('btn-acao');
-            const inputEvento = document.getElementById('id-evento');
-            
-            if (!isRunning) {
-                const idEvento = inputEvento.value.trim();
-                if (!idEvento) {
-                    alert("⚠️ Por favor, digite os IDs dos Eventos antes de iniciar.");
-                    inputEvento.focus();
-                    return;
-                }
-
-                if(confirm(`Deseja iniciar a extração para os eventos: ${idEvento}?`)) {
-                    // Limpa textos de cópias anteriores
-                    textoGeradoFindes = "";
-                    
-                    socket.emit('comando_direto', { modo: 'ligar_robo', portal: 'findes', evento: idEvento });
-                    
-                    isRunning = true;
-                    btn.className = "btn-ligar running";
-                    btn.innerHTML = '<i class="fa-solid fa-stop"></i> PARAR MÓDULO';
-                    document.getElementById('led-status').className = "led running";
-                    document.getElementById('txt-status').innerText = "Processando dados...";
-                    inputEvento.disabled = true; 
-                    addLog(`Comando de INÍCIO enviado para a fila.`);
+        // ==========================================
+        // ROBÔ NOVO: INICIAR / PARAR FINDES (.BAT)
+        // ==========================================
+        function alternarEstadoFindesNovo() {
+            if (!isRunningNovo) {
+                if (confirm("Deseja iniciar a execução do Robô Findes?")) {
+                    socket.emit('comando_direto', { modo: 'iniciar_findes', portal: 'findes' });
+                    atualizarUINovo(true);
+                    addLogNovo("🚀 Comando de INICIAR FINDES enviado.");
                 }
             } else {
-                if(confirm("Deseja interromper o processamento e desligar o robô?")) {
-                    socket.emit('comando_direto', { modo: 'desligar_robo', portal: 'findes' });
-                    
-                    isRunning = false;
-                    btn.className = "btn-ligar";
-                    btn.innerHTML = '<i class="fa-solid fa-play"></i> INICIAR MÓDULO';
-                    document.getElementById('led-status').className = "led";
-                    document.getElementById('txt-status').innerText = "Ocioso";
-                    inputEvento.disabled = false;
-                    addLog(`Ordem de PARADA enviada.`);
+                if (confirm("Deseja interromper a execução do Robô Findes?")) {
+                    socket.emit('comando_direto', { modo: 'parar_findes', portal: 'findes' });
+                    atualizarUINovo(false);
+                    addLogNovo("🛑 Comando de PARAR A EXECUÇÃO enviado.");
                 }
             }
         }
 
-        function copiarDadosEvento() {
-            // Se o Python já devolveu o texto longo formatado
-            if (textoGeradoFindes) {
-                navigator.clipboard.writeText(textoGeradoFindes).then(() => {
-                    addLog(`📋 Textos das cotações copiados com sucesso!`);
-                    piscarBotaoCopiar('#2e8b57', '#fff');
-                    
-                    // 👇 AVISA O PYTHON PARA LER E MOVER OS PDFs NA MESMA HORA 👇
-                    socket.emit('comando_direto', { modo: 'mover_anexos_findes', portal: 'findes' });
-                    
-                }).catch(err => {
-                    addLog("Falha ao copiar dados da cotação.");
-                });
-            } 
-            else {
-                const inputEvento = document.getElementById('id-evento').value.trim();
-                if (!inputEvento) {
-                    addLog("Nada para copiar.");
+        function atualizarUINovo(rodando) {
+            isRunningNovo = rodando;
+            const btn = document.getElementById('btn-acao-novo');
+            const led = document.getElementById('led-status');
+            const txt = document.getElementById('txt-status');
+            if (btn) {
+                if (rodando) {
+                    btn.className = "btn-ligar running";
+                    btn.innerHTML = '<i class="fa-solid fa-stop"></i> PARAR A EXECUÇÃO';
+                } else {
+                    btn.className = "btn-ligar";
+                    btn.innerHTML = '<i class="fa-solid fa-play"></i> INICIAR FINDES';
+                }
+            }
+            if (led) {
+                led.className = rodando ? "led running" : "led";
+            }
+            if (txt) {
+                txt.innerText = rodando ? "Executando..." : "Ocioso";
+            }
+        }
+
+        // ==========================================
+        // ROBÔ ANTIGO: MODAL DE PESQUISA (.NET)
+        // ==========================================
+        function abrirModalPesquisa() {
+            const modal = document.getElementById('modal-pesquisa');
+            if (modal) {
+                modal.classList.add('ativo');
+                const input = document.getElementById('id-evento');
+                if (input && !isRunningAntigo) {
+                    setTimeout(() => input.focus(), 150);
+                }
+            }
+        }
+
+        function fecharModalPesquisa() {
+            const modal = document.getElementById('modal-pesquisa');
+            if (modal) {
+                modal.classList.remove('ativo');
+            }
+        }
+
+        window.addEventListener('click', function(e) {
+            const modal = document.getElementById('modal-pesquisa');
+            if (e.target === modal) {
+                fecharModalPesquisa();
+            }
+        });
+
+        window.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                fecharModalPesquisa();
+            }
+        });
+
+        function alternarEstadoFindesAntigo() {
+            const inputEvento = document.getElementById('id-evento');
+            
+            if (!isRunningAntigo) {
+                const idEvento = inputEvento ? inputEvento.value.trim() : '';
+                if (!idEvento) {
+                    alert("⚠️ Por favor, digite os IDs dos Eventos antes de iniciar.");
+                    if (inputEvento) inputEvento.focus();
                     return;
                 }
-                navigator.clipboard.writeText(inputEvento).then(() => {
-                    addLog(`ID(s) copiado(s): ${inputEvento}`);
+
+                if (confirm(`Deseja iniciar a extração para os eventos: ${idEvento}?`)) {
+                    textoGeradoFindes = "";
+                    socket.emit('comando_direto', { modo: 'ligar_robo_antigo', portal: 'findes', evento: idEvento, versao: 'antigo' });
+                    atualizarUIAntigo(true);
+                    addLogAntigo(`🚀 Comando de INÍCIO enviado para a fila.`);
+                }
+            } else {
+                if (confirm("Deseja interromper o processamento e desligar o robô de pesquisa?")) {
+                    socket.emit('comando_direto', { modo: 'desligar_robo_antigo', portal: 'findes', versao: 'antigo' });
+                    atualizarUIAntigo(false);
+                    addLogAntigo(`🛑 Ordem de PARADA enviada.`);
+                }
+            }
+        }
+
+        function atualizarUIAntigo(rodando) {
+            isRunningAntigo = rodando;
+            const btn = document.getElementById('btn-acao-antigo');
+            const led = document.getElementById('led-status-antigo');
+            const txt = document.getElementById('txt-status-antigo');
+            const input = document.getElementById('id-evento');
+            if (btn) {
+                if (rodando) {
+                    btn.className = "btn-ligar running";
+                    btn.innerHTML = '<i class="fa-solid fa-stop"></i> PARAR MÓDULO';
+                } else {
+                    btn.className = "btn-ligar";
+                    btn.innerHTML = '<i class="fa-solid fa-play"></i> INICIAR MÓDULO';
+                }
+            }
+            if (led) {
+                led.className = rodando ? "led running" : "led";
+            }
+            if (txt) {
+                txt.innerText = rodando ? "Processando dados..." : "Ocioso";
+            }
+            if (input) {
+                input.disabled = rodando;
+            }
+        }
+
+        // ==========================================
+        // COPIAR DADOS (MODAL ANTIGO)
+        // ==========================================
+        function copiarDadosEvento() {
+            if (textoGeradoFindes) {
+                navigator.clipboard.writeText(textoGeradoFindes).then(() => {
+                    addLogAntigo(`📋 Textos das cotações copiados com sucesso!`);
+                    piscarBotaoCopiar('#2e8b57', '#fff');
+                    socket.emit('comando_direto', { modo: 'mover_anexos_findes', portal: 'findes' });
+                }).catch(() => {
+                    addLogAntigo("Falha ao copiar dados da cotação.");
+                });
+            } else {
+                const inputEvento = document.getElementById('id-evento');
+                const val = inputEvento ? inputEvento.value.trim() : '';
+                if (!val) {
+                    addLogAntigo("Nada para copiar.");
+                    return;
+                }
+                navigator.clipboard.writeText(val).then(() => {
+                    addLogAntigo(`ID(s) copiado(s): ${val}`);
                     piscarBotaoCopiar('#1a36c4', '#fff');
                 });
             }
         }
 
         function piscarBotaoCopiar(corFundo, corTexto) {
-            const btnCopy = document.querySelector('.btn-copy');
-            btnCopy.style.background = corFundo;
-            btnCopy.style.color = corTexto;
-            setTimeout(() => {
-                btnCopy.style.background = '';
-                btnCopy.style.color = '';
-            }, 1000);
+            const btnCopy = document.getElementById('btn-copy-antigo') || document.querySelector('.btn-copy');
+            if (btnCopy) {
+                btnCopy.style.background = corFundo;
+                btnCopy.style.color = corTexto;
+                setTimeout(() => {
+                    btnCopy.style.background = '';
+                    btnCopy.style.color = '';
+                }, 1200);
+            }
         }
 
-        function addLog(msg) {
-            const term = document.getElementById('mini-terminal');
+        // ==========================================
+        // GERENCIAMENTO DE LOGS
+        // ==========================================
+        function addLogNovo(msg) {
+            adicionarLinhaLog('mini-terminal', msg);
+        }
+
+        function addLogAntigo(msg) {
+            adicionarLinhaLog('mini-terminal-antigo', msg);
+        }
+
+        function adicionarLinhaLog(terminalId, msg) {
+            const term = document.getElementById(terminalId);
             if (term) {
                 const now = new Date();
                 const hora = now.getHours().toString().padStart(2, '0') + ':' + 
-                             now.getMinutes().toString().padStart(2, '0');
+                             now.getMinutes().toString().padStart(2, '0') + ':' +
+                             now.getSeconds().toString().padStart(2, '0');
                 
                 term.innerHTML += `<div class="log-line"><span class="log-time">[${hora}]</span> ${msg}</div>`;
                 
-                while (term.childElementCount > 50) {
+                while (term.childElementCount > 80) {
                     term.removeChild(term.firstChild);
                 }
                 term.scrollTop = term.scrollHeight;
             }
         }
 
-        // Ouve as linhas de progresso do Findes
+        // ==========================================
+        // EVENTOS DE REDE (SOCKET.IO)
+        // ==========================================
         socket.on('relatar_progresso_findes', function(dados) {
-                if (dados.mensagem) {
-                addLog(dados.mensagem); // Isso escreve no seu terminalzinho preto
+            if (dados.comando_interno === 'desligar_botoes') {
+                atualizarUINovo(false);
+                addLogNovo(`✅ Robô Findes finalizado.`);
+                return;
+            }
+            if (dados.mensagem) {
+                addLogNovo(dados.mensagem);
             }
         });
 
+        socket.on('relatar_progresso_findes_antigo', function(dados) {
+            if (dados.comando_interno === 'desligar_botoes') {
+                atualizarUIAntigo(false);
+                addLogAntigo(`✅ Módulo Pesquisa finalizado.`);
+                return;
+            }
+            if (dados.mensagem) {
+                addLogAntigo(dados.mensagem);
+            }
+        });
+
+        socket.on('sincronizar_estado_findes', function(dados) {
+            const rodando = (dados && (dados.status === 'executando' || dados.status === 'rodando'));
+            atualizarUINovo(rodando);
+        });
+
+        socket.on('sincronizar_estado_findes_antigo', function(dados) {
+            const rodando = (dados && (dados.status === 'executando' || dados.status === 'rodando'));
+            atualizarUIAntigo(rodando);
+        });
 
         socket.on('findes_textos_gerados', function(dados) {
             textoGeradoFindes = dados.texto;
-            addLog("📝 Modelos de texto prontos! Clique no botão de copiar.");
+            addLogAntigo("📝 Modelos de texto prontos! Clique no botão de copiar.");
             piscarBotaoCopiar('#2e8b57', '#fff'); 
         });
 
-
-        socket.on('relatar_progresso_findes', function(dados) {
-            
-            if (dados.comando_interno === 'desligar_botoes') {
-                isRunning = false;
-                const btn = document.getElementById('btn-acao');
-                const inputEvento = document.getElementById('id-evento');
-                btn.className = "btn-ligar";
-                btn.innerHTML = '<i class="fa-solid fa-play"></i> INICIAR MÓDULO';
-                document.getElementById('led-status').className = "led";
-                document.getElementById('txt-status').innerText = "Ocioso";
-                inputEvento.disabled = false;
-                addLog(`✅ Módulo Finalizado e Liberado.`);
-                return; 
-            }
-            
-            if (dados.mensagem) {
-                addLog(dados.mensagem);
-            }
-        });
-
-        socket.on('findes_textos_gerados', function(dados) {
-    console.log("Recebi dados do Python:", dados.texto); // Veja no F12 (Console) se isto aparece
-    textoGeradoFindes = dados.texto;
-    addLog("📝 Dados organizados e prontos para copiar!");
-    
-    // Feedback visual para o usuário
-    const btnCopy = document.querySelector('.btn-copy');
-    btnCopy.style.background = '#2e8b57';
-    btnCopy.style.color = '#fff';
-    setTimeout(() => { btnCopy.style.background = ''; btnCopy.style.color = ''; }, 2000);
-    });
-        
-        // (Nota: NÃO ADICIONE mais o socket.on('tarefa_concluida') aqui para não voltar o bug do Coupa!)
-
-        //  RECEBE O PDF DO PYTHON E BAIXA AUTOMATICAMENTE 
         socket.on('baixar_pdf_findes', function(dados) {
-            // Cria um link HTML invisível na memória
             const link = document.createElement('a');
-            // Anexa o PDF convertido
             link.href = `data:application/pdf;base64,${dados.base64}`;
-            link.download = dados.nome; // Nome do arquivo original
-            
-            // Clica no link invisível para forçar o download no Chrome/Edge
+            link.download = dados.nome;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
-            addLog(`✅ Arquivo '${dados.nome}' transferido para os seus Downloads!`);
+            addLogAntigo(`✅ Arquivo '${dados.nome}' transferido para os seus Downloads!`);
+            addLogNovo(`✅ Arquivo '${dados.nome}' transferido para os seus Downloads!`);
         });
 
-        // ⚡ Função de Troca de Módulo Sem Erro 502
-function irPara(url) {
-    if (typeof socket !== 'undefined' && socket.connected) {
-        socket.disconnect(); // Fecha a conexão VIP com educação
-    }
-    // Pequena pausa de 100ms para o Render limpar a memória antes de mudar
-    setTimeout(() => {
-        window.location.href = url;
-    }, 100);
-}
+        function irPara(url) {
+            if (typeof socket !== 'undefined' && socket.connected) {
+                socket.disconnect();
+            }
+            setTimeout(() => {
+                window.location.href = url;
+            }, 100);
+        }
     </script>
 </body>
 </html>

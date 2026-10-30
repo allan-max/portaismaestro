@@ -111,6 +111,8 @@ app.use(express.json());
 let estado_global = { status: 'desligado', portal_atual: null, fila_pendente: [], tarefas_concluidas: [] };
 let estado_me = { status: 'desligado' };
 let estado_ariba = { status: 'desligado' };
+let estado_findes = { status: 'desligado' };
+let estado_findes_antigo = { status: 'desligado' };
 let fila_respostas = [];
 let bot_socket_id = null;
 let sync_socket_id = null;   // serviço de NF (cruzar_nf/servico.py)
@@ -182,7 +184,7 @@ const dashboardFontes = criarDashboardFontes({
 const auditoria = criarAuditoria({ dir: process.env.AUDITORIA_DIR || path.join(__dirname, '..', 'auditoria'), uuid: uuidv4 });   // AUDITORIA_DIR: testes não sujam a real
 const emailsPendentes = new Map();      // clientId -> e-mail digitado no login/cadastro, até o robô responder
 const auditPorCliente = new Map();      // `${tipo}:${clientId}` -> id do registro, para respostas sem audit_id
-const MODOS_AUDITADOS = new Set(['ligar_robo', 'desligar_robo', 'forcar_troca', 'solicitar_parada', 'parar_extracao', 'extrair', 'verificar', 'mover_anexos_findes']);
+const MODOS_AUDITADOS = new Set(['ligar_robo', 'desligar_robo', 'forcar_troca', 'solicitar_parada', 'parar_extracao', 'extrair', 'verificar', 'mover_anexos_findes', 'iniciar_findes', 'parar_findes', 'ligar_robo_antigo', 'desligar_robo_antigo']);
 let syncNfAuditId = null;
 
 // Só quem ainda é admin com sessão válida continua recebendo ao vivo (rebaixado, bloqueado ou expirado sai da sala)
@@ -385,6 +387,9 @@ io.on('connection', (socket) => {
     socket.on('relatar_progresso_coupa', (dados) => { if (doRobo()) io.to('frontend').emit('relatar_progresso_coupa', dados); });
     socket.on('relatar_progresso_vale', (dados) => { if (doRobo()) io.to('frontend').emit('relatar_progresso_vale', dados); });
     socket.on('relatar_progresso_findes', (dados) => io.to('frontend').emit('relatar_progresso_findes', dados));
+    socket.on('relatar_progresso_findes_antigo', (dados) => io.to('frontend').emit('relatar_progresso_findes_antigo', dados));
+    socket.on('findes_textos_gerados', (dados) => io.to('frontend').emit('findes_textos_gerados', dados));
+    socket.on('baixar_pdf_findes', (dados) => io.to('frontend').emit('baixar_pdf_findes', dados));
     socket.on('relatar_progresso_ariba', (dados) => io.to('frontend').emit('relatar_progresso_ariba', dados));
 
     socket.on('contagem_me', (dados) => io.to('frontend').emit('atualizar_contagem_me', dados));
@@ -392,6 +397,13 @@ io.on('connection', (socket) => {
     
     socket.on('sincronizar_estado_me', (dados) => { estado_me = dados; io.to('frontend').emit('sincronizar_estado_me', dados); });
     socket.on('sincronizar_estado_ariba', (dados) => { estado_ariba = dados; io.to('frontend').emit('sincronizar_estado_ariba', dados); });
+    socket.on('sincronizar_estado_findes', (dados) => { estado_findes = dados; io.to('frontend').emit('sincronizar_estado_findes', dados); });
+    socket.on('sincronizar_estado_findes_antigo', (dados) => { estado_findes_antigo = dados; io.to('frontend').emit('sincronizar_estado_findes_antigo', dados); });
+    socket.on('pedir_estado_findes', () => {
+        socket.emit('sincronizar_estado_findes', estado_findes);
+        socket.emit('sincronizar_estado_findes_antigo', estado_findes_antigo);
+        if (bot_socket_id) io.to(bot_socket_id).emit('pedir_estado_findes');
+    });
 
     socket.on('tarefa_concluida', (dados) => {
         // 👇 NOVA ROTINA PARA CONTROLE DE FILA (EVENTOS) 👇
@@ -464,6 +476,8 @@ io.on('connection', (socket) => {
         socket.emit('sincronizar_estado', { estado: estado_global, mensagem: "Conectado com segurança." });
         socket.emit('sincronizar_estado_me', estado_me);
         socket.emit('sincronizar_estado_ariba', estado_ariba);
+        socket.emit('sincronizar_estado_findes', estado_findes);
+        socket.emit('sincronizar_estado_findes_antigo', estado_findes_antigo);
     });
 
     socket.on('pedir_dados_dev_seguro', (dados) => {
