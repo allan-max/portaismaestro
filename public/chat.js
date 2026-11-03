@@ -28,6 +28,10 @@ const chatHTML = `
 
 // 2. Injeta o HTML automaticamente assim que a página carrega
 document.addEventListener("DOMContentLoaded", () => {
+    const path = window.location.pathname.toLowerCase();
+    if (path.endsWith('index.html') || path === '/' || path === '') {
+        return; // Não injeta o botão de mensagem no index
+    }
     document.body.insertAdjacentHTML('beforeend', chatHTML);
 });
 

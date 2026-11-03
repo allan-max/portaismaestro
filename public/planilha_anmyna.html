@@ -713,7 +713,7 @@
                 padding: 16px !important;
                 max-height: 92vh !important;
             }
-            #tabela-cotacoes-manuais, #tabela-pedidos-manuais {
+            #tabela-cotacoes-manuais {
                 font-size: 0.75rem !important;
             }
         }
@@ -815,6 +815,16 @@
                 <option value="SIM">Respondidas</option>
                 <option value="NAO">Pendentes</option>
             </select>
+
+            <!-- Filtro Ordenação -->
+            <select id="filtro-ordenacao" class="select-filter" onchange="sincronizarOrdenacao(this.value); aplicarFiltros();" title="Critério de Ordenação">
+                <option value="registro-desc" selected>Ordem: Últimas Registradas (Decrescente)</option>
+                <option value="registro-asc">Ordem: Primeiras Registradas (Crescente)</option>
+                <option value="venc-asc">Ordem: Vencimento Mais Próximo</option>
+                <option value="venc-desc">Ordem: Vencimento Mais Distante</option>
+                <option value="cotacao-desc">Ordem: Cotação (Decrescente)</option>
+                <option value="cotacao-asc">Ordem: Cotação (Crescente)</option>
+            </select>
             
             <!-- Visualização Colunas -->
             <button class="btn-filter" onclick="toggleDropdownVis()">
@@ -832,8 +842,7 @@
             <div id="dropdown-menu" style="display: none; position: absolute; left: 20px; top: 55px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; flex-direction: column; min-width: 220px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 10000;">
                 <a href="#" onclick="abrirForm('vendedor'); return false;" style="padding: 12px 15px; color: var(--text-main); text-decoration: none; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-user-tag" style="width: 20px; text-align: center;"></i> Registro de Vendedor</a>
                 <a href="#" onclick="abrirForm('cotacao'); return false;" style="padding: 12px 15px; color: var(--text-main); text-decoration: none; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-list-check" style="width: 20px; text-align: center;"></i> Registro de Cotação</a>
-                <a href="#" onclick="abrirForm('pedido'); return false;" style="padding: 12px 15px; color: var(--text-main); text-decoration: none; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-cart-shopping" style="width: 20px; text-align: center;"></i> Registro de Pedido</a>
-                <a href="planilha_vale.html" style="padding: 12px 15px; color: var(--text-main); text-decoration: none; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-file-excel" style="width: 20px; text-align: center; color: #10b981;"></i> Abrir Planilha Vale</a>
+                                <a href="planilha_vale.html" style="padding: 12px 15px; color: var(--text-main); text-decoration: none; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-file-excel" style="width: 20px; text-align: center; color: #10b981;"></i> Abrir Planilha Vale</a>
                 <button onclick="carregarBancoDados(); toggleDropdownMenu();" style="width: 100%; background: var(--accent-purple); color: white; border: none; padding: 12px; cursor: pointer; font-weight: bold; border-radius: 0 0 8px 8px; text-align: left; display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-rotate"></i> Atualizar Dados</button>
             </div>
 
@@ -872,7 +881,7 @@
             <table class="modern-table">
                 <thead>
                     <tr>
-                        <th style="width: 22%;">Cotação</th>
+                        <th style="width: 22%; cursor: pointer;" onclick="alternarOrdemCotacao()" title="Clique para alternar ordenação por Cotação / Últimas Registradas"><i class="fa-solid fa-file-invoice" style="margin-right:6px;"></i>Cotação <i class="fa-solid fa-sort" style="margin-left:4px; font-size: 0.75em; color: #8b9eb3;"></i></th>
                         <th style="width: 15%; cursor: pointer;" onclick="abrirFiltroCliente(event)" title="Clique para filtrar por Cliente"><i class="fa-regular fa-building" style="margin-right:6px;"></i>Cliente <i class="fa-solid fa-filter" style="margin-left:4px; font-size: 0.75em; color: #8b9eb3;"></i></th>
                         <th style="width: 13%; cursor: pointer;" onclick="abrirFiltroVendedor(event)" title="Clique para filtrar por Vendedor"><i class="fa-regular fa-user" style="margin-right:6px;"></i>Vendedor <i class="fa-solid fa-filter" style="margin-left:4px; font-size: 0.75em; color: #8b9eb3;"></i></th>
                         <th style="width: 19%;"><i class="fa-solid fa-box" style="margin-right:6px;"></i>Produto</th>
@@ -922,10 +931,13 @@
     <div id="menu-filtro-periodo" style="display: none; position: absolute; background: #2d333b; border: 1px solid #444c56; border-radius: 8px; padding: 14px; width: 250px; box-shadow: 0 10px 25px rgba(0,0,0,0.6); z-index: 100001; font-family: 'Inter', sans-serif;">
         <h4 style="color: #cdd9e5; margin: 0 0 10px 0; font-size: 0.85rem;">Filtrar Vencimento</h4>
         <label style="display: block; font-size: 0.75rem; color: #768390; margin-bottom: 4px;">Ordenação:</label>
-        <select id="filtro-ordem-vencimento" style="width: 100%; box-sizing: border-box; background: #22272e; border: 1px solid #444c56; color: #adbac7; padding: 7px; border-radius: 6px; font-size: 0.8rem; margin-bottom: 10px; outline: none;">
-            <option value="0">Ordem Padrão da Planilha</option>
-            <option value="1">Crescente (mais antigas primeiro)</option>
-            <option value="-1">Decrescente (mais recentes primeiro)</option>
+        <select id="filtro-ordem-vencimento" onchange="sincronizarOrdenacao(this.value)" style="width: 100%; box-sizing: border-box; background: #22272e; border: 1px solid #444c56; color: #adbac7; padding: 7px; border-radius: 6px; font-size: 0.8rem; margin-bottom: 10px; outline: none;">
+            <option value="registro-desc" selected>Últimas Registradas (Decrescente)</option>
+            <option value="registro-asc">Primeiras Registradas (Crescente)</option>
+            <option value="venc-asc">Vencimento: Mais próximo primeiro</option>
+            <option value="venc-desc">Vencimento: Mais distante primeiro</option>
+            <option value="cotacao-desc">Cotação: Decrescente</option>
+            <option value="cotacao-asc">Cotação: Crescente</option>
         </select>
         <label style="display: block; font-size: 0.75rem; color: #768390; margin-bottom: 4px;">Data Inicial:</label>
         <input type="date" id="filtro-data-inicio" style="width: 100%; box-sizing: border-box; background: #22272e; border: 1px solid #444c56; color: #adbac7; padding: 7px; border-radius: 6px; font-size: 0.8rem; margin-bottom: 10px; outline: none;">
@@ -1022,7 +1034,7 @@
         </div>
     </div>
 
-    <!-- Modal de Formulários Manuais (Vendedor, Cotação, Pedido) -->
+    <!-- Modal de Formulários Manuais (Vendedor, Cotação) -->
     <div id="container-forms-modal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 9999999; overflow-y: auto;" onclick="if(event.target===this) fecharFormsModal()">
         <div style="background: var(--bg-card); padding: 25px 30px; border-radius: 12px; width: 90%; max-width: 900px; display: flex; flex-direction: column; gap: 20px; position: relative; border: 1px solid var(--border-color); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
             <button onclick="fecharFormsModal()" style="position: absolute; top: 15px; right: 15px; background: none; border: none; color: #768390; font-size: 1.5rem; cursor: pointer;" title="Fechar">&times;</button>
@@ -1040,13 +1052,13 @@
                         <thead>
                             <tr style="background: #1c2128; color: #adbac7; font-size: 0.8rem; text-align: left;">
                                 <th style="padding: 8px;">Cotação</th>
-                                <th style="padding: 8px;">Vencimento</th>
-                                <th style="padding: 8px;">Item</th>
-                                <th style="padding: 8px;">Qtd</th>
-                                <th style="padding: 8px;">Localidade</th>
+                                <th style="padding: 8px;">Cliente</th>
                                 <th style="padding: 8px;">Vendedor</th>
-                                <th style="padding: 8px;">Modelos</th>
-                                <th style="padding: 8px;">Marcas</th>
+                                <th style="padding: 8px;">Produto</th>
+                                <th style="padding: 8px;">Vencimento</th>
+                                <th style="padding: 8px;">Entrega</th>
+                                <th style="padding: 8px;">Portal</th>
+                                <th style="padding: 8px;">Empresa</th>
                                 <th style="width: 30px; padding: 8px;"></th>
                             </tr>
                         </thead>
@@ -1089,46 +1101,7 @@
                 <div id="status-msg" style="margin-top: 12px; font-size: 0.85rem; min-height: 20px; font-weight: 500;"></div>
             </div>
 
-            <!-- Form Pedido -->
-            <div id="form-pedido" style="display: none; position: relative;">
-                <div style="font-size: 2rem; color: #8b5cf6; margin-bottom: 5px;">
-                    <i class="fa-solid fa-cart-shopping"></i>
-                </div>
-                <h2 style="font-size: 1.3rem; margin-bottom: 5px; font-weight: 700; color: #cdd9e5;">Registrar Pedido Manual</h2>
-                <p style="font-size: 0.85rem; color: #768390; margin-bottom: 20px;">Adicione novos pedidos manualmente na aba de pedidos da planilha.</p>
-                
-                <div style="overflow-x: auto; max-height: 400px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #444c56; border-radius: 6px;">
-                    <table id="tabela-pedidos-manuais" style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr style="background: #1c2128; color: #adbac7; font-size: 0.8rem; text-align: left;">
-                                <th style="padding: 8px;">Cidade</th>
-                                <th style="padding: 8px;">Frete</th>
-                                <th style="padding: 8px;">Pedido</th>
-                                <th style="padding: 8px;">Valor</th>
-                                <th style="padding: 8px;">Produto</th>
-                                <th style="padding: 8px;">Entrega</th>
-                                <th style="padding: 8px;">RFQ</th>
-                                <th style="padding: 8px;">Requisitante</th>
-                                <th style="padding: 8px;">Email</th>
-                                <th style="width: 30px; padding: 8px;"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="tbody-pedidos-manuais">
-                        </tbody>
-                    </table>
-                </div>
-
-                <div style="display: flex; gap: 10px;">
-                    <button onclick="adicionarLinhaPedidoManual()" class="btn-filter" style="width: 50px; justify-content: center;" title="Adicionar Linha">
-                        <i class="fa-solid fa-plus"></i>
-                    </button>
-                    <button id="btn-registrar-pedidos" onclick="registrarPedidosManuais()" class="btn-filter" style="flex: 1; background: var(--accent-purple); color: #fff; font-weight: 600; justify-content: center;">
-                        REGISTRAR PEDIDOS NA PLANILHA
-                    </button>
-                </div>
-                <div id="status-msg-pedido" style="margin-top: 12px; font-size: 0.85rem; min-height: 20px; font-weight: 500;"></div>
             </div>
-        </div>
     </div>
 
     <!-- Floating Navbar Maestro -->
@@ -1170,7 +1143,7 @@
         let vendedoresUnicos = [];
         let filtroClienteAtivo = new Set();
         let clientesUnicos = [];
-        let filtroPeriodoAtivo = { inicio: null, fim: null, ordem: 0 };
+        let filtroPeriodoAtivo = { inicio: null, fim: null, ordem: 'registro-desc' };
 
         function formatarDataBR(val) {
             if (!val) return '-';
@@ -1200,7 +1173,7 @@
             return new Date(y, mes - 1, dia).getTime();
         }
 
-        function extrairCampos(r) {
+        function extrairCampos(r, idx = 0) {
             return {
                 numero: String(r['NÚMERO DA COTAÇÃO'] || r['N\u00daMERO DA COTA\u00c7\u00c3O'] || r['COTAÇÃO'] || '').trim(),
                 portal: String(r['PORTAL'] || '').trim(),
@@ -1294,7 +1267,11 @@
         function carregarAba(nomeAba) {
             const rawList = baseAnmynaCompleta[nomeAba] || [];
             // Filtra linhas de cabeçalho de seção (como {"NÚMERO DA COTAÇÃO": "JANEIRO"})
-            registrosOriginais = rawList.map(extrairCampos).filter(item => {
+            registrosOriginais = rawList.map((r, idx) => {
+                const item = extrairCampos(r);
+                item.indice = idx;
+                return item;
+            }).filter(item => {
                 if (!item.numero) return false;
                 // Ignora linhas que são só nomes de meses
                 if (!item.cliente && !item.portal && !item.produto && item.numero.length > 2 && isNaN(item.numero)) {
@@ -1402,13 +1379,46 @@
             });
 
             // Ordenação
-            if (filtroPeriodoAtivo.ordem !== 0) {
-                registrosFiltrados.sort((a, b) => {
-                    const tsA = parseTimestampVencimento(a.data_venc) || 0;
-                    const tsB = parseTimestampVencimento(b.data_venc) || 0;
-                    return (tsA - tsB) * filtroPeriodoAtivo.ordem;
-                });
-            }
+            const criterioOrdem = (document.getElementById('filtro-ordenacao')?.value ||
+                                   document.getElementById('filtro-ordem-vencimento')?.value ||
+                                   filtroPeriodoAtivo.ordem ||
+                                   'registro-desc').toString();
+
+            registrosFiltrados.sort((a, b) => {
+                if (criterioOrdem === 'registro-desc' || criterioOrdem === '-1') {
+                    // Últimas cotações registradas primeiro (maior índice da planilha)
+                    return (b.indice ?? 0) - (a.indice ?? 0);
+                }
+                if (criterioOrdem === 'registro-asc' || criterioOrdem === '0') {
+                    // Primeiras registradas primeiro (ordem original da planilha)
+                    return (a.indice ?? 0) - (b.indice ?? 0);
+                }
+                if (criterioOrdem === 'venc-asc' || criterioOrdem === '1') {
+                    // Vencimento mais próximo primeiro
+                    const tsA = parseTimestampVencimento(a.data_venc);
+                    const tsB = parseTimestampVencimento(b.data_venc);
+                    if (!tsA && !tsB) return (b.indice ?? 0) - (a.indice ?? 0);
+                    if (!tsA) return 1;
+                    if (!tsB) return -1;
+                    return tsA - tsB;
+                }
+                if (criterioOrdem === 'venc-desc') {
+                    // Vencimento mais distante primeiro
+                    const tsA = parseTimestampVencimento(a.data_venc);
+                    const tsB = parseTimestampVencimento(b.data_venc);
+                    if (!tsA && !tsB) return (b.indice ?? 0) - (a.indice ?? 0);
+                    if (!tsA) return 1;
+                    if (!tsB) return -1;
+                    return tsB - tsA;
+                }
+                if (criterioOrdem === 'cotacao-desc') {
+                    return String(b.numero).localeCompare(String(a.numero), undefined, { numeric: true });
+                }
+                if (criterioOrdem === 'cotacao-asc') {
+                    return String(a.numero).localeCompare(String(b.numero), undefined, { numeric: true });
+                }
+                return (b.indice ?? 0) - (a.indice ?? 0);
+            });
 
             currentPage = 0;
             renderizarTabela(false);
@@ -1767,14 +1777,33 @@
             menu.style.display = 'block';
         }
 
+        function sincronizarOrdenacao(valor) {
+            const f1 = document.getElementById('filtro-ordenacao');
+            const f2 = document.getElementById('filtro-ordem-vencimento');
+            if (f1 && f1.value !== valor) f1.value = valor;
+            if (f2 && f2.value !== valor) f2.value = valor;
+            filtroPeriodoAtivo.ordem = valor;
+        }
+
+        function alternarOrdemCotacao() {
+            const atual = document.getElementById('filtro-ordenacao')?.value || 'registro-desc';
+            let prox = 'registro-desc';
+            if (atual === 'registro-desc') prox = 'cotacao-desc';
+            else if (atual === 'cotacao-desc') prox = 'cotacao-asc';
+            else if (atual === 'cotacao-asc') prox = 'registro-desc';
+            sincronizarOrdenacao(prox);
+            aplicarFiltros();
+        }
+
         function aplicarFiltroPeriodo() {
             const ini = document.getElementById('filtro-data-inicio').value;
             const fim = document.getElementById('filtro-data-fim').value;
-            const ordem = parseInt(document.getElementById('filtro-ordem-vencimento').value, 10) || 0;
+            const ordemVal = document.getElementById('filtro-ordem-vencimento').value || 'registro-desc';
 
             filtroPeriodoAtivo.inicio = ini ? new Date(ini + 'T00:00:00').getTime() : null;
             filtroPeriodoAtivo.fim = fim ? new Date(fim + 'T23:59:59').getTime() : null;
-            filtroPeriodoAtivo.ordem = ordem;
+            filtroPeriodoAtivo.ordem = ordemVal;
+            sincronizarOrdenacao(ordemVal);
 
             document.getElementById('menu-filtro-periodo').style.display = 'none';
             aplicarFiltros();
@@ -1783,8 +1812,9 @@
         function limparFiltroPeriodo() {
             document.getElementById('filtro-data-inicio').value = '';
             document.getElementById('filtro-data-fim').value = '';
-            document.getElementById('filtro-ordem-vencimento').value = '0';
-            filtroPeriodoAtivo = { inicio: null, fim: null, ordem: 0 };
+            document.getElementById('filtro-ordem-vencimento').value = 'registro-desc';
+            sincronizarOrdenacao('registro-desc');
+            filtroPeriodoAtivo = { inicio: null, fim: null, ordem: 'registro-desc' };
             document.getElementById('menu-filtro-periodo').style.display = 'none';
             aplicarFiltros();
         }
@@ -1908,7 +1938,6 @@
             if (menu) menu.style.display = 'none';
             document.getElementById('form-cotacao').style.display = 'none';
             document.getElementById('form-vendedor').style.display = 'none';
-            document.getElementById('form-pedido').style.display = 'none';
             document.getElementById('container-forms-modal').style.display = 'flex';
             
             if (tipo === 'cotacao') {
@@ -1919,12 +1948,6 @@
             }
             if (tipo === 'vendedor') {
                 document.getElementById('form-vendedor').style.display = 'block';
-            }
-            if (tipo === 'pedido') {
-                document.getElementById('form-pedido').style.display = 'block';
-                if (document.querySelectorAll('#tbody-pedidos-manuais tr').length === 0) {
-                    adicionarLinhaPedidoManual();
-                }
             }
         }
 
@@ -1940,14 +1963,14 @@
         function templateLinhaManual() {
             return `
                 <tr style="vertical-align: top; border-bottom: 1px solid #30363d;">
-                    <td style="padding: 4px;">${criarTextareaAutoResize('c-cotacao', 'Nº')}</td>
-                    <td style="padding: 4px;">${criarTextareaAutoResize('c-vencimento', 'DD/MM/AAAA')}</td>
-                    <td style="padding: 4px;">${criarTextareaAutoResize('c-item', 'Descrição')}</td>
-                    <td style="padding: 4px;">${criarTextareaAutoResize('c-qtd', 'Qtd')}</td>
-                    <td style="padding: 4px;">${criarTextareaAutoResize('c-local', 'Local')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-cotacao', 'Nº Cotação')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-cliente', 'Cliente')}</td>
                     <td style="padding: 4px;">${criarTextareaAutoResize('c-vendedor', 'Vendedor')}</td>
-                    <td style="padding: 4px;">${criarTextareaAutoResize('c-modelos', 'Modelos')}</td>
-                    <td style="padding: 4px;">${criarTextareaAutoResize('c-marcas', 'Marcas')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-produto', 'Descrição/Produto')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-vencimento', 'DD/MM/AAAA')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-entrega', 'DD/MM/AAAA')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-portal', 'Portal')}</td>
+                    <td style="padding: 4px;">${criarTextareaAutoResize('c-empresa', 'Empresa')}</td>
                     <td style="padding: 4px; vertical-align: middle; text-align: center;">
                         <button onclick="this.closest('tr').remove()" style="background: none; border: none; color: #e5534b; cursor: pointer; padding: 4px;" title="Remover"><i class="fa-solid fa-trash"></i></button>
                     </td>
@@ -1966,17 +1989,19 @@
             const rows = document.querySelectorAll('#tbody-cotacoes-manuais tr');
             const cotacoes = [];
             rows.forEach(tr => {
-                const cota = tr.querySelector('.c-cotacao').value.trim();
+                const cota = (tr.querySelector('.c-cotacao')?.value || '').trim();
                 if (cota) {
                     cotacoes.push({
                         cotacao: cota,
-                        vencimento: tr.querySelector('.c-vencimento').value.trim(),
-                        item: tr.querySelector('.c-item').value.trim(),
-                        quantidade: tr.querySelector('.c-qtd').value.trim(),
-                        localidade: tr.querySelector('.c-local').value.trim(),
-                        vendedor: tr.querySelector('.c-vendedor').value.trim(),
-                        modelos: tr.querySelector('.c-modelos').value.trim(),
-                        marcas: tr.querySelector('.c-marcas').value.trim()
+                        numero: cota,
+                        cliente: (tr.querySelector('.c-cliente')?.value || '').trim(),
+                        vendedor: (tr.querySelector('.c-vendedor')?.value || '').trim(),
+                        produto: (tr.querySelector('.c-produto')?.value || '').trim(),
+                        vencimento: (tr.querySelector('.c-vencimento')?.value || '').trim(),
+                        entrega: (tr.querySelector('.c-entrega')?.value || '').trim(),
+                        portal: (tr.querySelector('.c-portal')?.value || 'Anmyna').trim(),
+                        empresa: (tr.querySelector('.c-empresa')?.value || '').trim(),
+                        respondido: 'NÃO'
                     });
                 }
             });
@@ -1993,69 +2018,9 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> REGISTRANDO...';
             msg.style.color = '#e3b341';
-            msg.innerText = "⏳ Enviando para o Robô...";
+            msg.innerText = "⏳ Salvando na Planilha Anmyna...";
 
-            socket.emit('solicitar_registro_cotacao_manual', { cotacoes });
-        }
-
-        function adicionarLinhaPedidoManual() {
-            const tbody = document.getElementById('tbody-pedidos-manuais');
-            const tr = document.createElement('tr');
-            tr.style.verticalAlign = 'top';
-            tr.style.borderBottom = '1px solid #30363d';
-            tr.innerHTML = `
-                <td style="padding: 4px;">${criarTextareaAutoResize('p-cidade')}</td>
-                <td style="padding: 4px;">${criarTextareaAutoResize('p-frete')}</td>
-                <td style="padding: 4px;">${criarTextareaAutoResize('p-pedido')}</td>
-                <td style="padding: 4px;">${criarTextareaAutoResize('p-valor')}</td>
-                <td style="padding: 4px;">${criarTextareaAutoResize('p-produto')}</td>
-                <td style="padding: 4px;">${criarTextareaAutoResize('p-entrega', 'DD/MM/AAAA')}</td>
-                <td style="padding: 4px;">${criarTextareaAutoResize('p-rfq')}</td>
-                <td style="padding: 4px;">${criarTextareaAutoResize('p-requisitante')}</td>
-                <td style="padding: 4px;">${criarTextareaAutoResize('p-email')}</td>
-                <td style="padding: 4px; vertical-align: middle; text-align: center;">
-                    <button onclick="this.closest('tr').remove()" style="background: none; border: none; color: #e5534b; cursor: pointer; padding: 4px;" title="Remover"><i class="fa-solid fa-trash"></i></button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        }
-
-        function registrarPedidosManuais() {
-            const rows = document.querySelectorAll('#tbody-pedidos-manuais tr');
-            const pedidos = [];
-            rows.forEach(tr => {
-                const pedidoNum = tr.querySelector('.p-pedido').value.trim();
-                const produto = tr.querySelector('.p-produto').value.trim();
-                if (pedidoNum || produto) {
-                    pedidos.push({
-                        cidade_estado: tr.querySelector('.p-cidade').value.trim(),
-                        frete: tr.querySelector('.p-frete').value.trim(),
-                        pedido: pedidoNum,
-                        valor: tr.querySelector('.p-valor').value.trim(),
-                        produto: produto,
-                        entrega: tr.querySelector('.p-entrega').value.trim(),
-                        rfq: tr.querySelector('.p-rfq').value.trim(),
-                        requisitante: tr.querySelector('.p-requisitante').value.trim(),
-                        email_requisitante: tr.querySelector('.p-email').value.trim()
-                    });
-                }
-            });
-
-            const btn = document.getElementById('btn-registrar-pedidos');
-            const msg = document.getElementById('status-msg-pedido');
-
-            if (pedidos.length === 0) {
-                msg.style.color = '#e5534b';
-                msg.innerText = "⚠️ Preencha ao menos uma linha com Pedido ou Produto.";
-                return;
-            }
-
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> REGISTRANDO...';
-            msg.style.color = '#e3b341';
-            msg.innerText = "⏳ Enviando para o Robô...";
-
-            socket.emit('solicitar_registro_pedido_manual', { pedidos });
+            socket.emit('solicitar_registro_cotacao_anmyna', { aba: abaAtiva, cotacoes, origem: 'anmyna' });
         }
 
         function registrarVendedor() {
@@ -2075,7 +2040,7 @@
             msg.style.color = '#e3b341';
             msg.innerText = "⏳ Enviando para o Robô...";
 
-            socket.emit('solicitar_registro_vendedor_cotacao', { vendedor, cotacoes });
+            socket.emit('solicitar_registro_vendedor_cotacao', { vendedor, cotacoes, origem: 'anmyna', aba: abaAtiva });
         }
 
         socket.on('status_registro_vendedor', (res) => {
@@ -2106,6 +2071,27 @@
             }
         });
 
+        socket.on('resposta_registro_cotacao_anmyna', (res) => {
+            const btn = document.getElementById('btn-registrar-manuais');
+            const msg = document.getElementById('status-msg-manual');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = 'REGISTRAR COTAÇÕES NA PLANILHA';
+            }
+            if (msg) {
+                if (res.sucesso) {
+                    msg.style.color = '#34d399';
+                    msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + (res.mensagem || 'Cotações salvas na Planilha Anmyna com sucesso!');
+                    document.getElementById('tbody-cotacoes-manuais').innerHTML = '';
+                    adicionarLinhaCotacaoManual();
+                    carregarBancoDados();
+                } else {
+                    msg.style.color = '#e5534b';
+                    msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + (res.erro || 'Falha ao salvar cotações.');
+                }
+            }
+        });
+
         socket.on('resposta_registro_cotacao_manual', (res) => {
             const btn = document.getElementById('btn-registrar-manuais');
             const msg = document.getElementById('status-msg-manual');
@@ -2116,32 +2102,13 @@
             if (msg) {
                 if (res.sucesso) {
                     msg.style.color = '#34d399';
-                    msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + res.mensagem;
+                    msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + (res.mensagem || 'Cotações salvas na Planilha Anmyna com sucesso!');
                     document.getElementById('tbody-cotacoes-manuais').innerHTML = '';
                     adicionarLinhaCotacaoManual();
+                    carregarBancoDados();
                 } else {
                     msg.style.color = '#e5534b';
-                    msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + res.erro;
-                }
-            }
-        });
-
-        socket.on('resposta_registro_pedido_manual', (res) => {
-            const btn = document.getElementById('btn-registrar-pedidos');
-            const msg = document.getElementById('status-msg-pedido');
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = 'REGISTRAR PEDIDOS NA PLANILHA';
-            }
-            if (msg) {
-                if (res.sucesso) {
-                    msg.style.color = '#34d399';
-                    msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + res.mensagem;
-                    document.getElementById('tbody-pedidos-manuais').innerHTML = '';
-                    adicionarLinhaPedidoManual();
-                } else {
-                    msg.style.color = '#e5534b';
-                    msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + res.erro;
+                    msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + (res.erro || 'Falha ao salvar.');
                 }
             }
         });

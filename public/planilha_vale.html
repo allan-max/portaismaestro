@@ -1518,7 +1518,7 @@
                 document.getElementById('tbody-bd-cota').innerHTML = `<tr><td colspan="6" style="padding: 20px; text-align: center; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>`;
                 document.getElementById('tbody-bd-pedi').innerHTML = `<tr><td colspan="7" style="padding: 20px; text-align: center; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</td></tr>`;
             }
-            socket.emit('solicitar_planilha_json', { origem: 'todas' });
+            socket.emit('solicitar_planilha_json', { origem: 'todas', tela: 'planilha_vale' });
         }
 
         setInterval(() => { carregarBancoDados(true); }, 10000);
@@ -1811,7 +1811,7 @@
                 return;
             }
 
-            window.dadosBanco.cotacoes = res.cotacoes || [];
+            window.dadosBanco.cotacoes = (res.cotacoes || []).filter(c => c && c.ORIGEM_PLANILHA !== 'anmyna');
             window.dadosBanco.pedidos = res.pedidos || [];
             
             aplicarFiltroGlobal();

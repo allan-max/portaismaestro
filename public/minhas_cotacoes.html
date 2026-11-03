@@ -114,7 +114,7 @@
         });
 
         function carregarMinhasCotacoes() {
-            socket.emit('solicitar_planilha_json', { origem: 'todas', apenas_meu_vendedor: true });
+            socket.emit('solicitar_planilha_json', { origem: 'todas', apenas_meu_vendedor: true, tela: 'minhas_cotacoes' });
         }
 
         function isRespondida(c) {
