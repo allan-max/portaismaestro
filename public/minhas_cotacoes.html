@@ -60,6 +60,8 @@
         window.portaisRobo = portaisRobo;
         let printsRobo = {};
         window.printsRobo = printsRobo;
+        let errosRobo = {};
+        window.errosRobo = errosRobo;
 
         function clicarCaptchaGlobal(x, y) {
             socket.emit('clique_no_captcha', { x: Math.round(Number(x) || 0), y: Math.round(Number(y) || 0) });
@@ -78,11 +80,41 @@
             }
         });
 
+        socket.on('retorno_prints_evento', (dados) => {
+            if (!dados || !dados.evento || !Array.isArray(dados.prints) || !dados.prints.length) return;
+            const chave = String(dados.evento).trim();
+            printsRobo[chave] = dados.prints;
+            const limpo = chave.replace(/\D+/g, '');
+            if (limpo) printsRobo[limpo] = dados.prints;
+            if (window.Tela && typeof window.Tela.receberPrintsEvento === 'function') {
+                window.Tela.receberPrintsEvento(chave, dados.prints);
+            }
+        });
+
         socket.on('prints_evento_atualizados', (dados) => {
             if (!dados || !dados.evento || !Array.isArray(dados.prints)) return;
             printsRobo[String(dados.evento).trim()] = dados.prints;
             if (window.Tela && typeof window.Tela.receberPrintsEvento === 'function') {
                 window.Tela.receberPrintsEvento(dados.evento, dados.prints);
+            }
+        });
+
+        socket.on('erro_evento_atualizado', (dados) => {
+            if (!dados || !dados.evento) return;
+            const chave = String(dados.evento).replace(/^Evento\s+/i, '').trim();
+            const limpo = chave.replace(/\D+/g, '');
+            if (dados.erro) {
+                errosRobo[chave] = dados.erro;
+                if (limpo) errosRobo[limpo] = dados.erro;
+                if (window.Tela && typeof window.Tela.receberErroResposta === 'function') {
+                    window.Tela.receberErroResposta(chave, dados.erro);
+                }
+            } else {
+                delete errosRobo[chave];
+                if (limpo) delete errosRobo[limpo];
+                if (window.Tela && typeof window.Tela.limparErroResposta === 'function') {
+                    window.Tela.limparErroResposta(chave);
+                }
             }
         });
 
@@ -96,7 +128,7 @@
         });
 
         socket.on('tarefa_concluida', (dados) => {
-            if (!dados || !dados.evento || !String(dados.evento).startsWith('Evento ')) return;
+            if (!dados || !dados.evento) return;
             const evId = String(dados.evento).replace(/^Evento\s+/i, '').trim();
             if (Array.isArray(dados.prints) && dados.prints.length) {
                 printsRobo[evId] = dados.prints;
@@ -104,11 +136,13 @@
                     window.Tela.receberPrintsEvento(evId, dados.prints);
                 }
             }
-            if (window.Tela && typeof window.Tela.toast === 'function') {
+            if (window.Tela) {
                 if (dados.sucesso) {
-                    window.Tela.toast(`✅ Evento <b>${evId.replace(/[&<>"']/g, '')}</b> respondido e salvo!`);
+                    if (typeof window.Tela.toast === 'function') window.Tela.toast(`✅ Evento <b>${evId.replace(/[&<>"']/g, '')}</b> respondido e salvo!`);
+                    if (typeof window.Tela.limparErroResposta === 'function') window.Tela.limparErroResposta(evId);
                 } else if (dados.erro) {
-                    window.Tela.toast(`❌ Falha ao responder evento ${evId.replace(/[&<>"']/g, '')}: ${String(dados.erro).replace(/[&<>"']/g, '')}`);
+                    if (typeof window.Tela.toast === 'function') window.Tela.toast(`❌ Falha ao responder evento ${evId.replace(/[&<>"']/g, '')}: ${String(dados.erro).replace(/[&<>"']/g, '')}`);
+                    if (typeof window.Tela.receberErroResposta === 'function') window.Tela.receberErroResposta(evId, dados.erro);
                 }
             }
         });
@@ -188,7 +222,11 @@
                 printsRobo = { ...printsRobo, ...res.prints_robo };
                 window.printsRobo = printsRobo;
             }
-            if (window.Tela) window.Tela.receber(todasCotacoes, portaisRobo, printsRobo);
+            if (res.erros_robo && typeof res.erros_robo === 'object') {
+                errosRobo = { ...errosRobo, ...res.erros_robo };
+                window.errosRobo = errosRobo;
+            }
+            if (window.Tela) window.Tela.receber(todasCotacoes, portaisRobo, printsRobo, errosRobo);
         });
 
         function marcarComoRespondida(c) {
@@ -1143,6 +1181,7 @@ ${paragraphs.join('\n')}
             const ncms = itens.map(it => String(it.ncm ?? '').trim());
             const origens = itens.map(it => String(it.origem ?? '').trim());
             const icms = itens.map(it => String(it.icms ?? '').trim());
+            const datasheetPorLinha = Boolean(dados && dados.datasheetPorLinha);
 
             const formData = new FormData();
             formData.append('sessionId', localStorage.getItem('maestro_session') || '');
@@ -1153,10 +1192,27 @@ ${paragraphs.join('\n')}
             formData.append('ncms', JSON.stringify(ncms));
             formData.append('origens', JSON.stringify(origens));
             formData.append('icms', JSON.stringify(icms));
+            formData.append('datasheet_por_linha', datasheetPorLinha ? 'true' : 'false');
 
             const datasheets = Array.isArray(dados && dados.datasheets) ? dados.datasheets : [];
             const davs = Array.isArray(dados && dados.davs) ? dados.davs : [];
-            datasheets.forEach(f => formData.append('datasheet', f));
+            if (!datasheetPorLinha) {
+                datasheets.forEach(f => formData.append('datasheet', f));
+            } else {
+                const dsPorItem = Array.isArray(dados && dados.datasheetsPorItem) ? dados.datasheetsPorItem : [];
+                const indicesDsItem = [];
+                dsPorItem.forEach((listaArqItem, itemIdx) => {
+                    if (Array.isArray(listaArqItem)) {
+                        listaArqItem.forEach(f => {
+                            if (f) {
+                                formData.append('datasheet_item', f);
+                                indicesDsItem.push(itemIdx);
+                            }
+                        });
+                    }
+                });
+                formData.append('datasheet_item_indices', JSON.stringify(indicesDsItem));
+            }
             davs.forEach(f => formData.append('dav', f));
 
             const resp = await fetch('/api/responder', { method: 'POST', body: formData });

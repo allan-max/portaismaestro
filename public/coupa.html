@@ -688,10 +688,14 @@
                 setTimeout(() => window.scrollTo({ top: areaCaptcha.offsetTop - 20, behavior: 'smooth' }), 500);
             }
             
-            // Renderiza a imagem que veio do Python
-            const imgOculta = new Image();
-            imgOculta.onload = function() { document.getElementById('imagem-captcha').src = this.src; };
-            imgOculta.src = "data:image/png;base64," + dados.imagem; 
+            // Renderiza a imagem que veio do Python (60 FPS contínuo)
+            const elImgCaptcha = document.getElementById('imagem-captcha');
+            if (elImgCaptcha && dados && dados.imagem) {
+                const src = String(dados.imagem).startsWith('data:image') 
+                    ? dados.imagem 
+                    : "data:image/png;base64," + dados.imagem;
+                elImgCaptcha.src = src;
+            } 
 
             // Reseta o temporizador que esconde o Captcha se não houver cliques
             clearTimeout(timerCaptcha);
@@ -699,8 +703,6 @@
         });
         
         document.getElementById('imagem-captcha').addEventListener('click', function(event) {
-            this.style.opacity = '0.5';
-            setTimeout(() => { this.style.opacity = '1'; }, 150);
             const rect = this.getBoundingClientRect();
             socket.emit('clique_no_captcha', { 
                 x: Math.round(event.offsetX * (this.naturalWidth / rect.width)), 
@@ -764,7 +766,7 @@ function solicitarParada(btnElement) {
         function adicionarBlocoEvento() {
             contadorEventos++;
             const id = contadorEventos;
-            arquivosPorEvento[id] = { ds: [], dav: [] };
+            arquivosPorEvento[id] = { ds: [], dav: [], dsPorLinha: false, dsItens: {} };
 
             const blocosAbertos = document.querySelectorAll('.evento-body.active');
             blocosAbertos.forEach(corpo => {
@@ -802,9 +804,15 @@ function solicitarParada(btnElement) {
 
                     <div style="display:flex; flex-direction: column; gap:15px; margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.05); width: 100%; overflow: hidden; box-sizing: border-box;">
                         <div class="form-group" style="margin:0; width: 100%; overflow: hidden; box-sizing: border-box;">
-                            <label><i class="fa-solid fa-paperclip" style="color: #94a3b8"></i> DATASHEET (.PDF)</label>
-                            <input type="file" accept=".pdf" multiple onchange="adicionarArquivosBloco(event, 'ds', ${id})" style="border:none; padding:0; background:transparent; width: 100%; max-width: 100%; box-sizing: border-box;">
-                            <div id="lista-ds-${id}" style="width: 100%;"></div>
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#e2e8f0; margin-bottom:8px;">
+                                <input type="checkbox" id="check_ds_linha_${id}" onchange="alternarDsPorLinhaBloco(${id}, this.checked)" style="width:15px; height:15px; margin:0; accent-color:#3b82f6; cursor:pointer;">
+                                <span>Datasheet por linha</span>
+                            </label>
+                            <div id="box-ds-geral-${id}" style="width: 100%;">
+                                <label><i class="fa-solid fa-paperclip" style="color: #94a3b8"></i> DATASHEET (.PDF)</label>
+                                <input type="file" accept=".pdf" multiple onchange="adicionarArquivosBloco(event, 'ds', ${id})" style="border:none; padding:0; background:transparent; width: 100%; max-width: 100%; box-sizing: border-box;">
+                                <div id="lista-ds-${id}" style="width: 100%;"></div>
+                            </div>
                         </div>
                         <div class="form-group" style="margin:0; width: 100%; overflow: hidden; box-sizing: border-box;">
                             <label><i class="fa-solid fa-paperclip" style="color: #94a3b8"></i> DAV (.PDF)</label>
@@ -816,6 +824,18 @@ function solicitarParada(btnElement) {
             `;
             document.getElementById('container-eventos').appendChild(div);
             gerarCamposItensBloco(id); 
+        }
+
+        function alternarDsPorLinhaBloco(id, ativo) {
+            if (!arquivosPorEvento[id]) return;
+            arquivosPorEvento[id].dsPorLinha = Boolean(ativo);
+            const boxGeral = document.getElementById(`box-ds-geral-${id}`);
+            if (boxGeral) boxGeral.style.display = ativo ? 'none' : 'block';
+            const qtd = parseInt(document.getElementById(`res_qtd_itens_${id}`).value) || 1;
+            for (let i = 1; i <= qtd; i++) {
+                const boxItem = document.getElementById(`box-ds-item-${id}-${i}`);
+                if (boxItem) boxItem.style.display = ativo ? 'block' : 'none';
+            }
         }
 
         function toggleBlocoEvento(id) {
@@ -839,6 +859,7 @@ function solicitarParada(btnElement) {
         function gerarCamposItensBloco(id) {
             const qtd = parseInt(document.getElementById(`res_qtd_itens_${id}`).value) || 1;
             const container = document.getElementById(`container-itens-${id}`);
+            const dsPorLinha = Boolean(arquivosPorEvento[id] && arquivosPorEvento[id].dsPorLinha);
             container.innerHTML = ''; 
             for(let i=1; i<=qtd; i++) {
                 container.innerHTML += `
@@ -852,8 +873,50 @@ function solicitarParada(btnElement) {
                             <div class="form-group" style="flex:1; margin:0;"><label>ORIGEM</label><input type="text" id="res_origem_${id}_${i}" placeholder="Nacional"></div>
                             <div class="form-group" style="flex:1; margin:0;"><label>ICMS (%)</label><input type="text" id="res_icms_${id}_${i}" placeholder="18"></div>
                         </div>
+                        <div id="box-ds-item-${id}-${i}" class="form-group" style="display:${dsPorLinha ? 'block' : 'none'}; margin-top:8px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.08);">
+                            <label><i class="fa-solid fa-paperclip" style="color: #94a3b8"></i> DATASHEET DO ITEM ${i} (.PDF)</label>
+                            <input type="file" accept=".pdf" multiple onchange="adicionarArquivosItemBloco(event, ${id}, ${i - 1})" style="border:none; padding:0; background:transparent; width: 100%; max-width: 100%; box-sizing: border-box;">
+                            <div id="lista-ds-item-${id}-${i - 1}" style="width: 100%;"></div>
+                        </div>
                     </div>`;
+                atualizarListaItemBloco(id, i - 1);
             }
+        }
+
+        function adicionarArquivosItemBloco(event, id, itemIdx) {
+            if (!arquivosPorEvento[id].dsItens) arquivosPorEvento[id].dsItens = {};
+            if (!Array.isArray(arquivosPorEvento[id].dsItens[itemIdx])) arquivosPorEvento[id].dsItens[itemIdx] = [];
+            const files = event.target.files;
+            for (let i = 0; i < files.length; i++) {
+                arquivosPorEvento[id].dsItens[itemIdx].push(files[i]);
+            }
+            event.target.value = "";
+            atualizarListaItemBloco(id, itemIdx);
+        }
+
+        function removerArquivoItemBloco(id, itemIdx, fileIdx) {
+            if (arquivosPorEvento[id] && arquivosPorEvento[id].dsItens && Array.isArray(arquivosPorEvento[id].dsItens[itemIdx])) {
+                arquivosPorEvento[id].dsItens[itemIdx].splice(fileIdx, 1);
+                atualizarListaItemBloco(id, itemIdx);
+            }
+        }
+
+        function atualizarListaItemBloco(id, itemIdx) {
+            const div = document.getElementById(`lista-ds-item-${id}-${itemIdx}`);
+            if (!div) return;
+            const lista = (arquivosPorEvento[id] && arquivosPorEvento[id].dsItens && arquivosPorEvento[id].dsItens[itemIdx]) || [];
+            div.innerHTML = "";
+            lista.forEach((arquivo, index) => {
+                div.innerHTML += `
+                    <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 8px; margin-top: 6px; border-radius: 6px; font-size: 0.75rem; display: flex; justify-content: space-between; align-items: center; color: #cbd5e1; width: 100%; box-sizing: border-box; overflow: hidden;">
+                        <span title="${arquivo.name}" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block; max-width: calc(100% - 35px);">
+                            <i class="fa-regular fa-file" style="color:#64748b;"></i> ${arquivo.name}
+                        </span> 
+                        <button type="button" onclick="removerArquivoItemBloco(${id}, ${itemIdx}, ${index})" style="background: none; border: none; color: #ef4444; cursor: pointer; font-weight: bold; flex-shrink: 0; padding: 0 5px;">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>`;
+            });
         }
 
         function adicionarArquivosBloco(event, tipo, id) {
@@ -919,9 +982,24 @@ function solicitarParada(btnElement) {
                 formData.append('origens', JSON.stringify(origens)); 
                 formData.append('icms', JSON.stringify(icmsList));   
                 
+                const dsPorLinha = Boolean(arquivosPorEvento[id]['dsPorLinha']);
+                formData.append('datasheet_por_linha', dsPorLinha ? 'true' : 'false');
                 const filesDS = arquivosPorEvento[id]['ds'];
                 const filesDAV = arquivosPorEvento[id]['dav'];
-                for(let i=0; i < filesDS.length; i++) { formData.append('datasheet', filesDS[i]); }
+                if (!dsPorLinha) {
+                    for(let i=0; i < filesDS.length; i++) { formData.append('datasheet', filesDS[i]); }
+                } else {
+                    const dsItens = arquivosPorEvento[id]['dsItens'] || {};
+                    const indicesDsItem = [];
+                    for (let idxItem = 0; idxItem < qtd; idxItem++) {
+                        const arrItem = dsItens[idxItem] || [];
+                        for (let j = 0; j < arrItem.length; j++) {
+                            formData.append('datasheet_item', arrItem[j]);
+                            indicesDsItem.push(idxItem);
+                        }
+                    }
+                    formData.append('datasheet_item_indices', JSON.stringify(indicesDsItem));
+                }
                 for(let i=0; i < filesDAV.length; i++) { formData.append('dav', filesDAV[i]); }
 
                 try { await fetch('/api/responder', { method: 'POST', body: formData }); } 

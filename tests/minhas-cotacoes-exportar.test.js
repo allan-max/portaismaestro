@@ -1025,3 +1025,130 @@ test('Exibe prints de cada item respondido/salvo no card do evento e mostra Capt
     assert.equal(Tela.estado.captchaImagem, '', 'Quando o Captcha for resolvido, deve limpar a imagem do Captcha');
     assert.equal(Tela.painelCaptchaGlobal(), '', 'Quando o Captcha for resolvido, deve ocultar o banner da tela principal');
 });
+
+test('Checkbox "Datasheet por linha" oculta o quadrado geral de Datasheet e exibe um quadrado em cada item do evento', async () => {
+    const { context, handlers } = setupMinhasCotacoesEnv();
+    const Tela = context.window.Tela;
+
+    handlers.retorno_planilha_json({
+        sucesso: true,
+        portais_robo: { '800123': 'vale' },
+        cotacoes: [
+            {
+                'COTAÇÃO': '800123',
+                'VENCIMENTO': dataRel(1),
+                'LOCALIDADE': 'VALE S.A.',
+                'ITEM': '(Item 1) BOMBA CENTRÍFUGA\n(Item 2) SELO MECÂNICO',
+                'QUANTIDADE': '(Item 1) 2 UN\n(Item 2) 5 UN'
+            }
+        ]
+    });
+
+    const cVale = Tela.estado.lista[0];
+    const k = Tela.id(cVale);
+    Tela.estado.aberta = k;
+    Tela.estado.respondendoPortal = true;
+
+    // 1. Por padrão (desmarcado), mostra a caixinha "Datasheet por linha" e o quadrado geral #drop-datasheet
+    const htmlPadrao = Tela.detalhe(cVale);
+    assert.ok(htmlPadrao.includes('id="check-datasheet-por-linha"'), 'Deve exibir o checkbox "Datasheet por linha" acima do datasheet');
+    assert.ok(htmlPadrao.includes('Datasheet por linha'), 'Deve ter o rótulo "Datasheet por linha"');
+    assert.ok(htmlPadrao.includes('id="drop-datasheet"'), 'Quando desmarcado, deve mostrar o quadrado geral de Datasheet');
+    assert.ok(!htmlPadrao.includes('id="drop-datasheet-item-0"'), 'Quando desmarcado, não deve mostrar quadrado de datasheet por item');
+
+    // 2. Ao marcar "Datasheet por linha", o quadrado geral some e aparece um quadrado em cada item do evento
+    Tela.alternarDatasheetPorLinha(k, true);
+    const htmlMarcado = Tela.detalhe(cVale);
+    assert.ok(!htmlMarcado.includes('id="drop-datasheet"'), 'Quando marcado, o quadrado geral do Datasheet deve sumir');
+    assert.ok(htmlMarcado.includes('id="drop-datasheet-item-0"'), 'Deve aparecer o quadrado de Datasheet no Item 1');
+    assert.ok(htmlMarcado.includes('id="drop-datasheet-item-1"'), 'Deve aparecer o quadrado de Datasheet no Item 2');
+
+    // 3. Anexa datasheets diferentes para cada item
+    await Tela.receberArquivosResposta(k, 'datasheet-item', [{ name: 'ds_bomba.pdf' }], 0);
+    await Tela.receberArquivosResposta(k, 'datasheet-item', [{ name: 'ds_selo.pdf' }], 1);
+
+    const dados = Tela.dadosResposta(cVale);
+    assert.equal(dados.datasheetPorLinha, true);
+    assert.equal(dados.datasheetsPorItem[0].length, 1);
+    assert.equal(dados.datasheetsPorItem[0][0].name, 'ds_bomba.pdf');
+    assert.equal(dados.datasheetsPorItem[1].length, 1);
+    assert.equal(dados.datasheetsPorItem[1][0].name, 'ds_selo.pdf');
+
+    const htmlComArquivos = Tela.detalhe(cVale);
+    assert.ok(htmlComArquivos.includes('ds_bomba.pdf'), 'Deve listar o datasheet anexado no Item 1');
+    assert.ok(htmlComArquivos.includes('ds_selo.pdf'), 'Deve listar o datasheet anexado no Item 2');
+
+    // 4. Se desmarcar a caixinha, volta ao funcionamento normal de antes
+    Tela.alternarDatasheetPorLinha(k, false);
+    const htmlDesmarcado = Tela.detalhe(cVale);
+    assert.ok(htmlDesmarcado.includes('id="drop-datasheet"'), 'Ao desmarcar, o quadrado geral do Datasheet volta a aparecer');
+    assert.ok(!htmlDesmarcado.includes('id="drop-datasheet-item-0"'), 'Ao desmarcar, os quadrados por item somem');
+});
+
+test('Salva o erro minimalista em vermelho no evento e oculta o alerta quando o usuário enviar a resposta novamente', async () => {
+    const { context, handlers } = setupMinhasCotacoesEnv();
+    const Tela = context.window.Tela;
+
+    handlers.retorno_planilha_json({
+        sucesso: true,
+        portais_robo: { '800777': 'vale' },
+        cotacoes: [
+            {
+                'COTAÇÃO': '800777',
+                'VENCIMENTO': dataRel(1),
+                'LOCALIDADE': 'VALE S.A.',
+                'ITEM': '(Item 1) VÁLVULA ESFERA',
+                'QUANTIDADE': '(Item 1) 3 UN'
+            }
+        ]
+    });
+
+    const cota = Tela.estado.lista[0];
+    const k = Tela.id(cota);
+
+    // 1. Quando ocorre erro ao responder o evento, salva o erro curto e direto em vermelho no card e no modal
+    handlers.tarefa_concluida({
+        evento: 'Evento 800777',
+        sucesso: false,
+        erro: 'NCM não existe · Faltou a origem'
+    });
+
+    assert.equal(Tela.erroDe(cota), 'NCM não existe · Faltou a origem');
+
+    const htmlCardComErro = Tela.cartao(cota, 0);
+    assert.ok(htmlCardComErro.includes('b-erro-card'), 'O card do evento deve mostrar a badge minimalista de erro em vermelho');
+    assert.ok(htmlCardComErro.includes('com-erro'), 'O card do evento deve receber a classe com-erro');
+    assert.ok(htmlCardComErro.includes('NCM não existe · Faltou a origem'), 'O card deve exibir o motivo curto do erro');
+
+    Tela.estado.aberta = k;
+    const htmlModalComErro = Tela.detalhe(cota);
+    assert.ok(htmlModalComErro.includes('pc-alerta-erro-evento'), 'O modal do evento deve mostrar o alerta minimalista de erro em vermelho');
+    assert.ok(htmlModalComErro.includes('NCM não existe · Faltou a origem'), 'O modal deve mostrar o motivo curto do erro');
+
+    // Também formata mensagens brutas em textos curtos ("Valor errado", "NCM não existe", "Faltou a origem")
+    assert.equal(Tela.formatarErroCurto('NCM não existe'), 'NCM não existe');
+    assert.equal(Tela.formatarErroCurto('Valor errado'), 'Valor errado');
+    assert.equal(Tela.formatarErroCurto('Faltou a origem'), 'Faltou a origem');
+
+    // 2. Quando o usuário envia a resposta novamente para esse evento, o alerta de erro desaparece
+    let enviadoParaServidor = null;
+    context.enviarRespostaCotacaoPortal = async (payload) => {
+        enviadoParaServidor = payload;
+        return { sucesso: true };
+    };
+
+    const d = Tela.dadosResposta(cota);
+    d.itens = [{ n: 1, produto: 'VÁLVULA ESFERA', quantidade: 3, preco: '150,00', prazo: '10', ncm: '8481.80.95', origem: '0', icms: '18' }];
+
+    await Tela.enviarRespostaDoModal(cota);
+
+    assert.ok(enviadoParaServidor, 'Deve ter enviado a nova resposta do evento');
+    assert.equal(Tela.erroDe(cota), '', 'O erro do evento deve ser limpo ao reenviar a resposta');
+
+    const htmlCardSemErro = Tela.cartao(cota, 0);
+    assert.ok(!htmlCardSemErro.includes('b-erro-card'), 'O alerta de erro deve sumir do card após reenviar a resposta');
+    assert.ok(!htmlCardSemErro.includes('com-erro'), 'A classe com-erro deve sair do card após reenviar a resposta');
+
+    const htmlModalSemErro = Tela.detalhe(cota);
+    assert.ok(!htmlModalSemErro.includes('pc-alerta-erro-evento'), 'O alerta de erro deve sumir do modal após reenviar a resposta');
+});

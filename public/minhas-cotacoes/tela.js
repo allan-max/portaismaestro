@@ -83,8 +83,83 @@
         const mapa = { ...mapaWin, ...(estado.printsRobo || {}) };
         const bruto = String(c['COTAÇÃO'] ?? '').trim();
         const limpo = numero(c).num;
-        const listaPrints = mapa[bruto] || mapa[limpo] || [];
+        const apenasDigitos = (bruto.match(/\d+/) || limpo.match(/\d+/) || [])[0] || '';
+
+        let listaPrints = mapa[bruto] || mapa[limpo] || (apenasDigitos ? mapa[apenasDigitos] : null) || (c.id ? mapa[c.id] : null);
+        if (!listaPrints && apenasDigitos) {
+            for (const k in mapa) {
+                const kDigitos = (k.match(/\d+/) || [])[0];
+                if (kDigitos && kDigitos === apenasDigitos) {
+                    listaPrints = mapa[k];
+                    break;
+                }
+            }
+        }
         return Array.isArray(listaPrints) ? listaPrints : [];
+    }
+
+    function formatarErroCurto(msg) {
+        const raw = String(msg || '').replace(/<[^>]+>/g, '').trim();
+        if (!raw) return '';
+        const low = raw.toLowerCase();
+        const motivos = [];
+        const add = m => { if (m && !motivos.includes(m)) motivos.push(m); };
+
+        // Se já vier em formato curto separado por " · "
+        if (raw.length <= 70 && !low.includes('o portal recusou') && !low.includes('traceback') && !low.includes('exception')) {
+            return raw;
+        }
+
+        if (low.includes('ncm não existe') || low.includes('ncm nao existe') || low.includes('ncm inexistente') || low.includes('ncm inválido') || low.includes('ncm invalido')) {
+            add('NCM não existe');
+        } else if (low.includes('faltou o ncm')) {
+            add('Faltou o NCM');
+        } else if (/\bncm\b/.test(low)) {
+            add('NCM não existe');
+        }
+        if (low.includes('faltou a origem') || (/\borigem\b/.test(low) && (low.includes('vazio') || low.includes('faltou') || low.includes('obrigat')))) {
+            add('Faltou a origem');
+        } else if (/\borigem\b/.test(low)) {
+            add('Origem inválida');
+        }
+        if (low.includes('valor errado') || (/(pre[çc]o|valor)/.test(low) && (low.includes('errado') || low.includes('inválido') || low.includes('invalido')))) {
+            add('Valor errado');
+        } else if (low.includes('faltou o valor') || /(pre[çc]o|valor)/.test(low)) {
+            add('Faltou o valor');
+        }
+        if (low.includes('faltou o prazo') || (/(prazo|tempo de espera)/.test(low) && (low.includes('vazio') || low.includes('faltou') || low.includes('obrigat')))) {
+            add('Faltou o prazo');
+        } else if (/(prazo|tempo de espera)/.test(low)) {
+            add('Prazo inválido');
+        }
+        if (/\bicms\b/.test(low)) add(low.includes('faltou') ? 'Faltou o ICMS' : 'ICMS inválido');
+        if (/\bipi\b/.test(low)) add(low.includes('faltou') ? 'Faltou o IPI' : 'IPI inválido');
+        if (/\bcofins\b/.test(low)) add(low.includes('faltou') ? 'Faltou o COFINS' : 'COFINS inválido');
+        if (low.includes('encerrad') || low.includes('fechad') || low.includes('expirad')) add('Evento encerrado');
+
+        if (motivos.length) return motivos.join(' · ');
+        return raw.length > 60 ? raw.slice(0, 57).trim() + '…' : raw;
+    }
+
+    function erroDe(c) {
+        if (!c) return '';
+        const mapaWin = (typeof window !== 'undefined' && window.errosRobo && typeof window.errosRobo === 'object') ? window.errosRobo : {};
+        const mapa = { ...mapaWin, ...(estado.errosResposta || {}) };
+        const bruto = String(c['COTAÇÃO'] ?? '').trim();
+        const limpo = numero(c).num;
+        const apenasDigitos = (bruto.match(/\d+/) || limpo.match(/\d+/) || [])[0] || '';
+
+        let msg = mapa[bruto] || mapa[limpo] || (apenasDigitos ? mapa[apenasDigitos] : '') || (c.id ? mapa[c.id] : '');
+        if (!msg && apenasDigitos) {
+            for (const k in mapa) {
+                const kDigitos = (k.match(/\d+/) || [])[0];
+                if (kDigitos && kDigitos === apenasDigitos && mapa[k]) {
+                    msg = mapa[k];
+                    break;
+                }
+            }
+        }
+        return formatarErroCurto(msg);
     }
 
     // ---------- prazo e status ----------
@@ -125,7 +200,7 @@
         prazo: lembrado.prazo === 'dia' ? '' : lembrado.prazo || '', dia: null, de: lembrado.de || '', ate: lembrado.ate || '',
         locais: arr(lembrado.locais), marcas: arr(lembrado.marcas), ordem: lembrado.ordem || 'prioridade',
         selecionadas: new Set(), aberta: null, confirmando: false, respondeuAgora: null, novos: new Set(), pop: null, portais: {},
-        respondendoPortal: false, respostas: {}, printsRobo: {}, captchaImagem: '',
+        respondendoPortal: false, respostas: {}, printsRobo: {}, captchaImagem: '', printViewer: null, errosResposta: {},
     };
     function dadosResposta(c) {
         if (!c) return null;
@@ -137,12 +212,33 @@
                 carregandoPlanilha: false,
                 davs: [],
                 datasheets: [],
+                datasheetPorLinha: false,
+                datasheetsPorItem: {},
                 itens: [],
                 enviando: false,
                 enviado: false,
             };
         }
         return estado.respostas[k];
+    }
+    function alternarDatasheetPorLinha(k, ativo) {
+        const c = porId(k);
+        if (!c) return;
+        const d = dadosResposta(c);
+        d.datasheetPorLinha = Boolean(ativo);
+        if (d.datasheetPorLinha && !d.itens.length) {
+            d.itens = itens(c).map((it, idx) => ({
+                n: idx + 1,
+                produto: it.nome || `Item ${idx + 1}`,
+                quantidade: it.qtd || 1,
+                preco: '',
+                prazo: '',
+                ncm: '',
+                origem: '',
+                icms: '',
+            }));
+        }
+        redesenhar();
     }
     const lembrar = () => gravar(CHAVE, JSON.stringify(Object.fromEntries(LEMBRAR.map(k => [k, estado[k]]))));
     const LIMITE_PRAZO = { hoje: 0, '7': 7, '15': 15, '30': 30 };
@@ -331,6 +427,14 @@
                 </div>`).join('')}</div>`
             : '';
 
+        const listaArqItem = (arrArq, idxItem) => arrArq && arrArq.length
+            ? `<div class="pc-drop-arquivos">${arrArq.map((a, idx) => `
+                <div class="pc-drop-arq">
+                    <span title="${esc(a.name)}">${icone('pdf')}<b>${esc(a.name)}</b></span>
+                    <button type="button" class="pc-drop-rem" data-acao="remover-arq-resp-item" data-item-idx="${idxItem}" data-idx="${idx}" data-id="${k}" title="Remover arquivo" aria-label="Remover ${esc(a.name)}">${icone('fechar')}</button>
+                </div>`).join('')}</div>`
+            : '';
+
         const secaoItens = d.itens.length
             ? `<div class="pc-resp-itens-wrap" id="pc-resp-itens-preview">
                 <div class="pc-resp-itens-head">
@@ -338,7 +442,9 @@
                     <small>Confira os valores lidos da planilha ou edite qualquer campo abaixo antes de enviar.</small>
                 </div>
                 <div class="pc-resp-itens-lista">
-                    ${d.itens.map((it, idx) => `
+                    ${d.itens.map((it, idx) => {
+                        const dsItem = Array.isArray(d.datasheetsPorItem && d.datasheetsPorItem[idx]) ? d.datasheetsPorItem[idx] : [];
+                        return `
                         <div class="pc-resp-item-card" data-item-idx="${idx}">
                             <div class="pc-resp-item-topo">
                                 <span class="pc-item-n">${idx + 1}</span>
@@ -367,7 +473,21 @@
                                     <input type="text" data-resp-campo="icms" data-id="${k}" data-idx="${idx}" value="${esc(it.icms)}" placeholder="Ex: 18">
                                 </label>
                             </div>
-                        </div>`).join('')}
+                            ${d.datasheetPorLinha ? `
+                                <div class="pc-resp-item-ds">
+                                    <label class="pc-dropzone pc-dropzone-item ${dsItem.length ? 'preenchido' : ''}" id="drop-datasheet-item-${idx}" data-drop-tipo="datasheet-item" data-item-idx="${idx}" data-id="${k}">
+                                        <input type="file" id="input-resp-datasheet-item-${idx}" data-resp-file="datasheet-item" data-item-idx="${idx}" data-id="${k}" accept=".pdf" multiple hidden>
+                                        <span class="pc-drop-icone">${icone('upload')}</span>
+                                        <span class="pc-drop-textos">
+                                            <strong>Arraste o Datasheet (Item ${idx + 1})</strong>
+                                            <small>ou clique para selecionar (.pdf)</small>
+                                        </span>
+                                    </label>
+                                    ${listaArqItem(dsItem, idx)}
+                                </div>
+                            ` : ''}
+                        </div>`;
+                    }).join('')}
                 </div>
             </div>`
             : '';
@@ -401,13 +521,19 @@
                     ${listaArq(d.davs, 'dav')}
                 </div>
                 <div class="pc-drop-col">
-                    <label class="pc-dropzone ${d.datasheets.length ? 'preenchido' : ''}" id="drop-datasheet" data-drop-tipo="datasheet" data-id="${k}">
-                        <input type="file" id="input-resp-datasheet" data-resp-file="datasheet" data-id="${k}" accept=".pdf" multiple hidden>
-                        <span class="pc-drop-icone">${icone('upload')}</span>
-                        <strong>Arraste o Datasheet</strong>
-                        <small>ou clique para selecionar (.pdf)</small>
+                    <label class="pc-check-ds-linha" title="Anexar um Datasheet diferente em cada item do evento">
+                        <input type="checkbox" class="pc-check" id="check-datasheet-por-linha" data-check-ds-linha="${k}" ${d.datasheetPorLinha ? 'checked' : ''}>
+                        <span>Datasheet por linha</span>
                     </label>
-                    ${listaArq(d.datasheets, 'datasheet')}
+                    ${!d.datasheetPorLinha ? `
+                        <label class="pc-dropzone ${d.datasheets.length ? 'preenchido' : ''}" id="drop-datasheet" data-drop-tipo="datasheet" data-id="${k}">
+                            <input type="file" id="input-resp-datasheet" data-resp-file="datasheet" data-id="${k}" accept=".pdf" multiple hidden>
+                            <span class="pc-drop-icone">${icone('upload')}</span>
+                            <strong>Arraste o Datasheet</strong>
+                            <small>ou clique para selecionar (.pdf)</small>
+                        </label>
+                        ${listaArq(d.datasheets, 'datasheet')}
+                    ` : ''}
                 </div>
             </div>
             ${secaoItens}
@@ -420,9 +546,59 @@
         </section>`;
     }
 
+
+    function bannerErroResposta(c) {
+        if (!c) return '';
+        const erroEv = erroDe(c);
+        if (!erroEv) return '';
+        return `<div class="pc-alerta-erro-evento" id="alerta-erro-evento" role="alert" aria-label="Erro ao responder evento: ${esc(erroEv)}">
+            <span class="pc-alerta-erro-dot" aria-hidden="true"></span>
+            <span class="pc-alerta-erro-label">Não respondido:</span>
+            <strong class="pc-alerta-erro-msg">${esc(erroEv)}</strong>
+        </div>`;
+    }
+
+    function receberErroResposta(eventoId, erro) {
+        const chave = String(eventoId || '').replace(/^Evento\s+/i, '').trim();
+        if (!chave) return;
+        const msgCurta = formatarErroCurto(erro);
+        if (!msgCurta) return;
+        estado.errosResposta[chave] = msgCurta;
+        const limpo = chave.replace(/\D+/g, '');
+        if (limpo) estado.errosResposta[limpo] = msgCurta;
+        if (typeof window !== 'undefined' && window.errosRobo && typeof window.errosRobo === 'object') {
+            window.errosRobo[chave] = msgCurta;
+            if (limpo) window.errosRobo[limpo] = msgCurta;
+        }
+        redesenhar();
+    }
+
+    function limparErroResposta(eventoId) {
+        const chave = String(eventoId || '').replace(/^Evento\s+/i, '').trim();
+        if (!chave) return;
+        const limpo = chave.replace(/\D+/g, '');
+        const apagarDe = (mapa) => {
+            if (!mapa || typeof mapa !== 'object') return;
+            delete mapa[chave];
+            if (limpo) delete mapa[limpo];
+            for (const k of Object.keys(mapa)) {
+                const kLimpo = String(k).replace(/\D+/g, '');
+                if (k === chave || (limpo && kLimpo === limpo)) {
+                    delete mapa[k];
+                }
+            }
+        };
+        apagarDe(estado.errosResposta);
+        if (typeof window !== 'undefined' && window.errosRobo) {
+            apagarDe(window.errosRobo);
+        }
+        redesenhar();
+    }
+
     function secaoPrintsEvento(c) {
         const prints = printsDe(c);
         if (!prints.length) return '';
+        const cid = id(c);
         return `<section class="pc-det-sec pc-prints-sec" id="prints-itens-respondidos" aria-label="Prints dos itens respondidos">
             <h3>Prints dos itens respondidos <span class="nav-count">${prints.length} ${prints.length === 1 ? 'item' : 'itens'}</span></h3>
             <div class="pc-prints-grid">
@@ -434,9 +610,10 @@
                             <b>Item ${esc(numItem)}</b>
                             <span>${p.preco ? `R$ ${esc(p.preco)}` : ''}${p.preco && p.prazo ? ' · ' : ''}${p.prazo ? `${esc(p.prazo)}d` : ''}</span>
                         </figcaption>
-                        <a href="${esc(src)}" target="_blank" rel="noopener" title="Abrir print do Item ${esc(numItem)} em tamanho original">
+                        <div class="pc-print-link" data-acao="abrir-print" data-id="${cid}" data-idx="${idx}" title="Clique para abrir e ampliar a print do Item ${esc(numItem)}">
                             <img src="${esc(src)}" alt="Print do Item ${esc(numItem)} respondido" loading="lazy">
-                        </a>
+                            <div class="pc-print-zoom-hint">🔍 Clique para Ampliar</div>
+                        </div>
                     </figure>`;
                 }).join('')}
             </div>
@@ -480,6 +657,7 @@
                 ${portal ? `<button type="button" class="button ${estado.respondendoPortal ? 'primary' : ''}" id="btn-responder-cotacao" data-acao="responder-portal" data-portal="${portal}" data-id="${id(c)}" aria-pressed="${estado.respondendoPortal}">${icone('responder')}Responder</button>` : ''}
                 ${botaoResposta(c)}
             </div>
+            ${bannerErroResposta(c)}
             ${painelResponderPortal(c, portal)}
             ${secaoPrintsEvento(c)}
             <section class="pc-det-sec">
@@ -518,6 +696,200 @@
             </div>${detalhe(c)}`;
         if (trocou && !nova) { caixa.scrollTop = 0; caixa.querySelector('.pc-det').classList.add('trocou'); }
         if (nova) caixa.focus();
+    }
+    // lightbox ampliado para inspecionar as prints dos itens respondidos
+    function janelaLightboxPrint() {
+        let el = document.getElementById('pc-lightbox-print');
+        if (!estado.printViewer) {
+            if (el) el.remove();
+            if (!estado.aberta) document.body.classList.remove('pc-travado');
+            return;
+        }
+        const c = porId(estado.printViewer.cotacaoId);
+        if (!c) {
+            if (el) el.remove();
+            return;
+        }
+        const prints = printsDe(c);
+        if (!prints.length) {
+            if (el) el.remove();
+            return;
+        }
+        const idx = Math.max(0, Math.min(estado.printViewer.index, prints.length - 1));
+        const p = prints[idx];
+        if (!p) {
+            if (el) el.remove();
+            return;
+        }
+        const numItem = p.item || (idx + 1);
+        const numCot = numero(c).num;
+        const src = String(p.imagem || '').startsWith('data:image') ? p.imagem : `data:image/png;base64,${p.imagem || ''}`;
+        const zoom = estado.printViewer.zoom || 1;
+
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'pc-lightbox-print';
+            el.className = 'pc-lightbox-fundo';
+            document.body.appendChild(el);
+        }
+        document.body.classList.add('pc-travado');
+
+        el.innerHTML = `
+            <div class="pc-lightbox-barra">
+                <div class="pc-lightbox-info">
+                    <span class="pc-lightbox-icone">📸</span>
+                    <div class="pc-lightbox-textos">
+                        <h4>Print do Portal · Item ${esc(numItem)}</h4>
+                        <div class="pc-lightbox-sub">
+                            <span>Cotação <b>${esc(numCot)}</b></span>
+                            ${p.preco ? `<span class="pc-lb-badge preco">R$ ${esc(p.preco)}</span>` : ''}
+                            ${p.prazo ? `<span class="pc-lb-badge prazo">${esc(p.prazo)} dias</span>` : ''}
+                            <span class="pc-lb-contador">(${idx + 1} de ${prints.length})</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="pc-lightbox-botoes">
+                    <button type="button" class="pc-lb-btn" data-acao="lb-zoom-out" title="Reduzir zoom (-)">🔍−</button>
+                    <button type="button" class="pc-lb-btn" data-acao="lb-zoom-reset" title="Tamanho normal (100%)" id="pc-lb-zoom-nivel">${Math.round(zoom * 100)}%</button>
+                    <button type="button" class="pc-lb-btn" data-acao="lb-zoom-in" title="Aumentar zoom (+)">🔍+</button>
+                    <button type="button" class="pc-lb-btn pc-lb-btn-destaque" data-acao="lb-nova-aba" title="Abrir imagem em tamanho real em uma nova aba">↗ Nova Aba</button>
+                    <button type="button" class="pc-lb-btn" data-acao="lb-baixar" title="Baixar imagem no computador">💾 Baixar</button>
+                    <button type="button" class="pc-lb-fechar" data-acao="fechar-lb-print" title="Fechar visualizador (Esc)">✕</button>
+                </div>
+            </div>
+            <div class="pc-lightbox-palco" id="pc-lb-palco" data-acao="fechar-lb-se-fundo">
+                ${prints.length > 1 ? `<button type="button" class="pc-lb-nav pc-lb-nav-prev" data-acao="lb-prev" title="Item anterior (←)">❮</button>` : ''}
+                <div class="pc-lightbox-img-wrap" id="pc-lb-img-wrap" data-acao="fechar-lb-se-fundo">
+                    <img id="pc-lb-imagem-alvo" src="${esc(src)}" alt="Print Item ${esc(numItem)}" style="transform: scale(${zoom});">
+                </div>
+                ${prints.length > 1 ? `<button type="button" class="pc-lb-nav pc-lb-nav-next" data-acao="lb-next" title="Próximo item (→)">❯</button>` : ''}
+            </div>
+        `;
+    }
+
+    function abrirVisualizadorPrint(c, idx) {
+        if (!c) return;
+        const cid = id(c);
+        const lista = printsDe(c);
+        if (!lista || !lista.length) return;
+        const i = Math.max(0, Math.min(Number(idx || 0), lista.length - 1));
+        estado.printViewer = { cotacaoId: cid, index: i, zoom: 1 };
+        redesenhar();
+    }
+
+    function fecharVisualizadorPrint() {
+        if (!estado.printViewer) return;
+        estado.printViewer = null;
+        redesenhar();
+    }
+
+    function zoomVisualizadorPrint(delta) {
+        if (!estado.printViewer) return;
+        const novo = Math.max(0.5, Math.min(3.0, (estado.printViewer.zoom || 1) + delta));
+        estado.printViewer.zoom = Math.round(novo * 100) / 100;
+        const img = document.getElementById('pc-lb-imagem-alvo');
+        const badge = document.getElementById('pc-lb-zoom-nivel');
+        if (img) img.style.transform = `scale(${estado.printViewer.zoom})`;
+        if (badge) badge.textContent = `${Math.round(estado.printViewer.zoom * 100)}%`;
+    }
+
+    function resetZoomVisualizadorPrint() {
+        if (!estado.printViewer) return;
+        estado.printViewer.zoom = 1;
+        const img = document.getElementById('pc-lb-imagem-alvo');
+        const badge = document.getElementById('pc-lb-zoom-nivel');
+        if (img) img.style.transform = 'scale(1)';
+        if (badge) badge.textContent = '100%';
+    }
+
+    function navVisualizadorPrint(dir) {
+        if (!estado.printViewer) return;
+        const c = porId(estado.printViewer.cotacaoId);
+        if (!c) return;
+        const prints = printsDe(c);
+        if (!prints.length) return;
+        const total = prints.length;
+        let prox = (estado.printViewer.index + dir) % total;
+        if (prox < 0) prox = total - 1;
+        estado.printViewer.index = prox;
+        estado.printViewer.zoom = 1;
+        redesenhar();
+    }
+
+    function abrirVisualizadorPrintNovaAba() {
+        if (!estado.printViewer) return;
+        const c = porId(estado.printViewer.cotacaoId);
+        if (!c) return;
+        const prints = printsDe(c);
+        const p = prints[estado.printViewer.index];
+        if (!p) return;
+        abrirPrintEmNovaAba(p.imagem, `Item_${p.item || estado.printViewer.index + 1}_Cotacao_${numero(c).num}`);
+    }
+
+    function baixarPrintVisualizador() {
+        if (!estado.printViewer) return;
+        const c = porId(estado.printViewer.cotacaoId);
+        if (!c) return;
+        const prints = printsDe(c);
+        const p = prints[estado.printViewer.index];
+        if (!p) return;
+        const itemNum = p.item || (estado.printViewer.index + 1);
+        const numCot = numero(c).num || 'evento';
+        const src = String(p.imagem || '');
+        const b64 = src.includes(',') ? src.split(',')[1] : src;
+        const mime = src.includes('image/jpeg') ? 'image/jpeg' : 'image/png';
+        const ext = mime === 'image/jpeg' ? 'jpg' : 'png';
+        try {
+            const byteCharacters = atob(b64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: mime });
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = `Print_Item_${itemNum}_${numCot}.${ext}`;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(blobUrl);
+            }, 2000);
+        } catch (_) {
+            toast('Erro ao preparar download da print.');
+        }
+    }
+
+    function abrirPrintEmNovaAba(base64OuData, titulo) {
+        if (!base64OuData) return;
+        const src = String(base64OuData);
+        const b64 = src.includes(',') ? src.split(',')[1] : src;
+        const mime = src.includes('image/jpeg') ? 'image/jpeg' : 'image/png';
+        try {
+            const byteCharacters = atob(b64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: mime });
+            const blobUrl = URL.createObjectURL(blob);
+            const win = window.open(blobUrl, '_blank');
+            if (!win) {
+                toast('O navegador bloqueou a abertura de nova aba. Permita popups para este site.');
+            }
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+        } catch (e) {
+            const win = window.open('', '_blank');
+            if (win && win.document) {
+                win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(titulo || 'Print do Portal')}</title><style>body{margin:0;background:#0b0f19;display:flex;align-items:center;justify-content:center;min-height:100vh;}img{max-width:100%;height:auto;box-shadow:0 10px 40px rgba(0,0,0,0.5);}</style></head><body><img src="${esc(src.startsWith('data:') ? src : `data:image/png;base64,${src}`)}"></body></html>`);
+                win.document.close();
+            } else {
+                toast('Não foi possível abrir a imagem em nova aba.');
+            }
+        }
     }
 
     // ---------- quadro principal ----------
@@ -578,6 +950,13 @@
     function cartao(c, i) {
         const p = prazo(c), its = itens(c), resp = respondida(c), { num, origem } = numero(c), k = id(c), novo = estado.novos.has(k);
         const qtd = its.length > 1 ? `${its.length} itens` : its[0].qtd;
+        const erroMsg = erroDe(c);
+        const blocoErroCard = erroMsg
+            ? `<div class="b-erro-card" id="erro-card-${k}" role="alert" aria-label="Erro ao responder: ${esc(erroMsg)}">
+                <span class="b-erro-ponto" aria-hidden="true"></span>
+                <span class="b-erro-txt">${esc(erroMsg)}</span>
+            </div>`
+            : '';
         const prints = printsDe(c);
         const blocoPrintsCard = prints.length
             ? `<div class="b-prints-card" id="prints-card-${k}" aria-label="Prints dos itens respondidos">
@@ -586,7 +965,7 @@
                     ${prints.map((pr, idx) => {
                         const nItem = pr.item || (idx + 1);
                         const src = String(pr.imagem || '').startsWith('data:image') ? pr.imagem : `data:image/png;base64,${pr.imagem || ''}`;
-                        return `<div class="b-print-thumb" title="Item ${esc(nItem)}${pr.preco ? ` · R$ ${esc(pr.preco)}` : ''}">
+                        return `<div class="b-print-thumb" data-acao="abrir-print" data-id="${k}" data-idx="${idx}" title="Clique para ver a print do Item ${esc(nItem)}${pr.preco ? ` · R$ ${esc(pr.preco)}` : ''}">
                             <img src="${esc(src)}" alt="Print Item ${esc(nItem)}" loading="lazy">
                             <span>Item ${esc(nItem)}</span>
                         </div>`;
@@ -594,7 +973,7 @@
                 </div>
             </div>`
             : '';
-        return `<article class="b-card ${resp ? 'feita' : ''} ${novo ? 'pc-novo' : ''} ${primeira ? 'entra' : ''}" style="--i:${Math.min(i, 10) + 6};--cor:${resp ? 'var(--green)' : COR[p.cls]}" data-acao="abrir" data-id="${k}" tabindex="0" aria-label="Cotação ${esc(num)}: ${esc(its[0].nome)}">
+        return `<article class="b-card ${resp ? 'feita' : ''} ${erroMsg ? 'com-erro' : ''} ${novo ? 'pc-novo' : ''} ${primeira ? 'entra' : ''}" style="--i:${Math.min(i, 10) + 6};--cor:${erroMsg ? 'var(--red)' : (resp ? 'var(--green)' : COR[p.cls])}" data-acao="abrir" data-id="${k}" tabindex="0" aria-label="Cotação ${esc(num)}: ${esc(its[0].nome)}">
             <div class="b-num-linha">
                 <span class="b-num" title="${esc(c['COTAÇÃO'])}">${esc(num)}</span>
                 <button type="button" class="b-copiar-num" data-acao="copiar-num" data-id="${k}" title="Copiar número" aria-label="Copiar número ${esc(num)}">${icone('copiar')}</button>
@@ -602,6 +981,7 @@
                 <label class="b-sel" data-acao="sel" title="Selecionar para exportar"><input class="pc-check" type="checkbox" data-sel="${k}" ${estado.selecionadas.has(k) ? 'checked' : ''} aria-label="Selecionar cotação ${esc(num)}"></label>
             </div>
             ${origem ? `<div class="b-origem">${esc(origem)}</div>` : (c.ORIGEM_PLANILHA === 'anmyna' ? `<div class="b-origem" style="color: #a78bfa; font-weight: 600;">ANMYNA${c.PORTAL ? ` · ${esc(c.PORTAL)}` : ''}</div>` : '')}
+            ${blocoErroCard}
             <div class="b-prazo"><span class="pc-prazo ${resp ? '' : p.cls}">${icone(resp ? 'ok' : 'relogio')}<b>${resp ? 'Respondida' : p.txt}</b>${!resp && p.d === 0 ? ` · ${esc(p.sub)}` : ''}</span>
                 ${resp ? '' : `<div class="pc-urg ${p.cls}"><i style="--w:${Math.round(p.urg * 100)}%"></i></div>`}</div>
             <div class="b-nome">${esc(its[0].nome)}</div>
@@ -688,6 +1068,7 @@
         if (!main) return; // fora do navegador (testes): só o estado importa
         render(main);
         janela();
+    janelaLightboxPrint();
     }
 
     // ---------- avisos ----------
@@ -710,11 +1091,13 @@
     }
 
     // ---------- dados do socket ----------
-    function receber(novaLista, portais, prints) {
+    function receber(novaLista, portais, prints, erros) {
         if (portais && typeof portais === 'object') estado.portais = portais;
         else if (typeof window !== 'undefined' && window.portaisRobo && typeof window.portaisRobo === 'object') estado.portais = window.portaisRobo;
         if (prints && typeof prints === 'object') estado.printsRobo = { ...estado.printsRobo, ...prints };
         else if (typeof window !== 'undefined' && window.printsRobo && typeof window.printsRobo === 'object') estado.printsRobo = { ...estado.printsRobo, ...window.printsRobo };
+        if (erros && typeof erros === 'object') estado.errosResposta = { ...estado.errosResposta, ...erros };
+        else if (typeof window !== 'undefined' && window.errosRobo && typeof window.errosRobo === 'object') estado.errosResposta = { ...estado.errosResposta, ...window.errosRobo };
         const antes = new Set(estado.lista.map(id));
         estado.lista = registrar(novaLista || []);
         const agora = new Set(estado.lista.map(id));
@@ -788,7 +1171,22 @@
     }
 
     // ---------- ações ----------
-    function abrir(v) { estado.aberta = Number(v); estado.confirmando = false; estado.respondeuAgora = null; estado.respondendoPortal = false; estado.novos.delete(Number(v)); redesenhar(); }
+    function abrir(v) {
+        estado.aberta = Number(v);
+        estado.confirmando = false;
+        estado.respondeuAgora = null;
+        estado.respondendoPortal = false;
+        estado.novos.delete(Number(v));
+        const c = porId(Number(v));
+        if (c) {
+            const printsAtuais = printsDe(c);
+            if (!printsAtuais.length && typeof socket !== 'undefined' && socket && socket.emit) {
+                const n = numero(c).num;
+                socket.emit('solicitar_prints_evento', { evento: n, cota: c['COTAÇÃO'] });
+            }
+        }
+        redesenhar();
+    }
     function fechar() { estado.aberta = null; estado.confirmando = false; estado.respondeuAgora = null; estado.respondendoPortal = false; redesenhar(); }
     function navegar(passo) {
         const l = filtradas();
@@ -819,7 +1217,7 @@
         toast(`Cotação <b>${esc(numero(c).num)}</b> marcada como respondida.`);
     }
 
-    async function receberArquivosResposta(k, tipo, fileList) {
+    async function receberArquivosResposta(k, tipo, fileList, itemIdx) {
         const c = porId(k);
         if (!c || !fileList || !fileList.length) return;
         const d = dadosResposta(c);
@@ -853,6 +1251,14 @@
         } else if (tipo === 'datasheet') {
             arquivos.forEach(f => d.datasheets.push(f));
             redesenhar();
+        } else if (tipo === 'datasheet-item') {
+            const idxNum = Number(itemIdx);
+            if (!Number.isNaN(idxNum) && idxNum >= 0) {
+                if (!d.datasheetsPorItem) d.datasheetsPorItem = {};
+                if (!Array.isArray(d.datasheetsPorItem[idxNum])) d.datasheetsPorItem[idxNum] = [];
+                arquivos.forEach(f => d.datasheetsPorItem[idxNum].push(f));
+                redesenhar();
+            }
         }
     }
 
@@ -873,16 +1279,26 @@
         try {
             const portal = portalRobo(c) || 'coupa';
             const num = numero(c).num;
+            const datasheetsPorItem = d.itens.map((_, idx) =>
+                (d.datasheetPorLinha && d.datasheetsPorItem && Array.isArray(d.datasheetsPorItem[idx]))
+                    ? d.datasheetsPorItem[idx]
+                    : []
+            );
             await enviarRespostaCotacaoPortal({
                 portal,
                 evento: num,
                 itens: d.itens,
                 davs: d.davs,
-                datasheets: d.datasheets,
+                datasheets: d.datasheetPorLinha ? [] : d.datasheets,
+                datasheetPorLinha: Boolean(d.datasheetPorLinha),
+                datasheetsPorItem,
             });
             d.enviando = false;
             d.enviado = true;
             estado.respondendoPortal = false;
+            // Se a pessoa enviar a resposta de novo para esse evento, o alerta de erro some imediatamente
+            limparErroResposta(num);
+            if (c['COTAÇÃO']) limparErroResposta(c['COTAÇÃO']);
             redesenhar();
             toast(`Cotação <b>${esc(num)}</b> enviada para a fila de resposta do robô!`);
         } catch (err) {
@@ -927,7 +1343,32 @@
             if (Array.isArray(lista) && idx >= 0 && idx < lista.length) lista.splice(idx, 1);
             redesenhar();
         },
+        'remover-arq-resp-item': (el, c) => {
+            const d = dadosResposta(c);
+            const itemIdx = Number(el.dataset.itemIdx);
+            const idx = Number(el.dataset.idx);
+            const lista = d.datasheetsPorItem && d.datasheetsPorItem[itemIdx];
+            if (Array.isArray(lista) && idx >= 0 && idx < lista.length) lista.splice(idx, 1);
+            redesenhar();
+        },
         'enviar-resp-portal': (el, c) => enviarRespostaDoModal(c),
+        'abrir-print': (el, c) => {
+            const idx = Number(el.dataset.idx || 0);
+            abrirVisualizadorPrint(c, idx);
+        },
+        'fechar-lb-print': () => fecharVisualizadorPrint(),
+        'fechar-lb-se-fundo': (el, c, e) => {
+            if (e && (e.target.id === 'pc-lb-palco' || e.target.id === 'pc-lb-img-wrap')) {
+                fecharVisualizadorPrint();
+            }
+        },
+        'lb-zoom-in': () => zoomVisualizadorPrint(0.25),
+        'lb-zoom-out': () => zoomVisualizadorPrint(-0.25),
+        'lb-zoom-reset': () => resetZoomVisualizadorPrint(),
+        'lb-prev': () => navVisualizadorPrint(-1),
+        'lb-next': () => navVisualizadorPrint(1),
+        'lb-nova-aba': () => abrirVisualizadorPrintNovaAba(),
+        'lb-baixar': () => baixarPrintVisualizador(),
         'fechar-captcha': () => fecharCaptcha(),
         responder: () => { estado.confirmando = true; redesenhar(); },
         'cancelar-resp': () => { estado.confirmando = false; redesenhar(); },
@@ -936,13 +1377,11 @@
         'exp-word': () => exportarLista('word'),
     };
     // ações sobre uma cotação que sumiu numa recarga do socket não fazem nada
-    const PRECISA_COTACAO = ['word', 'base', 'copiar', 'copiar-num', 'confirmar-resp', 'limpar-planilha-resp', 'remover-arq-resp', 'enviar-resp-portal'];
+    const PRECISA_COTACAO = ['word', 'base', 'copiar', 'copiar-num', 'confirmar-resp', 'limpar-planilha-resp', 'remover-arq-resp', 'remover-arq-resp-item', 'enviar-resp-portal', 'abrir-print'];
 
     document.addEventListener('click', e => {
         if (e.target && e.target.id === 'imagem-captcha-vendedor') {
             const img = e.target;
-            img.style.opacity = '0.5';
-            setTimeout(() => { img.style.opacity = '1'; }, 150);
             const rect = img.getBoundingClientRect ? img.getBoundingClientRect() : { width: 1, height: 1 };
             const escalaX = (img.naturalWidth || rect.width || 1) / (rect.width || 1);
             const escalaY = (img.naturalHeight || rect.height || 1) / (rect.height || 1);
@@ -960,7 +1399,7 @@
         if (pop && alvo.tagName === 'BUTTON') pop.open = false;
         const c = porId(alvo.dataset.id);
         if (PRECISA_COTACAO.includes(alvo.dataset.acao) && !c) return;
-        fazer(alvo, c);
+        fazer(alvo, c, e);
     });
     document.addEventListener('toggle', e => {
         const d = e.target;
@@ -974,11 +1413,16 @@
     }, true);
     document.addEventListener('change', e => {
         const t = e.target;
+        if (t.dataset.checkDsLinha) {
+            alternarDatasheetPorLinha(Number(t.dataset.checkDsLinha), t.checked);
+            return;
+        }
         if (t.dataset.respFile) {
             const arquivos = t.files;
             const k = Number(t.dataset.id);
             const tipo = t.dataset.respFile;
-            receberArquivosResposta(k, tipo, arquivos);
+            const itemIdx = t.dataset.itemIdx !== undefined ? Number(t.dataset.itemIdx) : undefined;
+            receberArquivosResposta(k, tipo, arquivos, itemIdx);
             t.value = '';
         } else if (t.dataset.multi) {
             const v = estado[t.dataset.multi];
@@ -1032,10 +1476,18 @@
         dz.classList.remove('arrastando');
         const files = e.dataTransfer && e.dataTransfer.files;
         if (files && files.length) {
-            receberArquivosResposta(Number(dz.dataset.id), dz.dataset.dropTipo, files);
+            const itemIdx = dz.dataset.itemIdx !== undefined ? Number(dz.dataset.itemIdx) : undefined;
+            receberArquivosResposta(Number(dz.dataset.id), dz.dataset.dropTipo, files, itemIdx);
         }
     });
     document.addEventListener('keydown', e => {
+        if (estado.printViewer) {
+            if (e.key === 'Escape') { e.preventDefault(); fecharVisualizadorPrint(); return; }
+            if (e.key === 'ArrowLeft') { e.preventDefault(); navVisualizadorPrint(-1); return; }
+            if (e.key === 'ArrowRight') { e.preventDefault(); navVisualizadorPrint(1); return; }
+            if (e.key === '+' || e.key === '=') { e.preventDefault(); zoomVisualizadorPrint(0.25); return; }
+            if (e.key === '-') { e.preventDefault(); zoomVisualizadorPrint(-0.25); return; }
+        }
         const digitando = /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName);
         const popAberto = document.querySelector('details.pc-pop[open]');
         if (e.key === '/' && !digitando) { e.preventDefault(); document.getElementById('pc-busca')?.focus(); }
@@ -1054,5 +1506,5 @@
     if (topo) topo.innerHTML = nav();
     redesenhar();
 
-    window.Tela = { estado, filtradas, contagem, itens, numero, portalRobo, printsDe, dadosResposta, receberArquivosResposta, enviarRespostaDoModal, receberPrintsEvento, receberCaptcha, fecharCaptcha, painelCaptchaGlobal, cartao, detalhe, dias, alvoExportacao, exportarLista, receber, falhou, conexao, toast, abrir, id };
+    window.Tela = { estado, filtradas, contagem, itens, numero, portalRobo, printsDe, erroDe, formatarErroCurto, bannerErroResposta, receberErroResposta, limparErroResposta, abrirVisualizadorPrint, fecharVisualizadorPrint, abrirPrintEmNovaAba, dadosResposta, alternarDatasheetPorLinha, receberArquivosResposta, enviarRespostaDoModal, receberPrintsEvento, receberCaptcha, fecharCaptcha, painelCaptchaGlobal, cartao, detalhe, dias, alvoExportacao, exportarLista, receber, falhou, conexao, toast, abrir, id };
 })();

@@ -132,7 +132,9 @@ try {
 function salvarPrintsEvento(eventoId, prints) {
     const chave = String(eventoId || '').trim();
     if (!chave || !Array.isArray(prints) || !prints.length) return;
+    const limpo = chave.replace(/\D+/g, '') || chave;
     printsPorEvento[chave] = prints;
+    if (limpo) printsPorEvento[limpo] = prints;
     try {
         fs.mkdirSync(path.dirname(caminhoPrintsRespostas), { recursive: true });
         fs.writeFileSync(caminhoPrintsRespostas, JSON.stringify(printsPorEvento), 'utf8');
@@ -140,6 +142,9 @@ function salvarPrintsEvento(eventoId, prints) {
         console.error('Aviso ao gravar prints_respostas.json:', e.message);
     }
     io.to('frontend').emit('prints_evento_atualizados', { evento: chave, prints });
+    if (limpo && limpo !== chave) {
+        io.to('frontend').emit('prints_evento_atualizados', { evento: limpo, prints });
+    }
 }
 
 function obterPrintsParaCotacoes(cotacoes) {
@@ -148,8 +153,104 @@ function obterPrintsParaCotacoes(cotacoes) {
     for (const c of cotacoes) {
         const bruto = String((c && c['COTAÇÃO']) || '').trim();
         const limpo = bruto.replace(/\D+/g, '') || bruto;
-        if (printsPorEvento[bruto]) mapa[bruto] = printsPorEvento[bruto];
-        else if (printsPorEvento[limpo]) mapa[limpo] = printsPorEvento[limpo];
+        const apenasNum = (bruto.match(/\d+/) || [])[0] || '';
+        
+        let achou = printsPorEvento[bruto] || printsPorEvento[limpo] || (apenasNum ? printsPorEvento[apenasNum] : null);
+        if (!achou && apenasNum) {
+            for (const k in printsPorEvento) {
+                const kNum = (k.match(/\d+/) || [])[0];
+                if (kNum && kNum === apenasNum) {
+                    achou = printsPorEvento[k];
+                    break;
+                }
+            }
+        }
+        if (achou) {
+            mapa[bruto] = achou;
+            if (limpo) mapa[limpo] = achou;
+            if (apenasNum) mapa[apenasNum] = achou;
+        }
+    }
+    return mapa;
+}
+
+// Armazenamento persistente dos erros de resposta por evento (some ao reenviar ou concluir com sucesso)
+const caminhoErrosRespostas = process.env.ERROS_RESPOSTAS_FILE || path.join(__dirname, 'dados', 'erros_respostas.json');
+let errosPorEvento = {};
+try {
+    if (fs.existsSync(caminhoErrosRespostas)) {
+        errosPorEvento = JSON.parse(fs.readFileSync(caminhoErrosRespostas, 'utf8')) || {};
+    }
+} catch (e) {
+    errosPorEvento = {};
+}
+
+function salvarErroEvento(eventoId, erroMsg) {
+    const chave = String(eventoId || '').replace(/^Evento\s+/i, '').trim();
+    const texto = String(erroMsg || '').trim();
+    if (!chave || !texto) return;
+    const limpo = chave.replace(/\D+/g, '') || chave;
+    errosPorEvento[chave] = texto;
+    if (limpo) errosPorEvento[limpo] = texto;
+    try {
+        fs.mkdirSync(path.dirname(caminhoErrosRespostas), { recursive: true });
+        fs.writeFileSync(caminhoErrosRespostas, JSON.stringify(errosPorEvento), 'utf8');
+    } catch (e) {
+        console.error('Aviso ao gravar erros_respostas.json:', e.message);
+    }
+    io.to('frontend').emit('erro_evento_atualizado', { evento: chave, erro: texto });
+    if (limpo && limpo !== chave) {
+        io.to('frontend').emit('erro_evento_atualizado', { evento: limpo, erro: texto });
+    }
+}
+
+function limparErroEvento(eventoId) {
+    const chave = String(eventoId || '').replace(/^Evento\s+/i, '').trim();
+    if (!chave) return;
+    const limpo = chave.replace(/\D+/g, '') || chave;
+    delete errosPorEvento[chave];
+    if (limpo) delete errosPorEvento[limpo];
+    if (limpo) {
+        for (const k of Object.keys(errosPorEvento)) {
+            const kNum = (k.match(/\d+/) || [])[0];
+            if (kNum && kNum === limpo) delete errosPorEvento[k];
+        }
+    }
+    try {
+        fs.mkdirSync(path.dirname(caminhoErrosRespostas), { recursive: true });
+        fs.writeFileSync(caminhoErrosRespostas, JSON.stringify(errosPorEvento), 'utf8');
+    } catch (e) {
+        console.error('Aviso ao atualizar erros_respostas.json:', e.message);
+    }
+    io.to('frontend').emit('erro_evento_atualizado', { evento: chave, erro: '' });
+    if (limpo && limpo !== chave) {
+        io.to('frontend').emit('erro_evento_atualizado', { evento: limpo, erro: '' });
+    }
+}
+
+function obterErrosParaCotacoes(cotacoes) {
+    const mapa = {};
+    if (!Array.isArray(cotacoes)) return mapa;
+    for (const c of cotacoes) {
+        const bruto = String((c && c['COTAÇÃO']) || '').trim();
+        const limpo = bruto.replace(/\D+/g, '') || bruto;
+        const apenasNum = (bruto.match(/\d+/) || [])[0] || '';
+
+        let achou = errosPorEvento[bruto] || errosPorEvento[limpo] || (apenasNum ? errosPorEvento[apenasNum] : null);
+        if (!achou && apenasNum) {
+            for (const k in errosPorEvento) {
+                const kNum = (k.match(/\d+/) || [])[0];
+                if (kNum && kNum === apenasNum) {
+                    achou = errosPorEvento[k];
+                    break;
+                }
+            }
+        }
+        if (achou) {
+            mapa[bruto] = achou;
+            if (limpo) mapa[limpo] = achou;
+            if (apenasNum) mapa[apenasNum] = achou;
+        }
     }
     return mapa;
 }
@@ -501,6 +602,26 @@ io.on('connection', (socket) => {
         io.to('frontend').emit('captcha_resolvido', dados || {});
     });
 
+    socket.on('solicitar_prints_evento', (dados = {}) => {
+        const id = String(dados.evento || '').trim();
+        const limpo = id.replace(/\D+/g, '') || id;
+        const cota = String(dados.cota || '').trim();
+        const cotaLimpo = cota.replace(/\D+/g, '') || cota;
+
+        let prints = printsPorEvento[id] || printsPorEvento[limpo] || printsPorEvento[cota] || printsPorEvento[cotaLimpo] || [];
+        if (!prints.length && (limpo || cotaLimpo)) {
+            const numAlvo = limpo || cotaLimpo;
+            for (const k in printsPorEvento) {
+                const kNum = (k.match(/\d+/) || [])[0];
+                if (kNum && kNum === numAlvo) {
+                    prints = printsPorEvento[k];
+                    break;
+                }
+            }
+        }
+        socket.emit('retorno_prints_evento', { evento: id || cota, prints });
+    });
+
     socket.on('prints_resposta_evento', (dados = {}) => {
         if (!doRobo()) return;
         salvarPrintsEvento(dados.evento, dados.prints);
@@ -542,10 +663,10 @@ io.on('connection', (socket) => {
 
     socket.on('tarefa_concluida', (dados) => {
         // 👇 NOVA ROTINA PARA CONTROLE DE FILA (EVENTOS) 👇
-        if (dados.evento && dados.evento.startsWith('Evento ')) {
-            const eventoId = dados.evento.replace('Evento ', '');
-
-            const respondido = fila_respostas.find(e => e.id === eventoId);
+        const eventoStr = String(dados?.evento || '').trim();
+        const eventoId = eventoStr.replace(/^Evento\s+/i, '').trim();
+        if (eventoId) {
+            const respondido = fila_respostas.find(e => e.id === eventoId || `Evento ${e.id}` === eventoStr);
             if (respondido && doRobo()) fecharPelaResposta(respondido.audit_id, dados);
             if (doRobo() && Array.isArray(dados.prints) && dados.prints.length) {
                 salvarPrintsEvento(eventoId, dados.prints);
@@ -557,12 +678,15 @@ io.on('connection', (socket) => {
                 estado_global.fila_pendente = estado_global.fila_pendente.filter(e => e !== eventoId);
             }
 
-            // 2. Move para os Concluídos
+            // 2. Move para os Concluídos ou Salva Erro do Evento
             if (dados.sucesso) {
+                if (doRobo()) limparErroEvento(eventoId);
                 if (!estado_global.tarefas_concluidas) estado_global.tarefas_concluidas = [];
                 if (!estado_global.tarefas_concluidas.includes(eventoId)) {
                     estado_global.tarefas_concluidas.push(eventoId);
                 }
+            } else if (doRobo() && dados.erro) {
+                salvarErroEvento(eventoId, dados.erro);
             }
 
             // 3. PUXA O PRÓXIMO DA FILA
@@ -1079,6 +1203,7 @@ io.on('connection', (socket) => {
         if (dashboardCotacoes.receber(socket.id, dados)) return;
         if (dados && Array.isArray(dados.cotacoes)) {
             dados.prints_robo = { ...(dados.prints_robo || {}), ...obterPrintsParaCotacoes(dados.cotacoes) };
+            dados.erros_robo = { ...(dados.erros_robo || {}), ...obterErrosParaCotacoes(dados.cotacoes) };
         }
         if (dados.clientId) {
             const reqInfo = (typeof pedidosPlanilhaPorCliente !== 'undefined' && pedidosPlanilhaPorCliente.get(dados.clientId)) ||
@@ -1463,7 +1588,7 @@ function processarProximoDaFila() {
 // =======================================================
 // ROTA: RECEBER EVENTOS DO COUPA E MANDAR PARA O ROBÔ
 // =======================================================
-app.post('/api/responder', upload.fields([{ name: 'datasheet' }, { name: 'dav' }]), (req, res) => {
+app.post('/api/responder', upload.fields([{ name: 'datasheet' }, { name: 'dav' }, { name: 'datasheet_item' }]), (req, res) => {
     try {
         const sessionId = req.body.sessionId;
         if (!cofreSessoes.has(sessionId)) return res.status(401).json({ error: "Sessão inválida" });
@@ -1475,6 +1600,7 @@ app.post('/api/responder', upload.fields([{ name: 'datasheet' }, { name: 'dav' }
         const ncms = JSON.parse(req.body.ncms || '[]');
         const origens = JSON.parse(req.body.origens || '[]');
         const icms = JSON.parse(req.body.icms || '[]');
+        const datasheetPorLinha = req.body.datasheet_por_linha === 'true' || req.body.datasheet_por_linha === true;
 
         // FUNÇÃO NOVA: Lê do Disco HD, converte e apaga a prova do crime
         const processarArquivos = (filesArray) => {
@@ -1500,6 +1626,22 @@ app.post('/api/responder', upload.fields([{ name: 'datasheet' }, { name: 'dav' }
         // Transforma os Datasheets e DAVs usando a nova função (MANTIDO INTACTO)
         const datasheets = processarArquivos(req.files['datasheet']);
         const davs = processarArquivos(req.files['dav']);
+        const datasheetsItemFlat = processarArquivos(req.files['datasheet_item']);
+        let indicesPorItem = [];
+        try {
+            indicesPorItem = JSON.parse(req.body.datasheet_item_indices || '[]');
+        } catch (_) {
+            indicesPorItem = [];
+        }
+        const totalItensBase = Math.max(precos.length, prazos.length);
+        const datasheets_por_item = Array.from({ length: totalItensBase }, () => []);
+        datasheetsItemFlat.forEach((arq, idxFlat) => {
+            const itemIdx = Number(indicesPorItem[idxFlat]);
+            if (Number.isInteger(itemIdx) && itemIdx >= 0) {
+                while (datasheets_por_item.length <= itemIdx) datasheets_por_item.push([]);
+                datasheets_por_item[itemIdx].push(arq);
+            }
+        });
 
         // 👇 AQUI: Extrai o portal que vem do site (se não vier, assume coupa por segurança)
         const portal_origem = req.body.portal || 'coupa';
@@ -1515,7 +1657,9 @@ app.post('/api/responder', upload.fields([{ name: 'datasheet' }, { name: 'dav' }
             origens: origens,
             icms: icms, 
             datasheets: datasheets, 
-            davs: davs
+            davs: davs,
+            datasheet_por_linha: datasheetPorLinha,
+            datasheets_por_item: datasheets_por_item
         };
 
         // 2. Adiciona à fila real de trabalho do servidor
@@ -1523,7 +1667,7 @@ app.post('/api/responder', upload.fields([{ name: 'datasheet' }, { name: 'dav' }
         const reg = registrarAuditoria({
             email: autor, ip: String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.ip,
             area: 'portal', acao: 'responder_evento', portal: portal_origem, alvo: evento,
-            detalhes: { qtd_itens: precos.length, tem_datasheet: datasheets.length > 0, tem_dav: davs.length > 0 }
+            detalhes: { qtd_itens: precos.length, tem_datasheet: datasheets.length > 0 || datasheetsItemFlat.length > 0, tem_dav: davs.length > 0, datasheet_por_linha: datasheetPorLinha }
         });
         const idxExistente = fila_respostas.findIndex(e => e.id === evento);
         if (idxExistente >= 0) {
@@ -1531,6 +1675,9 @@ app.post('/api/responder', upload.fields([{ name: 'datasheet' }, { name: 'dav' }
         } else {
             fila_respostas.push({ id: evento, payload: payload, audit_id: reg && reg.id });
         }
+
+        // Quando o utilizador envia a resposta novamente para o evento, limpa o alerta de erro anterior
+        limparErroEvento(evento);
         
         // 3. Adiciona à fila visual para aparecer no site
         if (!estado_global.fila_pendente) estado_global.fila_pendente = [];
