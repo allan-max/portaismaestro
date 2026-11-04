@@ -55,7 +55,8 @@ const io = new Server(server, { maxHttpBufferSize: 1e8,
 });
 
 // 🔐 MOTORES DE CRIPTOGRAFIA REAL (AES-256-GCM)
-const MASTER_KEY = crypto.scryptSync(process.env.MASTER_SECRET || 'chave-padrao-temporaria-substitua-no-env', 'salt', 32);
+const { chave: MASTER_KEY, aleatoria: chaveAleatoria } = require('./lib/chave-mestra').chaveMestra();
+if (chaveAleatoria) console.warn('⚠️ MASTER_SECRET ausente no .env: usando chave aleatória até o próximo reinício.');
 
 function encrypt(text) {
     const iv = crypto.randomBytes(12);
