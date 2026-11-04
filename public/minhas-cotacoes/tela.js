@@ -480,7 +480,7 @@
                                         <span class="pc-drop-icone">${icone('upload')}</span>
                                         <span class="pc-drop-textos">
                                             <strong>Arraste o Datasheet (Item ${idx + 1})</strong>
-                                            <small>ou clique para selecionar (.pdf)</small>
+                                            <small>${dsItem.length ? `${dsItem.length} anexado(s) · arraste ou clique para adicionar mais (.pdf)` : 'ou clique para selecionar um ou mais (.pdf)'}</small>
                                         </span>
                                     </label>
                                     ${listaArqItem(dsItem, idx)}
@@ -501,7 +501,7 @@
                 <button type="button" class="button text small" data-acao="fechar-resp-portal" data-id="${k}">Fechar</button>
             </div>
             <div class="pc-drop-grid">
-                <div class="pc-drop-col">
+                <div class="pc-drop-col pc-drop-col-baixo">
                     <label class="pc-dropzone ${d.planilhaNome ? 'preenchido' : ''}" id="drop-planilha-base" data-drop-tipo="planilha" data-id="${k}">
                         <input type="file" id="input-resp-planilha" data-resp-file="planilha" data-id="${k}" accept=".xlsx,.xls" hidden>
                         <span class="pc-drop-icone">${icone('base')}</span>
@@ -511,7 +511,7 @@
                     ${d.planilhaNome ? `<div class="pc-drop-arquivos"><div class="pc-drop-arq ok"><span title="${esc(d.planilhaNome)}">${icone('excel')}<b>${esc(d.planilhaNome)}</b></span><button type="button" class="pc-drop-rem" data-acao="limpar-planilha-resp" data-id="${k}" title="Remover planilha" aria-label="Remover planilha">${icone('fechar')}</button></div></div>` : ''}
                     ${d.planilhaErro ? `<small class="pc-drop-erro">${esc(d.planilhaErro)}</small>` : ''}
                 </div>
-                <div class="pc-drop-col">
+                <div class="pc-drop-col pc-drop-col-baixo">
                     <label class="pc-dropzone ${d.davs.length ? 'preenchido' : ''}" id="drop-dav" data-drop-tipo="dav" data-id="${k}">
                         <input type="file" id="input-resp-dav" data-resp-file="dav" data-id="${k}" accept=".pdf" multiple hidden>
                         <span class="pc-drop-icone">${icone('upload')}</span>
@@ -530,7 +530,7 @@
                             <input type="file" id="input-resp-datasheet" data-resp-file="datasheet" data-id="${k}" accept=".pdf" multiple hidden>
                             <span class="pc-drop-icone">${icone('upload')}</span>
                             <strong>Arraste o Datasheet</strong>
-                            <small>ou clique para selecionar (.pdf)</small>
+                            <small>${d.datasheets.length ? `${d.datasheets.length} anexado(s) · arraste ou clique para adicionar mais (.pdf)` : 'ou clique para selecionar um ou mais (.pdf)'}</small>
                         </label>
                         ${listaArq(d.datasheets, 'datasheet')}
                     ` : ''}

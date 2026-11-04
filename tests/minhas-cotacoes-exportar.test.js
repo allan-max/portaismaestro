@@ -938,13 +938,13 @@ test('tela: clicar em Responder exibe os 3 campos de arraste (Planilha Base, DAV
     assert.equal(resp.itens.length, 2, 'Deve extrair os 2 itens preenchidos na planilha');
     assert.equal(resp.itens[0].preco, '1450,00');
     assert.equal(resp.itens[0].prazo, '15');
-    assert.equal(resp.itens[0].ncm, '84137090');
+    assert.equal(resp.itens[0].ncm, '8413.70.90');
     assert.equal(resp.itens[0].origem, 'SP');
     assert.equal(resp.itens[0].icms, '12');
 
     assert.equal(resp.itens[1].preco, '290,00');
     assert.equal(resp.itens[1].prazo, '15');
-    assert.equal(resp.itens[1].ncm, '84842000');
+    assert.equal(resp.itens[1].ncm, '8484.20.00');
     assert.equal(resp.itens[1].origem, 'MG');
     assert.equal(resp.itens[1].icms, '18');
 
@@ -956,7 +956,10 @@ test('tela: clicar em Responder exibe os 3 campos de arraste (Planilha Base, DAV
     assert.ok(htmlComPlanilha.includes('data-resp-campo="origem"'), 'Deve exibir campo editável de origem');
     assert.ok(htmlComPlanilha.includes('data-resp-campo="icms"'), 'Deve exibir campo editável de ICMS');
     assert.ok(htmlComPlanilha.includes('value="1450,00"'), 'Deve preencher o valor unitário calculado da planilha');
-    assert.ok(htmlComPlanilha.includes('value="84137090"'), 'Deve preencher o NCM lido da planilha');
+    assert.ok(htmlComPlanilha.includes('value="8413.70.90"'), 'Deve preencher o NCM lido da planilha já formatado com pontos nos dois últimos pares');
+    assert.equal(context.window.formatarNcmPadrao('85411019'), '8541.10.19');
+    assert.equal(context.window.formatarNcmPadrao('85234900'), '8523.49.00');
+    assert.equal(context.window.formatarNcmPadrao('8523.49.00'), '8523.49.00');
 });
 
 test('Exibe prints de cada item respondido/salvo no card do evento e mostra Captcha na tela principal para todos os vendedores', () => {

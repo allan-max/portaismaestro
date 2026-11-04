@@ -1020,6 +1020,19 @@ ${paragraphs.join('\n')}
             return num.toFixed(2).replace('.', ',');
         }
 
+        function formatarNcmPadrao(val) {
+            let s = String(val ?? '').trim();
+            if (!s) return '';
+            s = s.replace(/^(\d{5,})[.,]0+$/, '$1');
+            if (/^\d+\.\d{2}\.\d{2}$/.test(s)) return s;
+            const digitos = s.replace(/\D/g, '');
+            if (digitos.length >= 5) {
+                return `${digitos.slice(0, -4)}.${digitos.slice(-4, -2)}.${digitos.slice(-2)}`;
+            }
+            return s;
+        }
+        window.formatarNcmPadrao = formatarNcmPadrao;
+
         async function lerPlanilhaBaseResposta(arquivoOuBuffer, cota = null) {
             if (typeof ExcelJS === 'undefined') {
                 throw new Error('Biblioteca ExcelJS não carregada.');
@@ -1110,7 +1123,7 @@ ${paragraphs.join('\n')}
                 }
 
                 const rawNcm = extrairValorCelulaExcel(row.getCell(colNcm));
-                const ncmStr = (rawNcm !== null && rawNcm !== undefined) ? String(rawNcm).trim() : '';
+                const ncmStr = (rawNcm !== null && rawNcm !== undefined) ? formatarNcmPadrao(rawNcm) : '';
 
                 const rawOrigem = extrairValorCelulaExcel(row.getCell(colOrigem));
                 const origemStr = (rawOrigem !== null && rawOrigem !== undefined) ? String(rawOrigem).trim() : '';
@@ -1178,7 +1191,7 @@ ${paragraphs.join('\n')}
                 const p = String(it.prazo ?? '').trim();
                 return (!algumComPreco || temPreco) ? p : '';
             });
-            const ncms = itens.map(it => String(it.ncm ?? '').trim());
+            const ncms = itens.map(it => formatarNcmPadrao(it.ncm));
             const origens = itens.map(it => String(it.origem ?? '').trim());
             const icms = itens.map(it => String(it.icms ?? '').trim());
             const datasheetPorLinha = Boolean(dados && dados.datasheetPorLinha);
