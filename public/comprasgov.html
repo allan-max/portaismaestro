@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAESTRO | ComprasGov - Robô de Licitações</title>
+    <link rel="icon" type="image/png" href="favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        /* TRAVAMENTO TOTAL DE SCROLLBAR (100% ONE-PAGE VIEWPORT) */
+        html, body {
+            width: 100%;
+            height: 100vh;
+            max-height: 100vh;
+            background-color: #f8fafc;
+            color: #0f172a;
+            overflow: hidden;
+        }
+
+        .page-container {
+            display: flex;
+            height: 100vh;
+            max-height: 100vh;
+            width: 100%;
+            background-color: #f8fafc;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* =========================================================
+           PAINEL AZUL ESQUERDO: COMPACTO, ELEGANTE E SEM SCROLL
+           ========================================================= */
+        .left-pane {
+            flex: 0 0 44%;
+            min-width: 440px;
+            max-width: 620px;
+            height: 100vh;
+            background: #0026b0;
+            background: radial-gradient(circle at 20% 25%, #014ce6 0%, #002db6 50%, #001b7a 100%);
+            position: relative;
+            overflow: hidden;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: clamp(25px, 4vh, 40px) clamp(35px, 4vw, 55px);
+            z-index: 1;
+        }
+
+        /* Textura pontilhada sutil de alta tecnologia (Dot Grid Matrix) */
+        .left-pane::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(rgba(255, 255, 255, 0.22) 1.2px, transparent 1.2px);
+            background-size: 24px 24px;
+            background-position: 8px 8px;
+            opacity: 0.5;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Camadas de ondas e formas curvas sobrepostas */
+        .waves-bg {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .waves-bg svg {
+            position: absolute;
+            width: 140%;
+            height: 140%;
+            top: -20%;
+            right: -30%;
+        }
+
+        /* Divisão curva orgânica entre azul e branco (ampla, fluida e assimétrica) */
+        .organic-wave-divider {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            right: -1px;
+            width: 150px;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .left-content {
+            position: relative;
+            z-index: 3;
+            max-width: 420px;
+        }
+
+        /* Ícone do Robô (Martelo de Licitação - Squircle Compacto) */
+        .gavel-icon-box {
+            width: clamp(80px, 10vh, 105px);
+            height: clamp(80px, 10vh, 105px);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 14px 32px rgba(0, 15, 80, 0.35);
+            margin-bottom: clamp(12px, 1.8vh, 18px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0022a8;
+        }
+
+        .gavel-icon-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        /* Tipografia de Cabeçalho Compacta e Fiel */
+        .left-title-sub {
+            font-size: clamp(1.6rem, 2.2vw, 2.1rem);
+            font-weight: 300;
+            color: #ffffff;
+            line-height: 1.1;
+            letter-spacing: -0.5px;
+            margin: 0;
+        }
+
+        .left-title-main {
+            font-size: clamp(2.6rem, 3.6vw, 3.4rem);
+            font-weight: 800;
+            color: #ffffff;
+            line-height: 1.0;
+            letter-spacing: -1.3px;
+            margin-top: 2px;
+        }
+
+        /* Linha 1: Abaixo de ComprasGov */
+        .cyan-line-1 {
+            width: 60px;
+            height: 2.5px;
+            background: #0088ff;
+            border-radius: 2px;
+            margin-top: clamp(8px, 1.2vh, 12px);
+            margin-bottom: clamp(8px, 1.2vh, 13px);
+        }
+
+        /* Parágrafo Descritivo */
+        .left-desc {
+            font-size: clamp(0.82rem, 1vw, 0.92rem);
+            line-height: 1.4;
+            color: #ffffff;
+            font-weight: 400;
+            margin: 0 0 clamp(8px, 1.2vh, 13px) 0;
+            max-width: 380px;
+        }
+
+        /* Linha 2: Abaixo do parágrafo */
+        .cyan-line-2 {
+            width: 48px;
+            height: 3px;
+            background: linear-gradient(90deg, #00e5ff 0%, #0066ff 100%);
+            border-radius: 2px;
+            box-shadow: 0 0 8px rgba(0, 229, 255, 0.55);
+            margin-bottom: clamp(12px, 2vh, 20px);
+        }
+
+        /* Lista de Recursos */
+        .features-list {
+            display: flex;
+            flex-direction: column;
+            gap: clamp(8px, 1.2vh, 12px);
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .feature-icon {
+            width: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(0.95rem, 1.1vw, 1.1rem);
+            color: #ffffff;
+        }
+
+        .feature-text {
+            font-size: clamp(0.8rem, 0.95vw, 0.88rem);
+            font-weight: 400;
+            color: #ffffff;
+            letter-spacing: -0.1px;
+        }
+
+        /* =========================================================
+           FLOATING TOP NAVBAR (BARRA SUPERIOR)
+           ========================================================= */
+        .floating-navbar {
+            position: fixed;
+            top: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 50px;
+            padding: 4px 7px;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #cbd5e1;
+            text-decoration: none;
+            letter-spacing: 0.4px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .nav-item i {
+            font-size: 0.78rem;
+        }
+
+        .nav-item:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .nav-item.active {
+            background: #2563eb;
+            color: #ffffff;
+            box-shadow: 0 2px 10px rgba(37, 99, 235, 0.4);
+        }
+
+        .nav-item.nav-voltar {
+            color: #f87171;
+            padding-left: 10px;
+        }
+
+        .nav-item.nav-voltar:hover {
+            color: #fca5a5;
+            background: rgba(239, 68, 68, 0.15);
+        }
+
+        /* =========================================================
+           LADO DIREITO: OPERAÇÃO TOTALMENTE COMPACTA (SEM SCROLL)
+           ========================================================= */
+        .right-pane {
+            flex: 1;
+            height: 100vh;
+            max-height: 100vh;
+            background: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: clamp(35px, 5vh, 48px) clamp(20px, 3vw, 36px) clamp(10px, 1.8vh, 18px);
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .top-lang-bar {
+            position: absolute;
+            top: clamp(10px, 2vh, 18px);
+            right: clamp(16px, 2.5vw, 36px);
+            display: flex;
+            align-items: center;
+            height: 28px;
+            z-index: 10;
+        }
+
+        .lang-selector {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #334155;
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.15s;
+        }
+
+        .lang-selector:hover {
+            color: #0f172a;
+        }
+
+        .lang-selector i:last-child {
+            font-size: 0.65rem;
+            color: #64748b;
+        }
+
+        /* Container central dos cards ajustado ao viewport */
+        .cards-container {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: clamp(8px, 1.2vh, 12px);
+        }
+
+        /* Estilo base de Card compacto */
+        .card {
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+            padding: clamp(10px, 1.4vh, 14px) clamp(16px, 1.8vw, 22px);
+            transition: box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+
+        .card:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+        }
+
+        /* --- CARD 1: CONTROLE DO ROBÔ --- */
+        .card-controle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: clamp(10px, 1.4vh, 14px) clamp(16px, 1.8vw, 22px);
+            gap: 16px;
+        }
+
+        .controle-left {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            flex: 1;
+        }
+
+        .controle-play-circle {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #0052cc;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+            box-shadow: 0 3px 8px rgba(0, 82, 204, 0.3);
+            margin-top: 2px;
+        }
+
+        .controle-play-circle i {
+            margin-left: 2px;
+        }
+
+        .controle-info h2 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #0f172a;
+            letter-spacing: -0.2px;
+            margin-bottom: 2px;
+        }
+
+        .controle-info p {
+            font-size: 0.78rem;
+            color: #64748b;
+            line-height: 1.35;
+            margin-bottom: clamp(6px, 1vh, 10px);
+        }
+
+        .btn-ligar-robo {
+            background: #0052cc;
+            color: #ffffff;
+            border: none;
+            border-radius: 7px;
+            padding: 7px 18px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0, 82, 204, 0.25);
+        }
+
+        .btn-ligar-robo:hover {
+            background: #0043a8;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(0, 82, 204, 0.35);
+        }
+
+        .btn-ligar-robo.ativo {
+            background: #dc2626;
+            box-shadow: 0 3px 10px rgba(220, 38, 38, 0.3);
+        }
+
+        .btn-ligar-robo.ativo:hover {
+            background: #b91c1c;
+        }
+
+        .controle-right {
+            border-left: 1px solid #e2e8f0;
+            padding-left: clamp(16px, 2vw, 24px);
+            min-width: 140px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .status-header {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 0.76rem;
+            font-weight: 500;
+            color: #64748b;
+        }
+
+        .status-dot-lg {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #94a3b8;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+
+        .status-dot-lg.running {
+            background: #22c55e;
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.8);
+        }
+
+        .status-text-val {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.2px;
+        }
+
+        /* --- CARD 2: LICITAÇÕES ENCONTRADAS --- */
+        .card-header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: clamp(6px, 1vh, 9px);
+        }
+
+        .card-header-title {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+
+        .card-header-title i {
+            font-size: 1.05rem;
+            color: #0052cc;
+        }
+
+        .card-header-title h2 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #0f172a;
+            letter-spacing: -0.2px;
+        }
+
+        .btn-atualizar {
+            background: transparent;
+            border: none;
+            color: #0052cc;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            padding: 3px 7px;
+            border-radius: 5px;
+            transition: all 0.15s ease;
+        }
+
+        .btn-atualizar:hover {
+            background: rgba(0, 82, 204, 0.08);
+        }
+
+        .btn-atualizar i {
+            font-size: 0.88rem;
+            transition: transform 0.4s ease;
+        }
+
+        .btn-atualizar.girando i {
+            transform: rotate(360deg);
+        }
+
+        /* Tabela Compacta */
+        .table-wrap {
+            width: 100%;
+            border-radius: 7px;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+
+        .tabela-licitacoes {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        .tabela-licitacoes thead {
+            background: #eef4fb;
+        }
+
+        .tabela-licitacoes th {
+            padding: clamp(6px, 0.8vh, 8px) 12px;
+            font-size: 0.74rem;
+            font-weight: 700;
+            color: #1e293b;
+            border-bottom: 1px solid #e2e8f0;
+            letter-spacing: 0.1px;
+        }
+
+        .tabela-licitacoes td {
+            padding: clamp(5px, 0.7vh, 7px) 12px;
+            font-size: 0.78rem;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: middle;
+        }
+
+        .tabela-licitacoes tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .tabela-licitacoes tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        .td-num {
+            font-weight: 800;
+            color: #0f172a;
+            white-space: nowrap;
+            width: 18%;
+        }
+
+        .td-obj {
+            color: #334155;
+            font-weight: 500;
+            width: 44%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .td-data {
+            color: #475569;
+            font-weight: 500;
+            white-space: nowrap;
+            width: 24%;
+        }
+
+        .td-acao {
+            text-align: right;
+            width: 14%;
+        }
+
+        .btn-abrir-licitacao {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #2563eb;
+            border-radius: 5px;
+            padding: 3px 9px;
+            font-size: 0.74rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.15s ease;
+            text-decoration: none;
+        }
+
+        .btn-abrir-licitacao:hover {
+            background: #dbeafe;
+            border-color: #93c5fd;
+            color: #1d4ed8;
+        }
+
+        .btn-abrir-licitacao i {
+            font-size: 0.7rem;
+        }
+
+        /* --- CARD 3: LOG DE ATIVIDADES --- */
+        .status-online-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.76rem;
+            font-weight: 600;
+            color: #16a34a;
+        }
+
+        .status-online-pill .dot-green {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 6px rgba(34, 197, 94, 0.7);
+        }
+
+        .log-entries {
+            display: flex;
+            flex-direction: column;
+            gap: clamp(2px, 0.4vh, 4px);
+            margin-top: 1px;
+            font-size: 0.76rem;
+        }
+
+        .log-row {
+            display: flex;
+            gap: 12px;
+            align-items: baseline;
+        }
+
+        .log-time {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.72rem;
+            color: #475569;
+            font-weight: 500;
+            min-width: 54px;
+        }
+
+        .log-msg {
+            color: #0f172a;
+            font-weight: 450;
+        }
+
+        /* Responsividade */
+        @media (max-width: 1100px) {
+            html, body {
+                height: auto;
+                max-height: none;
+                overflow-y: auto;
+            }
+            .page-container {
+                flex-direction: column;
+                height: auto;
+                max-height: none;
+                overflow: visible;
+            }
+            .left-pane {
+                flex: none;
+                width: 100%;
+                max-width: 100%;
+                min-width: auto;
+                height: auto;
+                max-height: none;
+                padding: 65px 24px 35px;
+            }
+            .organic-wave-divider {
+                display: none;
+            }
+            .right-pane {
+                height: auto;
+                max-height: none;
+                padding: 24px 16px 36px;
+                overflow: visible;
+            }
+            .floating-navbar {
+                width: 90%;
+                max-width: 480px;
+                overflow-x: auto;
+                justify-content: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- NAVBAR FLUTUANTE CENTRALIZADO -->
+    <nav class="floating-navbar">
+        <a href="javascript:void(0)" onclick="irPara('coupa.html')" class="nav-item"><i class="fa-solid fa-cube"></i> <span>COUPA</span></a>
+        <a href="javascript:void(0)" onclick="irPara('vale.html')" class="nav-item"><i class="fa-solid fa-helmet-safety"></i> <span>VALE</span></a>
+        <a href="javascript:void(0)" onclick="irPara('me.html')" class="nav-item"><i class="fa-solid fa-shopping-cart"></i> <span>ME</span></a>
+        <a href="javascript:void(0)" onclick="irPara('findes.html')" class="nav-item"><i class="fa-solid fa-industry"></i> <span>FINDES</span></a>
+        <a href="javascript:void(0)" onclick="irPara('ariba.html')" class="nav-item"><i class="fa-solid fa-cloud"></i> <span>ARIBA</span></a>
+        <a href="javascript:void(0)" onclick="irPara('comprasgov.html')" class="nav-item active"><i class="fa-solid fa-gavel"></i> <span>COMPRASGOV</span></a>
+        <a href="javascript:void(0)" onclick="irPara('arcelormittal.html')" class="nav-item"><i class="fa-solid fa-fire"></i> <span>ARCELORMITTAL</span></a>
+        <a href="javascript:void(0)" onclick="irPara('index.html')" class="nav-item nav-voltar"><i class="fa-solid fa-arrow-left"></i> <span>VOLTAR</span></a>
+    </nav>
+
+    <div class="page-container">
+        
+        <!-- LADO ESQUERDO: PAINEL AZUL COM ONDAS, PROFUNDIDADE E DIVISÃO CURVA -->
+        <aside class="left-pane">
+            <div class="waves-bg">
+                <svg viewBox="0 0 1000 1000" preserveAspectRatio="none">
+                    <defs>
+                        <!-- Onda profunda superior/direita (azul meia-noite) -->
+                        <linearGradient id="deepWaveGrad" x1="0%" y1="0%" x2="100%" y2="80%">
+                            <stop offset="0%" stop-color="#00104d" stop-opacity="0.95"/>
+                            <stop offset="50%" stop-color="#001a75" stop-opacity="0.85"/>
+                            <stop offset="100%" stop-color="#002bb8" stop-opacity="0.3"/>
+                        </linearGradient>
+
+                        <!-- Onda vibrante intermediária (azul elétrico real) -->
+                        <radialGradient id="electricWaveGrad" cx="30%" cy="85%" r="75%">
+                            <stop offset="0%" stop-color="#0137fe" stop-opacity="0.85"/>
+                            <stop offset="45%" stop-color="#002db3" stop-opacity="0.6"/>
+                            <stop offset="100%" stop-color="#001466" stop-opacity="0.1"/>
+                        </radialGradient>
+
+                        <!-- Onda ascendente inferior -->
+                        <linearGradient id="lowerWaveGrad" x1="0%" y1="100%" x2="100%" y2="50%">
+                            <stop offset="0%" stop-color="#001f8f" stop-opacity="0.9"/>
+                            <stop offset="100%" stop-color="#0142eb" stop-opacity="0.2"/>
+                        </linearGradient>
+
+                        <!-- Brilho ambiente suave atrás do ícone do martelo -->
+                        <radialGradient id="iconBackdropGlow" cx="22%" cy="25%" r="45%">
+                            <stop offset="0%" stop-color="#2563eb" stop-opacity="0.45"/>
+                            <stop offset="100%" stop-color="#001f8f" stop-opacity="0"/>
+                        </radialGradient>
+                    </defs>
+
+                    <!-- Glow atrás do ícone -->
+                    <circle cx="210" cy="235" r="340" fill="url(#iconBackdropGlow)"/>
+
+                    <!-- Camada 1: Onda escura profunda que varre do topo-direito em arco -->
+                    <path d="M 380,-50 C 650,80 880,320 940,580 C 1000,840 850,1050 680,1100 L 1100,1100 L 1100,-50 Z" fill="url(#deepWaveGrad)"/>
+
+                    <!-- Camada 2: Onda vibrante inferior que projeta volume -->
+                    <path d="M -80,680 C 220,620 540,780 820,1050 L 820,1100 L -80,1100 Z" fill="url(#electricWaveGrad)"/>
+
+                    <!-- Camada 3: Onda de fechamento inferior -->
+                    <path d="M 150,1100 C 420,850 720,780 1020,950 L 1050,1100 Z" fill="url(#lowerWaveGrad)"/>
+                </svg>
+            </div>
+
+            <!-- DIVISÃO CURVA E ASSIMÉTRICA ENTRE A ÁREA AZUL E BRANCA (Mais à direita no topo, recua para a esquerda na base) -->
+            <svg class="organic-wave-divider" viewBox="0 0 150 1000" preserveAspectRatio="none">
+                <path d="M 150,0 C 60,212 35,638 0,1000 L 150,1000 Z" fill="#f8fafc"/>
+            </svg>
+
+            <div class="left-content">
+                <!-- Ícone Real do Robô ComprasGov -->
+                <div class="gavel-icon-box" title="ComprasGov Licitações">
+                    <img src="img/logo-comprasgov.png" alt="Ícone Robô ComprasGov" class="gavel-icon-img">
+                </div>
+
+                <!-- Título Lockup -->
+                <div class="left-title-sub">Robô de Licitações</div>
+                <h1 class="left-title-main">ComprasGov</h1>
+
+                <!-- Linha 1 (Sob ComprasGov) -->
+                <div class="cyan-line-1"></div>
+
+                <!-- Parágrafo -->
+                <p class="left-desc">
+                    Automatize a busca por novas licitações<br>
+                    e acompanhe tudo em um só lugar.
+                </p>
+
+                <!-- Linha 2 (Sob o parágrafo) -->
+                <div class="cyan-line-2"></div>
+
+                <!-- Lista de Recursos -->
+                <div class="features-list">
+                    <div class="feature-item">
+                        <span class="feature-icon"><i class="fa-solid fa-bolt"></i></span>
+                        <span class="feature-text">Busca automática</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon"><i class="fa-regular fa-bell"></i></span>
+                        <span class="feature-text">Notificações em tempo real</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon"><i class="fa-solid fa-chart-column"></i></span>
+                        <span class="feature-text">Mais oportunidades para sua empresa</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- LADO DIREITO: OPERAÇÃO COMPACTA (100% SINGLE-SCREEN VIEWPORT) -->
+        <main class="right-pane">
+            <div class="top-lang-bar">
+                <div class="lang-selector">
+                    <i class="fa-solid fa-globe"></i>
+                    <span>Português (pt-BR)</span>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </div>
+            </div>
+
+            <div class="cards-container">
+                
+                <!-- CARD 1: CONTROLE DO ROBÔ -->
+                <section class="card card-controle">
+                    <div class="controle-left">
+                        <div class="controle-play-circle">
+                            <i class="fa-solid fa-play"></i>
+                        </div>
+                        <div class="controle-info">
+                            <h2>Controle do Robô</h2>
+                            <p>Clique no botão abaixo para iniciar ou parar<br>a busca de novas licitações no ComprasGov.</p>
+                            <button id="btn-toggle-robo" class="btn-ligar-robo" onclick="alternarRobo()">
+                                <i class="fa-solid fa-play" id="btn-icon"></i>
+                                <span id="btn-texto">Ligar o Robô</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="controle-right">
+                        <div class="status-header">
+                            <span class="status-dot-lg" id="status-dot"></span>
+                            <span>Status</span>
+                        </div>
+                        <div class="status-text-val" id="status-texto">Aguardando...</div>
+                    </div>
+                </section>
+
+                <!-- CARD 2: LICITAÇÕES ENCONTRADAS -->
+                <section class="card card-licitacoes">
+                    <div class="card-header-bar">
+                        <div class="card-header-title">
+                            <i class="fa-solid fa-bars-staggered"></i>
+                            <h2>Licitações Encontradas</h2>
+                        </div>
+                        <button class="btn-atualizar" id="btn-atualizar" onclick="atualizarLicitacoes()">
+                            <i class="fa-solid fa-rotate-right"></i>
+                            <span>Atualizar</span>
+                        </button>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table class="tabela-licitacoes">
+                            <thead>
+                                <tr>
+                                    <th>Nº da Licitação</th>
+                                    <th>Objeto</th>
+                                    <th>Data de Abertura</th>
+                                    <th style="text-align: right;">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="td-num">90023/2025</td>
+                                    <td class="td-obj">Aquisição de equipamentos...</td>
+                                    <td class="td-data">10/11/2025 09:00</td>
+                                    <td class="td-acao">
+                                        <button class="btn-abrir-licitacao" onclick="abrirLicitacao('90023/2025')">
+                                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="td-num">90017/2025</td>
+                                    <td class="td-obj">Material de informática...</td>
+                                    <td class="td-data">10/11/2025 10:00</td>
+                                    <td class="td-acao">
+                                        <button class="btn-abrir-licitacao" onclick="abrirLicitacao('90017/2025')">
+                                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="td-num">90012/2025</td>
+                                    <td class="td-obj">Serviços de manutenção...</td>
+                                    <td class="td-data">10/11/2025 11:00</td>
+                                    <td class="td-acao">
+                                        <button class="btn-abrir-licitacao" onclick="abrirLicitacao('90012/2025')">
+                                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="td-num">90007/2025</td>
+                                    <td class="td-obj">Mobiliário para escritório...</td>
+                                    <td class="td-data">10/11/2025 14:00</td>
+                                    <td class="td-acao">
+                                        <button class="btn-abrir-licitacao" onclick="abrirLicitacao('90007/2025')">
+                                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="td-num">90001/2025</td>
+                                    <td class="td-obj">Equipamentos de rede...</td>
+                                    <td class="td-data">11/11/2025 09:00</td>
+                                    <td class="td-acao">
+                                        <button class="btn-abrir-licitacao" onclick="abrirLicitacao('90001/2025')">
+                                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- CARD 3: LOG DE ATIVIDADES -->
+                <section class="card card-log">
+                    <div class="card-header-bar">
+                        <div class="card-header-title">
+                            <i class="fa-regular fa-file-lines"></i>
+                            <h2>Log de Atividades</h2>
+                        </div>
+                        <div class="status-online-pill">
+                            <span class="dot-green"></span>
+                            <span>Online</span>
+                        </div>
+                    </div>
+
+                    <div class="log-entries" id="log-entries">
+                        <div class="log-row">
+                            <span class="log-time">09:12:10</span>
+                            <span class="log-msg">Robô iniciado com sucesso!</span>
+                        </div>
+                        <div class="log-row">
+                            <span class="log-time">09:12:15</span>
+                            <span class="log-msg">Buscando novas licitações no ComprasGov...</span>
+                        </div>
+                        <div class="log-row">
+                            <span class="log-time">09:12:18</span>
+                            <span class="log-msg">5 licitações encontradas.</span>
+                        </div>
+                        <div class="log-row">
+                            <span class="log-time">09:12:25</span>
+                            <span class="log-msg">Aguardando próxima verificação (5 min).</span>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+
+    </div>
+
+    <script>
+        let roboLigado = false;
+
+        function alternarRobo() {
+            roboLigado = !roboLigado;
+            const btn = document.getElementById('btn-toggle-robo');
+            const btnIcon = document.getElementById('btn-icon');
+            const btnTexto = document.getElementById('btn-texto');
+            const dot = document.getElementById('status-dot');
+            const statusTexto = document.getElementById('status-texto');
+
+            if (roboLigado) {
+                btn.classList.add('ativo');
+                btnIcon.className = 'fa-solid fa-stop';
+                btnTexto.textContent = 'Desligar o Robô';
+                dot.classList.add('running');
+                statusTexto.textContent = 'Buscando...';
+                adicionarLog('Robô iniciado pelo operador.');
+            } else {
+                btn.classList.remove('ativo');
+                btnIcon.className = 'fa-solid fa-play';
+                btnTexto.textContent = 'Ligar o Robô';
+                dot.classList.remove('running');
+                statusTexto.textContent = 'Aguardando...';
+                adicionarLog('Robô pausado pelo operador.');
+            }
+        }
+
+        function atualizarLicitacoes() {
+            const btn = document.getElementById('btn-atualizar');
+            btn.classList.add('girando');
+            setTimeout(() => {
+                btn.classList.remove('girando');
+                adicionarLog('Lista de licitações atualizada.');
+            }, 600);
+        }
+
+        function abrirLicitacao(num) {
+            window.open('https://cnetmobile.estaleiro.serpro.gov.br/comprasnet-web/public/compras/quadro-avisos', '_blank');
+        }
+
+        function adicionarLog(msg) {
+            const container = document.getElementById('log-entries');
+            if (!container) return;
+            const agora = new Date();
+            const timeStr = String(agora.getHours()).padStart(2, '0') + ':' +
+                            String(agora.getMinutes()).padStart(2, '0') + ':' +
+                            String(agora.getSeconds()).padStart(2, '0');
+            const row = document.createElement('div');
+            row.className = 'log-row';
+            row.innerHTML = `<span class="log-time">${timeStr}</span><span class="log-msg">${msg}</span>`;
+            container.appendChild(row);
+        }
+
+        function irPara(url) {
+            window.location.href = url;
+        }
+    </script>
+</body>
+</html>

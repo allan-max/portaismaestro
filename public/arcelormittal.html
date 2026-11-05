@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAESTRO | ArcelorMittal - Robô de Cotações</title>
+    <link rel="icon" type="image/png" href="favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        /* TRAVAMENTO TOTAL DE SCROLLBAR (100% ONE-PAGE VIEWPORT) */
+        html, body {
+            width: 100%;
+            height: 100vh;
+            max-height: 100vh;
+            background-color: #f8fafc;
+            color: #0f172a;
+            overflow: hidden;
+        }
+
+        .page-container {
+            display: flex;
+            height: 100vh;
+            max-height: 100vh;
+            width: 100%;
+            background-color: #f8fafc;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* =========================================================
+           PAINEL LATERAL ESQUERDO: FOTOGRAFIA SIDERÚRGICA & CURVA ORGÂNICA
+           ========================================================= */
+        .left-pane {
+            flex: 0 0 44%;
+            min-width: 440px;
+            max-width: 640px;
+            height: 100vh;
+            background: #f8fafc;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            z-index: 1;
+        }
+
+        .left-panel-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: left center;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* =========================================================
+           FLOATING TOP NAVBAR (BARRA SUPERIOR FLUTUANTE)
+           ========================================================= */
+        .floating-navbar {
+            position: fixed;
+            top: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 50px;
+            padding: 4px 7px;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 13px;
+            border-radius: 40px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #cbd5e1;
+            text-decoration: none;
+            letter-spacing: 0.4px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .nav-item i {
+            font-size: 0.78rem;
+        }
+
+        .nav-item:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .nav-item.active.nav-arcelormittal {
+            background: #ea580c;
+            color: #ffffff;
+            box-shadow: 0 2px 10px rgba(234, 88, 12, 0.45);
+        }
+
+        .nav-item.nav-voltar {
+            color: #f87171;
+            padding-left: 10px;
+        }
+
+        .nav-item.nav-voltar:hover {
+            color: #fca5a5;
+            background: rgba(239, 68, 68, 0.15);
+        }
+
+        /* =========================================================
+           LADO DIREITO: OPERAÇÃO TOTALMENTE COMPACTA (SEM SCROLL)
+           ========================================================= */
+        .right-pane {
+            flex: 1;
+            height: 100vh;
+            max-height: 100vh;
+            background: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: clamp(35px, 5vh, 48px) clamp(20px, 3vw, 36px) clamp(10px, 1.8vh, 18px);
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        /* Barra de Ações Superior (Apenas Idioma) */
+        .top-header-bar {
+            position: absolute;
+            top: clamp(10px, 2vh, 18px);
+            right: clamp(16px, 2.5vw, 36px);
+            display: flex;
+            align-items: center;
+            height: 28px;
+            z-index: 10;
+        }
+
+        .lang-selector {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #1e293b;
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.15s;
+        }
+
+        .lang-selector:hover {
+            color: #ea580c;
+        }
+
+        .lang-selector i:first-child {
+            font-size: 0.85rem;
+        }
+
+        .lang-selector i:last-child {
+            font-size: 0.65rem;
+            color: #64748b;
+        }
+
+        /* Container central dos cards ajustado ao viewport */
+        .cards-container {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: clamp(8px, 1.2vh, 12px);
+        }
+
+        /* Estilo base de Card compacto */
+        .card {
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+            padding: clamp(12px, 1.6vh, 16px) clamp(18px, 2vw, 24px);
+            transition: box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+
+        .card:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+        }
+
+        /* --- CARD 1: CONTROLE DO ROBÔ --- */
+        .card-controle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: clamp(12px, 1.6vh, 16px) clamp(18px, 2vw, 24px);
+            gap: 16px;
+        }
+
+        .controle-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex: 1;
+        }
+
+        .controle-play-circle {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: none;
+            background: #ea580c;
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.08rem;
+            flex-shrink: 0;
+            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.4);
+            cursor: pointer;
+            transition: all 0.25s ease;
+            outline: none;
+        }
+
+        .controle-play-circle:hover {
+            transform: scale(1.08);
+            box-shadow: 0 6px 18px rgba(234, 88, 12, 0.55);
+            background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+        }
+
+        .controle-play-circle:active {
+            transform: scale(0.96);
+        }
+
+        .controle-play-circle.ativo {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            box-shadow: 0 4px 14px rgba(220, 38, 38, 0.45);
+        }
+
+        .controle-play-circle.ativo:hover {
+            transform: scale(1.08);
+            background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+        }
+
+        .controle-play-circle i {
+            margin-left: 2px;
+            transition: transform 0.2s ease;
+        }
+
+        .controle-play-circle.ativo i {
+            margin-left: 0;
+        }
+
+        .controle-divider-orange {
+            width: 1.5px;
+            height: 44px;
+            background: #f97316;
+            opacity: 0.45;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .controle-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            flex: 1;
+        }
+
+        .controle-info h2 {
+            font-size: 1.14rem;
+            font-weight: 700;
+            color: #0f172a;
+            letter-spacing: -0.2px;
+            margin-bottom: 2px;
+        }
+
+        .controle-info p {
+            font-size: 0.78rem;
+            color: #64748b;
+            line-height: 1.35;
+            margin-bottom: 6px;
+        }
+
+        .controle-hint-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.74rem;
+            font-weight: 600;
+            color: #ea580c;
+            background: #fff7ed;
+            border: 1px solid #ffedd5;
+            padding: 2px 9px;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .controle-right {
+            padding-left: clamp(10px, 1.5vw, 18px);
+            min-width: 140px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .status-header {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 0.76rem;
+            font-weight: 500;
+            color: #64748b;
+        }
+
+        .status-dot-lg {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #22c55e;
+            display: inline-block;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
+        }
+
+        .status-dot-lg.running {
+            background: #22c55e;
+            box-shadow: 0 0 10px rgba(34, 197, 94, 0.9);
+            animation: pulse-green 1.5s infinite;
+        }
+
+        @keyframes pulse-green {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+        }
+
+        .status-text-val {
+            font-size: 1.02rem;
+            font-weight: 800;
+            color: #15803d;
+            letter-spacing: -0.2px;
+        }
+
+        /* --- CARD 2: COTAÇÕES PARA IMPRIMIR --- */
+        .card-imprimir .card-header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: clamp(8px, 1.2vh, 12px);
+        }
+
+        .card-header-title {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+
+        .card-header-title i.orange-icon {
+            font-size: 1.1rem;
+            color: #ea580c;
+        }
+
+        .card-header-title h2 {
+            font-size: 1.08rem;
+            font-weight: 700;
+            color: #0f172a;
+            letter-spacing: -0.2px;
+        }
+
+        .btn-atualizar {
+            background: transparent;
+            border: none;
+            color: #ea580c;
+            font-size: 0.82rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            padding: 3px 7px;
+            border-radius: 5px;
+            transition: all 0.15s ease;
+        }
+
+        .btn-atualizar:hover {
+            background: rgba(234, 88, 12, 0.08);
+        }
+
+        .btn-atualizar i {
+            font-size: 0.88rem;
+            transition: transform 0.4s ease;
+        }
+
+        .btn-atualizar.girando i {
+            transform: rotate(360deg);
+        }
+
+        /* Caixa Elegante de Cotações para Imprimir */
+        .box-imprimir-wrapper {
+            border: 1px solid #fed7aa;
+            border-radius: 10px;
+            padding: clamp(12px, 1.6vh, 18px) clamp(16px, 2vw, 24px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            box-shadow: 0 3px 12px rgba(234, 88, 12, 0.05);
+            background: linear-gradient(135deg, #ffffff 0%, #fffbf7 100%);
+        }
+
+        .box-imprimir-left {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1;
+        }
+
+        .kpi-num-box {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .kpi-num {
+            font-size: clamp(2rem, 3.2vw, 2.7rem);
+            font-weight: 900;
+            line-height: 1;
+            color: #ea580c;
+            letter-spacing: -1px;
+        }
+
+        .kpi-label-group {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .kpi-title {
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: #0f172a;
+            letter-spacing: -0.2px;
+        }
+
+        .kpi-sub {
+            font-size: 0.74rem;
+            font-weight: 500;
+            color: #64748b;
+        }
+
+        .imprimir-desc {
+            font-size: 0.78rem;
+            color: #475569;
+            line-height: 1.4;
+            margin: 0;
+            max-width: 480px;
+        }
+
+        .box-imprimir-right {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .btn-imprimir-grande {
+            background: #ea580c;
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: clamp(11px, 1.5vh, 14px) clamp(20px, 2.2vw, 28px);
+            font-size: 0.88rem;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);
+            white-space: nowrap;
+        }
+
+        .btn-imprimir-grande:hover {
+            background: #c2410c;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(234, 88, 12, 0.45);
+        }
+
+        .btn-imprimir-grande:active {
+            transform: translateY(0);
+        }
+
+        .btn-imprimir-grande i {
+            font-size: 1.05rem;
+        }
+
+        /* --- CARD 3: LOG DE ATIVIDADES --- */
+        .card-log .card-header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: clamp(6px, 1vh, 9px);
+        }
+
+        .card-log .card-header-title {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+
+        .card-log .card-header-title i.orange-icon {
+            font-size: 1.05rem;
+            color: #ea580c;
+        }
+
+        .status-online-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.76rem;
+            font-weight: 600;
+            color: #16a34a;
+        }
+
+        .status-online-pill .dot-green {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 6px rgba(34, 197, 94, 0.7);
+        }
+
+        .log-wrapper {
+            display: flex;
+            align-items: stretch;
+            gap: 12px;
+            margin-top: 1px;
+        }
+
+        .log-orange-stripe {
+            width: 3px;
+            background: #ea580c;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .log-entries {
+            display: flex;
+            flex-direction: column;
+            gap: clamp(2px, 0.4vh, 4px);
+            font-size: 0.76rem;
+            flex: 1;
+        }
+
+        .log-row {
+            display: flex;
+            gap: 12px;
+            align-items: baseline;
+        }
+
+        .log-time {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.74rem;
+            color: #ea580c;
+            font-weight: 600;
+            min-width: 58px;
+        }
+
+        .log-msg {
+            color: #0f172a;
+            font-weight: 450;
+        }
+
+        /* Responsividade */
+        @media (max-width: 1100px) {
+            html, body {
+                height: auto;
+                max-height: none;
+                overflow-y: auto;
+            }
+            .page-container {
+                flex-direction: column;
+                height: auto;
+                max-height: none;
+                overflow: visible;
+            }
+            .left-pane {
+                flex: none;
+                width: 100%;
+                max-width: 100%;
+                min-width: auto;
+                height: 380px;
+                max-height: none;
+            }
+            .right-pane {
+                height: auto;
+                max-height: none;
+                padding: 24px 16px 36px;
+                overflow: visible;
+            }
+            .box-imprimir-wrapper {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .btn-imprimir-grande {
+                width: 100%;
+                justify-content: center;
+            }
+            .floating-navbar {
+                width: 92%;
+                max-width: 520px;
+                overflow-x: auto;
+                justify-content: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- NAVBAR FLUTUANTE CENTRALIZADO COM TODOS OS PORTAIS -->
+    <nav class="floating-navbar">
+        <a href="javascript:void(0)" onclick="irPara('coupa.html')" class="nav-item"><i class="fa-solid fa-cube"></i> <span>Coupa</span></a>
+        <a href="javascript:void(0)" onclick="irPara('vale.html')" class="nav-item"><i class="fa-solid fa-helmet-safety"></i> <span>Vale</span></a>
+        <a href="javascript:void(0)" onclick="irPara('me.html')" class="nav-item"><i class="fa-solid fa-shopping-cart"></i> <span>ME</span></a>
+        <a href="javascript:void(0)" onclick="irPara('findes.html')" class="nav-item"><i class="fa-solid fa-industry"></i> <span>Findes</span></a>
+        <a href="javascript:void(0)" onclick="irPara('ariba.html')" class="nav-item"><i class="fa-solid fa-cloud"></i> <span>Ariba</span></a>
+        <a href="javascript:void(0)" onclick="irPara('comprasgov.html')" class="nav-item"><i class="fa-solid fa-gavel"></i> <span>ComprasGov</span></a>
+        <a href="javascript:void(0)" onclick="irPara('arcelormittal.html')" class="nav-item active nav-arcelormittal"><i class="fa-solid fa-fire"></i> <span>ArcelorMittal</span></a>
+        <a href="index.html" class="nav-item nav-voltar"><i class="fa-solid fa-arrow-left"></i> <span>Voltar</span></a>
+    </nav>
+
+    <div class="page-container">
+        
+        <!-- LADO ESQUERDO: PAINEL INDUSTRIAL ARCELORMITTAL COM ONDAS E CURVA ORGÂNICA -->
+        <aside class="left-pane" aria-label="Painel Informativo ArcelorMittal">
+            <img src="img/arcelormittal-panel.png" alt="ArcelorMittal Robô de Licitações" class="left-panel-img">
+        </aside>
+
+        <!-- LADO DIREITO: OPERAÇÃO COMPACTA (100% SINGLE-SCREEN VIEWPORT) -->
+        <main class="right-pane">
+            
+            <!-- Barra Superior (Apenas Idioma) -->
+            <div class="top-header-bar">
+                <div class="lang-selector" title="Selecionar Idioma">
+                    <i class="fa-solid fa-globe"></i>
+                    <span>Português (pt-BR)</span>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </div>
+            </div>
+
+            <div class="cards-container">
+                
+                <!-- CARD 1: CONTROLE DO ROBÔ (LIGAR PELO CÍRCULO PLAY) -->
+                <section class="card card-controle">
+                    <div class="controle-left">
+                        <button class="controle-play-circle" id="btn-play-circle" onclick="alternarRobo()" title="Clique para Iniciar ou Pausar o Robô">
+                            <i class="fa-solid fa-play" id="btn-icon"></i>
+                        </button>
+                        <div class="controle-divider-orange"></div>
+                        <div class="controle-info">
+                            <h2>Controle do Robô</h2>
+                            <p>Clique no botão de play ao lado para iniciar ou pausar<br>a busca e extração de cotações no ArcelorMittal.</p>
+                            <span class="controle-hint-badge" id="btn-texto">
+                                <i class="fa-solid fa-power-off"></i> Clique no botão circular para ligar
+                            </span>
+                        </div>
+                    </div>
+                    <div class="controle-divider-orange"></div>
+                    <div class="controle-right">
+                        <div class="status-header">
+                            <span class="status-dot-lg" id="status-dot"></span>
+                            <span>Status</span>
+                        </div>
+                        <div class="status-text-val" id="status-texto">Aguardando...</div>
+                    </div>
+                </section>
+
+                <!-- CARD 2: COTAÇÕES PARA IMPRIMIR -->
+                <section class="card card-imprimir">
+                    <div class="card-header-bar">
+                        <div class="card-header-title">
+                            <i class="fa-solid fa-file-invoice orange-icon"></i>
+                            <h2>Cotações para Imprimir</h2>
+                        </div>
+                        <button class="btn-atualizar" id="btn-atualizar" onclick="atualizarCotacoes()" title="Atualizar contagem">
+                            <i class="fa-solid fa-rotate-right"></i>
+                            <span>Atualizar</span>
+                        </button>
+                    </div>
+
+                    <div class="box-imprimir-wrapper">
+                        <div class="box-imprimir-left">
+                            <div class="kpi-num-box">
+                                <span class="kpi-num" id="kpi-cotacoes-num">128</span>
+                                <div class="kpi-label-group">
+                                    <span class="kpi-title">Cotações extraídas</span>
+                                    <span class="kpi-sub">Total acumulado nesta execução</span>
+                                </div>
+                            </div>
+                            <p class="imprimir-desc">
+                                As cotações mineradas foram organizadas e consolidadas pelo robô. Clique no botão ao lado para emitir a folha de cotações para a equipe comercial.
+                            </p>
+                        </div>
+
+                        <div class="box-imprimir-right">
+                            <button class="btn-imprimir-grande" onclick="imprimirCotacoes()">
+                                <i class="fa-solid fa-print"></i>
+                                <span>Imprimir Cotações</span>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- CARD 3: LOG DE ATIVIDADES -->
+                <section class="card card-log">
+                    <div class="card-header-bar">
+                        <div class="card-header-title">
+                            <i class="fa-regular fa-file-lines orange-icon"></i>
+                            <h2>Log de Atividades</h2>
+                        </div>
+                        <div class="status-online-pill">
+                            <span class="dot-green"></span>
+                            <span>Online</span>
+                        </div>
+                    </div>
+
+                    <div class="log-wrapper">
+                        <div class="log-orange-stripe"></div>
+                        <div class="log-entries" id="log-entries">
+                            <div class="log-row">
+                                <span class="log-time">09:12:10</span>
+                                <span class="log-msg">Robô iniciado com sucesso!</span>
+                            </div>
+                            <div class="log-row">
+                                <span class="log-time">09:12:15</span>
+                                <span class="log-msg">Conectado ao portal ArcelorMittal.</span>
+                            </div>
+                            <div class="log-row">
+                                <span class="log-time">09:12:18</span>
+                                <span class="log-msg">Extraindo cotações...</span>
+                            </div>
+                            <div class="log-row">
+                                <span class="log-time">09:12:25</span>
+                                <span class="log-msg">128 cotações extraídas.</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+
+    </div>
+
+    <script>
+        let roboLigado = false;
+        let totalCotacoes = 128;
+
+        function alternarRobo() {
+            roboLigado = !roboLigado;
+            const btnPlay = document.getElementById('btn-play-circle');
+            const btnIcon = document.getElementById('btn-icon');
+            const btnTexto = document.getElementById('btn-texto');
+            const dot = document.getElementById('status-dot');
+            const statusTexto = document.getElementById('status-texto');
+
+            if (roboLigado) {
+                btnPlay.classList.add('ativo');
+                btnIcon.className = 'fa-solid fa-stop';
+                btnTexto.innerHTML = '<i class="fa-solid fa-circle-play" style="color: #22c55e;"></i> Robô em execução • Clique para parar';
+                dot.classList.add('running');
+                statusTexto.textContent = 'Extraindo...';
+                adicionarLog('Robô iniciado pelo operador.');
+                adicionarLog('Conectado ao portal ArcelorMittal.');
+                adicionarLog('Extraindo novas cotações...');
+            } else {
+                btnPlay.classList.remove('ativo');
+                btnIcon.className = 'fa-solid fa-play';
+                btnTexto.innerHTML = '<i class="fa-solid fa-power-off"></i> Clique no botão circular para ligar';
+                dot.classList.remove('running');
+                statusTexto.textContent = 'Aguardando...';
+                adicionarLog('Robô pausado pelo operador.');
+            }
+        }
+
+        function atualizarCotacoes() {
+            const btn = document.getElementById('btn-atualizar');
+            btn.classList.add('girando');
+            setTimeout(() => {
+                btn.classList.remove('girando');
+                adicionarLog('Contagem de cotações sincronizada com o banco.');
+            }, 600);
+        }
+
+        function imprimirCotacoes() {
+            adicionarLog('Iniciando emissão para impressão de ' + totalCotacoes + ' cotações...');
+            window.print();
+        }
+
+        function adicionarLog(msg) {
+            const container = document.getElementById('log-entries');
+            if (!container) return;
+            const agora = new Date();
+            const timeStr = String(agora.getHours()).padStart(2, '0') + ':' +
+                            String(agora.getMinutes()).padStart(2, '0') + ':' +
+                            String(agora.getSeconds()).padStart(2, '0');
+            const row = document.createElement('div');
+            row.className = 'log-row';
+            row.innerHTML = `<span class="log-time">${timeStr}</span><span class="log-msg">${msg}</span>`;
+            container.appendChild(row);
+        }
+
+        function irPara(url) {
+            window.location.href = url;
+        }
+    </script>
+</body>
+</html>

@@ -9,6 +9,18 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     
+    <script>
+        const sessionAtual = localStorage.getItem('maestro_session');
+        if (!sessionAtual) {
+            window.location.href = 'index.html';
+        }
+        const isAdmin = localStorage.getItem('maestro_admin') === 'true';
+        const temAcessoPlanilha = isAdmin || localStorage.getItem('maestro_planilha') === 'true';
+        if (!temAcessoPlanilha) {
+            window.location.href = 'minhas_cotacoes.html';
+        }
+    </script>
+    
     <style>
         :root {
             --bg-body: #10141b;
@@ -371,26 +383,6 @@
         .form-box { background: var(--bg-card) !important; border: 1px solid var(--border-color) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important; border-radius: 12px; }
         .form-input { background-color: var(--bg-body); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; padding: 10px 12px; font-family: 'Inter', sans-serif; font-size: 0.9rem; transition: border-color 0.2s, box-shadow 0.2s; width: 100%; box-sizing: border-box; }
         .form-input::placeholder { color: var(--text-muted); }
-        
-        /* Floating Navbar hide */
-        
-    
-        /* FORCED FLOATING NAVBAR CSS */
-        .floating-navbar {
-            position: fixed !important; top: 25px !important; left: 50% !important; transform: translateX(-50%) !important;
-            background: rgba(15, 17, 21, 0.85) !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important; border-radius: 40px !important; padding: 6px 10px !important;
-            display: flex !important; gap: 5px !important; z-index: 999999 !important; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6) !important;
-        }
-        .nav-item {
-            color: #9aa0a6 !important; text-decoration: none !important; padding: 8px 12px !important;
-            border-radius: 30px !important; font-family: 'Inter', sans-serif !important; gap: 8px !important;
-            display: flex !important; align-items: center !important;
-        }
-        .nav-item:hover { color: #fff !important; background: rgba(255, 255, 255, 0.1) !important; }
-        .nav-item.active.nav-planilha { background: #10b981 !important; color: #fff !important; box-shadow: 0 0 15px rgba(16, 185, 129, 0.4) !important; }
-        .nav-item.nav-voltar { color: #f87171 !important; }
-
     </style>
 
     <style>
@@ -415,7 +407,14 @@
             <button class="tab-btn" id="tab-pedi" onclick="mudarTabBanco('pedi')"><i class="fa-solid fa-cart-shopping"></i> Pedidos</button>
         </div>
 
-        
+        <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
+            <a href="minhas_cotacoes.html" class="tab-btn" style="text-decoration: none; color: #94a3b8; border: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-arrow-left"></i> Minhas Cotações
+            </a>
+            <a href="planilha_anmyna.html" class="tab-btn" style="text-decoration: none; color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-table-list"></i> Planilha Anmyna
+            </a>
+        </div>
     </nav>
 
     <!-- Main Content -->
@@ -2099,18 +2098,6 @@
 
     
 </div>
-<!-- Floating Navbar -->
-    <nav class="floating-navbar" style="z-index: 999999 !important; display: flex !important;">
-        <a href="javascript:void(0)" onclick="irPara('coupa.html')" class="nav-item"><i class="fa-solid fa-cube"></i> <span>Coupa</span></a>
-        <a href="javascript:void(0)" onclick="irPara('vale.html')" class="nav-item"><i class="fa-solid fa-helmet-safety"></i> <span>Vale</span></a>
-        <a href="javascript:void(0)" onclick="irPara('planilha_vale.html')" class="nav-item active nav-planilha"><i class="fa-solid fa-file-excel"></i> <span>Planilha Vale</span></a>
-        <a href="javascript:void(0)" onclick="irPara('planilha_anmyna.html')" class="nav-item"><i class="fa-solid fa-table-list"></i> <span>Planilha Anmyna</span></a>
-        <a href="javascript:void(0)" onclick="irPara('me.html')" class="nav-item"><i class="fa-solid fa-shopping-cart"></i> <span>ME</span></a>
-        <a href="javascript:void(0)" onclick="irPara('findes.html')" class="nav-item"><i class="fa-solid fa-industry"></i> <span>Findes</span></a>
-        <a href="javascript:void(0)" onclick="irPara('ariba.html')" class="nav-item"><i class="fa-solid fa-cloud"></i> <span>Ariba</span></a>
-        <a href="index.html" class="nav-item nav-voltar"><i class="fa-solid fa-arrow-left"></i> <span>Voltar</span></a>
-    </nav>
-
 
 <script src="vendor/exceljs-4.4.0.min.js"></script>
 <script src="planilha-exportar.js"></script>

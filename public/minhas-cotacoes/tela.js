@@ -317,8 +317,23 @@
         const nome = (vendedorLogado || '').toUpperCase();
         return `<nav class="dash-nav pc-nav" aria-label="Topo">
             <a class="brand" href="minhas_cotacoes.html"><span class="brand-logo"><img src="img/logo-maestro-dashboard.png" alt=""></span><span class="brand-texto">MAESTRO</span></a>
-            <div class="dash-nav-links">
+            <div class="dash-nav-links" style="overflow:visible;">
                 <a href="minhas_cotacoes.html" aria-current="page">${icone('cotacoes')}<span>Minhas cotações</span></a>
+                ${(typeof temAcessoPlanilha !== 'undefined' && temAcessoPlanilha) ? `
+                    <details class="pc-pop pc-nav-planilhas" id="pop-planilhas" style="position:relative; display:inline-flex;">
+                        <summary class="pc-nav-btn-planilhas" style="list-style:none; display:flex; align-items:center; gap:7px; padding:8px 12px; border-radius:7px; color:var(--muted); font-size:12px; background:transparent; border:none; cursor:pointer; font-family:inherit; white-space:nowrap; user-select:none;">
+                            ${icone('tabela')}<span>Planilhas</span>${icone('seta')}
+                        </summary>
+                        <div class="pc-menu pc-menu-planilhas" role="menu" style="position:absolute; left:0; right:auto; top:calc(100% + 6px); width:200px; z-index:100; background:#202b3c; border:1px solid #455469; border-radius:10px; box-shadow:0 16px 36px #0007; padding:6px; display:flex; flex-direction:column; gap:2px;">
+                            <a href="planilha_vale.html" role="menuitem" style="display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:7px; text-decoration:none; color:var(--text); font-size:12px; font-weight:600; transition:background .15s;">
+                                ${icone('base')}<span>Planilha Vale</span>
+                            </a>
+                            <a href="planilha_anmyna.html" role="menuitem" style="display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:7px; text-decoration:none; color:var(--text); font-size:12px; font-weight:600; transition:background .15s;">
+                                ${icone('cotacoes')}<span>Planilha Anmyna</span>
+                            </a>
+                        </div>
+                    </details>
+                ` : ''}
                 ${(typeof temAcessoPortais !== 'undefined' && temAcessoPortais) ? `<a href="index.html?portais=1">${icone('robo')}<span>Portais</span></a>` : ''}
                 ${(typeof temAcessoEstatisticas !== 'undefined' && temAcessoEstatisticas) ? `<a href="dashboard2.html">${icone('cotacoes')}<span>Estatísticas</span></a>` : ''}
             </div>

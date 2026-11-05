@@ -34,7 +34,7 @@
         }
 
         const isAdmin = localStorage.getItem('maestro_admin') === 'true';
-        const temAcessoPlanilha = false;
+        const temAcessoPlanilha = isAdmin || localStorage.getItem('maestro_planilha') === 'true';
         const temAcessoPortais = isAdmin || localStorage.getItem('maestro_portais') === 'true' || localStorage.getItem('maestro_dashboard') === 'true';
         const temAcessoEstatisticas = isAdmin || localStorage.getItem('maestro_dashboard') === 'true';
 

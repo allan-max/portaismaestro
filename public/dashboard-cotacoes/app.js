@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   const D = window.DashboardData;
-  const state = { view: 'overview', sellers: [], status: '', deadline: '', from: '', to: '', search: '', sort: 'asc', page: 1, dateMode: 'safe' };
+  const state = { view: 'overview', sellers: [], status: '', deadline: '', from: '', to: '', search: '', sort: 'asc', page: 1, dateMode: 'br' };
   const paramsUrl = new URLSearchParams(location.search);
   const viewUrl = paramsUrl.get('view');
   if (['overview', 'vendors', 'quotes', 'history', 'audit', 'users'].includes(viewUrl)) state.view = viewUrl;
@@ -90,10 +90,10 @@
     <div class="filter-chips">${chips}${state.sellers.length || state.status || state.deadline || state.search || state.from || state.to ? btn('clear', 'Limpar filtros', '', 'text small') : btn('pending', 'Pendentes no prazo', 'filter', 'text small')}</div></div>`;
   }
   function metrics(data) {
-    const m = D.metrics(data);
+    const m = D.metrics(D.select(D.rows, { ...state, deadline: '', status: '' }));
     return `<section class="metrics" aria-label="Indicadores do recorte">${[
       ['active', 'Carteira no prazo', 'calendar', '', 'vencimento a partir de hoje'],
-      ['pendingActive', 'Sem resposta registrada no prazo', 'inbox', 'blue', 'não respondidas + sem informação'],
+      ['pendingActive', 'Sem resposta registrada no prazo', 'inbox', 'blue', 'não respondidas + rascunhos + sem informação'],
       ['today', 'Vencem hoje', 'clock', 'amber', 'sem resposta registrada'],
       ['next7', 'Próximos 7 dias', 'calendar', '', `${date(D.TODAY)} a ${date(D.day(D.TODAY, 7))} · inclusive`],
       ['overdue', 'Vencidas sem resposta registrada', 'alert', 'red', 'prazo anterior a hoje'],
@@ -122,7 +122,7 @@
     let start = 0;
     const stops = values.map((value, i) => {
       const end = start + (total ? value / total * 100 : 0);
-      const color = ['#34d399', '#60a5fa', '#7588a0', '#f4bf68'][i];
+      const color = ['#34d399', '#60a5fa', '#22d3ee', '#7588a0', '#f4bf68'][i];
       const stop = `${color} ${start}% ${end}%`; start = end; return stop;
     }).join(',');
     const coverage = total ? Math.round(values[0] / total * 100) + '%' : '—';
@@ -130,7 +130,8 @@
       <div class="status-list">${Object.entries(D.STATUS).map(([k, v], i) => `<button class="status-line ${state.status === k ? 'selected' : ''}" data-status="${k}" aria-label="Filtrar ${v.label}: ${values[i]} registros"><i class="swatch ${v.color}"></i><span>${v.short}</span><b class="number">${values[i]}</b></button>`).join('')}</div></div></section>`;
   }
   function table(data, limit = 6, compact = false) {
-    const sorted = D.sortRows(data, state.sort), pages = Math.max(1, Math.ceil(data.length / limit));
+    const baseSorted = (state.view === 'overview' && !state.deadline && !state.from && !state.to && state.sort === 'asc') ? [...D.sortRows(data.filter(r => D.validDate(r.due) && r.due >= D.TODAY), 'asc'), ...D.sortRows(data.filter(r => D.validDate(r.due) && r.due < D.TODAY), 'desc'), ...data.filter(r => !D.validDate(r.due))] : D.sortRows(data, state.sort);
+    const sorted = baseSorted, pages = Math.max(1, Math.ceil(data.length / limit));
     state.page = Math.min(state.page, pages);
     const start = (state.page - 1) * limit, page = sorted.slice(start, start + limit);
     return `<section class="panel table-panel" id="quotation-table"><div class="panel-head"><div><div class="table-title"><h2>${'Cotações da carteira'}</h2><span class="counter number">${number(data.length)}</span></div><p>Ordem por vencimento · abra uma cotação para consultar</p></div><div class="table-toolbar"><select class="sort-select" id="sort-order" aria-label="Ordenação por vencimento"><option value="asc" ${state.sort === 'asc' ? 'selected' : ''}>Vencimento ↑ crescente</option><option value="desc" ${state.sort === 'desc' ? 'selected' : ''}>Vencimento ↓ decrescente</option></select>${state.view !== 'quotes' ? '<button class="panel-link" data-view="quotes">Ver todas ' + icon('arrow') + '</button>' : ''}</div></div>
@@ -150,7 +151,7 @@
     return `<div class="seller-cards">${(all ? sellers : sellers.slice(0, 6)).map(({ name, rows, m }) => `<button class="seller-card ${state.sellers.includes(name) ? 'selected' : ''}" data-select-seller="${esc(name)}" aria-label="Consultar carteira de ${esc(name)}: ${rows.length} registros"><div class="seller-card-head">${avatar(name)}<div><h3>${esc(name)}</h3><small>${rows.length} registros na carteira</small></div>${icon('chevron')}</div><div class="seller-card-stats"><strong class="number">${m.pendingActive}</strong><span>sem resposta no prazo</span></div><div class="mini-stats"><span><b class="amber number">${m.today}</b>Vencem hoje</span><span><b class="number">${m.next7}</b>Em 7 dias</span><span><b class="red number">${m.overdue}</b>Vencidas</span></div><div class="card-progress" aria-hidden="true">${Object.keys(D.STATUS).map((k, i) => segment(k, counts(rows)[i], rows.length)).join('')}</div><div class="card-progress-note"><span>${m.responded} com resposta registrada</span><span>${Math.round(m.responded / rows.length * 100)}%</span></div></button>`).join('')}</div>`;
   }
   function insights(data) {
-    const m = D.metrics(data);
+    const m = D.metrics(D.select(D.rows, { ...state, deadline: '', status: '' }));
     return `<section class="panel"><div class="panel-head"><h2>Pontos de atenção</h2></div><div class="panel-body insight-list"><div class="insight">${icon('clock')}<div><strong>${m.today} cotações vencem hoje</strong><p>Sem resposta registrada no recorte.</p><button class="panel-link" data-metric="today">Consultar ${icon('arrow')}</button></div></div><div class="insight">${icon('alert')}<div><strong>${m.overdue} vencidas sem resposta</strong><p>Verifique a situação registrada e as evidências.</p><button class="panel-link" data-metric="overdue">Conferir ${icon('arrow')}</button></div></div><div class="insight">${icon('info')}<div><strong>Histórico incompleto</strong><p>Status não comprova data ou canal. Campos ausentes aparecem como “Não registrado”.</p></div></div></div></section>`;
   }
   function overview(data) {
@@ -158,7 +159,7 @@
   }
   function vendors(data) {
     const sellers = sellersByUrgency(data);
-    return `<div class="section-label"><div><h2>Acompanhamento por vendedor</h2><p>Ordem de urgência: vencem hoje, vencidas e próximos 7 dias.</p></div><span class="muted">${sellers.length} carteiras</span></div>${cards(data, true)}<section class="panel table-panel" style="margin-top:22px"><div class="panel-head"><div><h2>Resumo da equipe</h2><p>Contagens por registro · volume não representa desempenho comercial</p></div></div><div class="table-scroll" tabindex="0" role="region" aria-label="Resumo dos vendedores"><table class="vendor-table"><thead><tr><th>Vendedor</th><th>No prazo</th><th>Hoje</th><th>Em 7 dias</th><th>Vencidas sem resposta</th><th>Resposta registrada</th><th>Sem informação</th><th></th></tr></thead><tbody>${sellers.map(s => `<tr><td><span class="seller-cell">${avatar(s.name)}${esc(s.name)}</span></td><td class="number">${s.m.active}</td><td class="amber number">${s.m.today}</td><td class="number">${s.m.next7}</td><td class="red number">${s.m.overdue}</td><td class="green number">${s.m.responded}</td><td class="number muted">${s.m.unknown}</td><td><button class="panel-link" data-select-seller="${esc(s.name)}">Consultar ${icon('arrow')}</button></td></tr>`).join('')}</tbody></table></div></section>${quality(data)}`;
+    return `<div class="section-label"><div><h2>Acompanhamento por vendedor</h2><p>Ordem de urgência: vencem hoje, vencidas e próximos 7 dias.</p></div><span class="muted">${sellers.length} carteiras</span></div>${cards(data, true)}<section class="panel table-panel" style="margin-top:22px"><div class="panel-head"><div><h2>Resumo da equipe</h2><p>Contagens por registro · volume não representa desempenho comercial</p></div></div><div class="table-scroll" tabindex="0" role="region" aria-label="Resumo dos vendedores"><table class="vendor-table"><thead><tr><th>Vendedor</th><th>No prazo</th><th>Hoje</th><th>Em 7 dias</th><th>Vencidas sem resposta</th><th>Rascunho</th><th>Resposta registrada</th><th>Sem informação</th><th></th></tr></thead><tbody>${sellers.map(s => `<tr><td><span class="seller-cell">${avatar(s.name)}${esc(s.name)}</span></td><td class="number">${s.m.active}</td><td class="amber number">${s.m.today}</td><td class="number">${s.m.next7}</td><td class="red number">${s.m.overdue}</td><td class="cyan number">${s.m.draft}</td><td class="green number">${s.m.responded}</td><td class="number muted">${s.m.unknown}</td><td><button class="panel-link" data-select-seller="${esc(s.name)}">Consultar ${icon('arrow')}</button></td></tr>`).join('')}</tbody></table></div></section>${quality(data)}`;
   }
   function history(data) {
     const responded = data.filter(r => r.status === 'responded'), known = responded.filter(r => r.respondedAt);
@@ -257,7 +258,7 @@
       const seller = element.dataset.seller;
       changeFilters({ sellers: element.checked ? [...state.sellers, seller] : state.sellers.filter(s => s !== seller) }); return;
     }
-    if (element.id === 'date-mode') { state.dateMode = element.value; D.rows = D.normalizeRows(rawRows, state.dateMode); state.page = 1; render(); return; }
+    if (element.id === 'date-mode') { state.dateMode = element.value; D.rows = D.normalizeRows(rawRows, state.dateMode); state.page = 1; render(); window.Dash?.atualizarTopo?.(); return; }
     const keys = { 'filter-from': 'from', 'filter-to': 'to', 'filter-status': 'status', 'sort-order': 'sort' };
     if (keys[element.id]) changeFilters({ [keys[element.id]]: element.value });
   });
@@ -340,7 +341,7 @@
         const rows = D.normalizeRows(reply.cotacoes, state.dateMode);
         if (!reply.consultado_em || Number.isNaN(Date.parse(reply.consultado_em))) throw new Error('Leitura sem confirmação de horário.');
         closeDrawer(); rawRows = reply.cotacoes; D.rows = rows; lastSuccess = reply.consultado_em;
-        sourceState = 'ready'; sourceError = ''; render();
+        sourceState = 'ready'; sourceError = ''; render(); window.Dash?.atualizarTopo?.();
         if (reloadAfter) { reloadAfter = false; requestData(); }
       } catch { unavailable('A resposta recebida não contém uma base de cotações válida. Tente atualizar.'); }
     });

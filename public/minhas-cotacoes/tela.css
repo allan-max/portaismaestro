@@ -59,6 +59,65 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .pc-menu b { display: block; font-size: 12px; font-weight: 600; }
 .pc-menu em { display: block; font-style: normal; font-size: 10px; color: var(--muted); margin-top: 2px; }
 
+/* dropdown de planilhas na barra de navegação */
+.pc-nav .dash-nav-links { overflow: visible; }
+.pc-nav-planilhas { position: relative; display: inline-flex; }
+.pc-nav-planilhas > summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 12px;
+    border-radius: 7px;
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    user-select: none;
+    background: transparent;
+    border: none;
+    white-space: nowrap;
+    transition: background .15s, color .15s;
+}
+.pc-nav-planilhas > summary::-webkit-details-marker { display: none; }
+.pc-nav-planilhas > summary:hover,
+.pc-nav-planilhas[open] > summary {
+    background: var(--panel-hover);
+    color: var(--text);
+}
+.pc-nav-planilhas > summary svg { width: 15px; height: 15px; }
+.pc-nav-planilhas > summary svg:last-child { width: 11px; height: 11px; transition: transform .15s; }
+.pc-nav-planilhas[open] > summary svg:last-child { transform: rotate(180deg); }
+.pc-menu-planilhas {
+    left: 0;
+    right: auto;
+    width: 200px;
+    z-index: 100;
+}
+.pc-menu-planilhas a {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    text-align: left;
+    text-decoration: none;
+    color: var(--text);
+    background: transparent;
+    padding: 9px 12px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 500;
+    transition: background .15s, color .15s;
+}
+.pc-menu-planilhas a:hover {
+    background: #304158;
+    color: #fff;
+}
+.pc-menu-planilhas a svg {
+    color: var(--cyan);
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+}
+
 /* produto em destaque */
 .pc-prod { min-width: 0; }
 .pc-prod strong { display: block; font-size: 12px; font-weight: 600; color: #eef4fb; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

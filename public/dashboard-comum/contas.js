@@ -15,6 +15,7 @@
                 verificado: d.verificado !== false,
                 dashboard_access: !!d.dashboard_access,
                 portais_access: !!d.portais_access || !!d.dashboard_access,
+                planilha_access: !!d.planilha_access,
                 bloqueado: !!d.bloqueado,
                 vendedor: String(d.vendedor || ''),
                 online: !!d.online,
@@ -33,6 +34,7 @@
             if (f.grupo === 'admins' && !u.admin) return false;
             if (f.grupo === 'portais' && !(u.portais_access || u.dashboard_access || u.admin)) return false;
             if (f.grupo === 'estatisticas' && !(u.dashboard_access || u.admin)) return false;
+            if (f.grupo === 'planilhas' && !(u.planilha_access || u.admin)) return false;
             if (f.grupo === 'vendedores' && !u.vendedor.trim()) return false;
             if (f.grupo === 'pendentes' && u.verificado !== false) return false;
             if (termo && !`${u.email} ${u.vendedor}`.toLowerCase().includes(termo)) return false;
@@ -46,6 +48,7 @@
             admins: lista.filter(u => u.admin).length,
             portais: lista.filter(u => u.portais_access || u.dashboard_access || u.admin).length,
             estatisticas: lista.filter(u => u.dashboard_access || u.admin).length,
+            planilhas: lista.filter(u => u.planilha_access || u.admin).length,
             vendedores: lista.filter(u => u.vendedor.trim()).length,
         };
     }
@@ -58,7 +61,8 @@
             ${card('admins', 'Administradores', k.admins, 'green', 'com acesso administrativo total', 1)}
             ${card('portais', 'Acesso aos portais', k.portais, 'blue', 'habilitados nos robôs', 2)}
             ${card('estatisticas', 'Estatísticas', k.estatisticas, 'amber', 'Gestão comercial no dashboard', 3)}
-            ${card('vendedores', 'Com vendedor vinculado', k.vendedores, 'cyan', 'associados à planilha comercial', 4)}
+            ${card('planilhas', 'Planilhas', k.planilhas, 'purple', 'Vale e Anmyna liberadas', 4)}
+            ${card('vendedores', 'Com vendedor vinculado', k.vendedores, 'cyan', 'associados à planilha comercial', 5)}
         </div>`;
     }
 
@@ -97,6 +101,7 @@
         const linhas = lista.map((u, idx) => {
             const hasPortais = u.portais_access || u.dashboard_access || u.admin;
             const hasStats = u.dashboard_access || u.admin;
+            const hasPlanilha = u.planilha_access || u.admin;
             const disabledAttr = u.admin ? 'disabled title="Administradores sempre têm acesso total"' : '';
             const email = esc(u.email);
             const vend = esc(u.vendedor);
@@ -136,6 +141,12 @@
                     </label>
                 </td>
                 <td>
+                    <label class="contas-switch">
+                        <input type="checkbox" data-acao-change="toggle-acesso" data-email="${email}" data-campo="planilha_access" ${hasPlanilha ? 'checked' : ''} ${disabledAttr}>
+                        <span class="contas-slider"></span>
+                    </label>
+                </td>
+                <td>
                     <div class="contas-row-actions">
                         <button type="button" class="icon-button" data-acao="focar-vendedor" data-input="${inputId}" title="Editar vendedor vinculado">${icone('editar')}</button>
                         <button type="button" class="icon-button" data-acao="salvar-vendedor" data-email="${email}" data-input="${inputId}" title="Salvar vínculo do usuário">${icone('salvar')}</button>
@@ -163,6 +174,7 @@
                             <option value="admins" ${f.grupo === 'admins' ? 'selected' : ''}>Administradores</option>
                             <option value="portais" ${f.grupo === 'portais' ? 'selected' : ''}>Com acesso aos portais</option>
                             <option value="estatisticas" ${f.grupo === 'estatisticas' ? 'selected' : ''}>Com acesso a estatísticas</option>
+                            <option value="planilhas" ${f.grupo === 'planilhas' ? 'selected' : ''}>Com acesso a planilhas</option>
                             <option value="vendedores" ${f.grupo === 'vendedores' ? 'selected' : ''}>Com vendedor vinculado</option>
                             <option value="pendentes" ${f.grupo === 'pendentes' ? 'selected' : ''}>Não verificados</option>
                         </select>
@@ -180,6 +192,7 @@
                                 <th>Vendedor vinculado (Planilha)</th>
                                 <th>Permissões · Portais (Robôs)</th>
                                 <th>Permissões · Estatísticas (Comercial)</th>
+                                <th>Permissões · Planilhas</th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
@@ -259,6 +272,7 @@
                             const u = estado.dados.usuarios[r.email];
                             if (r.portais_access !== undefined) u.portais_access = r.portais_access;
                             if (r.dashboard_access !== undefined) u.dashboard_access = r.dashboard_access;
+                            if (r.planilha_access !== undefined) u.planilha_access = r.planilha_access;
                             if (r.campo) u[r.campo] = r.acesso;
                             if (r.campo === 'dashboard_access' && r.acesso) u.portais_access = true;
                             if (r.campo === 'portais_access' && !r.acesso) u.dashboard_access = false;

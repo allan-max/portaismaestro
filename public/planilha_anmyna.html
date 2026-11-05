@@ -10,8 +10,14 @@
     <link rel="stylesheet" href="style.css">
 
     <script>
-        if (!localStorage.getItem('maestro_session')) {
+        const sessionAtual = localStorage.getItem('maestro_session');
+        if (!sessionAtual) {
             window.location.href = 'index.html';
+        }
+        const isAdmin = localStorage.getItem('maestro_admin') === 'true';
+        const temAcessoPlanilha = isAdmin || localStorage.getItem('maestro_planilha') === 'true';
+        if (!temAcessoPlanilha) {
+            window.location.href = 'minhas_cotacoes.html';
         }
     </script>
     
@@ -551,23 +557,6 @@
             border-color: var(--accent-purple);
         }
 
-        /* Floating Navbar */
-        .floating-navbar {
-            position: fixed !important; top: 25px !important; left: 50% !important; transform: translateX(-50%) !important;
-            background: rgba(15, 17, 21, 0.85) !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important; border-radius: 40px !important; padding: 6px 10px !important;
-            display: flex !important; gap: 5px !important; z-index: 999999 !important; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6) !important;
-        }
-        .nav-item {
-            color: #9aa0a6 !important; text-decoration: none !important; padding: 8px 12px !important;
-            border-radius: 30px !important; font-family: 'Inter', sans-serif !important; font-size: 11px !important;
-            font-weight: 600 !important; text-transform: uppercase !important; letter-spacing: 0.5px !important;
-            display: flex !important; align-items: center !important; gap: 8px !important; transition: all 0.2s !important;
-        }
-        .nav-item:hover { color: #fff !important; background: rgba(255, 255, 255, 0.1) !important; }
-        .nav-item.active.nav-anmyna { background: #8b5cf6 !important; color: #fff !important; box-shadow: 0 0 15px rgba(139, 92, 246, 0.4) !important; }
-        .nav-item.nav-voltar { color: #f87171 !important; }
-
         /* Detail field item */
         .detail-row {
             display: flex;
@@ -743,6 +732,12 @@
         <div class="nav-tabs" id="abas-container"></div>
 
         <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
+            <a href="minhas_cotacoes.html" class="tab-btn" style="text-decoration: none; color: #94a3b8; border: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-arrow-left"></i> Minhas Cotações
+            </a>
+            <a href="planilha_vale.html" class="tab-btn" style="text-decoration: none; color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-file-excel"></i> Planilha Vale
+            </a>
             <button class="btn-filter" onclick="carregarBancoDados()" title="Atualizar Base de Dados">
                 <i class="fa-solid fa-rotate" id="icon-refresh"></i> Atualizar
             </button>
@@ -1103,18 +1098,6 @@
 
             </div>
     </div>
-
-    <!-- Floating Navbar Maestro -->
-    <nav class="floating-navbar">
-        <a href="javascript:void(0)" onclick="irPara('coupa.html')" class="nav-item"><i class="fa-solid fa-cube"></i> <span>Coupa</span></a>
-        <a href="javascript:void(0)" onclick="irPara('vale.html')" class="nav-item"><i class="fa-solid fa-helmet-safety"></i> <span>Vale</span></a>
-        <a href="javascript:void(0)" onclick="irPara('planilha_vale.html')" class="nav-item"><i class="fa-solid fa-file-excel"></i> <span>Planilha Vale</span></a>
-        <a href="javascript:void(0)" onclick="irPara('planilha_anmyna.html')" class="nav-item active nav-anmyna"><i class="fa-solid fa-table-list"></i> <span>Planilha Anmyna</span></a>
-        <a href="javascript:void(0)" onclick="irPara('me.html')" class="nav-item"><i class="fa-solid fa-shopping-cart"></i> <span>ME</span></a>
-        <a href="javascript:void(0)" onclick="irPara('findes.html')" class="nav-item"><i class="fa-solid fa-industry"></i> <span>Findes</span></a>
-        <a href="javascript:void(0)" onclick="irPara('ariba.html')" class="nav-item"><i class="fa-solid fa-cloud"></i> <span>Ariba</span></a>
-        <a href="index.html" class="nav-item nav-voltar"><i class="fa-solid fa-arrow-left"></i> <span>Voltar</span></a>
-    </nav>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
     <script src="vendor/exceljs-4.4.0.min.js"></script>

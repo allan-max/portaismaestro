@@ -99,6 +99,8 @@
             <nav class="subnav" aria-label="Pedidos e planilha">
                 ${itemPagina('sync', 'Sincronização planilha', 'sync.html', 'sync')}
                 ${itemPagina('nfs', 'Notas fiscais (NFs)', 'nfs.html', 'nfs')}
+                ${itemPagina('planilha_vale', 'Planilha Vale', 'planilha_vale.html', 'cotacoes')}
+                ${itemPagina('planilha_anmyna', 'Planilha Anmyna', 'planilha_anmyna.html', 'cotacoes')}
             </nav>
             <div class="eyebrow">Controle e admin</div>
             <nav class="subnav" aria-label="Controle e administração">
@@ -273,7 +275,7 @@
             socket.on('retorno_dashboard_saude', r => { if (r && r.requestId === saudeId && r.sucesso) { estado.saude = r; desenharTopo(); } });
             socket.on('retorno_dashboard_cotacoes', r => {
                 if (!r || r.requestId !== cotasId || r.sucesso !== true) return;
-                try { const D = window.DashboardData; estado.metricas = D.metrics(D.normalizeRows(r.cotacoes)); desenharTopo(); } catch { /* fica "carregando" */ }
+                try { const D = window.DashboardData; estado.metricas = D.metrics(D.normalizeRows(r.cotacoes, 'br')); desenharTopo(); } catch { /* fica "carregando" */ }
             });
             socket.on('planilha_atualizada', () => { pedir(); pedirSaude(); });
             socket.on('sessao_invalida', () => { estado.autorizado = false; estado.acesso = 'expirada'; localStorage.removeItem('maestro_session'); desenhar(); socket.disconnect(); });
@@ -309,7 +311,8 @@
         }
         desenhar();
         conectar();
-        return { atualizar: () => pedir(), desenhar };
+        API.atualizarTopo = desenharTopo;
+        return { atualizar: () => pedir(), desenhar, desenharTopo };
     }
 
     const API = { iniciar, nav, sidebar, icone };

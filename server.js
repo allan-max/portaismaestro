@@ -848,12 +848,14 @@ io.on('connection', (socket) => {
             const expires = Date.now() + (28800 * 1000); 
             const hasDashboardAccess = Boolean(dados.hasDashboardAccess);
             const hasPortaisAccess = Boolean(dados.hasPortaisAccess || dados.hasDashboardAccess || dados.isAdmin);
+            const hasPlanilhaAccess = Boolean(dados.hasPlanilhaAccess || dados.isAdmin);
             cofreSessoes.set(sessionId, JSON.stringify({ 
                 email: dados.user, 
                 admin: dados.isAdmin, 
                 dev: dados.isDev,
                 dashboard_access: hasDashboardAccess,
                 portais_access: hasPortaisAccess,
+                planilha_access: hasPlanilhaAccess,
                 vendedor: dados.vendedor || '',
                 expires: expires 
             }));
@@ -865,6 +867,7 @@ io.on('connection', (socket) => {
                 dev: dados.isDev,
                 dashboard_access: hasDashboardAccess,
                 portais_access: hasPortaisAccess,
+                planilha_access: hasPlanilhaAccess,
                 vendedor: dados.vendedor || ''
             });
         } else {
@@ -1053,6 +1056,7 @@ io.on('connection', (socket) => {
                     if (u.email && u.email.toLowerCase() === dados.email.toLowerCase()) {
                         if (dados.dashboard_access !== undefined) u.dashboard_access = dados.dashboard_access;
                         if (dados.portais_access !== undefined) u.portais_access = dados.portais_access;
+                        if (dados.planilha_access !== undefined) u.planilha_access = dados.planilha_access;
                         if (u.dashboard_access) u.portais_access = true;
                         cofreSessoes.set(sId, JSON.stringify(u));
                     }
@@ -1105,6 +1109,10 @@ io.on('connection', (socket) => {
     
     socket.on('comando_apagar_linha', (dados = {}) => {
         if (!socket.autenticado) return socket.emit('sessao_invalida');
+        const user = socket.usuarioLogado || {};
+        if (!user.admin && !user.planilha_access) {
+            return socket.emit('resposta_acao_linha', { sucesso: false, erro: 'Sem permissão para alterar a planilha.' });
+        }
         if (bot_socket_id) {
             dados.clientId = socket.id;
             const reg = audit('planilha', 'apagar_linha', { alvo: dados.chave, detalhes: { tipo: dados.tipo } });
@@ -1115,6 +1123,10 @@ io.on('connection', (socket) => {
 
     socket.on('comando_editar_linha', (dados = {}) => {
         if (!socket.autenticado) return socket.emit('sessao_invalida');
+        const user = socket.usuarioLogado || {};
+        if (!user.admin && !user.planilha_access) {
+            return socket.emit('resposta_acao_linha', { sucesso: false, erro: 'Sem permissão para alterar a planilha.' });
+        }
         if (bot_socket_id) {
             dados.clientId = socket.id;
             const reg = audit('planilha', 'editar_linha', { alvo: dados.chave, detalhes: { tipo: dados.tipo, novos_dados: dados.novos_dados } });
@@ -1250,6 +1262,11 @@ io.on('connection', (socket) => {
             socket.emit('sessao_invalida');
             return;
         }
+        const user = socket.usuarioLogado || {};
+        const podeVerPlanilha = !!(user.admin || user.planilha_access);
+        if (!podeVerPlanilha) {
+            return socket.emit('retorno_planilha_anmyna_json', { sucesso: false, erro: 'Acesso não autorizado às planilhas.' });
+        }
         try {
             const caminho = obterCaminhoPlanilhaAnmyna();
             if (!fs.existsSync(caminho)) {
@@ -1266,6 +1283,10 @@ io.on('connection', (socket) => {
 
     socket.on('comando_editar_linha_anmyna', (dados = {}) => {
         if (!socket.autenticado) return socket.emit('sessao_invalida');
+        const user = socket.usuarioLogado || {};
+        if (!user.admin && !user.planilha_access) {
+            return socket.emit('resposta_acao_linha_anmyna', { sucesso: false, erro: 'Sem permissão para alterar a planilha.' });
+        }
         try {
             const caminho = obterCaminhoPlanilhaAnmyna();
             if (!fs.existsSync(caminho)) {
@@ -1292,6 +1313,10 @@ io.on('connection', (socket) => {
 
     socket.on('comando_marcar_respondida_anmyna', (dados = {}) => {
         if (!socket.autenticado) return socket.emit('sessao_invalida');
+        const user = socket.usuarioLogado || {};
+        if (!user.admin && !user.planilha_access) {
+            return socket.emit('resposta_acao_linha_anmyna', { sucesso: false, erro: 'Sem permissão para alterar a planilha.' });
+        }
         try {
             const caminho = obterCaminhoPlanilhaAnmyna();
             if (!fs.existsSync(caminho)) return socket.emit('resposta_acao_linha_anmyna', { sucesso: false, erro: 'Arquivo não encontrado.' });
@@ -1317,6 +1342,12 @@ io.on('connection', (socket) => {
 
     socket.on('solicitar_registro_cotacao_anmyna', (dados = {}) => {
         if (!socket.autenticado) return socket.emit('sessao_invalida');
+        const user = socket.usuarioLogado || {};
+        if (!user.admin && !user.planilha_access) {
+            socket.emit('resposta_registro_cotacao_anmyna', { sucesso: false, erro: 'Sem permissão para registrar na planilha.' });
+            socket.emit('resposta_registro_cotacao_manual', { sucesso: false, erro: 'Sem permissão para registrar na planilha.' });
+            return;
+        }
         try {
             const resultado = salvarCotacoesPlanilhaAnmyna(dados.cotacoes, dados.aba);
             const numeros = resultado.registros.map(r => r['NÚMERO DA COTAÇÃO']);
@@ -1420,6 +1451,10 @@ io.on('connection', (socket) => {
     // Site pede para registrar vendedor na planilha
     socket.on('solicitar_registro_vendedor_cotacao', (dados = {}) => {
         if (!socket.autenticado) return socket.emit('sessao_invalida');
+        const user = socket.usuarioLogado || {};
+        if (!user.admin && !user.planilha_access) {
+            return socket.emit('resposta_registro_vendedor_cotacao', { sucesso: false, erro: 'Sem permissão para alterar planilhas.' });
+        }
 
         const ehAnmyna = String(dados.origem || '').toLowerCase() === 'anmyna' ||
                          String(dados.planilha || '').toLowerCase() === 'anmyna';
@@ -1484,6 +1519,10 @@ io.on('connection', (socket) => {
     
     socket.on('solicitar_registro_pedido_manual', (dados = {}) => {
         if (!socket.autenticado) return socket.emit('sessao_invalida');
+        const user = socket.usuarioLogado || {};
+        if (!user.admin && !user.planilha_access) {
+            return socket.emit('resposta_registro_pedido_manual', { sucesso: false, erro: 'Sem permissão para alterar planilhas.' });
+        }
         if (bot_socket_id) {
             dados.clientId = socket.id;
             const numeros = (Array.isArray(dados.pedidos) ? dados.pedidos : []).map(p => p && p.pedido).filter(Boolean);
@@ -1505,6 +1544,12 @@ io.on('connection', (socket) => {
 
     socket.on('solicitar_registro_cotacao_manual', (dados = {}) => {
         if (!socket.autenticado) return socket.emit('sessao_invalida');
+        const user = socket.usuarioLogado || {};
+        if (socket.usuarioLogado && !user.admin && !user.planilha_access) {
+            socket.emit('resposta_registro_cotacao_anmyna', { sucesso: false, erro: 'Sem permissão para alterar planilhas.' });
+            socket.emit('resposta_registro_cotacao_manual', { sucesso: false, erro: 'Sem permissão para alterar planilhas.' });
+            return;
+        }
 
         // SEGURANÇA: Se a origem for ANMYNA, salva EXCLUSIVAMENTE na Planilha Anmyna e NUNCA repassa para a planilha VALE
         const ehAnmyna = String(dados.origem || '').toLowerCase() === 'anmyna' ||

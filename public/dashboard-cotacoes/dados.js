@@ -36,13 +36,14 @@
         if (!text) return { iso: '', problem: 'missing' };
         const iso = text.match(/^(\d{4}-\d{2}-\d{2})(?:[T\s].*)?$/);
         if (iso) return validDate(iso[1]) ? { iso: iso[1], problem: '' } : { iso: '', problem: 'invalid' };
-        const slash = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s.*)?$/);
+        const slash = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})(?:\s.*)?$/);
         if (!slash) return { iso: '', problem: 'invalid' };
         const a = Number(slash[1]), b = Number(slash[2]);
         if (a < 1 || b < 1 || (a > 12 && b > 12)) return { iso: '', problem: 'invalid' };
         if (a <= 12 && b <= 12 && a !== b && !['br', 'us'].includes(format)) return { iso: '', problem: 'ambiguous' };
         const us = b > 12 || (a <= 12 && b <= 12 && format === 'us');
-        const date = `${slash[3]}-${String(us ? a : b).padStart(2, '0')}-${String(us ? b : a).padStart(2, '0')}`;
+        const yearStr = slash[3].length === 2 ? `20${slash[3]}` : slash[3];
+        const date = `${yearStr}-${String(us ? a : b).padStart(2, '0')}-${String(us ? b : a).padStart(2, '0')}`;
         return validDate(date) ? { iso: date, problem: '' } : { iso: '', problem: 'invalid' };
     }
     function normalize(value) {
