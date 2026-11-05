@@ -1183,7 +1183,7 @@
             // Fallback via API caso socket demore
             setTimeout(() => {
                 if (registrosOriginais.length === 0) {
-                    fetch('/api/planilha-anmyna')
+                    fetch('/api/planilha-anmyna', { headers: { 'x-session-id': localStorage.getItem('maestro_session') || '' } })
                         .then(res => res.json())
                         .then(data => {
                             if (data && typeof data === 'object') processarDadosRecebidos(data);

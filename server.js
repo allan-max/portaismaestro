@@ -640,6 +640,8 @@ io.on('connection', (socket) => {
     });
 
     socket.on('solicitar_prints_evento', (dados = {}) => {
+        // As prints mostram a resposta enviada (preços): só para quem está logado
+        if (!socket.autenticado) return socket.emit('sessao_invalida');
         const id = String(dados.evento || '').trim();
         const limpo = id.replace(/\D+/g, '') || id;
         const cota = String(dados.cota || '').trim();
@@ -1802,6 +1804,14 @@ Regras rígidas:
 });
 
 app.get('/api/planilha-anmyna', (req, res) => {
+    // Mesma regra do evento solicitar_planilha_anmyna_json: sessão válida e acesso às planilhas.
+    // A sessão vem no cabeçalho (nunca na URL, que fica em logs e no histórico).
+    const sessionId = req.get('x-session-id');
+    const ficha = sessionId ? lerSessao(cofreSessoes, { sessionId }) : null;
+    if (!ficha) return res.status(401).json({ sucesso: false, erro: 'Sessão inválida ou expirada. Entre novamente.' });
+    if (!ficha.admin && !ficha.planilha_access) {
+        return res.status(403).json({ sucesso: false, erro: 'Acesso não autorizado às planilhas.' });
+    }
     try {
         const caminho = obterCaminhoPlanilhaAnmyna();
         if (!fs.existsSync(caminho)) {
