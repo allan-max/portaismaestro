@@ -108,7 +108,13 @@ test('servidor real: eventos do robô, fila de extração, clientId e /api/respo
   const comando = await paraRobo;
   assert.equal(comando.evento, '165060'); assert.equal(comando.portal, 'coupa');
   assert.equal(Buffer.from(comando.datasheets[0].data, 'base64').toString(), '%PDF-1.4 teste');
-  assert.equal((await responder({ sessionId: usuario.sessionId, evento: '165060' })).status, 409);
+  // Reenvio do mesmo evento substitui a resposta na fila (comportamento da main; o 409 do PR aguarda decisão)
+  assert.equal((await responder({ sessionId: usuario.sessionId, evento: '165060' })).status, 200);
+  // datasheet por item: campo datasheet_item é aceito pelo upload
+  const form = new FormData();
+  for (const [k, v] of Object.entries({ sessionId: usuario.sessionId, evento: '165061', precos: '["1","2"]', datasheet_por_linha: 'true', datasheet_item_indices: '[1]' })) form.append(k, v);
+  form.append('datasheet_item', new Blob([Buffer.from('%PDF-1.4 item')]), marca);
+  assert.equal((await fetch(`http://127.0.0.1:${port}/api/responder`, { method: 'POST', body: form })).status, 200);
   await pausa(200);
   assert.deepEqual(restosNoTmp(), []);   // nenhum anexo fica no disco, aceito ou recusado
 });

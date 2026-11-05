@@ -12,88 +12,9 @@ function setupMinhasCotacoesEnv(options = {}) {
 
     const downloads = [];
     const alerts = [];
-    const elements = {
-        'btn-exportar-excel': { style: {}, disabled: false, innerHTML: 'Exportar Excel', dataset: {} },
-        'btn-top-exportar': { style: {}, disabled: false, innerHTML: 'Exportar Excel', dataset: {} },
-        'btn-nav-planilha': { style: {} },
-        'btn-nav-portais': { style: {} },
-        'badge-vendedor': { innerText: '' },
-        'avatar-vendedor': { innerText: '' },
-        'tbody-cotacoes': { innerHTML: '' },
-        'count-total': { innerText: '0' },
-        'count-hoje': { innerText: '0' },
-        'count-respondidas': { innerText: '0' },
-        'input-busca': { value: '' },
-        'select-ordem': { value: 'prioridade' },
-        'btn-filtro-vencimento': {
-            style: {},
-            classList: {
-                _classes: new Set(),
-                add(c) { this._classes.add(c); },
-                remove(c) { this._classes.delete(c); },
-                contains(c) { return this._classes.has(c); }
-            },
-            setAttribute(k, v) { this[k] = v; }
-        },
-        'menu-filtro-periodo': { style: { display: 'none' }, contains() { return false; } },
-        'filtro-venc-inicio': { value: '' },
-        'filtro-venc-fim': { value: '' },
-        'chip-filtro-periodo': { style: { display: 'none' } },
-        'texto-filtro-periodo': { innerText: '' },
-        'th-vencimento': {
-            getBoundingClientRect: () => ({ bottom: 100, left: 200 }),
-            contains() { return false; }
-        },
-        'btn-filtro-localidade': {
-            style: {},
-            classList: {
-                _classes: new Set(),
-                add(c) { this._classes.add(c); },
-                remove(c) { this._classes.delete(c); },
-                contains(c) { return this._classes.has(c); }
-            },
-            setAttribute(k, v) { this[k] = v; }
-        },
-        'menu-filtro-localidade': { style: { display: 'none' }, contains() { return false; } },
-        'input-busca-localidade': { value: '' },
-        'chk-todos-localidade': { checked: true },
-        'contagem-opcoes-localidade': { innerText: '' },
-        'lista-opcoes-localidade': { innerHTML: '' },
-        'chip-filtro-localidade': { style: { display: 'none' } },
-        'texto-filtro-localidade': { innerText: '' },
-        'th-localidade': {
-            getBoundingClientRect: () => ({ bottom: 100, left: 300 }),
-            contains() { return false; }
-        },
-        'btn-filtro-marca': {
-            style: {},
-            classList: {
-                _classes: new Set(),
-                add(c) { this._classes.add(c); },
-                remove(c) { this._classes.delete(c); },
-                contains(c) { return this._classes.has(c); }
-            },
-            setAttribute(k, v) { this[k] = v; }
-        },
-        'menu-filtro-marca': { style: { display: 'none' }, contains() { return false; } },
-        'input-busca-marca': { value: '' },
-        'chk-todos-marca': { checked: true },
-        'contagem-opcoes-marca': { innerText: '' },
-        'lista-opcoes-marca': { innerHTML: '' },
-        'chip-filtro-marca': { style: { display: 'none' } },
-        'texto-filtro-marca': { innerText: '' },
-        'th-marca': {
-            getBoundingClientRect: () => ({ bottom: 100, left: 400 }),
-            contains() { return false; }
-        },
-        'modal-detalhes': { style: { display: 'none' } },
-        'modal-titulo': { innerText: '' },
-        'modal-corpo': { innerHTML: '' },
-        'btn-exportar-planilha-base': { style: {}, disabled: false, innerHTML: 'Exportar para Planilha Base', dataset: {} },
-        'btn-exportar-modal-word': { style: {}, disabled: false, innerHTML: 'Exportar para Word', dataset: {} },
-        _chkLocalidades: [],
-        _chkMarcas: []
-    };
+    const elements = {};
+    const handlers = {};
+    const emitted = [];
 
     let blobCaptured = null;
 
@@ -109,18 +30,7 @@ function setupMinhasCotacoesEnv(options = {}) {
         removeItem() {}
     };
 
-    // `hoje` congela o relógio da página: status e ordenação dependem da data corrente
-    const extras = {};
-    if (options.hoje) {
-        const fixo = new Date(options.hoje).getTime();
-        extras.Date = class extends Date {
-            constructor(...args) { super(...(args.length ? args : [fixo])); }
-            static now() { return fixo; }
-        };
-    }
-
     const context = vm.createContext({
-        ...extras,
         window: {
             location: { href: '' },
             addEventListener() {}
@@ -155,8 +65,8 @@ function setupMinhasCotacoesEnv(options = {}) {
         localStorage: mockLocalStorage,
         io() {
             return {
-                emit() {},
-                on() {}
+                emit: (...args) => emitted.push(args),
+                on: (ev, fn) => { handlers[ev] = fn; }
             };
         },
         alert: msg => alerts.push(msg),
@@ -217,28 +127,32 @@ function setupMinhasCotacoesEnv(options = {}) {
     const mainScript = scriptMatch.find(m => m[1].includes('exportarMinhasCotacoesExcel'))[1];
 
     vm.runInContext(mainScript, context);
+    if (options.tela !== false) {
+        vm.runInContext(fs.readFileSync(path.join(__dirname, '../public/minhas-cotacoes/tela.js'), 'utf8'), context);
+    }
 
-    return { context, elements, downloads, alerts, html };
+    return { context, elements, downloads, alerts, html, handlers, emitted };
 }
 
-test('minhas_cotacoes.html contém botão de exportação e inclui ExcelJS', () => {
-    const htmlPath = path.join(__dirname, '../public/minhas_cotacoes.html');
-    const html = fs.readFileSync(htmlPath, 'utf8');
+test('minhas_cotacoes.html carrega ExcelJS e a tela nova, com exportação da lista no menu Exportar', () => {
+    const html = fs.readFileSync(path.join(__dirname, '../public/minhas_cotacoes.html'), 'utf8');
+    const tela = fs.readFileSync(path.join(__dirname, '../public/minhas-cotacoes/tela.js'), 'utf8');
 
-    assert.ok(html.includes('id="btn-exportar-excel"'), 'Deve conter botão #btn-exportar-excel');
-    assert.ok(html.includes('id="btn-top-exportar"'), 'Deve conter botão #btn-top-exportar');
     assert.ok(html.includes('vendor/exceljs-4.4.0.min.js'), 'Deve carregar vendor/exceljs-4.4.0.min.js');
-    assert.ok(html.includes('exportarMinhasCotacoesExcel'), 'Deve invocar exportarMinhasCotacoesExcel');
+    assert.ok(html.includes('src="minhas-cotacoes/tela.js"'), 'Deve carregar a tela nova');
+    assert.ok(html.includes('href="minhas-cotacoes/tela.css"'), 'Deve carregar o CSS da tela nova');
+    assert.ok(tela.includes('data-acao="exp-excel"') && tela.includes('data-acao="exp-word"'), 'Menu Exportar deve ter Excel e Word');
+    assert.ok(tela.includes('exportarMinhasCotacoesExcel()') && tela.includes('exportarMinhasCotacoesWord()'), 'Menu deve usar as exportações da página');
 });
 
 test('exportarMinhasCotacoesExcel gera arquivo .xlsx válido com status e colunas formatadas', async () => {
-    const env = setupMinhasCotacoesEnv({ vendedor: 'Carlos Alberto', hoje: '2026-10-16T12:00:00-03:00' });
+    const env = setupMinhasCotacoesEnv({ vendedor: 'Carlos Alberto' });
     const { context, downloads } = env;
 
     context.window.cotacoesFiltradas = [
         {
             'COTAÇÃO': '800123',
-            'VENCIMENTO': '16/10/2026',
+            'VENCIMENTO': dataRel(0),
             'LOCALIDADE': 'TUBARÃO',
             'ITEM': 'ROLAMENTO FIXO DE ESFERAS 6205',
             'QUANTIDADE': '10',
@@ -326,285 +240,35 @@ test('exportarMinhasCotacoesExcel utiliza fallback CSV com BOM quando ExcelJS n�
     assert.ok(conteudo.includes('SANTOS'));
 });
 
-test('minhas_cotacoes.html contém elementos de filtro de vencimento na coluna e popover', () => {
-    const htmlPath = path.join(__dirname, '../public/minhas_cotacoes.html');
-    const html = fs.readFileSync(htmlPath, 'utf8');
+// datas relativas a hoje no formato da planilha (dd/mm/aaaa)
+function dataRel(off) {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + off);
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+}
+function isoRel(off) {
+    const [d, m, a] = dataRel(off).split('/');
+    return `${a}-${m}-${d}`;
+}
 
-    assert.ok(html.includes('id="th-vencimento"'), 'Deve conter cabeçalho com id th-vencimento');
-    assert.ok(html.includes('id="btn-filtro-vencimento"'), 'Deve conter botão de filtro no cabeçalho');
-    assert.ok(html.includes('id="menu-filtro-periodo"'), 'Deve conter popover de filtro de período');
-    assert.ok(html.includes('id="filtro-venc-inicio"'), 'Deve conter input de data inicial');
-    assert.ok(html.includes('id="filtro-venc-fim"'), 'Deve conter input de data final');
-    assert.ok(html.includes('id="chip-filtro-periodo"'), 'Deve conter chip de filtro ativo');
-    assert.ok(html.includes('aplicarFiltroPeriodo'), 'Deve conter função aplicarFiltroPeriodo');
-    assert.ok(html.includes('limparFiltroPeriodo'), 'Deve conter função limparFiltroPeriodo');
-});
+test('tela: status, vencimento, localidade, marca e busca combinados recortam a fila e o Excel exporta exatamente ela', async () => {
+    const { context, downloads } = setupMinhasCotacoesEnv({ vendedor: 'Aline' });
+    const Tela = context.window.Tela;
 
-test('filtro de vencimento: aplicarFiltroPeriodo recorta cotações pelo intervalo de datas e reflete no Excel', async () => {
-    const env = setupMinhasCotacoesEnv({ vendedor: 'Lucas Vendas', hoje: '2026-10-16T12:00:00-03:00' });
-    const { context, elements, downloads } = env;
+    Tela.receber([
+        { 'COTAÇÃO': '701', 'LOCALIDADE': 'TUBARÃO', 'MARCAS ': 'SKF', 'ITEM': 'ROLAMENTO 6205', 'VENCIMENTO': dataRel(2), 'RESPOSTA': '' },
+        { 'COTAÇÃO': '702', 'LOCALIDADE': 'TUBARÃO', 'MARCAS ': 'SKF', 'ITEM': 'RETENTOR SABÓ', 'VENCIMENTO': dataRel(2), 'RESPOSTA': '' },
+        { 'COTAÇÃO': '703', 'LOCALIDADE': 'SANTOS', 'MARCAS ': 'SKF', 'ITEM': 'ROLAMENTO 6205', 'VENCIMENTO': dataRel(2), 'RESPOSTA': '' },
+        { 'COTAÇÃO': '704', 'LOCALIDADE': 'TUBARÃO', 'MARCAS ': 'WEG', 'ITEM': 'ROLAMENTO 6205', 'VENCIMENTO': dataRel(2), 'RESPOSTA': '' },
+        { 'COTAÇÃO': '705', 'LOCALIDADE': 'TUBARÃO', 'MARCAS ': 'SKF', 'ITEM': 'ROLAMENTO 6205', 'VENCIMENTO': dataRel(20), 'RESPOSTA': '' },
+        { 'COTAÇÃO': '706', 'LOCALIDADE': 'TUBARÃO', 'MARCAS ': 'SKF', 'ITEM': 'ROLAMENTO 6205', 'VENCIMENTO': dataRel(2), 'RESPOSTA': 'RESPONDIDO' }
+    ]);
+    Object.assign(Tela.estado, { status: 'pendentes', prazo: '7', locais: ['TUBARÃO'], marcas: ['SKF'], busca: 'rolamento' });
 
-    context.window.todasCotacoes = [
-        { 'COTAÇÃO': '101', 'VENCIMENTO': '15/10/2026', 'ITEM': 'PARAFUSO A', 'VENDEDOR': 'LUCAS' },
-        { 'COTAÇÃO': '102', 'VENCIMENTO': '18/10/2026', 'ITEM': 'PORCA B', 'VENDEDOR': 'LUCAS' },
-        { 'COTAÇÃO': '103', 'VENCIMENTO': '22/10/2026', 'ITEM': 'ARRUELA C', 'VENDEDOR': 'LUCAS' },
-        { 'COTAÇÃO': '104', 'VENCIMENTO': '30/10/2026', 'ITEM': 'CORREIA D', 'VENDEDOR': 'LUCAS' },
-        { 'COTAÇÃO': '105', 'VENCIMENTO': '05/11/2026', 'ITEM': 'ENGRENAGEM E', 'VENDEDOR': 'LUCAS' }
-    ];
+    assert.deepEqual(Tela.filtradas().map(c => c['COTAÇÃO']), ['701']);
 
-    // Define período: 18/10/2026 até 25/10/2026
-    elements['filtro-venc-inicio'].value = '2026-10-18';
-    elements['filtro-venc-fim'].value = '2026-10-25';
-
-    context.aplicarFiltroPeriodo();
-
-    // Esperado: apenas as cotações 102 (18/10) e 103 (22/10)
-    assert.equal(context.window.cotacoesFiltradas.length, 2);
-    const cotas = context.window.cotacoesFiltradas.map(c => c['COTAÇÃO']);
-    assert.deepEqual(cotas, ['102', '103']);
-    assert.equal(elements['chip-filtro-periodo'].style.display, 'inline-flex');
-    assert.ok(elements['texto-filtro-periodo'].innerText.includes('18/10/2026'));
-
-    // Ao exportar, o Excel gerado deve conter apenas as 2 cotações filtradas
-    await context.exportarMinhasCotacoesExcel();
-
-    assert.equal(downloads.length, 1);
-    const wb = XLSX.read(downloads[0].buffer, { type: 'buffer' });
-    const rows = XLSX.utils.sheet_to_json(wb.Sheets['Minhas Cotações']);
-    assert.equal(rows.length, 2);
-    assert.equal(rows[0]['COTAÇÃO'], '102');
-    assert.equal(rows[1]['COTAÇÃO'], '103');
-});
-
-test('combinação de filtro de vencimento com busca e status exporta exatamente o que está na tela', async () => {
-    const env = setupMinhasCotacoesEnv({ vendedor: 'Juliana' });
-    const { context, elements, downloads } = env;
-
-    context.window.todasCotacoes = [
-        { 'COTAÇÃO': '201', 'VENCIMENTO': '20/10/2026', 'ITEM': 'VÁLVULA ESFERA 2 POL', 'RESPOSTA': 'NÃO', 'VENDEDOR': 'JULIANA' },
-        { 'COTAÇÃO': '202', 'VENCIMENTO': '20/10/2026', 'ITEM': 'VÁLVULA GLOBO 3 POL', 'RESPOSTA': 'RESPONDIDO', 'VENDEDOR': 'JULIANA' },
-        { 'COTAÇÃO': '203', 'VENCIMENTO': '20/10/2026', 'ITEM': 'TUBULAÇÃO DE COBRE', 'RESPOSTA': 'RESPONDIDO', 'VENDEDOR': 'JULIANA' },
-        { 'COTAÇÃO': '204', 'VENCIMENTO': '05/11/2026', 'ITEM': 'VÁLVULA ESFERA 4 POL', 'RESPOSTA': 'RESPONDIDO', 'VENDEDOR': 'JULIANA' }
-    ];
-
-    // Filtro por data: até 25/10/2026
-    elements['filtro-venc-inicio'].value = '';
-    elements['filtro-venc-fim'].value = '2026-10-25';
-    context.aplicarFiltroPeriodo();
-
-    // Filtro por busca textual: "válvula"
-    elements['input-busca'].value = 'válvula';
-
-    // Filtro por status: apenas respondidas
-    context.setFiltroStatus('respondidas');
-
-    // Cotação 201: válvula, mas NÃO respondida (excluída)
-    // Cotação 202: válvula, respondida, vencimento 20/10 (INCLUÍDA!)
-    // Cotação 203: não é válvula (excluída)
-    // Cotação 204: válvula, respondida, mas vencimento 05/11 fora do prazo (excluída)
-    assert.equal(context.window.cotacoesFiltradas.length, 1);
-    assert.equal(context.window.cotacoesFiltradas[0]['COTAÇÃO'], '202');
-
-    // Exporta e garante que apenas a 202 está no arquivo
-    await context.exportarMinhasCotacoesExcel();
-
-    assert.equal(downloads.length, 1);
-    const wb = XLSX.read(downloads[0].buffer, { type: 'buffer' });
-    const rows = XLSX.utils.sheet_to_json(wb.Sheets['Minhas Cotações']);
-    assert.equal(rows.length, 1);
-    assert.equal(rows[0]['COTAÇÃO'], '202');
-    assert.equal(rows[0]['STATUS'], 'Respondida');
-});
-
-test('limparFiltroPeriodo limpa inputs, esconde chip e reestabelece exportação de todas', async () => {
-    const env = setupMinhasCotacoesEnv({ vendedor: 'Mariana' });
-    const { context, elements, downloads } = env;
-
-    context.window.todasCotacoes = [
-        { 'COTAÇÃO': '301', 'VENCIMENTO': '16/10/2026', 'ITEM': 'ITEM A', 'VENDEDOR': 'MARIANA' },
-        { 'COTAÇÃO': '302', 'VENCIMENTO': '18/10/2026', 'ITEM': 'ITEM B', 'VENDEDOR': 'MARIANA' }
-    ];
-
-    // Aplica filtro que pega só uma
-    elements['filtro-venc-inicio'].value = '2026-10-18';
-    elements['filtro-venc-fim'].value = '2026-10-18';
-    context.aplicarFiltroPeriodo();
-    assert.equal(context.window.cotacoesFiltradas.length, 1);
-
-    // Limpa o filtro
-    context.limparFiltroPeriodo();
-
-    assert.equal(elements['filtro-venc-inicio'].value, '');
-    assert.equal(elements['filtro-venc-fim'].value, '');
-    assert.equal(elements['chip-filtro-periodo'].style.display, 'none');
-    assert.equal(context.window.cotacoesFiltradas.length, 2);
-
-    // Exporta e garante que ambas voltaram para o Excel
-    await context.exportarMinhasCotacoesExcel();
-
-    assert.equal(downloads.length, 1);
-    const wb = XLSX.read(downloads[0].buffer, { type: 'buffer' });
-    const rows = XLSX.utils.sheet_to_json(wb.Sheets['Minhas Cotações']);
-    assert.equal(rows.length, 2);
-});
-
-test('presets de período preenchem os inputs e aplicam o filtro corretamente', () => {
-    const env = setupMinhasCotacoesEnv();
-    const { context, elements } = env;
-
-    // Preset "hoje"
-    context.setPresetPeriodo('hoje');
-    const hoje = new Date();
-    const y = hoje.getFullYear();
-    const m = String(hoje.getMonth() + 1).padStart(2, '0');
-    const d = String(hoje.getDate()).padStart(2, '0');
-    const hojeStr = `${y}-${m}-${d}`;
-
-    assert.equal(elements['filtro-venc-inicio'].value, hojeStr);
-    assert.equal(elements['filtro-venc-fim'].value, hojeStr);
-
-    // Preset "7dias"
-    context.setPresetPeriodo('7dias');
-    assert.equal(elements['filtro-venc-inicio'].value, hojeStr);
-    assert.ok(elements['filtro-venc-fim'].value > hojeStr);
-});
-
-test('minhas_cotacoes.html contém coluna de Marca e menus de filtro para Localidade e Marca', () => {
-    const htmlPath = path.join(__dirname, '../public/minhas_cotacoes.html');
-    const html = fs.readFileSync(htmlPath, 'utf8');
-
-    // Localidade
-    assert.ok(html.includes('id="th-localidade"'), 'Deve conter cabeçalho id th-localidade');
-    assert.ok(html.includes('id="btn-filtro-localidade"'), 'Deve conter botão #btn-filtro-localidade');
-    assert.ok(html.includes('id="menu-filtro-localidade"'), 'Deve conter popover #menu-filtro-localidade');
-    assert.ok(html.includes('id="chip-filtro-localidade"'), 'Deve conter chip de filtro de localidade');
-    assert.ok(html.includes('aplicarFiltroLocalidade'), 'Deve conter função aplicarFiltroLocalidade');
-    assert.ok(html.includes('limparFiltroLocalidade'), 'Deve conter função limparFiltroLocalidade');
-
-    // Marca
-    assert.ok(html.includes('id="th-marca"'), 'Deve conter cabeçalho id th-marca');
-    assert.ok(html.includes('id="btn-filtro-marca"'), 'Deve conter botão #btn-filtro-marca');
-    assert.ok(html.includes('id="menu-filtro-marca"'), 'Deve conter popover #menu-filtro-marca');
-    assert.ok(html.includes('id="chip-filtro-marca"'), 'Deve conter chip de filtro de marca');
-    assert.ok(html.includes('aplicarFiltroMarca'), 'Deve conter função aplicarFiltroMarca');
-    assert.ok(html.includes('limparFiltroMarca'), 'Deve conter função limparFiltroMarca');
-
-    // CSS e Tabela
-    assert.ok(html.includes('marca-text'), 'Deve conter classe CSS marca-text');
-    assert.ok(html.includes('colspan="7"'), 'Deve atualizar colspan para 7 colunas');
-});
-
-test('filtro de localidade recorta cotações e exporta somente as localidades selecionadas', async () => {
-    const env = setupMinhasCotacoesEnv({ vendedor: 'Fernanda' });
-    const { context, elements, downloads } = env;
-
-    context.window.todasCotacoes = [
-        { 'COTAÇÃO': '501', 'LOCALIDADE': 'TUBARÃO', 'MARCA': 'SKF', 'ITEM': 'ROLAMENTO', 'VENCIMENTO': '25/10/2026' },
-        { 'COTAÇÃO': '502', 'LOCALIDADE': 'SANTOS', 'MARCA': 'TIMKEN', 'ITEM': 'CORREIA', 'VENCIMENTO': '25/10/2026' },
-        { 'COTAÇÃO': '503', 'LOCALIDADE': 'VITÓRIA', 'MARCA': 'SKF', 'ITEM': 'RETENTOR', 'VENCIMENTO': '25/10/2026' }
-    ];
-
-    // Mock das opções de localidade com apenas TUBARÃO marcado
-    elements._chkLocalidades = [
-        { value: 'TUBARÃO', checked: true },
-        { value: 'SANTOS', checked: false },
-        { value: 'VITÓRIA', checked: false }
-    ];
-
-    context.extrairListasFiltrosUnicas();
-    context.aplicarFiltroLocalidade();
-
-    assert.equal(context.window.cotacoesFiltradas.length, 1);
-    assert.equal(context.window.cotacoesFiltradas[0]['COTAÇÃO'], '501');
-    assert.equal(elements['chip-filtro-localidade'].style.display, 'inline-flex');
-    assert.equal(elements['texto-filtro-localidade'].innerText, 'TUBARÃO');
-
-    await context.exportarMinhasCotacoesExcel();
-
-    assert.equal(downloads.length, 1);
-    const wb = XLSX.read(downloads[0].buffer, { type: 'buffer' });
-    const rows = XLSX.utils.sheet_to_json(wb.Sheets['Minhas Cotações']);
-    assert.equal(rows.length, 1);
-    assert.equal(rows[0]['COTAÇÃO'], '501');
-    assert.equal(rows[0]['LOCALIDADE'], 'TUBARÃO');
-});
-
-test('filtro de marca recorta cotações e exporta somente as marcas selecionadas', async () => {
-    const env = setupMinhasCotacoesEnv({ vendedor: 'Rodrigo' });
-    const { context, elements, downloads } = env;
-
-    context.window.todasCotacoes = [
-        { 'COTAÇÃO': '601', 'LOCALIDADE': 'TUBARÃO', 'MARCA': 'WEG', 'ITEM': 'MOTOR 5CV', 'VENCIMENTO': '25/10/2026' },
-        { 'COTAÇÃO': '602', 'LOCALIDADE': 'TUBARÃO', 'MARCAS': 'SKF', 'ITEM': 'ROLAMENTO', 'VENCIMENTO': '25/10/2026' },
-        { 'COTAÇÃO': '603', 'LOCALIDADE': 'TUBARÃO', 'MARCA': 'BELENUS', 'ITEM': 'PARAFUSO', 'VENCIMENTO': '25/10/2026' }
-    ];
-
-    // Mock das opções de marca com apenas SKF e WEG marcados
-    elements._chkMarcas = [
-        { value: 'WEG', checked: true },
-        { value: 'SKF', checked: true },
-        { value: 'BELENUS', checked: false }
-    ];
-
-    context.extrairListasFiltrosUnicas();
-    context.aplicarFiltroMarca();
-
-    assert.equal(context.window.cotacoesFiltradas.length, 2);
-    const cotas = context.window.cotacoesFiltradas.map(c => c['COTAÇÃO']);
-    assert.deepEqual(cotas, ['601', '602']);
-    assert.equal(elements['chip-filtro-marca'].style.display, 'inline-flex');
-
-    await context.exportarMinhasCotacoesExcel();
-
-    assert.equal(downloads.length, 1);
-    const wb = XLSX.read(downloads[0].buffer, { type: 'buffer' });
-    const rows = XLSX.utils.sheet_to_json(wb.Sheets['Minhas Cotações']);
-    assert.equal(rows.length, 2);
-    assert.equal(rows[0]['COTAÇÃO'], '601');
-    assert.equal(rows[1]['COTAÇÃO'], '602');
-});
-
-test('combinação total: localidade + marca + vencimento + busca exporta exatamente o cruzamento de filtros', async () => {
-    const env = setupMinhasCotacoesEnv({ vendedor: 'Aline' });
-    const { context, elements, downloads } = env;
-
-    context.window.todasCotacoes = [
-        { 'COTAÇÃO': '701', 'LOCALIDADE': 'TUBARÃO', 'MARCA': 'SKF', 'ITEM': 'ROLAMENTO 6205', 'VENCIMENTO': '20/10/2026' },
-        { 'COTAÇÃO': '702', 'LOCALIDADE': 'TUBARÃO', 'MARCA': 'SKF', 'ITEM': 'RETENTOR SABÓ', 'VENCIMENTO': '20/10/2026' },
-        { 'COTAÇÃO': '703', 'LOCALIDADE': 'SANTOS', 'MARCA': 'SKF', 'ITEM': 'ROLAMENTO 6205', 'VENCIMENTO': '20/10/2026' },
-        { 'COTAÇÃO': '704', 'LOCALIDADE': 'TUBARÃO', 'MARCA': 'WEG', 'ITEM': 'ROLAMENTO 6205', 'VENCIMENTO': '20/10/2026' },
-        { 'COTAÇÃO': '705', 'LOCALIDADE': 'TUBARÃO', 'MARCA': 'SKF', 'ITEM': 'ROLAMENTO 6205', 'VENCIMENTO': '30/11/2026' }
-    ];
-
-    context.extrairListasFiltrosUnicas();
-
-    // 1. Filtro Localidade = TUBARÃO
-    elements._chkLocalidades = [
-        { value: 'TUBARÃO', checked: true },
-        { value: 'SANTOS', checked: false }
-    ];
-    context.aplicarFiltroLocalidade();
-
-    // 2. Filtro Marca = SKF
-    elements._chkMarcas = [
-        { value: 'SKF', checked: true },
-        { value: 'WEG', checked: false }
-    ];
-    context.aplicarFiltroMarca();
-
-    // 3. Filtro Vencimento = até 31/10/2026
-    elements['filtro-venc-fim'].value = '2026-10-31';
-    context.aplicarFiltroPeriodo();
-
-    // 4. Busca = "rolamento"
-    elements['input-busca'].value = 'rolamento';
-    context.aplicarFiltros();
-
-    // Apenas cotação 701 atende a todos os 4 filtros simultaneamente
-    assert.equal(context.window.cotacoesFiltradas.length, 1);
-    assert.equal(context.window.cotacoesFiltradas[0]['COTAÇÃO'], '701');
-
-    await context.exportarMinhasCotacoesExcel();
+    await Tela.exportarLista('excel');
 
     assert.equal(downloads.length, 1);
     const wb = XLSX.read(downloads[0].buffer, { type: 'buffer' });
@@ -612,38 +276,160 @@ test('combinação total: localidade + marca + vencimento + busca exporta exatam
     assert.equal(rows.length, 1);
     assert.equal(rows[0]['COTAÇÃO'], '701');
     assert.equal(rows[0]['MARCAS'], 'SKF');
-    assert.equal(rows[0]['LOCALIDADE'], 'TUBARÃO');
+    assert.ok(!Object.keys(rows[0]).some(k => k.startsWith('_')), 'Controle interno da tela não pode virar coluna no Excel');
 });
 
-test('minhas_cotacoes.html contém botão #btn-exportar-planilha-base no modal e inclui template_planilha_base.js', () => {
-    const htmlPath = path.join(__dirname, '../public/minhas_cotacoes.html');
-    const html = fs.readFileSync(htmlPath, 'utf8');
+test('tela: período com datas e dia clicado no gráfico filtram pelo vencimento', () => {
+    const { context } = setupMinhasCotacoesEnv();
+    const Tela = context.window.Tela;
 
-    assert.ok(html.includes('id="btn-exportar-planilha-base"'), 'Deve conter botão #btn-exportar-planilha-base');
+    Tela.receber([
+        { 'COTAÇÃO': '101', 'VENCIMENTO': dataRel(0), 'ITEM': 'A' },
+        { 'COTAÇÃO': '102', 'VENCIMENTO': dataRel(3), 'ITEM': 'B' },
+        { 'COTAÇÃO': '103', 'VENCIMENTO': isoRel(5), 'ITEM': 'C' },
+        { 'COTAÇÃO': '104', 'VENCIMENTO': dataRel(12), 'ITEM': 'D' }
+    ]);
+    Object.assign(Tela.estado, { status: 'todas', ordem: 'venc_asc', prazo: 'periodo', de: isoRel(3), ate: isoRel(5) });
+    assert.deepEqual(Tela.filtradas().map(c => c['COTAÇÃO']), ['102', '103']);
+
+    Object.assign(Tela.estado, { prazo: 'dia', dia: 0, de: '', ate: '' });
+    assert.deepEqual(Tela.filtradas().map(c => c['COTAÇÃO']), ['101']);
+
+    Object.assign(Tela.estado, { prazo: '', status: 'semana' });
+    assert.deepEqual(Tela.filtradas().map(c => c['COTAÇÃO']), ['102', '103']);
+
+    const n = Tela.contagem();
+    assert.equal(n.todas, 4);
+    assert.equal(n.hoje, 1);
+    assert.equal(n.semana, 2);
+});
+
+test('tela: com cotações selecionadas, o Exportar gera só elas mesmo fora dos filtros', async () => {
+    const { context, downloads } = setupMinhasCotacoesEnv({ vendedor: 'Bia' });
+    const Tela = context.window.Tela;
+
+    Tela.receber([
+        { 'COTAÇÃO': '201', 'VENCIMENTO': dataRel(1), 'ITEM': 'VÁLVULA', 'RESPOSTA': '' },
+        { 'COTAÇÃO': '202', 'VENCIMENTO': dataRel(1), 'ITEM': 'TUBO', 'RESPOSTA': 'RESPONDIDO' },
+        { 'COTAÇÃO': '203', 'VENCIMENTO': dataRel(4), 'ITEM': 'CONEXÃO', 'RESPOSTA': '' }
+    ]);
+    Tela.estado.status = 'pendentes';
+    const [c201, c202] = Tela.estado.lista;
+    Tela.estado.selecionadas.add(Tela.id(c201));
+    Tela.estado.selecionadas.add(Tela.id(c202));
+
+    assert.deepEqual(Tela.alvoExportacao().map(c => c['COTAÇÃO']), ['201', '202']);
+
+    await Tela.exportarLista('word');
+    assert.equal(downloads.length, 1);
+    assert.match(downloads[0].filename, /^cotacoes_bia_\d{4}-\d{2}-\d{2}\.docx$/);
+    assert.deepEqual(context.window.cotacoesFiltradas.map(c => c['COTAÇÃO']), ['201', '202']);
+});
+
+test('tela: número da cotação sai limpo e os itens são lidos no formato da planilha', () => {
+    const { context } = setupMinhasCotacoesEnv();
+    const Tela = context.window.Tela;
+
+    assert.deepEqual({ ...Tela.numero({ 'COTAÇÃO': 'COTAÇÃO/ES (EDIVIT) > PPG0241188' }) }, { num: 'PPG0241188', origem: 'EDIVIT' });
+    assert.equal(Tela.numero({ 'COTAÇÃO': 'Cotação 171-548812' }).num, '171-548812');
+    assert.equal(Tela.numero({ 'COTAÇÃO': '297402' }).num, '297402');
+
+    const [headset] = Tela.itens({ 'ITEM': '13113728 || HEADSET C/FIO - PT || HEADSET; COR: PRETO', 'QUANTIDADE': '4 EA-cada', 'MARCAS ': 'PLANTRONICS' });
+    assert.equal(headset.codigo, '13113728');
+    assert.equal(headset.nome, 'HEADSET C/FIO');
+    assert.equal(headset.desc, 'HEADSET; COR: PRETO');
+    assert.equal(headset.qtd, '4 EA');
+    assert.equal(headset.marca, 'PLANTRONICS');
+
+    const multi = Tela.itens({
+        'ITEM': '(Item 1) 35001117 || MADEIRA SERRADA - PT || TABUA PINUS 30CM X 3M\n(Item 2) 35001117 || MADEIRA SERRADA - PT || CAIBRO PINUS 5X5CM X 3M',
+        'QUANTIDADE': '(Item 1) 300 PC-peca\n(Item 2) 120 PC-peca'
+    });
+    assert.equal(multi.length, 2);
+    assert.equal(multi[0].nome, 'TABUA PINUS 30CM X 3M');
+    assert.equal(multi[0].categoria, 'MADEIRA SERRADA');
+    assert.equal(multi[1].qtd, '120 PC');
+
+    assert.equal(Tela.itens({ 'ITEM': '' })[0].nome, 'Sem descrição na planilha');
+});
+
+test('tela: recarga do socket mantém o id da cotação e marca a que chegou como nova', () => {
+    const { context } = setupMinhasCotacoesEnv();
+    const Tela = context.window.Tela;
+    const linha = n => ({ 'COTAÇÃO': n, 'LOCALIDADE': 'VITÓRIA', 'VENCIMENTO': dataRel(1), 'ITEM': 'ITEM ' + n });
+
+    Tela.receber([linha('301'), linha('302')]);
+    const id302 = Tela.id(Tela.estado.lista[1]);
+    Tela.estado.selecionadas.add(id302);
+
+    Tela.receber([linha('303'), linha('302')]);
+    assert.equal(Tela.id(Tela.estado.lista[1]), id302, 'Mesma cotação mantém o id entre recargas');
+    assert.ok(Tela.estado.novos.has(Tela.id(Tela.estado.lista[0])), 'Cotação que chegou fica marcada como nova');
+    assert.ok(!Tela.estado.novos.has(id302));
+    assert.deepEqual([...Tela.estado.selecionadas], [id302], 'Seleção sobrevive à recarga');
+});
+
+test('socket: vencidas ficam fora da tela e marcar como respondida envia a identidade da linha', () => {
+    const { context, handlers, emitted } = setupMinhasCotacoesEnv();
+    const Tela = context.window.Tela;
+
+    handlers.retorno_planilha_json({
+        sucesso: true,
+        cotacoes: [
+            { 'COTAÇÃO': '401', 'VENCIMENTO': dataRel(-1), 'ITEM': 'VENCIDA' },
+            { 'COTAÇÃO': '402', 'VENCIMENTO': dataRel(0), 'ITEM': 'HOJE', 'VENDEDOR': 'ROBERTO', 'LOCALIDADE': 'SANTOS' }
+        ]
+    });
+    assert.deepEqual(Tela.estado.lista.map(c => c['COTAÇÃO']), ['402']);
+    assert.equal(Tela.estado.carregado, true);
+
+    context.marcarComoRespondida(Tela.estado.lista[0]);
+    const envio = emitted.find(e => e[0] === 'marcar_cotacao_respondida');
+    assert.ok(envio, 'Deve emitir marcar_cotacao_respondida');
+    assert.equal(envio[1].identidade['COTAÇÃO'], '402');
+    assert.equal(envio[1].identidade['VENCIMENTO'], dataRel(0));
+
+    handlers.retorno_planilha_json({ sucesso: false, erro: 'planilha indisponível' });
+    assert.equal(Tela.estado.erro, 'planilha indisponível');
+});
+
+test('socket: cotações da Planilha Anmyna aparecem em minhas_cotacoes e marcar como respondida usa comando_marcar_respondida_anmyna', () => {
+    const { context, handlers, emitted } = setupMinhasCotacoesEnv();
+    const Tela = context.window.Tela;
+
+    handlers.retorno_planilha_json({
+        sucesso: true,
+        cotacoes: [
+            {
+                'COTAÇÃO': 'ANM-9001',
+                'VENCIMENTO': dataRel(2),
+                'ITEM': 'PRODUTO ANMYNA 1',
+                'VENDEDOR': 'MARCIA',
+                'LOCALIDADE': 'NESTLE',
+                'ORIGEM_PLANILHA': 'anmyna',
+                'ABA_ANMYNA': 'COTAÇÕES 2025'
+            }
+        ]
+    });
+    assert.deepEqual(Tela.estado.lista.map(c => c['COTAÇÃO']), ['ANM-9001']);
+    assert.equal(Tela.estado.carregado, true);
+
+    context.marcarComoRespondida(Tela.estado.lista[0]);
+    const envio = emitted.find(e => e[0] === 'comando_marcar_respondida_anmyna');
+    assert.ok(envio, 'Deve emitir comando_marcar_respondida_anmyna');
+    assert.equal(envio[1].chave, 'ANM-9001');
+    assert.equal(envio[1].aba, 'COTAÇÕES 2025');
+    assert.equal(envio[1].respondido, 'SIM');
+});
+
+test('minhas_cotacoes.html inclui template_planilha_base.js e a tela exporta Word Coupa e Planilha Base por cotação', () => {
+    const html = fs.readFileSync(path.join(__dirname, '../public/minhas_cotacoes.html'), 'utf8');
+    const tela = fs.readFileSync(path.join(__dirname, '../public/minhas-cotacoes/tela.js'), 'utf8');
+
     assert.ok(html.includes('vendor/template_planilha_base.js'), 'Deve carregar vendor/template_planilha_base.js');
-    assert.ok(html.includes('exportarCotacaoModalPlanilhaBase'), 'Deve vincular exportarCotacaoModalPlanilhaBase');
-    assert.ok(html.includes('exportarCotacaoPlanilhaBase'), 'Deve definir exportarCotacaoPlanilhaBase');
-});
-
-test('abrirDetalhes define cotacaoModalAtual e exibe modal', () => {
-    const env = setupMinhasCotacoesEnv();
-    const { context, elements } = env;
-
-    context.window.cotacoesFiltradas = [
-        {
-            'COTAÇÃO': '887766',
-            'ITEM': 'ROLAMENTO DE ROLOS CONICOS',
-            'QUANTIDADE': '4',
-            'VENDEDOR': 'ROBERTO'
-        }
-    ];
-
-    context.abrirDetalhes(0);
-
-    assert.equal(elements['modal-detalhes'].style.display, 'flex');
-    assert.ok(elements['modal-titulo'].innerText.includes('887766'));
-    assert.ok(elements['modal-corpo'].innerHTML.includes('ROLAMENTO DE ROLOS CONICOS'));
-    assert.equal(context.window.cotacaoModalAtual['COTAÇÃO'], '887766');
+    assert.ok(html.includes('async function exportarCotacaoPlanilhaBase'), 'Deve definir exportarCotacaoPlanilhaBase');
+    assert.ok(tela.includes('id="btn-exportar-planilha-base"'), 'Janela da cotação deve ter o botão Planilha Base');
+    assert.ok(tela.includes('exportarCotacaoPlanilhaBase(c)') && tela.includes('exportarCotacaoWordCore(c, el)'), 'Ações por cotação devem usar as exportações da página');
 });
 
 test('extrairQuantidadeNumero trata corretamente inteiros, decimais e unidades', () => {
@@ -685,7 +471,7 @@ test('exportarCotacaoPlanilhaBase preenche produto em A2, quantidade em B2 e pre
 
     // Valida abas originais preservadas
     const sheetNames = wb.worksheets.map(w => w.name);
-    assert.deepEqual(sheetNames, ['ORÇAMENTO', 'COTAÇÃO', 'FRETE']);
+    assert.deepEqual(sheetNames, ['ORÇAMENTO', 'COTAÇÃO', 'FRETE', 'LISTAS']);
 
     const ws = wb.getWorksheet('ORÇAMENTO');
     assert.ok(ws, 'Aba ORÇAMENTO deve existir');
@@ -695,44 +481,30 @@ test('exportarCotacaoPlanilhaBase preenche produto em A2, quantidade em B2 e pre
     assert.equal(ws.getCell('B2').value, 6);
 
     // Valida fórmulas intactas na linha 2 e totais
-    assert.equal(ws.getCell('H2').value?.formula, '(C2+(D2/B2)+(E2/B2)+(F2))*B2');
-    assert.equal(ws.getCell('I2').value?.formula, '(H2*G2/100)+H2');
-    assert.equal(ws.getCell('J2').value?.formula, 'I2/B2');
+    assert.equal(ws.getCell('H2').value?.formula, 'SUM(C2*B2+(D2+E2+F2))');
+    assert.equal(ws.getCell('I2').value?.formula, 'SUM((C2*B2)+D2+E2+F2)*G2%+H2');
+    assert.equal(ws.getCell('J2').value?.formula, 'SUM(I2/B2)');
     assert.equal(ws.getCell('I26').value?.formula, 'SUM(I2:I25)');
+
+    // Listas suspensas iguais ao modelo do cotafrete (vendedor, pagamento, parcelamento, filial, frete, origem, grupo, marca)
+    const listas = {
+        B33: 'LISTAS!$A$2:$A$28', B34: 'LISTAS!$B$2:$B$8', B35: 'LISTAS!$C$2:$C$23',
+        B37: 'LISTAS!$E$2:$E$4', B38: 'LISTAS!$H$2:$H$3',
+        M2: 'LISTAS!$D$2:$D$10', M25: 'LISTAS!$D$2:$D$10',
+        P2: 'LISTAS!$F$2:$F$500', Q25: 'LISTAS!$G$2:$G$1409'
+    };
+    for (const [ref, intervalo] of Object.entries(listas)) {
+        const dv = ws.getCell(ref).dataValidation;
+        assert.equal(dv?.type, 'list', `${ref} deve ter lista suspensa`);
+        assert.equal(dv.formulae[0], intervalo, `${ref} deve apontar para ${intervalo}`);
+    }
 });
 
-test('exportarCotacaoModalPlanilhaBase exporta a cotação ativa no modal', async () => {
-    const env = setupMinhasCotacoesEnv();
-    const { context, downloads } = env;
-
-    context.window.cotacoesFiltradas = [
-        {
-            'COTAÇÃO': '554433',
-            'ITEM': 'FILTRO SEPARADOR DE AGUA',
-            'QUANTIDADE': '2 UN'
-        }
-    ];
-
-    context.abrirDetalhes(0);
-    await context.exportarCotacaoModalPlanilhaBase();
-
-    assert.equal(downloads.length, 1);
-    assert.equal(downloads[0].filename, 'planilha_base_cotacao_554433.xlsx');
-
-    const wb = new ExcelJS.Workbook();
-    await wb.xlsx.load(downloads[0].buffer);
-    const ws = wb.getWorksheet('ORÇAMENTO');
-
-    assert.equal(ws.getCell('A2').value, 'FILTRO SEPARADOR DE AGUA');
-    assert.equal(ws.getCell('B2').value, 2);
-});
-
-test('exportarCotacaoModalPlanilhaBase exibe aviso quando nenhuma cotação está selecionada', async () => {
+test('exportarCotacaoPlanilhaBase exibe aviso quando nenhuma cotação é passada', async () => {
     const env = setupMinhasCotacoesEnv();
     const { context, alerts, downloads } = env;
 
-    context.window.cotacaoModalAtual = null;
-    await context.exportarCotacaoModalPlanilhaBase();
+    await context.exportarCotacaoPlanilhaBase(null);
 
     assert.equal(downloads.length, 0);
     assert.ok(alerts.some(a => a.includes('Nenhuma cotação selecionada')));
@@ -790,7 +562,7 @@ test('exportarCotacaoPlanilhaBase exporta múltiplos itens para linhas sucessiva
     // Linha 2 (Item 1)
     assert.equal(ws.getCell('A2').value, 'Impressora Zebra ZD230 USB + Ethernet');
     assert.equal(ws.getCell('B2').value, 1);
-    assert.equal(ws.getCell('H2').value?.formula, '(C2+(D2/B2)+(E2/B2)+(F2))*B2');
+    assert.equal(ws.getCell('H2').value?.formula, 'SUM(C2*B2+(D2+E2+F2))');
 
     // Linha 3 (Item 2)
     assert.equal(ws.getCell('A3').value, 'Leitor código barras Zebra DS2208 Kit com suporte');
@@ -806,50 +578,9 @@ test('exportarCotacaoPlanilhaBase exporta múltiplos itens para linhas sucessiva
 
     // Fórmulas da soma total e abas
     assert.equal(ws.getCell('I26').value?.formula, 'SUM(I2:I25)');
-    assert.deepEqual(wb.worksheets.map(w => w.name), ['ORÇAMENTO', 'COTAÇÃO', 'FRETE']);
+    assert.deepEqual(wb.worksheets.map(w => w.name), ['ORÇAMENTO', 'COTAÇÃO', 'FRETE', 'LISTAS']);
 });
 
-test('minhas_cotacoes.html contém botão Exportar Word com estilo azul suave, inclusão de JSZip e cabeçalho atualizado', () => {
-    const htmlPath = path.join(__dirname, '../public/minhas_cotacoes.html');
-    const html = fs.readFileSync(htmlPath, 'utf8');
-
-    // Verifica inclusão do script JSZip
-    assert.ok(html.includes('src="vendor/jszip.min.js"'), 'Deve incluir vendor/jszip.min.js');
-
-    // Verifica estilos do botão azul suave
-    assert.ok(html.includes('.btn-exportar-word'), 'Deve conter a classe .btn-exportar-word');
-    assert.ok(html.includes('rgba(56, 189, 248'), 'Deve conter cor azul clara com transparência suave');
-    assert.ok(html.includes('#7dd3fc') || html.includes('#38bdf8'), 'Deve conter tom azul suave (#7dd3fc ou #38bdf8)');
-
-    // Verifica cabeçalho da tabela
-    assert.ok(html.includes('Responder cotação'), 'Cabeçalho da tabela deve conter a coluna "Responder cotação"');
-    assert.ok(html.includes('id="btn-top-exportar-word"') && html.includes('exportarMinhasCotacoesWord()'), 'Topo deve ter o botão Exportar Word de todas as cotações exibidas');
-
-    // Verifica botão no modal
-    assert.ok(html.includes('id="btn-exportar-modal-word"'), 'Modal de detalhes deve conter o botão #btn-exportar-modal-word');
-    assert.ok(html.includes('exportarCotacaoModalWord()'), 'Botão do modal deve chamar exportarCotacaoModalWord()');
-});
-
-test('renderizarTabela troca o Exportar Word por "Responder cotação" em cada linha da tabela', () => {
-    const env = setupMinhasCotacoesEnv();
-    const { context, elements } = env;
-
-    const cotasExemplo = [
-        { 'COTAÇÃO': '101', 'VENCIMENTO': '20/10/2026', 'LOCALIDADE': 'TUBARÃO', 'ITEM': 'IMPRESSORA ZEBRA', 'RESPOSTA': 'NÃO' },
-        { 'COTAÇÃO': '102', 'VENCIMENTO': '22/10/2026', 'LOCALIDADE': 'SANTOS', 'ITEM': 'LEITOR CÓDIGO BARRAS', 'RESPOSTA': 'RESPONDIDO' }
-    ];
-    context.cotacoesFiltradas = cotasExemplo;
-    context.window.cotacoesFiltradas = cotasExemplo;
-
-    context.renderizarTabela();
-
-    const tbodyHtml = elements['tbody-cotacoes'].innerHTML;
-    assert.ok(tbodyHtml.includes('btn-responder'), 'Tabela deve conter botões .btn-responder');
-    assert.ok(tbodyHtml.includes('Responder cotação'), 'Botão da linha deve se chamar "Responder cotação"');
-    assert.ok(tbodyHtml.includes('abrirDetalhes(0)'), 'Primeira linha deve chamar abrirDetalhes(0)');
-    assert.ok(tbodyHtml.includes('abrirDetalhes(1)'), 'Segunda linha deve chamar abrirDetalhes(1)');
-    assert.ok(!tbodyHtml.includes('btn-exportar-word'), 'Linha não deve mais ter o botão Exportar Word');
-});
 
 test('gerarDocxCotacaoCoupaXml gera formato idêntico ao Coupa com margens, cabeçalho, assinaturas, frete e itens', () => {
     const env = setupMinhasCotacoesEnv();
@@ -957,30 +688,18 @@ test('gerarDocxCotacaoCoupaBlob gera zip docx válido com OpenXML e styles Arial
     assert.ok(stylesXml.includes('w:sz w:val="18"'), 'Styles deve especificar tamanho 9pt (18 half-points)');
 });
 
-test('exportarCotacaoWord e exportarCotacaoModalWord disparam o download com nome de arquivo correto', async () => {
+test('exportarCotacaoWordCore (Word Coupa de uma cotação) dispara o download com nome de arquivo correto', async () => {
     const env = setupMinhasCotacoesEnv();
     const { context, downloads } = env;
 
-    const cotasLinha = [
-        { 'COTAÇÃO': '887766', 'VENCIMENTO': '20/10/2026', 'LOCALIDADE': 'TUBARÃO', 'ITEM': 'PRODUTO X' }
-    ];
-    context.cotacoesFiltradas = cotasLinha;
-    context.window.cotacoesFiltradas = cotasLinha;
+    const btn = { disabled: false, innerHTML: 'Word Coupa' };
+    await context.exportarCotacaoWordCore({ 'COTAÇÃO': '887766', 'VENCIMENTO': '20/10/2026', 'LOCALIDADE': 'TUBARÃO', 'ITEM': 'PRODUTO X' }, btn);
 
-    // Exportação pela linha da tabela
-    await context.exportarCotacaoWord(0);
     assert.equal(downloads.length, 1);
     assert.equal(downloads[0].filename, 'Cotacao_887766.docx');
     assert.ok(downloads[0].buffer && downloads[0].buffer.length > 0, 'Buffer não deve estar vazio');
-
-    // Exportação pelo modal
-    const cotasModal = { 'COTAÇÃO': '554433', 'VENCIMENTO': '22/10/2026', 'LOCALIDADE': 'SANTOS', 'ITEM': 'PRODUTO Y' };
-    context.cotacaoModalAtual = cotasModal;
-    context.window.cotacaoModalAtual = cotasModal;
-    await context.exportarCotacaoModalWord();
-    assert.equal(downloads.length, 2);
-    assert.equal(downloads[1].filename, 'Cotacao_554433.docx');
-    assert.ok(downloads[1].buffer && downloads[1].buffer.length > 0, 'Buffer não deve estar vazio');
+    assert.equal(btn.disabled, false, 'Botão volta ao normal depois de gerar');
+    assert.equal(btn.innerHTML, 'Word Coupa');
 });
 
 test('minhas_cotacoes.html inclui fallback de CDN para JSZip quando vendor local não estiver disponível', () => {
@@ -1027,10 +746,8 @@ test('gerarDocxCotacaoCoupaBlob funciona 100% sem JSZip usando gerador ZIP nativ
     assert.ok(docXml.includes('Coletor de Dados Honeywell EDA51'));
     assert.ok(docXml.includes('MARCA: HONEYWELL'));
 
-    // Valida exportação completa pela UI sem JSZip
-    context.cotacoesFiltradas = [cotacao];
-    context.window.cotacoesFiltradas = [cotacao];
-    await context.exportarCotacaoWord(0);
+    // Valida exportação completa pela tela sem JSZip
+    await context.exportarCotacaoWordCore(cotacao, null);
 
     assert.equal(downloads.length, 1);
     assert.equal(downloads[0].filename, 'Cotacao_998877.docx');
@@ -1129,4 +846,325 @@ test('parseItensCotacao, Word e Planilha Base associam quantidades empilhadas li
     assert.ok(itensMultiModelo[0].produto.startsWith('15392756 || MOCHILA'));
     assert.equal(itensMultiModelo[1].quantidade, 4, 'Item 2 deve ter quantidade 4 e não o modelo 13091680');
     assert.ok(itensMultiModelo[1].produto.startsWith('13091680 || MOUSE'));
+});
+
+
+test('tela: botão Responder aparece apenas ao abrir cotação do Coupa ou Vale, ao lado do botão Planilha Base', () => {
+    const { context, handlers } = setupMinhasCotacoesEnv();
+    const Tela = context.window.Tela;
+
+    handlers.retorno_planilha_json({
+        sucesso: true,
+        portais_robo: {
+            '800123': 'coupa',
+            '310150': 'vale'
+        },
+        cotacoes: [
+            { 'COTAÇÃO': '800123', 'VENCIMENTO': dataRel(1), 'LOCALIDADE': 'TUBARÃO', 'ITEM': 'ITEM COUPA' },
+            { 'COTAÇÃO': '310150', 'VENCIMENTO': dataRel(2), 'LOCALIDADE': 'PARAUAPEBAS', 'ITEM': 'ITEM VALE' },
+            { 'COTAÇÃO': '999000', 'VENCIMENTO': dataRel(3), 'LOCALIDADE': 'VITÓRIA', 'ITEM': 'ITEM OUTRO' }
+        ]
+    });
+
+    const [cCoupa, cVale, cOutro] = Tela.estado.lista;
+    assert.equal(Tela.portalRobo(cCoupa), 'coupa');
+    assert.equal(Tela.portalRobo(cVale), 'vale');
+    assert.equal(Tela.portalRobo(cOutro), '');
+
+    const htmlCoupa = Tela.detalhe(cCoupa);
+    assert.ok(htmlCoupa.includes('id="btn-responder-cotacao"'), 'Cotação Coupa aberta deve ter botão Responder');
+    assert.ok(htmlCoupa.includes('data-portal="coupa"'), 'Botão Responder deve indicar portal coupa');
+    assert.match(
+        htmlCoupa,
+        /id="btn-exportar-planilha-base"[^>]*>[\s\S]*?<\/button>\s*<button[^>]*id="btn-responder-cotacao"/,
+        'Botão Responder deve ficar imediatamente ao lado do botão Planilha Base'
+    );
+
+    const htmlVale = Tela.detalhe(cVale);
+    assert.ok(htmlVale.includes('id="btn-responder-cotacao"'), 'Cotação Vale aberta deve ter botão Responder');
+    assert.ok(htmlVale.includes('data-portal="vale"'), 'Botão Responder deve indicar portal vale');
+
+    const htmlOutro = Tela.detalhe(cOutro);
+    assert.ok(!htmlOutro.includes('id="btn-responder-cotacao"'), 'Cotação fora de Coupa/Vale não deve exibir botão Responder');
+
+    const codigoTela = fs.readFileSync(path.join(__dirname, '../public/minhas-cotacoes/tela.js'), 'utf8');
+    const blocoCartao = codigoTela.slice(codigoTela.indexOf('function cartao('), codigoTela.indexOf('function quadro('));
+    assert.ok(!blocoCartao.includes('btn-responder-cotacao'), 'Cartão da lista principal não deve exibir o botão antes de abrir a cotação');
+});
+
+test('tela: clicar em Responder exibe os 3 campos de arraste (Planilha Base, DAV, Datasheet) e carregar a Planilha Base mostra os dados editáveis', async () => {
+    const { context, handlers } = setupMinhasCotacoesEnv();
+    const Tela = context.window.Tela;
+
+    handlers.retorno_planilha_json({
+        sucesso: true,
+        portais_robo: { '800123': 'coupa' },
+        cotacoes: [
+            {
+                'COTAÇÃO': '800123',
+                'VENCIMENTO': dataRel(1),
+                'LOCALIDADE': 'TUBARÃO',
+                'ITEM': '(Item 1) BOMBA CENTRÍFUGA\n(Item 2) SELO MECÂNICO',
+                'QUANTIDADE': '(Item 1) 2 UN\n(Item 2) 5 UN'
+            }
+        ]
+    });
+
+    const cCoupa = Tela.estado.lista[0];
+    Tela.estado.aberta = Tela.id(cCoupa);
+    Tela.estado.respondendoPortal = true;
+
+    const htmlAberto = Tela.detalhe(cCoupa);
+    assert.ok(htmlAberto.includes('id="painel-responder-cotacao"'), 'Deve renderizar o painel de resposta');
+    assert.ok(htmlAberto.includes('id="drop-planilha-base"'), 'Deve ter campo de arraste da Planilha Base');
+    assert.ok(htmlAberto.includes('id="drop-dav"'), 'Deve ter campo de arraste do DAV');
+    assert.ok(htmlAberto.includes('id="drop-datasheet"'), 'Deve ter campo de arraste do Datasheet');
+
+    // Prepara uma Planilha Base preenchida pelo vendedor
+    const templateBuf = fs.readFileSync(path.join(__dirname, '../public/PLANILHA BASE.xlsx'));
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(templateBuf);
+    const ws = wb.getWorksheet('ORÇAMENTO');
+    ws.getCell('A2').value = 'BOMBA CENTRÍFUGA';
+    ws.getCell('B2').value = 2;
+    ws.getCell('C2').value = 1000; // Custo 1000, margem padrão 45% => 1450,00
+    ws.getCell('L2').value = '84137090';
+    ws.getCell('M2').value = 'SP';
+    ws.getCell('N2').value = 12;
+
+    ws.getCell('A3').value = 'SELO MECÂNICO';
+    ws.getCell('B3').value = 5;
+    ws.getCell('C3').value = 200; // Custo 200, margem padrão 45% => 290,00
+    ws.getCell('L3').value = '84842000';
+    ws.getCell('M3').value = 'MG';
+    ws.getCell('N3').value = 18;
+
+    ws.getCell('B32').value = 15; // Prazo de entrega (Dias)
+    const bufferPreenchido = await wb.xlsx.writeBuffer();
+
+    await Tela.receberArquivosResposta(Tela.id(cCoupa), 'planilha', [{
+        name: '800123 - TUBARÃO.xlsx',
+        arrayBuffer: async () => bufferPreenchido
+    }]);
+
+    const resp = Tela.dadosResposta(cCoupa);
+    assert.equal(resp.itens.length, 2, 'Deve extrair os 2 itens preenchidos na planilha');
+    assert.equal(resp.itens[0].preco, '1450,00');
+    assert.equal(resp.itens[0].prazo, '15');
+    assert.equal(resp.itens[0].ncm, '8413.70.90');
+    assert.equal(resp.itens[0].origem, 'SP');
+    assert.equal(resp.itens[0].icms, '12');
+
+    assert.equal(resp.itens[1].preco, '290,00');
+    assert.equal(resp.itens[1].prazo, '15');
+    assert.equal(resp.itens[1].ncm, '8484.20.00');
+    assert.equal(resp.itens[1].origem, 'MG');
+    assert.equal(resp.itens[1].icms, '18');
+
+    const htmlComPlanilha = Tela.detalhe(cCoupa);
+    assert.ok(htmlComPlanilha.includes('id="pc-resp-itens-preview"'), 'Deve mostrar as informações da planilha na tela');
+    assert.ok(htmlComPlanilha.includes('data-resp-campo="preco"'), 'Deve exibir campo editável de preço');
+    assert.ok(htmlComPlanilha.includes('data-resp-campo="prazo"'), 'Deve exibir campo editável de prazo');
+    assert.ok(htmlComPlanilha.includes('data-resp-campo="ncm"'), 'Deve exibir campo editável de NCM');
+    assert.ok(htmlComPlanilha.includes('data-resp-campo="origem"'), 'Deve exibir campo editável de origem');
+    assert.ok(htmlComPlanilha.includes('data-resp-campo="icms"'), 'Deve exibir campo editável de ICMS');
+    assert.ok(htmlComPlanilha.includes('value="1450,00"'), 'Deve preencher o valor unitário calculado da planilha');
+    assert.ok(htmlComPlanilha.includes('value="8413.70.90"'), 'Deve preencher o NCM lido da planilha já formatado com pontos nos dois últimos pares');
+    assert.equal(context.window.formatarNcmPadrao('85411019'), '8541.10.19');
+    assert.equal(context.window.formatarNcmPadrao('85234900'), '8523.49.00');
+    assert.equal(context.window.formatarNcmPadrao('8523.49.00'), '8523.49.00');
+});
+
+test('Exibe prints de cada item respondido/salvo no card do evento e mostra Captcha na tela principal para todos os vendedores', () => {
+    const { context, handlers, emitted } = setupMinhasCotacoesEnv();
+    const Tela = context.window.Tela;
+
+    handlers.retorno_planilha_json({
+        sucesso: true,
+        portais_robo: { '800123': 'coupa' },
+        cotacoes: [
+            {
+                'COTAÇÃO': '800123',
+                'VENCIMENTO': dataRel(1),
+                'LOCALIDADE': 'TUBARÃO',
+                'ITEM': '(Item 1) BOMBA CENTRÍFUGA\n(Item 2) SELO MECÂNICO',
+                'QUANTIDADE': '(Item 1) 2 UN\n(Item 2) 5 UN'
+            }
+        ]
+    });
+
+    const cCoupa = Tela.estado.lista[0];
+
+    // Antes de receber prints, não deve mostrar seção de prints
+    assert.ok(!Tela.cartao(cCoupa, 0).includes('b-prints-card'), 'Card não deve exibir prints antes da resposta');
+    assert.ok(!Tela.detalhe(cCoupa).includes('id="prints-itens-respondidos"'), 'Modal não deve exibir prints antes da resposta');
+
+    // Simula recebimento dos prints pelo socket (prints_evento_atualizados)
+    assert.equal(typeof handlers.prints_evento_atualizados, 'function', 'Deve escutar prints_evento_atualizados');
+    handlers.prints_evento_atualizados({
+        evento: '800123',
+        prints: [
+            { item: 1, imagem: 'iVBORw0KGgoAAAANSUhEUg==', preco: '1450,00', prazo: '15' },
+            { item: 2, imagem: 'iVBORw0KGgoAAAANSUhEUg==', preco: '290,00', prazo: '15' }
+        ]
+    });
+
+    const htmlCard = Tela.cartao(cCoupa, 0);
+    assert.ok(htmlCard.includes('class="b-prints-card"'), 'Card do evento deve mostrar os prints dos itens respondidos');
+    assert.ok(htmlCard.includes('2 itens salvos'), 'Card deve indicar a quantidade de itens salvos');
+    assert.ok(htmlCard.includes('data:image/png;base64,iVBORw0KGgoAAAANSUhEUg=='), 'Card deve renderizar a miniatura de cada item salvo');
+
+    const htmlDetalhe = Tela.detalhe(cCoupa);
+    assert.ok(htmlDetalhe.includes('id="prints-itens-respondidos"'), 'Detalhe do evento deve mostrar a galeria de prints dos itens respondidos');
+    assert.ok(htmlDetalhe.includes('Item 1'), 'Galeria deve identificar o Item 1');
+    assert.ok(htmlDetalhe.includes('Item 2'), 'Galeria deve identificar o Item 2');
+
+    // Captcha na tela principal para todos os vendedores
+    assert.equal(typeof handlers.nova_imagem, 'function', 'Deve escutar nova_imagem para Captcha global');
+    assert.equal(typeof handlers.captcha_resolvido, 'function', 'Deve escutar captcha_resolvido');
+    assert.equal(Tela.painelCaptchaGlobal(), '', 'Sem Captcha ativo não deve renderizar o painel');
+
+    handlers.nova_imagem({ imagem: 'iVBORw0KGgoCAPTCHA==' });
+    assert.equal(Tela.estado.captchaImagem, 'iVBORw0KGgoCAPTCHA==', 'Deve armazenar a imagem do Captcha no estado');
+
+    const htmlCaptcha = Tela.painelCaptchaGlobal();
+    assert.ok(htmlCaptcha.includes('id="painel-captcha-vendedores"'), 'Deve renderizar o painel de Captcha na tela principal');
+    assert.ok(htmlCaptcha.includes('id="imagem-captcha-vendedor"'), 'Deve exibir a imagem clicável do Captcha para os vendedores');
+
+    context.clicarCaptchaGlobal(140, 95);
+    const ultimoEmit = emitted[emitted.length - 1];
+    assert.equal(ultimoEmit[0], 'clique_no_captcha', 'Clique do vendedor deve enviar clique_no_captcha');
+    assert.equal(ultimoEmit[1].x, 140, 'Coordenada X enviada corretamente');
+    assert.equal(ultimoEmit[1].y, 95, 'Coordenada Y enviada corretamente');
+
+    handlers.captcha_resolvido();
+    assert.equal(Tela.estado.captchaImagem, '', 'Quando o Captcha for resolvido, deve limpar a imagem do Captcha');
+    assert.equal(Tela.painelCaptchaGlobal(), '', 'Quando o Captcha for resolvido, deve ocultar o banner da tela principal');
+});
+
+test('Checkbox "Datasheet por linha" oculta o quadrado geral de Datasheet e exibe um quadrado em cada item do evento', async () => {
+    const { context, handlers } = setupMinhasCotacoesEnv();
+    const Tela = context.window.Tela;
+
+    handlers.retorno_planilha_json({
+        sucesso: true,
+        portais_robo: { '800123': 'vale' },
+        cotacoes: [
+            {
+                'COTAÇÃO': '800123',
+                'VENCIMENTO': dataRel(1),
+                'LOCALIDADE': 'VALE S.A.',
+                'ITEM': '(Item 1) BOMBA CENTRÍFUGA\n(Item 2) SELO MECÂNICO',
+                'QUANTIDADE': '(Item 1) 2 UN\n(Item 2) 5 UN'
+            }
+        ]
+    });
+
+    const cVale = Tela.estado.lista[0];
+    const k = Tela.id(cVale);
+    Tela.estado.aberta = k;
+    Tela.estado.respondendoPortal = true;
+
+    // 1. Por padrão (desmarcado), mostra a caixinha "Datasheet por linha" e o quadrado geral #drop-datasheet
+    const htmlPadrao = Tela.detalhe(cVale);
+    assert.ok(htmlPadrao.includes('id="check-datasheet-por-linha"'), 'Deve exibir o checkbox "Datasheet por linha" acima do datasheet');
+    assert.ok(htmlPadrao.includes('Datasheet por linha'), 'Deve ter o rótulo "Datasheet por linha"');
+    assert.ok(htmlPadrao.includes('id="drop-datasheet"'), 'Quando desmarcado, deve mostrar o quadrado geral de Datasheet');
+    assert.ok(!htmlPadrao.includes('id="drop-datasheet-item-0"'), 'Quando desmarcado, não deve mostrar quadrado de datasheet por item');
+
+    // 2. Ao marcar "Datasheet por linha", o quadrado geral some e aparece um quadrado em cada item do evento
+    Tela.alternarDatasheetPorLinha(k, true);
+    const htmlMarcado = Tela.detalhe(cVale);
+    assert.ok(!htmlMarcado.includes('id="drop-datasheet"'), 'Quando marcado, o quadrado geral do Datasheet deve sumir');
+    assert.ok(htmlMarcado.includes('id="drop-datasheet-item-0"'), 'Deve aparecer o quadrado de Datasheet no Item 1');
+    assert.ok(htmlMarcado.includes('id="drop-datasheet-item-1"'), 'Deve aparecer o quadrado de Datasheet no Item 2');
+
+    // 3. Anexa datasheets diferentes para cada item
+    await Tela.receberArquivosResposta(k, 'datasheet-item', [{ name: 'ds_bomba.pdf' }], 0);
+    await Tela.receberArquivosResposta(k, 'datasheet-item', [{ name: 'ds_selo.pdf' }], 1);
+
+    const dados = Tela.dadosResposta(cVale);
+    assert.equal(dados.datasheetPorLinha, true);
+    assert.equal(dados.datasheetsPorItem[0].length, 1);
+    assert.equal(dados.datasheetsPorItem[0][0].name, 'ds_bomba.pdf');
+    assert.equal(dados.datasheetsPorItem[1].length, 1);
+    assert.equal(dados.datasheetsPorItem[1][0].name, 'ds_selo.pdf');
+
+    const htmlComArquivos = Tela.detalhe(cVale);
+    assert.ok(htmlComArquivos.includes('ds_bomba.pdf'), 'Deve listar o datasheet anexado no Item 1');
+    assert.ok(htmlComArquivos.includes('ds_selo.pdf'), 'Deve listar o datasheet anexado no Item 2');
+
+    // 4. Se desmarcar a caixinha, volta ao funcionamento normal de antes
+    Tela.alternarDatasheetPorLinha(k, false);
+    const htmlDesmarcado = Tela.detalhe(cVale);
+    assert.ok(htmlDesmarcado.includes('id="drop-datasheet"'), 'Ao desmarcar, o quadrado geral do Datasheet volta a aparecer');
+    assert.ok(!htmlDesmarcado.includes('id="drop-datasheet-item-0"'), 'Ao desmarcar, os quadrados por item somem');
+});
+
+test('Salva o erro minimalista em vermelho no evento e oculta o alerta quando o usuário enviar a resposta novamente', async () => {
+    const { context, handlers } = setupMinhasCotacoesEnv();
+    const Tela = context.window.Tela;
+
+    handlers.retorno_planilha_json({
+        sucesso: true,
+        portais_robo: { '800777': 'vale' },
+        cotacoes: [
+            {
+                'COTAÇÃO': '800777',
+                'VENCIMENTO': dataRel(1),
+                'LOCALIDADE': 'VALE S.A.',
+                'ITEM': '(Item 1) VÁLVULA ESFERA',
+                'QUANTIDADE': '(Item 1) 3 UN'
+            }
+        ]
+    });
+
+    const cota = Tela.estado.lista[0];
+    const k = Tela.id(cota);
+
+    // 1. Quando ocorre erro ao responder o evento, salva o erro curto e direto em vermelho no card e no modal
+    handlers.tarefa_concluida({
+        evento: 'Evento 800777',
+        sucesso: false,
+        erro: 'NCM não existe · Faltou a origem'
+    });
+
+    assert.equal(Tela.erroDe(cota), 'NCM não existe · Faltou a origem');
+
+    const htmlCardComErro = Tela.cartao(cota, 0);
+    assert.ok(htmlCardComErro.includes('b-erro-card'), 'O card do evento deve mostrar a badge minimalista de erro em vermelho');
+    assert.ok(htmlCardComErro.includes('com-erro'), 'O card do evento deve receber a classe com-erro');
+    assert.ok(htmlCardComErro.includes('NCM não existe · Faltou a origem'), 'O card deve exibir o motivo curto do erro');
+
+    Tela.estado.aberta = k;
+    const htmlModalComErro = Tela.detalhe(cota);
+    assert.ok(htmlModalComErro.includes('pc-alerta-erro-evento'), 'O modal do evento deve mostrar o alerta minimalista de erro em vermelho');
+    assert.ok(htmlModalComErro.includes('NCM não existe · Faltou a origem'), 'O modal deve mostrar o motivo curto do erro');
+
+    // Também formata mensagens brutas em textos curtos ("Valor errado", "NCM não existe", "Faltou a origem")
+    assert.equal(Tela.formatarErroCurto('NCM não existe'), 'NCM não existe');
+    assert.equal(Tela.formatarErroCurto('Valor errado'), 'Valor errado');
+    assert.equal(Tela.formatarErroCurto('Faltou a origem'), 'Faltou a origem');
+
+    // 2. Quando o usuário envia a resposta novamente para esse evento, o alerta de erro desaparece
+    let enviadoParaServidor = null;
+    context.enviarRespostaCotacaoPortal = async (payload) => {
+        enviadoParaServidor = payload;
+        return { sucesso: true };
+    };
+
+    const d = Tela.dadosResposta(cota);
+    d.itens = [{ n: 1, produto: 'VÁLVULA ESFERA', quantidade: 3, preco: '150,00', prazo: '10', ncm: '8481.80.95', origem: '0', icms: '18' }];
+
+    await Tela.enviarRespostaDoModal(cota);
+
+    assert.ok(enviadoParaServidor, 'Deve ter enviado a nova resposta do evento');
+    assert.equal(Tela.erroDe(cota), '', 'O erro do evento deve ser limpo ao reenviar a resposta');
+
+    const htmlCardSemErro = Tela.cartao(cota, 0);
+    assert.ok(!htmlCardSemErro.includes('b-erro-card'), 'O alerta de erro deve sumir do card após reenviar a resposta');
+    assert.ok(!htmlCardSemErro.includes('com-erro'), 'A classe com-erro deve sair do card após reenviar a resposta');
+
+    const htmlModalSemErro = Tela.detalhe(cota);
+    assert.ok(!htmlModalSemErro.includes('pc-alerta-erro-evento'), 'O alerta de erro deve sumir do modal após reenviar a resposta');
 });

@@ -47,7 +47,7 @@ test('servidor real: admin exclusivo, origem do robô, correlação, JSON intact
   const bot = await client({ robo_secret: secret });
   const ready = event(bot, 'sincronizar_estado'); bot.emit('sou_o_robo'); await ready;
   bot.on('validar_login', data => bot.emit('resultado_login', { sucesso: true, user: data.user,
-    isAdmin: data.user === 'admin@example.test', hasDashboardAccess: true, hasPlanilhaAccess: true, clientId: data.clientId }));
+    isAdmin: data.user === 'admin@example.test', hasDashboardAccess: data.user === 'admin@example.test', hasPlanilhaAccess: true, clientId: data.clientId }));
   bot.on('comando_carregar_planilha_json', data => {
     commands.push(data);
     bot.emit('retorno_planilha_json', { sucesso: true, clientId: data.clientId,

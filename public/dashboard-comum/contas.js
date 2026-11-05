@@ -14,8 +14,7 @@
                 dev: !!d.dev,
                 verificado: d.verificado !== false,
                 dashboard_access: !!d.dashboard_access,
-                planilha_access: !!d.planilha_access,
-                portais_access: !!d.portais_access,
+                portais_access: !!d.portais_access || !!d.dashboard_access,
                 bloqueado: !!d.bloqueado,
                 vendedor: String(d.vendedor || ''),
                 online: !!d.online,
@@ -32,7 +31,8 @@
         const termo = String(f.busca || '').trim().toLowerCase();
         return lista.filter(u => {
             if (f.grupo === 'admins' && !u.admin) return false;
-            if (f.grupo === 'portais' && !(u.portais_access || u.admin)) return false;
+            if (f.grupo === 'portais' && !(u.portais_access || u.dashboard_access || u.admin)) return false;
+            if (f.grupo === 'estatisticas' && !(u.dashboard_access || u.admin)) return false;
             if (f.grupo === 'vendedores' && !u.vendedor.trim()) return false;
             if (f.grupo === 'pendentes' && u.verificado !== false) return false;
             if (termo && !`${u.email} ${u.vendedor}`.toLowerCase().includes(termo)) return false;
@@ -44,7 +44,8 @@
         return {
             total: lista.length,
             admins: lista.filter(u => u.admin).length,
-            portais: lista.filter(u => u.portais_access || u.admin).length,
+            portais: lista.filter(u => u.portais_access || u.dashboard_access || u.admin).length,
+            estatisticas: lista.filter(u => u.dashboard_access || u.admin).length,
             vendedores: lista.filter(u => u.vendedor.trim()).length,
         };
     }
@@ -56,7 +57,8 @@
             ${card('', 'Contas cadastradas', k.total, '', 'total de usuários no sistema', 0)}
             ${card('admins', 'Administradores', k.admins, 'green', 'com acesso administrativo total', 1)}
             ${card('portais', 'Acesso aos portais', k.portais, 'blue', 'habilitados nos robôs', 2)}
-            ${card('vendedores', 'Com vendedor vinculado', k.vendedores, 'cyan', 'associados à planilha comercial', 3)}
+            ${card('estatisticas', 'Estatísticas', k.estatisticas, 'amber', 'Gestão comercial no dashboard', 3)}
+            ${card('vendedores', 'Com vendedor vinculado', k.vendedores, 'cyan', 'associados à planilha comercial', 4)}
         </div>`;
     }
 
@@ -93,8 +95,8 @@
         const icone = ctx.icone || (() => '');
 
         const linhas = lista.map((u, idx) => {
-            const hasPlanilha = u.planilha_access || u.admin;
-            const hasPortais = u.portais_access || u.admin;
+            const hasPortais = u.portais_access || u.dashboard_access || u.admin;
+            const hasStats = u.dashboard_access || u.admin;
             const disabledAttr = u.admin ? 'disabled title="Administradores sempre têm acesso total"' : '';
             const email = esc(u.email);
             const vend = esc(u.vendedor);
@@ -111,7 +113,7 @@
                                 ${u.admin ? '<span class="tag azul">ADMIN</span>' : ''}
                                 ${u.verificado === false ? '<span class="tag vermelho" title="Ainda não clicou no link de ativação">NÃO VERIFICADO</span>' : ''}
                             </div>
-                            <small>${u.admin ? 'Administrador' : 'Vendedor'} · <span class="aud-online${u.online ? ' on' : ''}">${u.online ? 'Online' : 'Offline'}</span></small>
+                            <small>${u.admin ? 'Administrador' : (u.vendedor ? 'Vendedor' : 'Usuário')} · <span class="aud-online${u.online ? ' on' : ''}">${u.online ? 'Online' : 'Offline'}</span></small>
                         </div>
                     </div>
                 </td>
@@ -122,19 +124,14 @@
                     </div>
                 </td>
                 <td>
-                    <span class="status-badge ${u.admin ? 'green' : 'muted'}" title="Estatísticas é exclusiva de administradores">
-                        ${u.admin ? 'Administrador' : 'Restrito'}
-                    </span>
-                </td>
-                <td>
                     <label class="contas-switch">
-                        <input type="checkbox" data-acao-change="toggle-acesso" data-email="${email}" data-campo="planilha_access" ${hasPlanilha ? 'checked' : ''} ${disabledAttr}>
+                        <input type="checkbox" data-acao-change="toggle-acesso" data-email="${email}" data-campo="portais_access" ${hasPortais ? 'checked' : ''} ${disabledAttr}>
                         <span class="contas-slider"></span>
                     </label>
                 </td>
                 <td>
                     <label class="contas-switch">
-                        <input type="checkbox" data-acao-change="toggle-acesso" data-email="${email}" data-campo="portais_access" ${hasPortais ? 'checked' : ''} ${disabledAttr}>
+                        <input type="checkbox" data-acao-change="toggle-acesso" data-email="${email}" data-campo="dashboard_access" ${hasStats ? 'checked' : ''} ${disabledAttr}>
                         <span class="contas-slider"></span>
                     </label>
                 </td>
@@ -152,7 +149,7 @@
                 <div class="panel-head">
                     <div>
                         <div class="table-title"><h2>Contas e privilégios</h2><span class="counter number">${lista.length}</span></div>
-                        <p>Vincule o nome do vendedor na planilha e controle o acesso à Planilha Geral e aos Portais de Robôs.</p>
+                        <p>Vincule o vendedor e controle o acesso aos Portais de Robôs e às Estatísticas (Gestão comercial).</p>
                     </div>
                     <div class="actions">
                         ${f.grupo || f.busca ? '<button type="button" class="button small text" data-acao="limpar">Limpar filtro</button>' : ''}
@@ -165,6 +162,7 @@
                             <option value="" ${!f.grupo ? 'selected' : ''}>Todos (${todos.length})</option>
                             <option value="admins" ${f.grupo === 'admins' ? 'selected' : ''}>Administradores</option>
                             <option value="portais" ${f.grupo === 'portais' ? 'selected' : ''}>Com acesso aos portais</option>
+                            <option value="estatisticas" ${f.grupo === 'estatisticas' ? 'selected' : ''}>Com acesso a estatísticas</option>
                             <option value="vendedores" ${f.grupo === 'vendedores' ? 'selected' : ''}>Com vendedor vinculado</option>
                             <option value="pendentes" ${f.grupo === 'pendentes' ? 'selected' : ''}>Não verificados</option>
                         </select>
@@ -180,9 +178,8 @@
                             <tr>
                                 <th>Usuário (E-mail)</th>
                                 <th>Vendedor vinculado (Planilha)</th>
-                                <th>Permissões · Estatísticas</th>
-                                <th>Permissões · Planilha Geral</th>
                                 <th>Permissões · Portais (Robôs)</th>
+                                <th>Permissões · Estatísticas (Comercial)</th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
@@ -258,8 +255,13 @@
                 });
                 socket.on('admin_acesso_alterado', r => {
                     if (r && r.sucesso) {
-                        if (estado.dados && estado.dados.usuarios && estado.dados.usuarios[r.email] && r.campo) {
-                            estado.dados.usuarios[r.email][r.campo] = r.acesso;
+                        if (estado.dados && estado.dados.usuarios && estado.dados.usuarios[r.email]) {
+                            const u = estado.dados.usuarios[r.email];
+                            if (r.portais_access !== undefined) u.portais_access = r.portais_access;
+                            if (r.dashboard_access !== undefined) u.dashboard_access = r.dashboard_access;
+                            if (r.campo) u[r.campo] = r.acesso;
+                            if (r.campo === 'dashboard_access' && r.acesso) u.portais_access = true;
+                            if (r.campo === 'portais_access' && !r.acesso) u.dashboard_access = false;
                         }
                         mostrarToast(`Permissão atualizada para ${r.email}.`);
                         desenhar();
@@ -300,7 +302,10 @@
                 'toggle-acesso': (el, ctx) => {
                     const socket = ctx.socket && ctx.socket();
                     if (!socket) return;
-                    socket.emit('admin_alterar_acesso_dashboard', { email: el.dataset.email, campo: el.dataset.campo, acesso: !!el.checked });
+                    const email = el.dataset.email;
+                    const campo = el.dataset.campo;
+                    const acesso = !!el.checked;
+                    socket.emit('admin_alterar_acesso_dashboard', { email, campo, acesso });
                 },
                 'abrir-config': (el, ctx) => {
                     op.configAberta = true;
