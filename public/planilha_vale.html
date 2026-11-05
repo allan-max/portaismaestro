@@ -831,7 +831,7 @@
     }
     </script>
 <script>
-        const sessionAtual = localStorage.getItem('maestro_session');
+        // sessionAtual já vem do script de acesso no <head>; declarar de novo derruba este script inteiro
         const socket = io({ auth: { sessionId: sessionAtual }, transports: ['websocket'], upgrade: false });
 
         socket.emit('sou_frontend', { sessionId: sessionAtual });
