@@ -1103,8 +1103,8 @@
     <script src="vendor/exceljs-4.4.0.min.js"></script>
 
     <script>
-        const sessionAtual = localStorage.getItem('maestro_session');
-        const socket = io({ 
+        // sessionAtual já vem do script de acesso no <head>; declarar de novo derruba este script inteiro
+        const socket = io({
             auth: { sessionId: sessionAtual },
             transports: ['websocket'],
             upgrade: false
