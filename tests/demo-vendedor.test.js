@@ -59,5 +59,5 @@ test('a consulta aguarda confirmação da sessão e a escrita usa apenas o coman
     assert.ok(source.includes("socketVendedores.on('sincronizar_estado'"));
     const events = [...source.matchAll(/socketVendedores\.emit\('([^']+)'/g)].map(match => match[1]);
     assert.deepEqual(events.sort(), ['marcar_cotacao_respondida', 'solicitar_planilha_json', 'sou_frontend']);
-    assert.ok(fs.readFileSync(path.join(__dirname, '../public/planilha_vale.html'), 'utf8').includes('id="aba-cotacoes-vendedores"'));
+    // b34566a tirou da planilha o link para teste/ (a página continua acessível pelo endereço)
 });

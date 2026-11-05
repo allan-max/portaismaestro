@@ -599,6 +599,8 @@
             adicionarLinhaLog('mini-terminal-antigo', msg);
         }
 
+        // Texto vindo do robô/portal entra na tela como texto, nunca como HTML
+        const escHtml = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
         function adicionarLinhaLog(terminalId, msg) {
             const term = document.getElementById(terminalId);
             if (term) {
@@ -607,7 +609,7 @@
                              now.getMinutes().toString().padStart(2, '0') + ':' +
                              now.getSeconds().toString().padStart(2, '0');
                 
-                term.innerHTML += `<div class="log-line"><span class="log-time">[${hora}]</span> ${msg}</div>`;
+                term.innerHTML += `<div class="log-line"><span class="log-time">[${hora}]</span> ${escHtml(msg)}</div>`;
                 
                 while (term.childElementCount > 80) {
                     term.removeChild(term.firstChild);
