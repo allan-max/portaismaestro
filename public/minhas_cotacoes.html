@@ -484,6 +484,17 @@
         }
 
         const MAX_ITENS_PLANILHA_BASE = 24;
+        // Listas suspensas da Planilha Base v3 (célula/intervalo -> lista na aba LISTAS), iguais ao modelo do cotafrete
+        const LISTAS_PLANILHA_BASE = [
+            ['B33', 'LISTAS!$A$2:$A$28'],     // Vendedor
+            ['B34', 'LISTAS!$B$2:$B$8'],      // Forma de pagamento
+            ['B35', 'LISTAS!$C$2:$C$23'],     // Parcelamento
+            ['B37', 'LISTAS!$E$2:$E$4'],      // Filial
+            ['B38', 'LISTAS!$H$2:$H$3'],      // Frete
+            ['M2:M25', 'LISTAS!$D$2:$D$10'],  // Origem
+            ['P2:P25', 'LISTAS!$F$2:$F$500'], // Grupo
+            ['Q2:Q25', 'LISTAS!$G$2:$G$1409'] // Marca
+        ];
 
         async function exportarCotacaoPlanilhaBase(cota) {
             if (!cota) {
@@ -526,6 +537,12 @@
                 const obs = cota['OBSERVAÇÕES'] || cota['OBSERVACOES'];
                 if (obs) ws.getCell('B26').value = String(obs);
 
+                // ExcelJS descarta as listas suspensas da v3 (validações x14 que apontam para a aba LISTAS).
+                // Reaplica as mesmas listas do modelo do cotafrete; manter em sincronia com o template.
+                LISTAS_PLANILHA_BASE.forEach(([ref, intervalo]) => {
+                    ws.dataValidations.add(ref, { type: 'list', allowBlank: true, formulae: [intervalo] });
+                });
+
                 const idCotacao = String(cota['COTAÇÃO'] || cota['COTACAO'] || cota['NUMERO'] || cota['ID'] || 'cotacao')
                     .replace(/[^a-zA-Z0-9_-]/g, '_') || 'cotacao';
                 const nomeArquivo = `planilha_base_cotacao_${idCotacao}.xlsx`;
@@ -534,12 +551,9 @@
                 const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
                 baixarBlob(blob, nomeArquivo);
 
-                // ExcelJS descarta as listas suspensas (validações x14) da v3 ao gravar
-                const avisos = ['As listas de seleção (vendedor, pagamento…) não vêm no arquivo exportado: use o modelo do Gerar DAV se precisar delas.'];
                 if (todosItens.length > MAX_ITENS_PLANILHA_BASE) {
-                    avisos.unshift(`Esta cotação tem ${todosItens.length} itens, mas a planilha comporta ${MAX_ITENS_PLANILHA_BASE} itens: os ${todosItens.length - MAX_ITENS_PLANILHA_BASE} últimos ficaram de fora.`);
+                    alert(`Esta cotação tem ${todosItens.length} itens, mas a planilha comporta ${MAX_ITENS_PLANILHA_BASE} itens: os ${todosItens.length - MAX_ITENS_PLANILHA_BASE} últimos ficaram de fora.`);
                 }
-                alert(avisos.join('\n\n'));
             } catch (err) {
                 console.error('Erro ao exportar para Planilha Base:', err);
                 alert('Não foi possível exportar para a Planilha Base: ' + (err.message || 'Erro desconhecido'));

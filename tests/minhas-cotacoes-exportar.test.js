@@ -485,6 +485,19 @@ test('exportarCotacaoPlanilhaBase preenche produto em A2, quantidade em B2 e pre
     assert.equal(ws.getCell('I2').value?.formula, 'SUM((C2*B2)+D2+E2+F2)*G2%+H2');
     assert.equal(ws.getCell('J2').value?.formula, 'SUM(I2/B2)');
     assert.equal(ws.getCell('I26').value?.formula, 'SUM(I2:I25)');
+
+    // Listas suspensas iguais ao modelo do cotafrete (vendedor, pagamento, parcelamento, filial, frete, origem, grupo, marca)
+    const listas = {
+        B33: 'LISTAS!$A$2:$A$28', B34: 'LISTAS!$B$2:$B$8', B35: 'LISTAS!$C$2:$C$23',
+        B37: 'LISTAS!$E$2:$E$4', B38: 'LISTAS!$H$2:$H$3',
+        M2: 'LISTAS!$D$2:$D$10', M25: 'LISTAS!$D$2:$D$10',
+        P2: 'LISTAS!$F$2:$F$500', Q25: 'LISTAS!$G$2:$G$1409'
+    };
+    for (const [ref, intervalo] of Object.entries(listas)) {
+        const dv = ws.getCell(ref).dataValidation;
+        assert.equal(dv?.type, 'list', `${ref} deve ter lista suspensa`);
+        assert.equal(dv.formulae[0], intervalo, `${ref} deve apontar para ${intervalo}`);
+    }
 });
 
 test('exportarCotacaoPlanilhaBase exibe aviso quando nenhuma cotação é passada', async () => {
