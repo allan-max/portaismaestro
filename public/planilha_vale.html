@@ -408,9 +408,23 @@
         </div>
 
         <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
-            <a href="minhas_cotacoes.html" class="tab-btn" style="text-decoration: none; color: #94a3b8; border: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px;">
+            <a id="btn-voltar-planilha" href="minhas_cotacoes.html" class="tab-btn" style="text-decoration: none; color: #94a3b8; border: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px;">
                 <i class="fa-solid fa-arrow-left"></i> Minhas Cotações
             </a>
+            <script>
+                // Admin não usa Minhas Cotações: o botão volta para a tela anterior (ou para a gestão).
+                if (localStorage.getItem('maestro_admin') === 'true') {
+                    const btnVoltar = document.getElementById('btn-voltar-planilha');
+                    btnVoltar.href = 'dashboard.html';
+                    btnVoltar.innerHTML = '<i class="fa-solid fa-arrow-left"></i> Voltar';
+                    btnVoltar.addEventListener('click', (e) => {
+                        if (document.referrer && new URL(document.referrer).origin === location.origin && history.length > 1) {
+                            e.preventDefault();
+                            history.back();
+                        }
+                    });
+                }
+            </script>
             <a href="planilha_anmyna.html" class="tab-btn" style="text-decoration: none; color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); display: flex; align-items: center; gap: 8px;">
                 <i class="fa-solid fa-table-list"></i> Planilha Anmyna
             </a>
