@@ -28,6 +28,8 @@
     function avisar(texto) { $('em-estado').textContent = texto; }
     function telaAcesso(titulo, texto) {
         $('em-app').hidden = true;
+        $('em-abas').hidden = true;
+        $('em-dash').hidden = true;
         $('em-acesso').hidden = false;
         $('em-acesso-titulo').textContent = titulo;
         $('em-acesso-texto').textContent = texto;
@@ -73,6 +75,7 @@
         avisar('Conexão perdida. Tentando reconectar…');
     });
     socket.on('emails_novidade', d => {
+        if (d && Number.isSafeInteger(d.atrasados)) mostrarContador(d.atrasados);
         const n = d && Number.isSafeInteger(d.novos) ? d.novos : 0;
         if (n <= 0) return;
         $('em-novidade-texto').textContent = n === 1 ? '1 e-mail novo chegou.' : n + ' e-mails novos chegaram.';
@@ -153,6 +156,141 @@
         dl.appendChild(el('dd', valor || '—'));
     }
 
+    function mostrarContador(n) {
+        const c = $('em-contador');
+        c.hidden = !(n > 0);
+        c.textContent = String(n);
+        c.setAttribute('aria-label', n === 1 ? '1 cotação ou pedido atrasado' : n + ' cotações ou pedidos atrasados');
+        document.title = (n > 0 ? '(' + n + ') ' : '') + 'E-mails — Maestro';
+    }
+
+    // ----- dashboard: números e barras de uma série (um tom), com o valor escrito ao lado -----
+    function kpi(rotulo, valor, alerta) {
+        const d = el('div', null, 'em-kpi' + (alerta ? ' em-kpi-alerta' : ''));
+        d.appendChild(el('strong', valor));
+        d.appendChild(el('span', rotulo));
+        return d;
+    }
+    function barras(titulo, pares) {
+        const painel = el('div', null, 'em-painel');
+        painel.appendChild(el('h3', titulo));
+        if (!pares.length) { painel.appendChild(el('p', 'Sem dados no período.', 'em-estado')); return painel; }
+        const max = Math.max(1, ...pares.map(p => p[1]));
+        const ul = el('ul', null, 'em-barras');
+        for (const [rotulo, valor] of pares) {
+            const li = el('li', null, 'em-barra');
+            li.title = rotulo + ': ' + valor.toLocaleString('pt-BR');
+            li.appendChild(el('span', rotulo, 'em-barra-rotulo'));
+            const trilho = el('span', null, 'em-barra-trilho');
+            const v = el('span', null, 'em-barra-valor');
+            v.style.width = (100 * valor / max).toFixed(1) + '%';   // CSSOM: permitido pela CSP
+            v.style.display = 'block';
+            trilho.appendChild(v);
+            li.appendChild(trilho);
+            li.appendChild(el('span', valor.toLocaleString('pt-BR'), 'em-barra-num'));
+            ul.appendChild(li);
+        }
+        painel.appendChild(ul);
+        return painel;
+    }
+    function tabela(titulo, cabecalho, linhas) {
+        const painel = el('div', null, 'em-painel');
+        painel.appendChild(el('h3', titulo));
+        const t = el('table', null, 'em-tabela');
+        const tr = el('tr');
+        cabecalho.forEach(c => tr.appendChild(el('th', c)));
+        const thead = el('thead'); thead.appendChild(tr); t.appendChild(thead);
+        const tbody = el('tbody');
+        for (const l of linhas) {
+            const r = el('tr');
+            l.forEach(c => { const td = el('td'); if (c instanceof Node) td.appendChild(c); else td.textContent = c; r.appendChild(td); });
+            tbody.appendChild(r);
+        }
+        t.appendChild(tbody);
+        painel.appendChild(t);
+        return painel;
+    }
+    function situacao(ok, textoOk, textoRuim) {
+        return el('span', (ok ? '\u2713 ' + textoOk : '\u2715 ' + textoRuim), ok ? 'em-ok' : 'em-ruim');
+    }
+    async function carregarDash() {
+        $('em-dash-estado').textContent = 'Carregando o dashboard…';
+        const r = await pedir('resumo', {});
+        if (r.cancelado) return;
+        const alvo = $('em-dash-conteudo');
+        alvo.replaceChildren();
+        if (!r.sucesso) { $('em-dash-estado').textContent = r.erro || 'Não foi possível carregar o dashboard.'; return; }
+        const d = r.dados;
+        mostrarContador(d.contador_menu);
+        $('em-dash-estado').textContent = 'Atualizado em ' + dataHora(d.gerado_em) +
+            (d.deteccao_confiavel.length ? '' : '. Nenhuma caixa grava enviados no servidor ainda: o alerta vermelho fica desligado.');
+        const kpis = el('div', null, 'em-kpis');
+        kpis.appendChild(kpi('cotações pendentes', d.pendentes['cotação'].toLocaleString('pt-BR')));
+        kpis.appendChild(kpi('pedidos pendentes', d.pendentes['pedido'].toLocaleString('pt-BR')));
+        kpis.appendChild(kpi('atrasados (mais de 4 h úteis)', d.atrasados.toLocaleString('pt-BR'), d.atrasados > 0));
+        kpis.appendChild(kpi('na fila de revisão', d.revisao.toLocaleString('pt-BR')));
+        kpis.appendChild(kpi('não classificados', d.nao_classificados.toLocaleString('pt-BR')));
+        const t = d.tempo_medio_resposta;
+        kpis.appendChild(kpi('tempo médio de resposta' + (t.n ? ' (' + t.n + ' respostas)' : ''),
+            t.horas_uteis == null ? 'sem dados' : t.horas_uteis.toLocaleString('pt-BR') + ' h úteis'));
+        kpis.appendChild(kpi('gasto de IA no mês' + (d.gasto_mes.pausado ? ' — classificação pausada' : ''),
+            'US$ ' + d.gasto_mes.usd.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' de ' + d.gasto_mes.teto.toLocaleString('pt-BR', { minimumFractionDigits: 2 }), d.gasto_mes.pausado));
+        alvo.appendChild(kpis);
+        const graficos = el('div', null, 'em-graficos');
+        graficos.appendChild(barras('Hoje por categoria', Object.entries(d.hoje_por_categoria)));
+        graficos.appendChild(barras('Volume por caixa nos últimos 7 dias', d.volume_por_caixa.map(v => [String(v.conta).split('@')[0], v.semana])));
+        alvo.appendChild(graficos);
+        if (d.lista_atrasados.length) {
+            alvo.appendChild(tabela('Atrasados', ['Recebido', 'Categoria', 'Remetente', 'Assunto', 'Horas úteis'],
+                d.lista_atrasados.map(a => [dataHora(a.data), a.categoria, a.remetente || '', a.assunto || '', String(a.horas_uteis).replace('.', ',')])));
+        }
+        alvo.appendChild(tabela('Saúde das caixas', ['Caixa', 'Leitura', 'Última leitura', 'Reconciliação', 'Erro'],
+            d.saude.map(s => [String(s.conta).split('@')[0], situacao(!s.parada && !s.ultimo_erro, 'em dia', s.ultimo_erro ? 'com erro' : 'parada'),
+                dataHora(s.ultima_leitura), s.reconciliacao == null ? '—' : (100 * s.reconciliacao).toFixed(1).replace('.', ',') + '%',
+                s.ultimo_erro || (s.pastas_com_erro ? s.pastas_com_erro + ' pasta(s) com erro' : '')])));
+    }
+    function abrirAba(dash) {
+        $('em-aba-dash').setAttribute('aria-pressed', String(dash));
+        $('em-aba-caixa').setAttribute('aria-pressed', String(!dash));
+        $('em-dash').hidden = !dash;
+        $('em-app').hidden = dash;
+        if (dash) carregarDash();
+    }
+
+    // ----- status e categoria no detalhe -----
+    const CATEGORIAS = ['cotação', 'pedido', 'financeiro/NF', 'cadastro', 'informação', 'marketing', 'spam', 'phishing', 'outros'];
+    function controles(e) {
+        const caixa = $('em-controle');
+        caixa.replaceChildren();
+        caixa.appendChild(el('span', 'Status: ' + (e.status || '—') + (e.status_por ? ' — por ' + e.status_por : '') +
+            (e.status_em ? ' em ' + dataHora(e.status_em) : ''), 'em-status-atual'));
+        for (const [valor, rotulo] of [['pendente', 'Pendente'], ['respondido', 'Respondido'], ['arquivado', 'Arquivado']]) {
+            const b = el('button', rotulo, 'em-botao em-secundario');
+            b.type = 'button';
+            b.setAttribute('aria-pressed', String(e.status === valor));
+            b.addEventListener('click', () => alterar('status', { id: e.id, status: valor }));
+            caixa.appendChild(b);
+        }
+        const sel = el('select');
+        sel.setAttribute('aria-label', 'Corrigir categoria');
+        for (const c of CATEGORIAS) { const o = el('option', c); o.value = c; if (c === e.categoria) o.selected = true; sel.appendChild(o); }
+        const corrigir = el('button', 'Corrigir categoria', 'em-botao em-secundario');
+        corrigir.type = 'button';
+        corrigir.addEventListener('click', () => { if (sel.value !== e.categoria) alterar('categoria', { id: e.id, categoria: sel.value }); });
+        caixa.appendChild(sel);
+        caixa.appendChild(corrigir);
+        if (e.categoria_original && e.categoria_original !== e.categoria) {
+            caixa.appendChild(el('span', 'Categoria original da IA: ' + e.categoria_original, 'em-status-atual'));
+        }
+    }
+    async function alterar(acao, params) {
+        const r = await pedir(acao, params);
+        if (r.cancelado) return;
+        if (!r.sucesso) { avisar(r.erro || 'Não foi possível salvar.'); return; }
+        avisar(acao === 'status' ? 'Status salvo.' : 'Categoria corrigida.');
+        mostrarDetalhe(r.dados);
+    }
+
     async function abrir(id, botao) {
         document.querySelectorAll('.em-item.em-ativo').forEach(b => b.classList.remove('em-ativo'));
         if (botao) botao.classList.add('em-ativo');
@@ -165,7 +303,13 @@
         const r = await pedir('detalhe', { id });
         if (r.cancelado) return;
         if (!r.sucesso) { $('em-assunto').textContent = r.erro || 'Não foi possível abrir o e-mail.'; return; }
-        const e = r.dados;
+        mostrarDetalhe(r.dados);
+        $('em-assunto').focus();
+    }
+
+    function mostrarDetalhe(e) {
+        $('em-meta').replaceChildren(); $('em-avisos').replaceChildren(); $('em-anexos').replaceChildren();
+        mostrarTexto();
         estado.aberto = e;
         $('em-assunto').textContent = e.assunto || '(sem assunto)';
         meta('De', (e.remetente_nome ? e.remetente_nome + ' ' : '') + '<' + (e.remetente || '') + '>');
@@ -200,7 +344,7 @@
         if (e.corpo_oculto) $('em-corpo').textContent = 'Corpo oculto: este e-mail traz código de acesso ou senha e não é exibido na central.';
         else $('em-corpo').textContent = e.corpo_texto || '(e-mail sem texto)';
         $('em-ver-html').hidden = !e.tem_html || e.corpo_oculto;
-        $('em-assunto').focus();
+        controles(e);
     }
 
     async function baixar(id, anexo, botao) {
@@ -250,4 +394,6 @@
     $('em-recarregar').addEventListener('click', () => listar(false));
     $('em-ver-html').addEventListener('click', verHtml);
     $('em-ver-texto').addEventListener('click', mostrarTexto);
+    $('em-aba-caixa').addEventListener('click', () => abrirAba(false));
+    $('em-aba-dash').addEventListener('click', () => abrirAba(true));
 })();

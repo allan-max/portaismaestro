@@ -109,8 +109,21 @@ test('anexo vira token de uso único com nome seguro', () => {
 test('novidade só para quem ainda tem permissão', () => {
   const s = setup(); s.handlers.emails_entrar(); assert.equal(s.salas.has('emails'), true);
   s.emails.novidade('impostor', { novos: 3 }); assert.equal(s.mensagens.length, 0);
-  s.emails.novidade('servico', { novos: 3 }); assert.deepEqual(s.ultima(), { e: 'emails_novidade', d: { novos: 3 } });
+  s.emails.novidade('servico', { novos: 3 }); assert.deepEqual(s.ultima(), { e: 'emails_novidade', d: { novos: 3, atrasados: null } });
   s.sessoes.set('sessao', JSON.stringify({ expires: Date.now() + 1000 }));
   s.emails.novidade('servico', { novos: 1 }); assert.equal(s.salas.has('emails'), false);
   s.emails.fechar();
+});
+
+test('marcação leva o usuário da sessão, nunca o do navegador; status e categoria validados', () => {
+  const s = setup();
+  s.pedir('status', { id: 3, status: 'respondido', usuario: 'forjado@example.test' });
+  assert.deepEqual(s.enviados[0].d.params, { id: 3, status: 'respondido', usuario: 'ana@example.test' });
+  s.pedir('status', { id: 3, status: 'apagado' }); assert.equal(s.ultima().d.codigo, 'PARAMETRO_INVALIDO');
+  s.pedir('categoria', { id: 3, categoria: 'cotação' });
+  assert.equal(s.enviados[1].d.params.usuario, 'ana@example.test');
+  s.pedir('resumo', { qualquer: 1 }); assert.deepEqual(s.enviados[2].d.params, {});
+  const sem = setup({ portais_access: true }); sem.pedir('status', { id: 3, status: 'arquivado' });
+  assert.equal(sem.ultima().d.codigo, 'SEM_PERMISSAO'); assert.equal(sem.enviados.length, 0);
+  s.emails.fechar(); sem.emails.fechar();
 });

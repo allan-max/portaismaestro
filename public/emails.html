@@ -27,6 +27,15 @@
     <a class="em-botao" href="index.html">Ir para o login do Maestro</a>
   </div>
 
+  <nav id="em-abas" class="em-abas" aria-label="Seções da central">
+    <button type="button" id="em-aba-caixa" aria-pressed="true">Caixa unificada</button>
+    <button type="button" id="em-aba-dash" aria-pressed="false">Dashboard <span id="em-contador" class="em-contador" hidden></span></button>
+  </nav>
+  <section id="em-dash" class="em-dash" aria-label="Dashboard" hidden>
+    <p id="em-dash-estado" class="em-estado" role="status" aria-live="polite"></p>
+    <div id="em-dash-conteudo"></div>
+  </section>
+
   <div id="em-app" class="em-app">
     <aside class="em-filtros" aria-label="Filtros">
       <form id="em-form" role="search">
@@ -69,6 +78,7 @@
       <h2 id="em-assunto" tabindex="-1"></h2>
       <dl id="em-meta" class="em-meta"></dl>
       <div id="em-avisos" class="em-avisos"></div>
+      <div id="em-controle" class="em-controle"></div>
       <div id="em-anexos" class="em-anexos"></div>
       <div class="em-corpo-acoes">
         <button type="button" id="em-ver-html" class="em-botao em-secundario" hidden>Ver versão formatada (HTML)</button>
