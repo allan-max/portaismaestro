@@ -177,9 +177,9 @@ test('exportar cotacao de 2 itens: v3 com itens em A2:A3, K1, A33 e aba LISTAS; 
     assert.equal(ws.getCell('I26').value.formula, 'SUM(I2:I25)');
     for (const c of ['K2', 'L2', 'Q2', 'B30', 'B33', 'B37']) assert.equal(ws.getCell(c).value, null, c + ' nao e escrita');
     assert.ok(wb.getWorksheet('LISTAS'), 'aba LISTAS existe');
-    // ExcelJS 4.4 descarta as validacoes x14 (listas suspensas) da v3: registrado aqui; se mudar, o aviso some
-    assert.equal(ws.getCell('B33').dataValidation, undefined, 'B33 sem lista suspensa no arquivo exportado');
-    assert.ok(alerts.some(a => a.includes('As listas de seleção (vendedor, pagamento…) não vêm no arquivo exportado: use o modelo do Gerar DAV se precisar delas.')));
+    // ExcelJS 4.4 descarta as validacoes x14 da v3: a exportacao reaplica as listas
+    assert.equal(ws.getCell('B33').dataValidation?.type, 'list', 'B33 com lista suspensa no arquivo exportado');
+    assert.ok(!alerts.some(a => a.includes('listas de seleção')));
 });
 
 test('exportar mais de 24 itens: so 24 vao e a tela avisa, sem sobrescrever as linhas 26+', async () => {

@@ -484,16 +484,18 @@
         }
 
         const MAX_ITENS_PLANILHA_BASE = 24;
-        // Listas suspensas da Planilha Base v3 (célula/intervalo -> lista na aba LISTAS), iguais ao modelo do cotafrete
+        // Listas suspensas da Planilha Base v3, iguais ao modelo do cotafrete (scripts/validacoes_modelo.py):
+        // célula/intervalo, lista na aba LISTAS, avisa em vez de barrar, título e mensagem.
+        // Barra o que o robô recusaria; só avisa no que vem do HSE, porque a cópia em LISTAS envelhece.
         const LISTAS_PLANILHA_BASE = [
-            ['B33', 'LISTAS!$A$2:$A$28'],     // Vendedor
-            ['B34', 'LISTAS!$B$2:$B$8'],      // Forma de pagamento
-            ['B35', 'LISTAS!$C$2:$C$23'],     // Parcelamento
-            ['B37', 'LISTAS!$E$2:$E$4'],      // Filial
-            ['B38', 'LISTAS!$H$2:$H$3'],      // Frete
-            ['M2:M25', 'LISTAS!$D$2:$D$10'],  // Origem
-            ['P2:P25', 'LISTAS!$F$2:$F$500'], // Grupo
-            ['Q2:Q25', 'LISTAS!$G$2:$G$1409'] // Marca
+            ['B33', 'LISTAS!$A$2:$A$28', true, 'Vendedor', 'Este nome não está na lista. O robô confere no HSE: use o nome exato.'],
+            ['B34', 'LISTAS!$B$2:$B$8', false, 'Forma de pagamento', 'Escolha uma das formas de pagamento da lista.'],
+            ['B35', 'LISTAS!$C$2:$C$23', true, 'Parcelamento', 'Este parcelamento não está na lista. Confira antes de seguir.'],
+            ['B37', 'LISTAS!$E$2:$E$4', false, 'Filial', 'Escolha a filial 1, 2 ou 3 na lista.'],
+            ['B38', 'LISTAS!$H$2:$H$3', false, 'Frete', 'Escolha CIF ou FOB na lista.'],
+            ['M2:M25', 'LISTAS!$D$2:$D$10', false, 'Origem', 'Escolha a origem na lista (0 a 8).'],
+            ['P2:P25', 'LISTAS!$F$2:$F$500', true, 'Grupo', 'Este grupo não está na lista. O produto novo precisa de um grupo do HSE.'],
+            ['Q2:Q25', 'LISTAS!$G$2:$G$1409', true, 'Marca', 'Esta marca não está na lista. O produto novo precisa de uma marca do HSE.']
         ];
 
         async function exportarCotacaoPlanilhaBase(cota) {
@@ -539,8 +541,11 @@
 
                 // ExcelJS descarta as listas suspensas da v3 (validações x14 que apontam para a aba LISTAS).
                 // Reaplica as mesmas listas do modelo do cotafrete; manter em sincronia com o template.
-                LISTAS_PLANILHA_BASE.forEach(([ref, intervalo]) => {
-                    ws.dataValidations.add(ref, { type: 'list', allowBlank: true, formulae: [intervalo] });
+                LISTAS_PLANILHA_BASE.forEach(([ref, intervalo, avisar, errorTitle, error]) => {
+                    ws.dataValidations.add(ref, {
+                        type: 'list', allowBlank: true, formulae: [intervalo], showErrorMessage: true,
+                        errorTitle, error, ...(avisar ? { errorStyle: 'warning' } : {})
+                    });
                 });
 
                 const idCotacao = String(cota['COTAÇÃO'] || cota['COTACAO'] || cota['NUMERO'] || cota['ID'] || 'cotacao')

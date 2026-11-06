@@ -498,6 +498,27 @@ test('exportarCotacaoPlanilhaBase preenche produto em A2, quantidade em B2 e pre
         assert.equal(dv?.type, 'list', `${ref} deve ter lista suspensa`);
         assert.equal(dv.formulae[0], intervalo, `${ref} deve apontar para ${intervalo}`);
     }
+
+    // A lista barra o que o robô recusaria e só avisa no que vem do HSE (cotafrete: scripts/validacoes_modelo.py)
+    for (const ref of ['B34', 'B37', 'B38', 'M2']) {
+        const dv = ws.getCell(ref).dataValidation;
+        assert.equal(dv.showErrorMessage, true, `${ref} deve barrar valor fora da lista`);
+        assert.ok(dv.error, `${ref} deve explicar o erro`);
+        assert.notEqual(dv.errorStyle, 'warning', `${ref} deve barrar, não avisar`);
+    }
+    for (const ref of ['B33', 'B35', 'P2', 'Q25']) {
+        const dv = ws.getCell(ref).dataValidation;
+        assert.equal(dv.showErrorMessage, true, `${ref} deve avisar`);
+        assert.equal(dv.errorStyle, 'warning', `${ref} deve avisar sem barrar`);
+    }
+
+    // Número e tamanho do modelo chegam ao arquivo exportado
+    const regras = { B2: 'decimal', C25: 'decimal', G2: 'decimal', L2: 'custom', N2: 'decimal', R2: 'textLength', B26: 'textLength', B32: 'whole' };
+    for (const [ref, tipo] of Object.entries(regras)) {
+        const dv = ws.getCell(ref).dataValidation;
+        assert.equal(dv?.type, tipo, `${ref} deve manter a validação ${tipo}`);
+        assert.equal(dv.showErrorMessage, true, `${ref} deve mostrar o erro`);
+    }
 });
 
 test('exportarCotacaoPlanilhaBase exibe aviso quando nenhuma cotação é passada', async () => {
