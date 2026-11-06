@@ -372,10 +372,34 @@
             flex-shrink: 0;
             box-shadow: 0 3px 8px rgba(0, 82, 204, 0.3);
             margin-top: 2px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
         }
 
-        .controle-play-circle i {
+        .controle-play-circle .fa-play {
             margin-left: 2px;
+        }
+
+        .controle-play-circle:hover {
+            background: #0043a8;
+            transform: scale(1.08);
+            box-shadow: 0 4px 14px rgba(0, 82, 204, 0.4);
+        }
+
+        .controle-play-circle.ativo {
+            background: #dc2626;
+            box-shadow: 0 3px 10px rgba(220, 38, 38, 0.35);
+        }
+
+        .controle-play-circle.ativo:hover {
+            background: #b91c1c;
+        }
+
+        .controle-play-circle:disabled {
+            opacity: 0.6;
+            cursor: wait;
+            transform: none;
         }
 
         .controle-info h2 {
@@ -391,37 +415,6 @@
             color: #64748b;
             line-height: 1.35;
             margin-bottom: clamp(6px, 1vh, 10px);
-        }
-
-        .btn-ligar-robo {
-            background: #0052cc;
-            color: #ffffff;
-            border: none;
-            border-radius: 7px;
-            padding: 7px 18px;
-            font-size: 0.82rem;
-            font-weight: 600;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 7px;
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 8px rgba(0, 82, 204, 0.25);
-        }
-
-        .btn-ligar-robo:hover {
-            background: #0043a8;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 14px rgba(0, 82, 204, 0.35);
-        }
-
-        .btn-ligar-robo.ativo {
-            background: #dc2626;
-            box-shadow: 0 3px 10px rgba(220, 38, 38, 0.3);
-        }
-
-        .btn-ligar-robo.ativo:hover {
-            background: #b91c1c;
         }
 
         .controle-right {
@@ -617,12 +610,6 @@
             font-weight: 600;
             color: #64748b;
             margin-left: 4px;
-        }
-
-        .btn-ligar-robo:disabled {
-            opacity: 0.6;
-            cursor: wait;
-            transform: none;
         }
 
         .status-dot-lg.iniciando {
@@ -868,16 +855,13 @@
                 <!-- CARD 1: CONTROLE DO ROBÔ -->
                 <section class="card card-controle">
                     <div class="controle-left">
-                        <div class="controle-play-circle">
-                            <i class="fa-solid fa-play"></i>
-                        </div>
+                        <button type="button" id="btn-toggle-robo" class="controle-play-circle" onclick="alternarRobo()"
+                                title="Ligar o Robô" aria-label="Ligar o Robô">
+                            <i class="fa-solid fa-play" id="btn-icon"></i>
+                        </button>
                         <div class="controle-info">
                             <h2>Controle do Robô</h2>
-                            <p>Clique no botão abaixo para iniciar ou parar<br>a busca de novas licitações no ComprasGov.</p>
-                            <button id="btn-toggle-robo" class="btn-ligar-robo" onclick="alternarRobo()">
-                                <i class="fa-solid fa-play" id="btn-icon"></i>
-                                <span id="btn-texto">Ligar o Robô</span>
-                            </button>
+                            <p>Clique no botão ao lado para iniciar ou parar<br>a busca de novas licitações no ComprasGov.</p>
                         </div>
                     </div>
                     <div class="controle-right">
@@ -987,7 +971,6 @@
             estadoRobo = status;
             const btn = document.getElementById('btn-toggle-robo');
             const btnIcon = document.getElementById('btn-icon');
-            const btnTexto = document.getElementById('btn-texto');
             const dot = document.getElementById('status-dot');
             const statusTexto = document.getElementById('status-texto');
 
@@ -997,13 +980,15 @@
             if (status === 'ligado' || status === 'iniciando') {
                 btn.classList.add('ativo');
                 btnIcon.className = 'fa-solid fa-stop';
-                btnTexto.textContent = 'Desligar o Robô';
+                btn.title = 'Desligar o Robô';
+                btn.setAttribute('aria-label', 'Desligar o Robô');
                 dot.classList.add(status === 'ligado' ? 'running' : 'iniciando');
                 statusTexto.textContent = status === 'ligado' ? 'Rodando' : 'Iniciando...';
             } else {
                 btn.classList.remove('ativo');
                 btnIcon.className = 'fa-solid fa-play';
-                btnTexto.textContent = 'Ligar o Robô';
+                btn.title = 'Ligar o Robô';
+                btn.setAttribute('aria-label', 'Ligar o Robô');
                 statusTexto.textContent = 'Desligado';
             }
         }
