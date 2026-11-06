@@ -7,6 +7,12 @@
     <link rel="icon" type="image/png" href="favicon.ico">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script>
+    if (!localStorage.getItem('maestro_session')) {
+        window.location.href = 'index.html';
+    }
+    </script>
 
     <style>
         * {
@@ -557,13 +563,13 @@
             font-weight: 800;
             color: #0f172a;
             white-space: nowrap;
-            width: 18%;
+            width: 13%;
         }
 
         .td-obj {
             color: #334155;
             font-weight: 500;
-            width: 44%;
+            max-width: 0;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -573,12 +579,60 @@
             color: #475569;
             font-weight: 500;
             white-space: nowrap;
-            width: 24%;
+            width: 17%;
+        }
+
+        .td-prazo {
+            color: #b45309;
+            font-weight: 600;
+            white-space: nowrap;
+            width: 17%;
         }
 
         .td-acao {
             text-align: right;
-            width: 14%;
+            width: 11%;
+        }
+
+        .td-vazio {
+            text-align: center;
+            color: #64748b;
+            padding: 14px 12px !important;
+        }
+
+        .tabela-scroll {
+            max-height: clamp(150px, 28vh, 320px);
+            overflow-y: auto;
+        }
+
+        .tabela-scroll thead th {
+            position: sticky;
+            top: 0;
+            background: #eef4fb;
+            z-index: 1;
+        }
+
+        .contador-licitacoes {
+            font-size: 0.74rem;
+            font-weight: 600;
+            color: #64748b;
+            margin-left: 4px;
+        }
+
+        .btn-ligar-robo:disabled {
+            opacity: 0.6;
+            cursor: wait;
+            transform: none;
+        }
+
+        .status-dot-lg.iniciando {
+            background: #f59e0b;
+            box-shadow: 0 0 8px rgba(245, 158, 11, 0.8);
+        }
+
+        .log-entries {
+            max-height: clamp(70px, 14vh, 160px);
+            overflow-y: auto;
         }
 
         .btn-abrir-licitacao {
@@ -831,7 +885,7 @@
                             <span class="status-dot-lg" id="status-dot"></span>
                             <span>Status</span>
                         </div>
-                        <div class="status-text-val" id="status-texto">Aguardando...</div>
+                        <div class="status-text-val" id="status-texto">Desligado</div>
                     </div>
                 </section>
 
@@ -841,6 +895,7 @@
                         <div class="card-header-title">
                             <i class="fa-solid fa-bars-staggered"></i>
                             <h2>Licitações Encontradas</h2>
+                            <span class="contador-licitacoes" id="contador-licitacoes"></span>
                         </div>
                         <button class="btn-atualizar" id="btn-atualizar" onclick="atualizarLicitacoes()">
                             <i class="fa-solid fa-rotate-right"></i>
@@ -848,67 +903,19 @@
                         </button>
                     </div>
 
-                    <div class="table-wrap">
+                    <div class="table-wrap tabela-scroll">
                         <table class="tabela-licitacoes">
                             <thead>
                                 <tr>
                                     <th>Nº da Licitação</th>
                                     <th>Objeto</th>
                                     <th>Data de Abertura</th>
+                                    <th>Término das Propostas</th>
                                     <th style="text-align: right;">Ação</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="td-num">90023/2025</td>
-                                    <td class="td-obj">Aquisição de equipamentos...</td>
-                                    <td class="td-data">10/11/2025 09:00</td>
-                                    <td class="td-acao">
-                                        <button class="btn-abrir-licitacao" onclick="abrirLicitacao('90023/2025')">
-                                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir
-                                        </button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="td-num">90017/2025</td>
-                                    <td class="td-obj">Material de informática...</td>
-                                    <td class="td-data">10/11/2025 10:00</td>
-                                    <td class="td-acao">
-                                        <button class="btn-abrir-licitacao" onclick="abrirLicitacao('90017/2025')">
-                                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir
-                                        </button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="td-num">90012/2025</td>
-                                    <td class="td-obj">Serviços de manutenção...</td>
-                                    <td class="td-data">10/11/2025 11:00</td>
-                                    <td class="td-acao">
-                                        <button class="btn-abrir-licitacao" onclick="abrirLicitacao('90012/2025')">
-                                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir
-                                        </button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="td-num">90007/2025</td>
-                                    <td class="td-obj">Mobiliário para escritório...</td>
-                                    <td class="td-data">10/11/2025 14:00</td>
-                                    <td class="td-acao">
-                                        <button class="btn-abrir-licitacao" onclick="abrirLicitacao('90007/2025')">
-                                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir
-                                        </button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="td-num">90001/2025</td>
-                                    <td class="td-obj">Equipamentos de rede...</td>
-                                    <td class="td-data">11/11/2025 09:00</td>
-                                    <td class="td-acao">
-                                        <button class="btn-abrir-licitacao" onclick="abrirLicitacao('90001/2025')">
-                                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir
-                                        </button>
-                                    </td>
-                                </tr>
+                            <tbody id="tbody-licitacoes">
+                                <tr><td colspan="5" class="td-vazio">Carregando licitações...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -927,24 +934,7 @@
                         </div>
                     </div>
 
-                    <div class="log-entries" id="log-entries">
-                        <div class="log-row">
-                            <span class="log-time">09:12:10</span>
-                            <span class="log-msg">Robô iniciado com sucesso!</span>
-                        </div>
-                        <div class="log-row">
-                            <span class="log-time">09:12:15</span>
-                            <span class="log-msg">Buscando novas licitações no ComprasGov...</span>
-                        </div>
-                        <div class="log-row">
-                            <span class="log-time">09:12:18</span>
-                            <span class="log-msg">5 licitações encontradas.</span>
-                        </div>
-                        <div class="log-row">
-                            <span class="log-time">09:12:25</span>
-                            <span class="log-msg">Aguardando próxima verificação (5 min).</span>
-                        </div>
-                    </div>
+                    <div class="log-entries" id="log-entries"></div>
                 </section>
 
             </div>
@@ -953,44 +943,124 @@
     </div>
 
     <script>
-        let roboLigado = false;
+        const socket = io({
+            auth: { sessionId: localStorage.getItem('maestro_session') },
+            transports: ['websocket'],
+            upgrade: false
+        });
 
-        function alternarRobo() {
-            roboLigado = !roboLigado;
+        // desligado | iniciando | ligado (vem do gerenciador, que checa o "dotnet run" do ComprasGOV)
+        let estadoRobo = 'desligado';
+
+        socket.on('connect', () => {
+            socket.emit('sou_frontend', { usuario: localStorage.getItem('maestro_user') || 'Usuário' });
+            socket.emit('pedir_estado_comprasgov');
+            atualizarLicitacoes();
+        });
+
+        socket.on('disconnect', () => adicionarLog('Conexão com o servidor perdida. Reconectando...'));
+
+        socket.on('sessao_invalida', () => {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        });
+
+        socket.on('sincronizar_estado_comprasgov', (dados) => {
+            aplicarEstado((dados && dados.status) || 'desligado');
+        });
+
+        socket.on('relatar_progresso_comprasgov', (dados) => {
+            if (dados && dados.mensagem) adicionarLog(dados.mensagem);
+        });
+
+        socket.on('retorno_licitacoes_comprasgov', (dados) => {
+            document.getElementById('btn-atualizar').classList.remove('girando');
+            if (!dados || !dados.sucesso) {
+                mostrarMensagemTabela((dados && dados.erro) || 'Erro ao carregar licitações.');
+                adicionarLog('Erro ao carregar licitações: ' + ((dados && dados.erro) || 'desconhecido'));
+                return;
+            }
+            renderizarLicitacoes(dados.licitacoes || []);
+        });
+
+        function aplicarEstado(status) {
+            estadoRobo = status;
             const btn = document.getElementById('btn-toggle-robo');
             const btnIcon = document.getElementById('btn-icon');
             const btnTexto = document.getElementById('btn-texto');
             const dot = document.getElementById('status-dot');
             const statusTexto = document.getElementById('status-texto');
 
-            if (roboLigado) {
+            btn.disabled = false;
+            dot.classList.remove('running', 'iniciando');
+
+            if (status === 'ligado' || status === 'iniciando') {
                 btn.classList.add('ativo');
                 btnIcon.className = 'fa-solid fa-stop';
                 btnTexto.textContent = 'Desligar o Robô';
-                dot.classList.add('running');
-                statusTexto.textContent = 'Buscando...';
-                adicionarLog('Robô iniciado pelo operador.');
+                dot.classList.add(status === 'ligado' ? 'running' : 'iniciando');
+                statusTexto.textContent = status === 'ligado' ? 'Rodando' : 'Iniciando...';
             } else {
                 btn.classList.remove('ativo');
                 btnIcon.className = 'fa-solid fa-play';
                 btnTexto.textContent = 'Ligar o Robô';
-                dot.classList.remove('running');
-                statusTexto.textContent = 'Aguardando...';
-                adicionarLog('Robô pausado pelo operador.');
+                statusTexto.textContent = 'Desligado';
             }
         }
 
-        function atualizarLicitacoes() {
-            const btn = document.getElementById('btn-atualizar');
-            btn.classList.add('girando');
-            setTimeout(() => {
-                btn.classList.remove('girando');
-                adicionarLog('Lista de licitações atualizada.');
-            }, 600);
+        function alternarRobo() {
+            const ligar = !(estadoRobo === 'ligado' || estadoRobo === 'iniciando');
+            if (!ligar && !confirm('Deseja realmente desligar o robô ComprasGOV?')) return;
+            document.getElementById('btn-toggle-robo').disabled = true;
+            socket.emit('comando_direto', { modo: ligar ? 'ligar_robo' : 'desligar_robo', portal: 'comprasgov' });
+            adicionarLog(ligar ? 'Pedido para ligar o robô enviado ao gerenciador.' : 'Pedido para desligar o robô enviado ao gerenciador.');
+            // Sem resposta do gerenciador em 15 s, libera o botão de novo
+            setTimeout(() => { document.getElementById('btn-toggle-robo').disabled = false; }, 15000);
         }
 
-        function abrirLicitacao(num) {
-            window.open('https://cnetmobile.estaleiro.serpro.gov.br/comprasnet-web/public/compras/quadro-avisos', '_blank');
+        function atualizarLicitacoes() {
+            document.getElementById('btn-atualizar').classList.add('girando');
+            socket.emit('solicitar_licitacoes_comprasgov');
+        }
+
+        // Recarrega a lista sozinho a cada 2 minutos
+        setInterval(() => { if (socket.connected) atualizarLicitacoes(); }, 120000);
+
+        function escaparHtml(texto) {
+            return String(texto ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function formatarData(iso) {
+            const d = new Date(iso);
+            if (isNaN(d)) return iso || '-';
+            const p = n => String(n).padStart(2, '0');
+            return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+        }
+
+        function mostrarMensagemTabela(msg) {
+            document.getElementById('tbody-licitacoes').innerHTML =
+                `<tr><td colspan="5" class="td-vazio">${escaparHtml(msg)}</td></tr>`;
+        }
+
+        function renderizarLicitacoes(lista) {
+            document.getElementById('contador-licitacoes').textContent = `(${lista.length})`;
+            if (!lista.length) {
+                mostrarMensagemTabela('Nenhuma licitação baixada até o momento.');
+                return;
+            }
+            document.getElementById('tbody-licitacoes').innerHTML = lista.map(l => {
+                const url = l.urlPncp || l.urlCompras;
+                const botao = url
+                    ? `<a class="btn-abrir-licitacao" href="${escaparHtml(url)}" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir</a>`
+                    : '<span class="td-vazio">-</span>';
+                return `<tr>
+                    <td class="td-num">${escaparHtml(l.numero)}</td>
+                    <td class="td-obj" title="${escaparHtml(l.objeto)}">${escaparHtml(l.objeto)}</td>
+                    <td class="td-data">${escaparHtml(formatarData(l.dataProcessamento))}</td>
+                    <td class="td-prazo">${escaparHtml(l.prazoProposta || '-')}</td>
+                    <td class="td-acao">${botao}</td>
+                </tr>`;
+            }).join('');
         }
 
         function adicionarLog(msg) {
@@ -1002,8 +1072,10 @@
                             String(agora.getSeconds()).padStart(2, '0');
             const row = document.createElement('div');
             row.className = 'log-row';
-            row.innerHTML = `<span class="log-time">${timeStr}</span><span class="log-msg">${msg}</span>`;
+            row.innerHTML = `<span class="log-time">${timeStr}</span><span class="log-msg">${escaparHtml(msg)}</span>`;
             container.appendChild(row);
+            while (container.children.length > 50) container.removeChild(container.firstChild);
+            container.scrollTop = container.scrollHeight;
         }
 
         function irPara(url) {

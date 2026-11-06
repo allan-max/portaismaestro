@@ -118,6 +118,7 @@ app.use(express.json());
 let estado_global = { status: 'desligado', portal_atual: null, fila_pendente: [], tarefas_concluidas: [] };
 let estado_me = { status: 'desligado' };
 let estado_ariba = { status: 'desligado' };
+let estado_comprasgov = { status: 'desligado' };
 let estado_findes = { status: 'desligado' };
 let estado_findes_antigo = { status: 'desligado' };
 let fila_respostas = [];
@@ -268,6 +269,32 @@ function obterCaminhoPlanilhaAnmyna() {
     const caminhoLocal = path.resolve(__dirname, '..', 'database', 'Banco-de-dados', 'PLANILHA-ANMYNA.JSON');
     if (fs.existsSync(caminhoLocal)) return caminhoLocal;
     return caminhoRede;
+}
+
+function obterCaminhoLicitacoesComprasGov() {
+    const caminhoRede = "\\\\SERVIDOR2\\Publico\\ALLAN\\database\\licitacoes_processadas.json";
+    if (fs.existsSync(caminhoRede)) return caminhoRede;
+    const caminhoLocal = path.resolve(__dirname, '..', 'database', 'licitacoes_processadas.json');
+    if (fs.existsSync(caminhoLocal)) return caminhoLocal;
+    return caminhoRede;
+}
+
+// Licitações que o robô ComprasGOV já baixou (Status "baixado"), mais recentes primeiro
+function lerLicitacoesBaixadas() {
+    const conteudo = fs.readFileSync(obterCaminhoLicitacoesComprasGov(), 'utf-8').replace(/^﻿/, '');
+    const lista = JSON.parse(conteudo);
+    if (!Array.isArray(lista)) return [];
+    return lista
+        .filter(l => l && String(l.Status || '').trim().toLowerCase() === 'baixado')
+        .map(l => ({
+            numero: String(l.Numero || ''),
+            objeto: String(l.Objeto || ''),
+            dataProcessamento: String(l.DataProcessamento || ''),
+            prazoProposta: String(l.PrazoProposta || ''),
+            urlPncp: /^https:\/\//i.test(l.UrlPncp || '') ? l.UrlPncp : '',
+            urlCompras: /^https:\/\//i.test(l.UrlCompras || '') ? l.UrlCompras : '',
+        }))
+        .sort((a, b) => (Date.parse(b.dataProcessamento) || 0) - (Date.parse(a.dataProcessamento) || 0));
 }
 
 function salvarCotacoesPlanilhaAnmyna(cotacoes, abaDestino) {
@@ -428,7 +455,7 @@ const auditoria = criarAuditoria({ dir: process.env.AUDITORIA_DIR || path.join(_
 const emailsPendentes = new Map();      // clientId -> e-mail digitado no login/cadastro, até o robô responder
 const auditPorCliente = new Map();      // `${tipo}:${clientId}` -> id do registro, para respostas sem audit_id
 // comando_direto: portais e campos que as telas (coupa, vale, me, ariba, findes) mandam
-const PORTAIS_COMANDO = new Set(['coupa', 'vale', 'me', 'ariba', 'findes']);
+const PORTAIS_COMANDO = new Set(['coupa', 'vale', 'me', 'ariba', 'findes', 'comprasgov']);
 const CAMPOS_COMANDO = ['modo', 'portal', 'evento', 'versao', 'empresas', 'prioridades'];
 const MODOS_AUDITADOS = new Set(['ligar_robo', 'desligar_robo', 'forcar_troca', 'solicitar_parada', 'parar_extracao', 'extrair', 'verificar', 'mover_anexos_findes', 'iniciar_findes', 'parar_findes', 'ligar_robo_antigo', 'desligar_robo_antigo']);
 let syncNfAuditId = null;
@@ -711,6 +738,31 @@ io.on('connection', (socket) => {
     socket.on('sincronizar_estado_ariba', (dados) => { estado_ariba = dados; io.to('frontend').emit('sincronizar_estado_ariba', dados); });
     socket.on('sincronizar_estado_findes', (dados) => { estado_findes = dados; io.to('frontend').emit('sincronizar_estado_findes', dados); });
     socket.on('sincronizar_estado_findes_antigo', (dados) => { estado_findes_antigo = dados; io.to('frontend').emit('sincronizar_estado_findes_antigo', dados); });
+    // === COMPRASGOV ===
+    socket.on('sincronizar_estado_comprasgov', (dados) => {
+        if (!doRobo() || !dados || typeof dados !== 'object') return;
+        estado_comprasgov = { status: String(dados.status || 'desligado') };
+        io.to('frontend').emit('sincronizar_estado_comprasgov', estado_comprasgov);
+    });
+    socket.on('relatar_progresso_comprasgov', (dados) => { if (doRobo()) io.to('frontend').emit('relatar_progresso_comprasgov', dados); });
+    socket.on('pedir_estado_comprasgov', () => {
+        if (!socket.autenticado) return;
+        socket.emit('sincronizar_estado_comprasgov', estado_comprasgov);
+        if (bot_socket_id) io.to(bot_socket_id).emit('pedir_estado_comprasgov');
+    });
+    socket.on('solicitar_licitacoes_comprasgov', () => {
+        if (!socket.autenticado) return socket.emit('sessao_invalida');
+        if (!podeOperarRobos()) {
+            return socket.emit('retorno_licitacoes_comprasgov', { sucesso: false, erro: 'Acesso não autorizado.' });
+        }
+        try {
+            socket.emit('retorno_licitacoes_comprasgov', { sucesso: true, licitacoes: lerLicitacoesBaixadas() });
+        } catch (err) {
+            console.error('Erro ao ler licitacoes_processadas.json:', err);
+            socket.emit('retorno_licitacoes_comprasgov', { sucesso: false, erro: 'Não foi possível ler licitacoes_processadas.json.' });
+        }
+    });
+
     socket.on('pedir_estado_findes', () => {
         socket.emit('sincronizar_estado_findes', estado_findes);
         socket.emit('sincronizar_estado_findes_antigo', estado_findes_antigo);
@@ -791,6 +843,7 @@ io.on('connection', (socket) => {
         socket.emit('sincronizar_estado_ariba', estado_ariba);
         socket.emit('sincronizar_estado_findes', estado_findes);
         socket.emit('sincronizar_estado_findes_antigo', estado_findes_antigo);
+        socket.emit('sincronizar_estado_comprasgov', estado_comprasgov);
     });
 
     socket.on('solicitar_impressao', (dados = {}) => {
@@ -837,6 +890,14 @@ io.on('connection', (socket) => {
                 estado_global.status = 'parando'; 
             }
             notificar_todos();
+        }
+
+        if (dados.portal === 'comprasgov') {
+            if (!bot_socket_id) {
+                return socket.emit('relatar_progresso_comprasgov', { mensagem: '❌ Gerenciador não está conectado ao servidor.' });
+            }
+            if (dados.modo === 'ligar_robo') estado_comprasgov = { status: 'iniciando' };
+            io.to('frontend').emit('sincronizar_estado_comprasgov', estado_comprasgov);
         }
 
         if (bot_socket_id) io.to(bot_socket_id).emit('comando_para_robo', dados);
