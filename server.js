@@ -2024,12 +2024,9 @@ app.get('/emails/anexo/:token', (req, res) => {
     const anexo = centralEmails.retirarAnexo(req.params.token);
     res.set('Cache-Control', 'no-store');
     if (!anexo) return res.status(404).type('text/plain; charset=utf-8').send('Link de anexo vencido ou já usado. Peça o download de novo na tela de e-mails.');
-    res.set({
-        'Content-Type': 'application/octet-stream',
-        'Content-Disposition': `attachment; filename="anexo"; filename*=UTF-8''${encodeURIComponent(anexo.nome)}`,
-        'X-Content-Type-Options': 'nosniff',
-        'Content-Security-Policy': "default-src 'none'; sandbox",
-    });
+    res.attachment(anexo.nome);   // Content-Disposition: attachment, com nome codificado pelo express
+    res.set({ 'Content-Type': 'application/octet-stream', 'X-Content-Type-Options': 'nosniff',
+        'Content-Security-Policy': "default-src 'none'; sandbox" });
     res.send(anexo.conteudo);
 });
 

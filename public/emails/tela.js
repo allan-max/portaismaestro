@@ -6,7 +6,8 @@
     const $ = id => document.getElementById(id);
     const sessao = localStorage.getItem('maestro_session');
     const FUSO = 'America/Sao_Paulo';
-    const estado = { filtros: {}, proximo: null, itens: 0, aberto: null, contas: [] };
+    const estado = { filtros: {}, proximo: null, itens: 0, total: 0, aberto: null, contas: [] };
+    const CANCELADO = { sucesso: false, cancelado: true };
     const esperando = new Map();
     let seq = 0;
 
@@ -43,8 +44,8 @@
     function pedir(acao, params) {
         return new Promise(resolve => {
             const requestId = acao + ':' + (++seq);
-            // só a resposta mais nova de cada ação interessa
-            for (const [id, p] of esperando) if (p.acao === acao) { esperando.delete(id); }
+            // só a resposta mais nova de cada ação interessa; a anterior termina como cancelada
+            for (const [id, p] of esperando) if (p.acao === acao) { esperando.delete(id); p.resolve(CANCELADO); }
             esperando.set(requestId, { acao, resolve });
             socket.emit('emails_pedir', { requestId, acao, params });
         });
@@ -65,7 +66,12 @@
     socket.on('sessao_invalida', () => telaAcesso('Sua sessão expirou', 'Entre de novo no Maestro para continuar.'));
     socket.on('connect', () => { socket.emit('emails_entrar'); if (!estado.itens) listar(false); });
     socket.on('connect_error', () => avisar('Sem conexão com o Maestro. Tentando de novo…'));
-    socket.on('disconnect', () => avisar('Conexão perdida. Tentando reconectar…'));
+    socket.on('disconnect', () => {
+        // o servidor descarta os pedidos deste socket; quem espera recebe "cancelado" e libera a tela
+        for (const p of esperando.values()) p.resolve(CANCELADO);
+        esperando.clear();
+        avisar('Conexão perdida. Tentando reconectar…');
+    });
     socket.on('emails_novidade', d => {
         const n = d && Number.isSafeInteger(d.novos) ? d.novos : 0;
         if (n <= 0) return;
@@ -123,11 +129,13 @@
         avisar('Carregando e-mails…');
         $('em-mais').hidden = true;
         const r = await pedir('listar', Object.assign({}, estado.filtros, { cursor: mais ? estado.proximo : '' }));
+        if (r.cancelado) return;
         if (!r.sucesso) {
             avisar(r.erro || 'Não foi possível carregar os e-mails.');
             return;
         }
         const d = r.dados || {};
+        if (Number.isFinite(d.total)) estado.total = d.total;
         preencherContas(d.contas);
         const itens = Array.isArray(d.itens) ? d.itens : [];
         const frag = document.createDocumentFragment();
@@ -136,7 +144,7 @@
         estado.itens += itens.length;
         estado.proximo = d.proximo || null;
         $('em-mais').hidden = !estado.proximo;
-        avisar(estado.itens ? `${estado.itens} de ${Number(d.total || estado.itens).toLocaleString('pt-BR')} e-mails` : 'Nenhum e-mail encontrado com esses filtros.');
+        avisar(estado.itens ? `${estado.itens} de ${Math.max(estado.total, estado.itens).toLocaleString('pt-BR')} e-mails` : 'Nenhum e-mail encontrado com esses filtros.');
     }
 
     function meta(rotulo, valor) {
@@ -155,6 +163,7 @@
         $('em-corpo').textContent = ''; mostrarTexto();
         $('em-ver-html').hidden = true;
         const r = await pedir('detalhe', { id });
+        if (r.cancelado) return;
         if (!r.sucesso) { $('em-assunto').textContent = r.erro || 'Não foi possível abrir o e-mail.'; return; }
         const e = r.dados;
         estado.aberto = e;
@@ -201,6 +210,7 @@
         const r = await pedir('anexo', { id, anexo });
         botao.disabled = false;
         botao.textContent = texto;
+        if (r.cancelado) return;
         if (!r.sucesso) { avisar(r.erro || 'Não foi possível baixar o anexo.'); return; }
         const url = r.dados && r.dados.url;
         if (typeof url === 'string' && /^\/emails\/anexo\/[0-9a-f]{64}$/.test(url)) window.location.assign(url);
@@ -215,6 +225,7 @@
         const e = estado.aberto;
         if (!e) return;
         const r = await pedir('html', { id: e.id });
+        if (r.cancelado || estado.aberto !== e) return;   // outro e-mail foi aberto enquanto esperava
         if (!r.sucesso) { avisar(r.erro || 'Não foi possível abrir a versão formatada.'); return; }
         const quadro = $('em-html');
         quadro.setAttribute('sandbox', '');   // reforço: sem allow-scripts e sem allow-same-origin
