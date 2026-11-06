@@ -319,7 +319,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .b-board.n1, .b-board.n2 { max-width: 1040px; margin-inline: auto; }
 .b-board.n1 .b-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
 .b-col { background: #141b25; border: 1px solid var(--border); border-radius: 14px; min-width: 0; }
-.b-col-head { display: flex; align-items: center; gap: 9px; padding: 13px 16px; border-bottom: 1px solid var(--border); position: sticky; top: calc(56px + env(safe-area-inset-top, 0px)); background: #141b25; border-radius: 14px 14px 0 0; z-index: 2; }
+.b-col-head { display: flex; align-items: center; gap: 9px; padding: 13px 16px; border-bottom: 1px solid var(--border); background: #141b25; border-radius: 14px 14px 0 0; }
 .b-col-head h2 { font-size: 13px; }
 .b-col-head p { flex: 1; font-size: 10px; color: var(--dim); }
 .b-col-head .ponto { width: 9px; height: 9px; border-radius: 50%; background: var(--cor); box-shadow: 0 0 0 3px color-mix(in srgb, var(--cor) 20%, transparent); }
