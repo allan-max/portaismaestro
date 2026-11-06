@@ -79,4 +79,9 @@ test('comandos aos robôs: sem acesso aos portais nada chega; com acesso só mod
   operador.socket.emit('comando_direto', null);
   await pausa(300);
   assert.deepEqual(comandos(), []);
+
+  // O piloto automático do gerenciador manda comando_direto pelo próprio socket do robô (sem usuário)
+  const doPiloto = event(bot, 'comando_para_robo');
+  bot.emit('comando_direto', { modo: 'extrair', portal: 'coupa' });
+  assert.deepEqual(await doPiloto, { modo: 'extrair', portal: 'coupa' });
 });

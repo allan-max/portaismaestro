@@ -647,6 +647,9 @@ io.on('connection', (socket) => {
     // Antes bastava estar logado: um vendedor sem portais desligava robô ou cancelava resposta alheia.
     // portais_access da sessão já inclui admin e dashboard_access (ver resultado_login).
     function podeOperarRobos() {
+        // O próprio gerenciador também manda comando_direto (piloto automático, "Assumir controle"):
+        // o socket dele não tem usuário, então sem isto todo comando do piloto era descartado.
+        if (doRobo()) return true;
         if (!socket.autenticado) return false;
         const u = socket.usuarioLogado || {};
         return !!(u.admin || u.portais_access);
