@@ -44,11 +44,12 @@ test('preserva menu, painel, robôs e coluna NF da versão boa 43b6c21', () => {
         .replace(/        <a id="aba-cotacoes-vendedores"[^\n]*<\/a>\n/, '');
     // Hashes dos blocos originais em 43b6c21:public/planilha_vale.html.
     const blocks = [
-        ['<body>', '    <div id="menu-filtro-periodo"', 'd9e3c23fc9521315b50a2ea5ea4bf17a6499bb30d046950d6204cf99e198128c'],
+        // be085d4 e seguintes: links de Minhas Cotações e Planilha Anmyna no menu; o resto do bloco segue igual a 43b6c21
+        ['<body>', '    <div id="menu-filtro-periodo"', '9e073e406be38580d7d58db5ddaf4a0eaf840451541c06b84e250ea5b0889e6f'],
         ['    <div id="modal-sync-nf"', '    <script src=', 'bd4b84956e4f8194c6c8f43c5276dbdb781323bf3720486823cf27fe05d7a639'],
-        // b34566a: edição de linha mantém números como número (manterTipo); o resto do bloco segue igual a 43b6c21
-        ['        const sessionAtual =', '        window.filteredCotacoes = [];', 'c314cb6b1070b83634b580d41074b1f5da4cea3882860e792f6fd983abdc002b'],
-        ['        window.pageCota = 0;', '    // Add logic for global search', '1a61f28dadd760a25858e085bc5ec4dc67007b7468dc40b00ebfb5528df038fb']
+        // b34566a: manterTipo. 86bfde6: sessionAtual sobe para o início da página. Sincronização, conferência e 61ab1b9 mudam o bloco.
+        ['        const socket = io({ auth: { sessionId', '        window.filteredCotacoes = [];', 'd2abbae59e0149f71a2eb880c1bd48fc20efb9d4023e2122f384ed95de09c4a8'],
+        ['        window.pageCota = 0;', '    // Add logic for global search', '5867e3e29e2e3a5fd01256be82324722f5388dd05c7d10d5344329b09f1890ff']
     ];
     for (const [start, end, expected] of blocks) {
         const from = source.indexOf(start);

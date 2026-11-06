@@ -7,7 +7,9 @@ const { test } = require('node:test');
 
 const serverCode = fs.readFileSync(path.join(__dirname, '../server.js'), 'utf8');
 const anmynaHtml = fs.readFileSync(path.join(__dirname, '../public/planilha_anmyna.html'), 'utf8');
-const gerenciadorPy = fs.readFileSync(path.join(__dirname, '../../gerenciador/gerenciador.py'), 'utf8');
+// O gerenciador é outro repositório: na CI ele não existe, e o teste dele fica de fora.
+const caminhoGerenciador = path.join(__dirname, '../../gerenciador/gerenciador.py');
+const gerenciadorPy = fs.existsSync(caminhoGerenciador) ? fs.readFileSync(caminhoGerenciador, 'utf8') : null;
 
 test('interface planilha_anmyna.html nao contem opcoes ou logica de pedidos', () => {
     assert.ok(!anmynaHtml.includes('Registro de Pedido'), 'Menu nao deve conter Registro de Pedido');
@@ -151,7 +153,7 @@ test('server.js: solicitar_registro_cotacao_manual com origem anmyna NUNCA envia
     fs.rmSync(tempDir, { recursive: true, force: true });
 });
 
-test('gerenciador.py: possui guardas explícitas recusando qualquer origem anmyna na planilha Vale', () => {
+test('gerenciador.py: possui guardas explícitas recusando qualquer origem anmyna na planilha Vale', { skip: !gerenciadorPy }, () => {
     assert.ok(gerenciadorPy.includes("dados.get('origem', '')).lower() == 'anmyna'"), 'gerenciador.py deve ter guarda para origem anmyna');
     assert.ok(gerenciadorPy.includes('Cotações ANMYNA não devem ser registradas na planilha VALE'), 'Mensagem de recusa de cotacao manual anmyna deve existir');
     assert.ok(gerenciadorPy.includes('A planilha ANMYNA não trabalha com pedidos'), 'Mensagem de recusa de pedidos anmyna deve existir');
