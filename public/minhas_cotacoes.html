@@ -58,6 +58,9 @@
         window.cotacoesFiltradas = cotacoesFiltradas;
         let portaisRobo = {};
         window.portaisRobo = portaisRobo;
+        // ONDE ENCONTRAR? por cotação, calculado pelo robô com a mesma configuração do Word do robô
+        let ondeEncontrar = {};
+        window.ondeEncontrar = ondeEncontrar;
         let printsRobo = {};
         window.printsRobo = printsRobo;
         let errosRobo = {};
@@ -218,6 +221,8 @@
             window.todasCotacoes = todasCotacoes;
             portaisRobo = (res.portais_robo && typeof res.portais_robo === 'object') ? res.portais_robo : {};
             window.portaisRobo = portaisRobo;
+            ondeEncontrar = (res.onde_encontrar && typeof res.onde_encontrar === 'object') ? res.onde_encontrar : {};
+            window.ondeEncontrar = ondeEncontrar;
             if (res.prints_robo && typeof res.prints_robo === 'object') {
                 printsRobo = { ...printsRobo, ...res.prints_robo };
                 window.printsRobo = printsRobo;
@@ -580,9 +585,53 @@
                 .replace(/'/g, '&apos;');
         }
 
+        // Recomendações "ONDE ENCONTRAR?" de uma cotação: [{item, fornecedores:[{nome, url}], mesmo_que_item}].
+        // Vêm prontas do robô (retorno_planilha_json.onde_encontrar); a página não escolhe fornecedores.
+        function recomendacoesOndeEncontrar(ev) {
+            if (Array.isArray(ev['onde_encontrar'])) return ev['onde_encontrar'];
+            const mapa = (typeof window !== 'undefined' && window.ondeEncontrar) || {};
+            const numero = String(ev['COTAÇÃO'] || ev['COTACAO'] || ev['numero_evento'] || '').trim();
+            return Array.isArray(mapa[numero]) ? mapa[numero] : [];
+        }
+
+        // Seção discreta (8pt): "ONDE ENCONTRAR?" + até 5 fornecedores com link de busca, separados por " | ".
+        // links: Map url -> rId, compartilhado pelo documento (a mesma URL nunca gera duas relações).
+        function paragrafoOndeEncontrar(rec, links) {
+            const rotulo = '<w:r><w:rPr><w:b/><w:color w:val="234B73"/><w:sz w:val="16"/></w:rPr><w:t>ONDE ENCONTRAR?</w:t></w:r>';
+            const cinza = (texto, tam = 16) => `<w:r><w:rPr><w:i/><w:color w:val="737373"/><w:sz w:val="${tam}"/></w:rPr><w:t xml:space="preserve">${escaparXml(texto)}</w:t></w:r>`;
+            if (rec.mesmo_que_item) {
+                return `    <w:p><w:pPr><w:spacing w:before="40" w:after="20"/></w:pPr>${rotulo}${cinza(` mesmos fornecedores do item ${rec.mesmo_que_item}`)}</w:p>`;
+            }
+            const vistos = new Set();
+            const fornecedores = (rec.fornecedores || []).filter(f => {
+                const chave = String(f && f.nome || '').trim().toUpperCase();
+                if (!chave || vistos.has(chave)) return false;
+                vistos.add(chave);
+                return true;
+            }).slice(0, 5);
+            if (!fornecedores.length) return '';
+            const partes = fornecedores.map(f => {
+                const nome = escaparXml(f.nome);
+                const url = String(f.url || '');
+                if (!/^https:\/\//i.test(url)) {
+                    return `<w:r><w:rPr><w:color w:val="373737"/><w:sz w:val="16"/></w:rPr><w:t>${nome}</w:t></w:r>`;
+                }
+                if (!links.has(url)) links.set(url, `rId${links.size + 2}`);
+                return `<w:hyperlink r:id="${links.get(url)}" w:history="1"><w:r><w:rPr><w:color w:val="1F5A96"/><w:u w:val="single"/><w:sz w:val="16"/></w:rPr><w:t>${nome}</w:t></w:r></w:hyperlink>`;
+            });
+            const separador = '<w:r><w:rPr><w:color w:val="737373"/><w:sz w:val="16"/></w:rPr><w:t xml:space="preserve"> | </w:t></w:r>';
+            return `    <w:p><w:pPr><w:spacing w:before="40" w:after="20"/></w:pPr>${rotulo}<w:r><w:br/></w:r>${partes.join(separador)}${cinza('  (links de busca; estoque e preço não confirmados)', 14)}</w:p>`;
+        }
+
         function gerarDocxCotacaoCoupaXml(cotacoes) {
+            return montarDocxCotacaoCoupa(cotacoes).xml;
+        }
+
+        // Monta o document.xml e as relações de hyperlink (rId2 em diante; rId1 é o styles.xml).
+        function montarDocxCotacaoCoupa(cotacoes) {
             const lista = Array.isArray(cotacoes) ? cotacoes : [cotacoes];
             const paragraphs = [];
+            const links = new Map();
 
             lista.forEach((ev, evIdx) => {
                 if (!ev) return;
@@ -626,6 +675,7 @@
                     ? ev['itens']
                     : (typeof parseItensCotacao === 'function' ? parseItensCotacao(ev) : [{ produto: ev['ITEM'] || '-', quantidade: ev['QUANTIDADE'] || 1 }]);
                 const localEntrega = ev['local_entrega'] || ev['LOCALIDADE'] || '-';
+                const recsOnde = recomendacoesOndeEncontrar(ev);
 
                 itens.forEach((it, itIdx) => {
                     const itemNum = it.item_num || (itIdx + 1);
@@ -669,11 +719,17 @@
                         const hist = it['historico_match'] || ev['historico_match'] || ev['HISTORICO_MATCH'];
                         paragraphs.push(`    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">${escaparXml(hist)}</w:t></w:r></w:p>`);
                     }
+
+                    const recOnde = recsOnde.find(r => String(r && r.item) === String(itemNum));
+                    if (recOnde) {
+                        const xmlOnde = paragrafoOndeEncontrar(recOnde, links);
+                        if (xmlOnde) paragraphs.push(xmlOnde);
+                    }
                 });
             });
 
-            return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+            const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
   <w:body>
 ${paragraphs.join('\n')}
     <w:sectPr>
@@ -682,6 +738,7 @@ ${paragraphs.join('\n')}
     </w:sectPr>
   </w:body>
 </w:document>`;
+            return { xml, links };
         }
 
         function criarZipStorePuro(arquivos) {
@@ -821,6 +878,10 @@ ${paragraphs.join('\n')}
                 ZipClass = await obterJSZip();
             } catch (_) {}
 
+            const montado = montarDocxCotacaoCoupa(cotacoes);
+            const relacoesLinks = Array.from(montado.links, ([url, id]) =>
+                `
+  <Relationship Id="${id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="${escaparXml(url)}" TargetMode="External"/>`).join('');
             const arquivosDocx = [
                 {
                     nome: '[Content_Types].xml',
@@ -843,7 +904,7 @@ ${paragraphs.join('\n')}
                     nome: 'word/_rels/document.xml.rels',
                     conteudo: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>${relacoesLinks}
 </Relationships>`
                 },
                 {
@@ -881,7 +942,7 @@ ${paragraphs.join('\n')}
                 },
                 {
                     nome: 'word/document.xml',
-                    conteudo: gerarDocxCotacaoCoupaXml(cotacoes)
+                    conteudo: montado.xml
                 }
             ];
 

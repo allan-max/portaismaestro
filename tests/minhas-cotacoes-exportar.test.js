@@ -1189,3 +1189,55 @@ test('Salva o erro minimalista em vermelho no evento e oculta o alerta quando o 
     const htmlModalSemErro = Tela.detalhe(cota);
     assert.ok(!htmlModalSemErro.includes('pc-alerta-erro-evento'), 'O alerta de erro deve sumir do modal após reenviar a resposta');
 });
+
+test('Word padrão Coupa inclui ONDE ENCONTRAR? enviado pelo robô, com links externos válidos e sem duplicidade', async () => {
+    for (const useJSZip of [true, false]) {
+        const { context, handlers } = setupMinhasCotacoesEnv({ useJSZip });
+        const url = (dom, q) => `https://www.google.com/search?q=site%3A${dom}+${q}&x=1`;
+        const cotacao = {
+            'COTAÇÃO': '554433', 'VENCIMENTO': '31/12/2099', 'LOCALIDADE': 'VITÓRIA',
+            'ITEM': '(Item 1) NOTEBOOK I5 8GB\n(Item 2) PARAFUSO M10\n(Item 3) NOTEBOOK I5 8GB',
+            'MARCAS ': '(Item 1) LENOVO\n(Item 2) GERDAU\n(Item 3) LENOVO'
+        };
+        const fornecedores = [
+            { nome: 'Agis', url: url('agis.com.br', 'LENOVO+E14') },
+            { nome: 'Mazer', url: url('mazer.com.br', 'LENOVO+E14') },
+            { nome: 'Mazer', url: url('mazer.com.br', 'LENOVO+E14') },
+            { nome: 'Gibson', url: '' }
+        ];
+        handlers['retorno_planilha_json']({
+            sucesso: true, cotacoes: [cotacao], portais_robo: { '554433': 'coupa' },
+            onde_encontrar: { '554433': [
+                { item: '1', termo_busca: 'LENOVO E14', fornecedores },
+                { item: '3', termo_busca: 'LENOVO E14', fornecedores, mesmo_que_item: '1' }
+            ] }
+        });
+
+        const xml = context.gerarDocxCotacaoCoupaXml(cotacao);
+        assert.ok(xml.includes('xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'));
+        assert.equal((xml.match(/ONDE ENCONTRAR\?/g) || []).length, 2, 'item 1 completo, item 3 referência, item 2 sem seção');
+        assert.ok(xml.includes('mesmos fornecedores do item 1'));
+        assert.equal((xml.match(/<w:hyperlink /g) || []).length, 2, 'Mazer repetido sai uma vez; Gibson sem link');
+        assert.ok(xml.includes('<w:t>Gibson</w:t>'));
+        assert.ok(xml.includes('estoque e preço não confirmados'));
+
+        const buffer = await context.gerarDocxCotacaoCoupaBlob(cotacao, { type: 'nodebuffer' });
+        const JSZip = require('../public/vendor/jszip.min.js');
+        const zip = await JSZip.loadAsync(buffer);
+        const rels = await zip.file('word/_rels/document.xml.rels').async('text');
+        const doc = await zip.file('word/document.xml').async('text');
+        const ids = [...rels.matchAll(/Id="(rId\d+)"/g)].map(m => m[1]);
+        assert.deepEqual(ids, ['rId1', 'rId2', 'rId3'], 'uma relação por URL, sem colidir com styles');
+        assert.equal((rels.match(/TargetMode="External"/g) || []).length, 2);
+        assert.ok(rels.includes('&amp;x=1'), '& da URL escapado no .rels');
+        for (const id of ['rId2', 'rId3']) assert.ok(doc.includes(`r:id="${id}"`));
+    }
+});
+
+test('Word padrão Coupa sem recomendações do robô continua sem a seção', () => {
+    const { context } = setupMinhasCotacoesEnv();
+    const xml = context.gerarDocxCotacaoCoupaXml({ 'COTAÇÃO': '1', 'VENCIMENTO': '30/10/2026', 'ITEM': 'NOTEBOOK', 'MARCA': 'DELL' });
+    assert.ok(!xml.includes('ONDE ENCONTRAR'));
+    assert.ok(!xml.includes('w:hyperlink'));
+    assert.ok(xml.includes('MARCA: DELL'));
+});
