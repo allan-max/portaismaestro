@@ -66,13 +66,18 @@
         </div>`;
     }
 
-    function htmlModalConfig(config, carregandoConfig, ctx) {
+    function htmlModalConfig(config, carregandoConfig, ctx, editaveis) {
         const icone = ctx.icone || (() => '');
         const entradas = config && typeof config === 'object' ? Object.entries(config) : [];
+        // o gerenciador diz o que aceita; caminhos (programas executados) só mudam no CONFIG.json do servidor
+        const podeEditar = chave => !Array.isArray(editaveis) || editaveis.includes(chave);
+        const campo = ([chave, valor]) => podeEditar(chave)
+            ? `<label class="field"><span class="field-label">${esc(chave)}</span><input type="text" class="contas-config-input" data-config-key="${esc(chave)}" value="${esc(valor ?? '')}"></label>`
+            : `<label class="field"><span class="field-label">${esc(chave)} (só no servidor)</span><input type="text" class="contas-config-input" value="${esc(valor ?? '')}" readonly title="Editável apenas no CONFIG.json do servidor"></label>`;
         const corpo = carregandoConfig
             ? '<p class="vazio">Carregando variáveis do robô (CONFIG.json)…</p>'
             : entradas.length
-                ? `<div class="contas-config-grid">${entradas.map(([chave, valor]) => `<label class="field"><span class="field-label">${esc(chave)}</span><input type="text" class="contas-config-input" data-config-key="${esc(chave)}" value="${esc(valor ?? '')}"></label>`).join('')}</div>`
+                ? `<div class="contas-config-grid">${entradas.map(campo).join('')}</div>`
                 : '<p class="vazio">Nenhuma variável recebida. Verifique se o gerenciador está online.</p>';
         return `<div class="drawer-shade" data-acao="fechar-config">
             <section class="drawer contas-config-drawer" role="dialog" aria-modal="true" aria-labelledby="config-drawer-title">
@@ -204,7 +209,7 @@
                     <span class="muted">Administradores possuem acesso total automaticamente</span>
                 </div>
             </section>
-            ${op.configAberta ? htmlModalConfig(op.configDados, op.carregandoConfig, ctx) : ''}`;
+            ${op.configAberta ? htmlModalConfig(op.configDados, op.carregandoConfig, ctx, op.configEditaveis) : ''}`;
     }
 
     const api = { normalizarUsuarios, filtrarUsuarios, kpisContas, pagina };
@@ -286,6 +291,7 @@
                 });
                 socket.on('receber_config_admin', r => {
                     op.carregandoConfig = false;
+                    if (r && Array.isArray(r.editaveis)) op.configEditaveis = r.editaveis;
                     if (r && r.sucesso) {
                         op.configDados = r.config || op.configDados;
                         op.configAberta = false;

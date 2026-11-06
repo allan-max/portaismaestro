@@ -1103,6 +1103,8 @@
     <script src="vendor/exceljs-4.4.0.min.js"></script>
 
     <script>
+        // Texto da planilha/portais vai para innerHTML: sempre passar por esc() (texto e atributo)
+        const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
         // sessionAtual já vem do script de acesso no <head>; declarar de novo derruba este script inteiro
         const socket = io({
             auth: { sessionId: sessionAtual },
@@ -1198,7 +1200,7 @@
             if (icon) icon.classList.remove('fa-spin');
 
             if (!res.sucesso) {
-                document.getElementById('tbody-anmyna').innerHTML = `<tr><td colspan="8" style="text-align: center; color: #ef4444; padding: 30px;"><i class="fa-solid fa-triangle-exclamation"></i> ${res.erro}</td></tr>`;
+                document.getElementById('tbody-anmyna').innerHTML = `<tr><td colspan="8" style="text-align: center; color: #ef4444; padding: 30px;"><i class="fa-solid fa-triangle-exclamation"></i> ${esc(res.erro)}</td></tr>`;
                 return;
             }
             processarDadosRecebidos(res.dados);
@@ -1233,8 +1235,8 @@
                 return;
             }
             container.innerHTML = abas.map(aba => `
-                <button class="tab-btn ${aba === abaAtiva ? 'active' : ''}" onclick="mudarAba('${aba.replace(/'/g, "\\'")}')">
-                    <i class="fa-solid fa-file-lines"></i> ${aba}
+                <button class="tab-btn ${aba === abaAtiva ? 'active' : ''}" data-aba="${esc(aba)}" onclick="mudarAba(this.dataset.aba)">
+                    <i class="fa-solid fa-file-lines"></i> ${esc(aba)}
                 </button>
             `).join('');
         }
@@ -1242,7 +1244,7 @@
         function mudarAba(novaAba) {
             abaAtiva = novaAba;
             document.querySelectorAll('#abas-container .tab-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.innerText.trim() === novaAba);
+                btn.classList.toggle('active', btn.dataset.aba === novaAba);
             });
             carregarAba(abaAtiva);
         }
@@ -1285,7 +1287,7 @@
             const selPortal = document.getElementById('filtro-portal');
             const portalAtual = selPortal.value;
             selPortal.innerHTML = '<option value="">Portal: Todos</option>' + 
-                Array.from(portaisSet).sort().map(p => `<option value="${p}" ${p === portalAtual ? 'selected' : ''}>${p}</option>`).join('');
+                Array.from(portaisSet).sort().map(p => `<option value="${esc(p)}" ${p === portalAtual ? 'selected' : ''}>${esc(p)}</option>`).join('');
 
             vendedoresUnicos = Array.from(vendSet).sort();
             if (filtroVendedorAtivo.size === 0) {
@@ -1430,11 +1432,11 @@
                 let portalBadge = '';
                 if (item.portal) {
                     let corClass = 'badge-portal';
-                    portalBadge = `<span class="badge-pill ${corClass}"><i class="fa-solid fa-globe"></i> ${item.portal}</span>`;
+                    portalBadge = `<span class="badge-pill ${corClass}"><i class="fa-solid fa-globe"></i> ${esc(item.portal)}</span>`;
                 }
 
                 // Empresa pill
-                let empresaBadge = item.empresa ? `<span class="badge-pill badge-empresa">${item.empresa}</span>` : '';
+                let empresaBadge = item.empresa ? `<span class="badge-pill badge-empresa">${esc(item.empresa)}</span>` : '';
 
                 // Vencimento badge
                 let vencBadge = '';
@@ -1457,31 +1459,31 @@
 
                 return `
                     <tr class="row-accent">
-                        <td onclick="abrirDetalhes(${globalIdx})" style="cursor: pointer;" title="Clique para ver detalhes da cotação ${item.numero}">
+                        <td onclick="abrirDetalhes(${globalIdx})" style="cursor: pointer;" title="Clique para ver detalhes da cotação ${esc(item.numero)}">
                             <div class="cell-content">
                                 <div class="doc-icon"><i class="fa-solid fa-file-invoice"></i></div>
                                 <div>
-                                    <div class="cell-main-text cotacao-clicavel" title="${item.numero}">${item.numero}</div>
+                                    <div class="cell-main-text cotacao-clicavel" title="${esc(item.numero)}">${esc(item.numero)}</div>
                                     <div class="cell-sub-text">${portalBadge} ${empresaBadge}</div>
                                 </div>
                             </div>
                         </td>
                         <td>
-                            <div class="cell-main-text">${item.cliente || '-'}</div>
+                            <div class="cell-main-text">${esc(item.cliente || '-')}</div>
                         </td>
                         <td>
-                            <div class="cell-main-text" style="color: #38bdf8;">${item.vendedor || 'SEM VENDEDOR'}</div>
+                            <div class="cell-main-text" style="color: #38bdf8;">${esc(item.vendedor || 'SEM VENDEDOR')}</div>
                         </td>
                         <td>
-                            <div class="cell-main-text" title="${item.produto.replace(/"/g, '&quot;')}">${prodCurto}</div>
+                            <div class="cell-main-text" title="${esc(item.produto)}">${esc(prodCurto)}</div>
                         </td>
                         <td>
-                            <div class="cell-main-text">${formatarDataBR(item.data_venc)} <span style="font-size:0.75rem; color:var(--text-muted);">${item.hora_venc}</span></div>
+                            <div class="cell-main-text">${esc(formatarDataBR(item.data_venc))} <span style="font-size:0.75rem; color:var(--text-muted);">${esc(item.hora_venc)}</span></div>
                             <div style="margin-top: 3px;">${vencBadge}</div>
                         </td>
                         <td>
-                            <div class="cell-main-text">${formatarDataBR(item.data_entrega)}</div>
-                            <div class="cell-sub-text">${item.hora_entrega || ''}</div>
+                            <div class="cell-main-text">${esc(formatarDataBR(item.data_entrega))}</div>
+                            <div class="cell-sub-text">${esc(item.hora_entrega || '')}</div>
                         </td>
                         <td style="text-align: center;">
                             ${statusBadge}
@@ -1540,10 +1542,10 @@
 
             const html = fields.filter(f => f.val).map(f => `
                 <div class="detail-row">
-                    <span class="detail-label">${f.label}</span>
+                    <span class="detail-label">${esc(f.label)}</span>
                     <span class="detail-value">
-                        ${f.val}
-                        <button class="btn-copy-field" onclick="copiarTexto('${String(f.val).replace(/'/g, "\\'")}', this)" title="Copiar"><i class="fa-regular fa-copy"></i></button>
+                        ${esc(f.val)}
+                        <button class="btn-copy-field" data-copiar="${esc(f.val)}" onclick="copiarTexto(this.dataset.copiar, this)" title="Copiar"><i class="fa-regular fa-copy"></i></button>
                     </span>
                 </div>
             `).join('');
@@ -1653,7 +1655,7 @@
                 if (!isChecked) todos = false;
                 html += `
                     <label style="display:flex; gap:6px; font-size:0.8rem; color:#adbac7; cursor:pointer; padding: 2px 0;">
-                        <input type="checkbox" value="${c.replace(/"/g, '&quot;')}" class="chk-cliente" ${isChecked ? 'checked' : ''} onchange="toggleClienteIndividual(this)"> <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${c.replace(/"/g, '&quot;')}">${c}</span>
+                        <input type="checkbox" value="${esc(c)}" class="chk-cliente" ${isChecked ? 'checked' : ''} onchange="toggleClienteIndividual(this)"> <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(c)}">${esc(c)}</span>
                     </label>
                 `;
             });
@@ -1713,7 +1715,7 @@
                 if (!isChecked) todos = false;
                 html += `
                     <label style="display:flex; gap:6px; font-size:0.8rem; color:#adbac7; cursor:pointer; padding: 2px 0;">
-                        <input type="checkbox" value="${v.replace(/"/g, '&quot;')}" class="chk-vendedor" ${isChecked ? 'checked' : ''} onchange="toggleVendedorIndividual(this)"> ${v}
+                        <input type="checkbox" value="${esc(v)}" class="chk-vendedor" ${isChecked ? 'checked' : ''} onchange="toggleVendedorIndividual(this)"> ${esc(v)}
                     </label>
                 `;
             });
@@ -2030,7 +2032,7 @@
             const msg = document.getElementById('status-msg');
             if (msg) {
                 msg.style.color = '#e3b341';
-                msg.innerHTML = '<i class="fa-solid fa-clock"></i> ' + (res.mensagem || '');
+                msg.innerHTML = '<i class="fa-solid fa-clock"></i> ' + esc(res.mensagem || '');
             }
         });
 
@@ -2044,12 +2046,12 @@
             if (msg) {
                 if (res.sucesso) {
                     msg.style.color = '#34d399';
-                    msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + res.mensagem;
+                    msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + esc(res.mensagem);
                     document.getElementById('input-vendedor').value = '';
                     document.getElementById('input-cotacoes').value = '';
                 } else {
                     msg.style.color = '#e5534b';
-                    msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + res.erro;
+                    msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + esc(res.erro);
                 }
             }
         });
@@ -2064,13 +2066,13 @@
             if (msg) {
                 if (res.sucesso) {
                     msg.style.color = '#34d399';
-                    msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + (res.mensagem || 'Cotações salvas na Planilha Anmyna com sucesso!');
+                    msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + esc(res.mensagem || 'Cotações salvas na Planilha Anmyna com sucesso!');
                     document.getElementById('tbody-cotacoes-manuais').innerHTML = '';
                     adicionarLinhaCotacaoManual();
                     carregarBancoDados();
                 } else {
                     msg.style.color = '#e5534b';
-                    msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + (res.erro || 'Falha ao salvar cotações.');
+                    msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + esc(res.erro || 'Falha ao salvar cotações.');
                 }
             }
         });
@@ -2085,13 +2087,13 @@
             if (msg) {
                 if (res.sucesso) {
                     msg.style.color = '#34d399';
-                    msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + (res.mensagem || 'Cotações salvas na Planilha Anmyna com sucesso!');
+                    msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + esc(res.mensagem || 'Cotações salvas na Planilha Anmyna com sucesso!');
                     document.getElementById('tbody-cotacoes-manuais').innerHTML = '';
                     adicionarLinhaCotacaoManual();
                     carregarBancoDados();
                 } else {
                     msg.style.color = '#e5534b';
-                    msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + (res.erro || 'Falha ao salvar.');
+                    msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + esc(res.erro || 'Falha ao salvar.');
                 }
             }
         });

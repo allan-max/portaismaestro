@@ -427,6 +427,9 @@ const dashboardFontes = criarDashboardFontes({
 const auditoria = criarAuditoria({ dir: process.env.AUDITORIA_DIR || path.join(__dirname, '..', 'auditoria'), uuid: uuidv4 });   // AUDITORIA_DIR: testes não sujam a real
 const emailsPendentes = new Map();      // clientId -> e-mail digitado no login/cadastro, até o robô responder
 const auditPorCliente = new Map();      // `${tipo}:${clientId}` -> id do registro, para respostas sem audit_id
+// comando_direto: portais e campos que as telas (coupa, vale, me, ariba, findes) mandam
+const PORTAIS_COMANDO = new Set(['coupa', 'vale', 'me', 'ariba', 'findes']);
+const CAMPOS_COMANDO = ['modo', 'portal', 'evento', 'versao', 'empresas', 'prioridades'];
 const MODOS_AUDITADOS = new Set(['ligar_robo', 'desligar_robo', 'forcar_troca', 'solicitar_parada', 'parar_extracao', 'extrair', 'verificar', 'mover_anexos_findes', 'iniciar_findes', 'parar_findes', 'ligar_robo_antigo', 'desligar_robo_antigo']);
 let syncNfAuditId = null;
 
@@ -586,8 +589,8 @@ io.on('connection', (socket) => {
     }
 
     // Cancelar Evento da Fila
-    socket.on('remover_da_fila', (dados) => {
-        if (!socket.autenticado) return;
+    socket.on('remover_da_fila', (dados = {}) => {
+        if (!podeOperarRobos()) return;
         const eventoId = dados.evento;
 
         // Proteção: não cancela se já estiver a ser preenchido pelo robô
@@ -613,6 +616,14 @@ io.on('connection', (socket) => {
         if (role === 'dev' && !socket.usuarioLogado?.dev) return false;
         return true;
     };
+    // Mexer nos robôs (ligar, extrair, imprimir, captcha, cancelar fila) exige "Acesso aos portais".
+    // Antes bastava estar logado: um vendedor sem portais desligava robô ou cancelava resposta alheia.
+    // portais_access da sessão já inclui admin e dashboard_access (ver resultado_login).
+    function podeOperarRobos() {
+        if (!socket.autenticado) return false;
+        const u = socket.usuarioLogado || {};
+        return !!(u.admin || u.portais_access);
+    }
 
     socket.on('sou_o_robo', () => {
         if (!socket.isBot) return socket.emit('robo_recusado', { erro: 'Identificação de serviço inválida.' });
@@ -669,7 +680,7 @@ io.on('connection', (socket) => {
     socket.on('contagem_coupa_vale', (dados) => io.to('frontend').emit('atualizar_contagem_coupa_vale', dados));
 
     socket.on('clique_no_captcha', (dados) => {
-        if (!socket.autenticado) return;
+        if (!podeOperarRobos()) return;
         // Repassa o clique do usuário diretamente para o robô local
         if (bot_socket_id) {
             io.to(bot_socket_id).emit('executar_clique', dados);
@@ -777,8 +788,8 @@ io.on('connection', (socket) => {
         socket.emit('sincronizar_estado_findes_antigo', estado_findes_antigo);
     });
 
-    socket.on('solicitar_impressao', (dados) => {
-        if (!socket.autenticado) return;
+    socket.on('solicitar_impressao', (dados = {}) => {
+        if (!podeOperarRobos()) return;
         audit('portal', 'imprimir', { portal: dados.portal || null, alvo: dados.evento || null, status: 'sucesso' });
         if (dados.portal === 'ariba') {
             estado_ariba.status = 'ocupado';
@@ -793,8 +804,12 @@ io.on('connection', (socket) => {
         if (bot_socket_id) io.to(bot_socket_id).emit('comando_imprimir', dados);
     });
 
-    socket.on('comando_direto', (dados) => {
-        if (!socket.autenticado) return;
+    socket.on('comando_direto', (bruto) => {
+        if (!podeOperarRobos()) return;
+        // Só os modos e campos que as telas usam: o robô aceita mais (ex.: 'responder' fora da fila)
+        if (!bruto || typeof bruto !== 'object' || !MODOS_AUDITADOS.has(bruto.modo) || !PORTAIS_COMANDO.has(bruto.portal)) return;
+        const dados = {};
+        for (const campo of CAMPOS_COMANDO) if (bruto[campo] !== undefined) dados[campo] = bruto[campo];
         if (MODOS_AUDITADOS.has(dados.modo)) {
             audit('portal', 'robo_' + dados.modo, { portal: dados.portal || null, alvo: dados.evento || null,
                 detalhes: { modo: dados.modo, evento: dados.evento || null }, status: 'sucesso' });
@@ -1597,7 +1612,8 @@ io.on('connection', (socket) => {
         io.to('backend').emit('obter_fila_extracao', { ...(dados || {}), clientId: socket.id });
     });
     socket.on('iniciar_extracao_fila', (dados) => {
-        if (!socket.autenticado) return;
+        // botão da planilha Vale: quem opera robôs ou tem a planilha liberada
+        if (!podeOperarRobos() && !socket.usuarioLogado?.planilha_access) return;
         audit('portal', 'extracao_fila', { status: 'sucesso' });
         io.to('backend').emit('iniciar_extracao_fila', dados);
     });
@@ -1668,6 +1684,7 @@ app.post('/api/responder', (req, res, next) => uploadResposta(req, res, err => {
         const sessionId = req.body.sessionId;
         const ficha = typeof sessionId === 'string' ? lerSessao(cofreSessoes, { sessionId }) : null;
         if (!ficha) return res.status(401).json({ error: "Sessão inválida ou expirada. Entre novamente." });
+        if (!ficha.admin && !ficha.portais_access) return res.status(403).json({ error: "Sem acesso aos portais." });
         const autor = ficha.email;
 
         const evento = String(req.body.evento || '').trim();

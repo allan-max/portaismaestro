@@ -1154,7 +1154,7 @@
         socket.on('status_registro_vendedor', (res) => {
             const msg = document.getElementById('status-msg');
             msg.style.color = '#e3b341';
-            msg.innerHTML = '<i class="fa-solid fa-clock"></i> ' + res.mensagem;
+            msg.innerHTML = '<i class="fa-solid fa-clock"></i> ' + escHtml(res.mensagem || '');
         });
 
         socket.on('resposta_registro_vendedor_cotacao', (res) => {
@@ -1166,12 +1166,12 @@
 
             if (res.sucesso) {
                 msg.style.color = '#34d399';
-                msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + res.mensagem;
+                msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + escHtml(res.mensagem || '');
                 document.getElementById('input-vendedor').value = '';
                 document.getElementById('input-cotacoes').value = '';
             } else {
                 msg.style.color = '#e5534b';
-                msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + res.erro;
+                msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + escHtml(res.erro);
             }
         });
 
@@ -1316,12 +1316,12 @@
 
             if (res.sucesso) {
                 msg.style.color = '#34d399';
-                msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + res.mensagem;
+                msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + escHtml(res.mensagem || '');
                 document.getElementById('tbody-pedidos-manuais').innerHTML = '';
                 adicionarLinhaPedidoManual();
             } else {
                 msg.style.color = '#e5534b';
-                msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + res.erro;
+                msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + escHtml(res.erro);
             }
         });
 
@@ -1334,12 +1334,12 @@
 
             if (res.sucesso) {
                 msg.style.color = '#34d399';
-                msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + res.mensagem;
+                msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + escHtml(res.mensagem || '');
                 document.getElementById('tbody-cotacoes-manuais').innerHTML = '';
                 adicionarLinhaCotacaoManual();
             } else {
                 msg.style.color = '#e5534b';
-                msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + res.erro;
+                msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Erro: ' + escHtml(res.erro);
             }
         });
 
@@ -1362,8 +1362,8 @@
                 let html = '';
                 for (let vend in agrupado) {
                     html += `<div style="background: #2d2d2d; padding: 10px; border-radius: 6px; margin-bottom: 10px;">
-                        <div style="color: #3b82f6; font-weight: bold; margin-bottom: 5px;"><i class="fa-solid fa-user"></i> ${vend}</div>
-                        <div style="color: #adbac7; font-size: 13px; line-height: 1.4;">${agrupado[vend].join(', ')}</div>
+                        <div style="color: #3b82f6; font-weight: bold; margin-bottom: 5px;"><i class="fa-solid fa-user"></i> ${escHtml(vend)}</div>
+                        <div style="color: #adbac7; font-size: 13px; line-height: 1.4;">${escHtml(agrupado[vend].join(', '))}</div>
                     </div>`;
                 }
                 lista.innerHTML = html;
@@ -1377,7 +1377,7 @@
         
         socket.on('progresso_fila_extracao', (res) => {
             const msg = document.getElementById('fila-status');
-            msg.innerHTML = res.mensagem;
+            msg.textContent = (res && res.mensagem) || '';
         });
 
         function iniciarExtracaoFila() {
@@ -1447,7 +1447,7 @@
                 const isChecked = estadoCol.selecionados.size === 0 || estadoCol.selecionados.has(val);
                 if (!isChecked) todasMarcadas = false;
                 
-                html += `<label style="display:flex; gap:5px; font-size:0.8rem; color:#adbac7; word-break: break-all;"><input type="checkbox" value="${val.replace(/"/g, '&quot;')}" class="chk-filtro-item" ${isChecked ? 'checked' : ''} onchange="aplicarFiltroColuna()"> ${val}</label>`;
+                html += `<label style="display:flex; gap:5px; font-size:0.8rem; color:#adbac7; word-break: break-all;"><input type="checkbox" value="${escHtml(val)}" class="chk-filtro-item" ${isChecked ? 'checked' : ''} onchange="aplicarFiltroColuna()"> ${escHtml(val)}</label>`;
             });
             document.getElementById('lista-filtro-col').innerHTML = html;
             document.getElementById('chk-todas-col').checked = todasMarcadas;
@@ -1571,8 +1571,8 @@
                 let val = item[key] ?? '';
                 html += `
                     <div style="margin-bottom: 10px;">
-                        <label style="display: block; font-size: 0.75rem; color: #768390; text-transform: uppercase; margin-bottom: 4px; font-weight: bold;">${key}</label>
-                        <textarea id="edit-input-${key}" style="width: 100%; box-sizing: border-box; background: #2d333b; border: 1px solid #444c56; color: #cdd9e5; padding: 8px; border-radius: 4px; font-size: 0.85rem; font-family: 'Inter'; resize: vertical; min-height: 35px;">${val}</textarea>
+                        <label style="display: block; font-size: 0.75rem; color: #768390; text-transform: uppercase; margin-bottom: 4px; font-weight: bold;">${escHtml(key)}</label>
+                        <textarea data-key="${escHtml(key)}" style="width: 100%; box-sizing: border-box; background: #2d333b; border: 1px solid #444c56; color: #cdd9e5; padding: 8px; border-radius: 4px; font-size: 0.85rem; font-family: 'Inter'; resize: vertical; min-height: 35px;">${escHtml(val)}</textarea>
                     </div>
                 `;
             }
@@ -1594,7 +1594,7 @@
             const inputs = document.querySelectorAll('#modal-editar-corpo textarea');
             const novos_dados = {};
             inputs.forEach(input => {
-                const key = input.id.replace('edit-input-', '');
+                const key = input.dataset.key;
                 novos_dados[key] = manterTipo(itemEmEdicao.original[key], input.value);
             });
             
@@ -1624,13 +1624,11 @@
             for (let key in item) {
                 let val = item[key];
                 if (val === null || val === undefined) val = '-';
-                if (typeof val === 'string') {
-                    val = val.replace(/\n/g, '<br>');
-                }
+                val = escHtml(val).replace(/\n/g, '<br>');   // escapa antes: o <br> é o único HTML
                 
                 const boxHtml = `
                     <div style="background: #444c56; padding: 12px; border-radius: 6px;">
-                        <span style="display: block; font-size: 0.75rem; color: #768390; text-transform: uppercase; margin-bottom: 4px; font-weight: bold;">${key}</span>
+                        <span style="display: block; font-size: 0.75rem; color: #768390; text-transform: uppercase; margin-bottom: 4px; font-weight: bold;">${escHtml(key)}</span>
                         <span style="color: #cdd9e5; font-size: 0.95rem; word-break: break-word;">${val}</span>
                     </div>
                 `;
@@ -1673,20 +1671,20 @@
                         <div class="cell-content">
                             <div class="doc-icon"><i class="fa-solid fa-file-lines"></i></div>
                             <div>
-                                <div class="cell-main-text"><a href="#"  style="color: inherit; text-decoration: none;">${c['COTAÇÃO'] || '-'}</a></div>
-                                <div class="cell-sub-text">${c['LOCALIDADE'] || 'Não informada'}</div>
+                                <div class="cell-main-text"><a href="#"  style="color: inherit; text-decoration: none;">${escHtml(c['COTAÇÃO'] || '-')}</a></div>
+                                <div class="cell-sub-text">${escHtml(c['LOCALIDADE'] || 'Não informada')}</div>
                             </div>
                         </div>
                     </td>
                     <td>
                         <div class="cell-content">
-                            <span class="blue-pill">${c['VENCIMENTO'] || '-'}</span>
+                            <span class="blue-pill">${escHtml(c['VENCIMENTO'] || '-')}</span>
                         </div>
                     </td>
                     <td>
                         <div class="cell-content">
                             <div>
-                                <div class="cell-main-text">${(c['VENDEDOR'] || '-').toUpperCase()}</div>
+                                <div class="cell-main-text">${escHtml(String(c['VENDEDOR'] || '-').toUpperCase())}</div>
                                 <div class="cell-sub-text">${c['VENDEDOR'] ? 'Atribuído' : 'Não informado'}</div>
                             </div>
                         </div>
@@ -1694,7 +1692,7 @@
                     <td>
                         <div class="cell-content">
                             <div>
-                                <div class="cell-main-text">${c['LOCALIDADE'] || '-'}</div>
+                                <div class="cell-main-text">${escHtml(c['LOCALIDADE'] || '-')}</div>
                                 <div class="cell-sub-text">Brasil</div>
                             </div>
                         </div>
@@ -1704,7 +1702,7 @@
                             <div>
                                 <div class="cell-main-text" style="display: flex; align-items: center; gap: 8px;">
                                     <div class="status-dot ${!c['RESPOSTA'] || (c['RESPOSTA']||'').toUpperCase().includes('NÃO') ? 'red' : 'green'}"></div>
-                                    ${c['RESPOSTA'] || '-'}
+                                    ${escHtml(c['RESPOSTA'] || '-')}
                                 </div>
                                 
                             </div>
@@ -1713,7 +1711,7 @@
                       <td>
                           <div class="cell-content">
                               <div>
-                                  <div class="cell-main-text" style="max-width: 250px; font-size: 0.75rem; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; color: #adbac7;" title="${(c['ITEM'] || c['ITENS'] || '-').replace(/"/g, '&quot;')}">${(c['ITEM'] || c['ITENS'] || '-').replace(/\n/g, '<br>')}</div>
+                                  <div class="cell-main-text" style="max-width: 250px; font-size: 0.75rem; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; color: #adbac7;" title="${escHtml(c['ITEM'] || c['ITENS'] || '-')}">${escHtml(c['ITEM'] || c['ITENS'] || '-').replace(/\n/g, '<br>')}</div>
                               </div>
                           </div>
                       </td>
@@ -1737,34 +1735,34 @@
                         <div class="cell-content">
                             <div class="doc-icon"><i class="fa-solid fa-cart-shopping"></i></div>
                             <div>
-                                <div class="cell-main-text"><a href="#"  style="color: inherit; text-decoration: none;">${p['PEDIDO'] || '-'}</a></div>
-                                <div class="cell-sub-text">${p['CIDADE'] || 'Não informada'}</div>
+                                <div class="cell-main-text"><a href="#"  style="color: inherit; text-decoration: none;">${escHtml(p['PEDIDO'] || '-')}</a></div>
+                                <div class="cell-sub-text">${escHtml(p['CIDADE'] || 'Não informada')}</div>
                             </div>
                         </div>
                     </td>
                     <td>
                         <div class="cell-content">
-                            <span class="blue-pill">R$ ${p['VALOR ']?.toLocaleString('pt-BR') || p['VALOR'] || '-'}</span>
+                            <span class="blue-pill">R$ ${escHtml(p['VALOR ']?.toLocaleString('pt-BR') || p['VALOR'] || '-')}</span>
                         </div>
                     </td>
                     <td>
                         <div class="cell-content">
                             <div>
-                                <div class="cell-main-text">${p['DATA DE ENTREGA'] || '-'}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="cell-content">
-                            <div>
-                                <div class="cell-main-text">${p['REQUISITANTE '] || p['REQUISITANTE'] || '-'}</div>
+                                <div class="cell-main-text">${escHtml(p['DATA DE ENTREGA'] || '-')}</div>
                             </div>
                         </div>
                     </td>
                     <td>
                         <div class="cell-content">
                             <div>
-                                <div class="cell-main-text">${p['CIDADE'] || '-'}</div>
+                                <div class="cell-main-text">${escHtml(p['REQUISITANTE '] || p['REQUISITANTE'] || '-')}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="cell-content">
+                            <div>
+                                <div class="cell-main-text">${escHtml(p['CIDADE'] || '-')}</div>
                             </div>
                         </div>
                     </td>
@@ -1832,8 +1830,8 @@
 
         socket.on('retorno_planilha_json', (res) => {
             if (!res.sucesso) {
-                document.getElementById('tbody-bd-cota').innerHTML = `<tr><td colspan="6" style="padding: 20px; text-align: center; color: #e5534b;">Erro: ${res.erro}</td></tr>`;
-                document.getElementById('tbody-bd-pedi').innerHTML = `<tr><td colspan="7" style="padding: 20px; text-align: center; color: #e5534b;">Erro: ${res.erro}</td></tr>`;
+                document.getElementById('tbody-bd-cota').innerHTML = `<tr><td colspan="6" style="padding: 20px; text-align: center; color: #e5534b;">Erro: ${escHtml(res.erro)}</td></tr>`;
+                document.getElementById('tbody-bd-pedi').innerHTML = `<tr><td colspan="7" style="padding: 20px; text-align: center; color: #e5534b;">Erro: ${escHtml(res.erro)}</td></tr>`;
                 return;
             }
 
@@ -1960,7 +1958,7 @@
             if (!isChecked) todosMarcados = false;
             
             html += `<label style="display:flex; gap:5px; font-size:0.8rem; color:#adbac7; word-break: break-all; cursor:pointer; padding: 2px 0;">
-                <input type="checkbox" value="${v.replace(/"/g, '&quot;')}" class="chk-filtro-vendedor" ${isChecked ? 'checked' : ''} onchange="atualizarFiltroVendedorState(this)"> ${v}
+                <input type="checkbox" value="${escHtml(v)}" class="chk-filtro-vendedor" ${isChecked ? 'checked' : ''} onchange="atualizarFiltroVendedorState(this)"> ${escHtml(v)}
             </label>`;
         });
 
