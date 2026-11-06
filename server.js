@@ -641,9 +641,14 @@ io.on('connection', (socket) => {
 
 
     // === PONTES DE CAPTCHA (ROBÔ <-> SITE) ===
-    socket.on('imagem_captcha_do_robo', (dados) => {
-        // Envia a imagem do desafio para todos os navegadores na sala frontend
-        io.to('frontend').emit('nova_imagem', dados);
+    socket.on('imagem_captcha_do_robo', (dados, ack) => {
+        // Só o robô transmite (antes qualquer conexão podia injetar imagem na tela dos vendedores)
+        if (doRobo() && dados && typeof dados.imagem === 'string') {
+            // volatile: navegador com conexão lenta perde o quadro em vez de acumular fila de quadros velhos
+            io.to('frontend').volatile.emit('nova_imagem', { imagem: dados.imagem });
+        }
+        // ack = controle de fluxo: o robô só manda o próximo quadro depois desta confirmação
+        if (typeof ack === 'function') ack();
     });
 
     socket.on('captcha_resolvido_do_robo', (dados) => {
