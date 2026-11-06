@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- CSP própria: o conteúdo dos e-mails é hostil e a sessão fica no localStorage. Nada inline. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' ws: wss:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+  <meta name="referrer" content="no-referrer" />
+  <title>E-mails — Maestro</title>
+  <link rel="icon" type="image/png" href="favicon-32x32.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="dashboard-cotacoes/style.css" />
+  <link rel="stylesheet" href="emails/tela.css" />
+</head>
+<body>
+  <a href="#em-lista" class="skip-link">Pular para a lista de e-mails</a>
+  <header class="em-topo">
+    <a class="em-marca" href="index.html?portais=1">MAESTRO</a>
+    <a class="em-voltar" href="index.html?portais=1">Voltar ao portal</a>
+    <h1 class="em-titulo">Central de E-mails</h1>
+    <span id="em-usuario" class="em-usuario"></span>
+  </header>
+
+  <div id="em-acesso" class="em-acesso" hidden>
+    <h2 id="em-acesso-titulo">Verificando acesso…</h2>
+    <p id="em-acesso-texto"></p>
+    <a class="em-botao" href="index.html">Ir para o login do Maestro</a>
+  </div>
+
+  <div id="em-app" class="em-app">
+    <aside class="em-filtros" aria-label="Filtros">
+      <form id="em-form" role="search">
+        <label for="em-busca">Buscar</label>
+        <input id="em-busca" type="search" maxlength="200" autocomplete="off" placeholder="Assunto, remetente ou texto" />
+        <label for="em-categoria">Categoria</label>
+        <select id="em-categoria">
+          <option value="">Todas</option>
+          <option>cotação</option><option>pedido</option><option>financeiro/NF</option><option>cadastro</option>
+          <option>informação</option><option>marketing</option><option>spam</option><option>phishing</option>
+          <option>outros</option><option>notificação Coupa</option><option>interno</option><option>enviado</option>
+          <option>código de login</option><option value="(não classificado)">Não classificado</option>
+        </select>
+        <label for="em-conta">Caixa</label>
+        <select id="em-conta"><option value="">Todas</option></select>
+        <label for="em-de">De</label>
+        <input id="em-de" type="date" />
+        <label for="em-ate">Até</label>
+        <input id="em-ate" type="date" />
+        <label class="em-check"><input id="em-revisao" type="checkbox" /> Só fila de revisão</label>
+        <div class="em-acoes">
+          <button type="submit" class="em-botao">Filtrar</button>
+          <button type="button" id="em-limpar" class="em-botao em-secundario">Limpar</button>
+        </div>
+      </form>
+    </aside>
+
+    <section class="em-lista-area" aria-labelledby="em-lista-titulo">
+      <h2 id="em-lista-titulo" class="em-sr">Lista de e-mails</h2>
+      <div id="em-novidade" class="em-novidade" hidden>
+        <span id="em-novidade-texto"></span>
+        <button type="button" id="em-recarregar" class="em-botao">Atualizar</button>
+      </div>
+      <p id="em-estado" class="em-estado" role="status" aria-live="polite"></p>
+      <ul id="em-lista" class="em-lista" tabindex="-1"></ul>
+      <button type="button" id="em-mais" class="em-botao em-secundario" hidden>Carregar mais</button>
+    </section>
+
+    <section id="em-detalhe" class="em-detalhe" aria-labelledby="em-assunto" hidden>
+      <h2 id="em-assunto" tabindex="-1"></h2>
+      <dl id="em-meta" class="em-meta"></dl>
+      <div id="em-avisos" class="em-avisos"></div>
+      <div id="em-anexos" class="em-anexos"></div>
+      <div class="em-corpo-acoes">
+        <button type="button" id="em-ver-html" class="em-botao em-secundario" hidden>Ver versão formatada (HTML)</button>
+        <button type="button" id="em-ver-texto" class="em-botao em-secundario" hidden>Ver texto puro</button>
+      </div>
+      <pre id="em-corpo" class="em-corpo"></pre>
+      <iframe id="em-html" class="em-html" title="Versão formatada do e-mail, sem scripts e sem imagens externas" sandbox="" referrerpolicy="no-referrer" hidden></iframe>
+    </section>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="emails/tela.js"></script>
+</body>
+</html>

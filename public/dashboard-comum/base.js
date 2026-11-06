@@ -23,6 +23,7 @@
         config: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.77 1.02 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
         calendario: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
         voltar: '<path d="m15 5-7 7 7 7"/>',
+        email: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>',
         alerta: '<path d="m10.3 3.9-8 14a2 2 0 0 0 1.7 3h16a2 2 0 0 0 1.7-3l-8-14a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/>',
         atualizar: '<path d="M20 7a8.1 8.1 0 0 0-14-2L3 8M3 3v5h5M4 17a8.1 8.1 0 0 0 14 2l3-3M16 16h5v5"/>',
         abaixo: '<path d="m6 9 6 6 6-6"/>',
@@ -61,6 +62,9 @@
             const sel = ativa === id && !op.configAberta;
             return `<a href="${href}" ${sel ? 'class="selected" aria-current="page"' : ''}>${icone(ico)}<span>${rotulo}</span></a>`;
         };
+        // Central de E-mails: admin ou emails_access (o servidor confere de novo a cada pedido)
+        const podeEmails = isAdmin || (typeof localStorage !== 'undefined' && localStorage.getItem('maestro_emails') === 'true');
+        const itemEmails = podeEmails ? itemPagina('emails', 'E-mails', 'emails.html', 'email') : '';
         const badgeQuotes = op.quotesCount != null ? `<span class="nav-count">${Number(op.quotesCount).toLocaleString('pt-BR')}</span>` : '';
         const badgeAudit = op.auditCountHtml || '';
         const itemConfig = naContas
@@ -75,6 +79,7 @@
                     ${itemCotacao('vendors', 'Vendedores', 'users')}
                     ${itemCotacao('quotes', 'Cotações', 'cotacoes', badgeQuotes)}
                     ${itemCotacao('history', 'Histórico', 'history')}
+                    ${itemEmails}
                 </nav>
                 <div class="sidebar-bottom">${icone('cotacoes')}<p>Gestão comercial</p><small>Painel de cotações</small></div>
             </aside>`;
@@ -87,6 +92,7 @@
                 ${itemCotacao('vendors', 'Vendedores', 'users')}
                 ${itemCotacao('quotes', 'Cotações', 'cotacoes', badgeQuotes)}
                 ${itemCotacao('history', 'Histórico', 'history')}
+                ${itemEmails}
             </nav>
             <div class="eyebrow">Operação e robôs</div>
             <nav class="subnav" aria-label="Operação e robôs">

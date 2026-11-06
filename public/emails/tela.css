@@ -1,0 +1,58 @@
+/* Central de E-mails — mesmas cores do painel (variáveis de dashboard-cotacoes/style.css). */
+.em-topo { display: flex; align-items: center; gap: 16px; padding: 12px 20px; background: var(--nav); border-bottom: 1px solid var(--border); }
+.em-marca { font-weight: 800; letter-spacing: .12em; }
+.em-voltar { color: var(--muted); }
+.em-voltar:hover { color: var(--text); }
+.em-titulo { font-size: 17px; letter-spacing: -.2px; margin-left: 8px; }
+.em-usuario { margin-left: auto; color: var(--muted); font-size: 12px; }
+.em-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.em-app { display: grid; grid-template-columns: 230px minmax(320px, 420px) 1fr; gap: 16px; padding: 16px 20px; height: calc(100vh - 54px); }
+.em-filtros, .em-lista-area, .em-detalhe { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; overflow: auto; }
+.em-filtros form { display: flex; flex-direction: column; gap: 6px; }
+.em-filtros label { color: var(--muted); font-size: 12px; margin-top: 6px; }
+.em-filtros input[type=search], .em-filtros input[type=date], .em-filtros select {
+  background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 7px 9px; }
+.em-check { display: flex; align-items: center; gap: 6px; }
+.em-acoes { display: flex; gap: 8px; margin-top: 12px; }
+.em-botao { background: var(--blue); color: #0b1220; font-weight: 600; border-radius: 8px; padding: 7px 12px; display: inline-block; }
+.em-secundario { background: transparent; color: var(--text); border: 1px solid var(--border); }
+.em-botao:hover:not(:disabled) { filter: brightness(1.1); }
+
+.em-estado { color: var(--muted); margin: 0 0 8px; min-height: 1.5em; }
+.em-novidade { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--panel-hover); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+.em-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.em-item { width: 100%; text-align: left; background: transparent; border: 1px solid var(--border); border-radius: 10px; padding: 9px 11px; display: flex; flex-direction: column; gap: 3px; }
+.em-item:hover, .em-item.em-ativo { background: var(--panel-hover); border-color: var(--cyan); }
+.em-item.em-revisao { border-left: 3px solid var(--amber); }
+.em-item-topo, .em-item-rodape { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.em-de { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%; }
+.em-data { margin-left: auto; color: var(--dim); font-size: 11px; white-space: nowrap; }
+.em-assunto-linha { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.em-resumo { color: var(--muted); font-size: 12px; }
+.em-caixas { color: var(--dim); font-size: 11px; }
+.em-chip { font-size: 11px; border-radius: 999px; padding: 1px 8px; background: rgba(96,165,250,.16); color: var(--blue); }
+.em-chip-alerta { background: rgba(244,191,104,.16); color: var(--amber); }
+.em-chip-cinza { background: rgba(154,174,195,.14); color: var(--muted); }
+#em-mais { margin-top: 10px; width: 100%; }
+
+.em-detalhe h2 { font-size: 18px; margin-bottom: 10px; overflow-wrap: anywhere; }
+.em-meta { display: grid; grid-template-columns: 110px 1fr; gap: 4px 10px; margin: 0 0 12px; }
+.em-meta dt { color: var(--muted); }
+.em-meta dd { margin: 0; overflow-wrap: anywhere; }
+.em-aviso { background: rgba(244,191,104,.12); border: 1px solid rgba(244,191,104,.35); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+.em-aviso-forte { background: rgba(251,133,133,.12); border-color: rgba(251,133,133,.45); }
+.em-anexos ul { list-style: none; padding: 0; margin: 6px 0 12px; display: flex; flex-direction: column; gap: 6px; }
+.em-anexos li button { white-space: nowrap; flex: 0 0 auto; }
+.em-anexos li { display: flex; justify-content: space-between; align-items: center; gap: 10px; overflow-wrap: anywhere; }
+.em-corpo-acoes { display: flex; gap: 8px; margin-bottom: 8px; }
+.em-corpo { white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit; font-size: 13px; line-height: 1.6; margin: 0; }
+.em-html { width: 100%; min-height: 60vh; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+
+.em-acesso { max-width: 520px; margin: 80px auto; text-align: center; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.em-acesso[hidden], .em-app[hidden], [hidden] { display: none !important; }
+
+@media (max-width: 1100px) {
+  .em-app { grid-template-columns: 1fr; height: auto; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
