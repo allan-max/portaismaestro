@@ -40,7 +40,7 @@ test('servidor real: eventos do robô, fila de extração, clientId e /api/respo
   const ready = event(bot, 'sincronizar_estado'); bot.emit('sou_o_robo'); await ready;
   const doRobo = [];
   bot.onAny((nome, dados) => doRobo.push({ nome, dados }));
-  bot.on('validar_login', data => bot.emit('resultado_login', { sucesso: true, user: data.user, clientId: data.clientId, vendedor: 'ANA' }));
+  bot.on('validar_login', data => bot.emit('resultado_login', { sucesso: true, user: data.user, clientId: data.clientId, vendedor: 'ANA', hasPlanilhaAccess: true, hasPortaisAccess: true }));
   async function login(user) {
     const socket = await client(), response = event(socket, 'resposta_login');
     socket.emit('solicitar_login', { user, pass: 'senha-de-teste' });

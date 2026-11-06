@@ -4,8 +4,8 @@ const assert = require('node:assert/strict');
 const D = require('../public/dashboard-cotacoes/dados');
 const A = require('../public/dashboard-comum/atividade');
 
-const br = iso => `${iso.slice(8)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
-const daqui = dias => br(D.day(D.TODAY, dias));
+// ISO, e não dd/mm/aaaa: com dia até 12 a data é ambígua e o teste só passava em parte do mês.
+const daqui = dias => D.day(D.TODAY, dias);
 
 test('RASCUNHO é um status próprio e conta como sem resposta (pendente)', () => {
   const rows = D.normalizeRows([
