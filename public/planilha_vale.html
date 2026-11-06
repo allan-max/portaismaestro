@@ -412,17 +412,12 @@
                 <i class="fa-solid fa-arrow-left"></i> Minhas Cotações
             </a>
             <script>
-                // Admin não usa Minhas Cotações: o botão volta para a tela anterior (ou para a gestão).
+                // Admin não usa Minhas Cotações: o botão leva para a tela principal (portais).
+                // ?portais=1 impede o index.html de mandar admin vinculado a vendedor para Minhas Cotações.
                 if (localStorage.getItem('maestro_admin') === 'true') {
                     const btnVoltar = document.getElementById('btn-voltar-planilha');
-                    btnVoltar.href = 'dashboard.html';
-                    btnVoltar.innerHTML = '<i class="fa-solid fa-arrow-left"></i> Voltar';
-                    btnVoltar.addEventListener('click', (e) => {
-                        if (document.referrer && new URL(document.referrer).origin === location.origin && history.length > 1) {
-                            e.preventDefault();
-                            history.back();
-                        }
-                    });
+                    btnVoltar.href = 'index.html?portais=1';
+                    btnVoltar.innerHTML = '<i class="fa-solid fa-arrow-left"></i> Tela principal';
                 }
             </script>
             <a href="planilha_anmyna.html" class="tab-btn" style="text-decoration: none; color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); display: flex; align-items: center; gap: 8px;">
