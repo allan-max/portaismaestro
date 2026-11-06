@@ -84,4 +84,21 @@ test('comandos aos robôs: sem acesso aos portais nada chega; com acesso só mod
   const doPiloto = event(bot, 'comando_para_robo');
   bot.emit('comando_direto', { modo: 'extrair', portal: 'coupa' });
   assert.deepEqual(await doPiloto, { modo: 'extrair', portal: 'coupa' });
+
+  // Conclusões que não são resposta da fila ("Login do Robo", "Lote de Extração") voltam a tela para "ocioso"
+  async function estadoApos(conclusao) {
+    const recebidos = [];
+    const ouvir = e => recebidos.push(e.estado.status);
+    operador.socket.on('sincronizar_estado', ouvir);
+    bot.emit('tarefa_concluida', conclusao);
+    await pausa(300);
+    operador.socket.off('sincronizar_estado', ouvir);
+    return recebidos.at(-1);
+  }
+  operador.socket.emit('comando_direto', { modo: 'ligar_robo', portal: 'coupa' });
+  await pausa(200);
+  assert.equal(await estadoApos({ evento: 'Login do Robo', sucesso: true }), 'ocioso');
+  operador.socket.emit('comando_direto', { modo: 'extrair', portal: 'coupa' });
+  await pausa(200);
+  assert.equal(await estadoApos({ evento: 'Lote de Extração', sucesso: true }), 'ocioso');
 });

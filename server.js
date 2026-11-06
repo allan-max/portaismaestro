@@ -776,7 +776,11 @@ io.on('connection', (socket) => {
         // 👇 NOVA ROTINA PARA CONTROLE DE FILA (EVENTOS) 👇
         const eventoStr = String(dados?.evento || '').trim();
         const eventoId = eventoStr.replace(/^Evento\s+/i, '').trim();
-        if (eventoId) {
+        // Só resposta de evento da fila ("Evento 123" ou o id cru). Antes qualquer texto entrava aqui
+        // ("Login do Robo", "Lote de Extração"...) e o Coupa/Vale ficava preso em "A AUTENTICAR"/"A EXTRAIR".
+        const ehRespostaDaFila = eventoId !== '' &&
+            (/^Evento\s+/i.test(eventoStr) || fila_respostas.some(e => e.id === eventoStr));
+        if (ehRespostaDaFila) {
             const respondido = fila_respostas.find(e => e.id === eventoId || `Evento ${e.id}` === eventoStr);
             if (respondido && doRobo()) fecharPelaResposta(respondido.audit_id, dados);
             if (doRobo() && Array.isArray(dados.prints) && dados.prints.length) {
@@ -1808,7 +1812,9 @@ app.post('/api/responder', (req, res, next) => uploadResposta(req, res, err => {
             datasheets: datasheets, 
             davs: davs,
             datasheet_por_linha: datasheetPorLinha,
-            datasheets_por_item: datasheets_por_item
+            datasheets_por_item: datasheets_por_item,
+            // Nome de quem respondeu (cadastro do usuário no painel admin); o robô põe no campo "Nome" do Coupa
+            vendedor: String(ficha.vendedor || '').trim() || autor
         };
 
         // 2. Adiciona à fila real de trabalho do servidor
