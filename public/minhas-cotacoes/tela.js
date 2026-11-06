@@ -1035,6 +1035,8 @@
             { titulo: 'Vence hoje', sub: 'responda primeiro', cor: 'var(--red)', cs: l.filter(c => dias(c) === 0) },
             { titulo: 'Esta semana', sub: 'de amanhã a 7 dias', cor: 'var(--amber)', cs: l.filter(c => dias(c) >= 1 && dias(c) <= 7) },
             { titulo: 'Mais adiante', sub: 'depois de 7 dias', cor: 'var(--blue)', cs: l.filter(c => dias(c) > 7) },
+            // só a cotação de outro vendedor achada pela busca exata pode estar vencida (a lista própria não traz vencidas)
+            { titulo: 'Vencidas', sub: 'de outro vendedor', cor: '#5b6f88', cs: l.filter(c => ehDeOutro(c) && dias(c) < 0) },
         ].filter(col => col.cs.length);
         if (!cols.length) {
             return estado.lista.length

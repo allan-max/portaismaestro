@@ -167,12 +167,8 @@
 
         socket.on('retorno_busca_cotacao_outro_vendedor', (res) => {
             if (!res || !Array.isArray(res.cotacoes)) return;
-            const hoje = getHojeMeiaNoite();
-            // mesma regra da lista própria: vencidas ficam de fora (menos Anmyna)
-            const cotacoes = res.cotacoes.filter(c => {
-                const tVenc = parseDataVenc(c['VENCIMENTO']);
-                return tVenc !== null && (tVenc >= hoje || c.ORIGEM_PLANILHA === 'anmyna');
-            });
+            // busca pelo número exato mostra a cotação de outro vendedor mesmo vencida (a lista própria segue sem vencidas)
+            const cotacoes = res.cotacoes;
             // os mapas da página valem também para a cotação de fora (Responder, Word "ONDE ENCONTRAR?", prints)
             if (res.onde_encontrar && typeof res.onde_encontrar === 'object') Object.assign(ondeEncontrarOutros, res.onde_encontrar);
             if (res.prints_robo && typeof res.prints_robo === 'object') { printsRobo = { ...printsRobo, ...res.prints_robo }; window.printsRobo = printsRobo; }

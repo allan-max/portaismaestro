@@ -1270,4 +1270,12 @@ test('tela: cotação de outro vendedor só aparece com o número exato na busca
     // número parcial não mostra a de outro vendedor
     Object.assign(Tela.estado, { busca: 'PPG024118' });
     assert.deepEqual(Tela.filtradas().map(c => c.ITEM), []);
+
+    // vencida de outro vendedor também aparece na busca exata
+    Object.assign(Tela.estado, { busca: '165060' });
+    Tela.receberOutros('165060', [{ 'COTAÇÃO': '165060', 'VENDEDOR': 'GUSTAVO', 'ITEM': 'C', 'VENCIMENTO': dataRel(-5), 'RESPOSTA': '' }], {});
+    const vencida = Tela.filtradas();
+    assert.deepEqual(vencida.map(c => c.ITEM), ['C']);
+    assert.match(Tela.cartao(vencida[0], 0), /Venceu há 5d/);
+    assert.match(Tela.cartao(vencida[0], 0), /Cotação de GUSTAVO/);
 });
