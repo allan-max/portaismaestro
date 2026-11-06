@@ -282,8 +282,9 @@ function obterCaminhoLicitacoesComprasGov() {
 // Licitações que o robô ComprasGOV já baixou (Status "baixado"), mais recentes primeiro
 function lerLicitacoesBaixadas() {
     const conteudo = fs.readFileSync(obterCaminhoLicitacoesComprasGov(), 'utf-8').replace(/^﻿/, '');
-    const lista = JSON.parse(conteudo);
-    if (!Array.isArray(lista)) return [];
+    const json = JSON.parse(conteudo);
+    // Formato antigo: array direto. Formato novo (Versao 2): { Versao, Itens: [...] }
+    const lista = Array.isArray(json) ? json : (json && Array.isArray(json.Itens) ? json.Itens : []);
     return lista
         .filter(l => l && String(l.Status || '').trim().toLowerCase() === 'baixado')
         .map(l => ({
@@ -374,6 +375,45 @@ function formatarDataVencimentoParaCotacao(val) {
     else if (p2 > 12) { dia = p2; mes = p1; }
     else { mes = p1; dia = p2; }
     return `${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}/${y}`;
+}
+
+// Busca exata de Minhas Cotações: "COTAÇÃO/ES (EDIVIT) > PPG0241188" casa com o texto inteiro ou com PPG0241188
+function normalizarNumeroBusca(v) {
+    const s = String(v ?? '').trim();
+    return s && s.length <= 60 ? s.toUpperCase() : '';
+}
+function numerosDaCotacao(valor) {
+    const bruto = String(valor ?? '').trim();
+    const limpo = bruto.split('>').pop().replace(/^\s*cota[çc][ãa]o\s*[:/\-]?\s*/i, '').trim();
+    return [bruto.toUpperCase(), (limpo || bruto).toUpperCase()];
+}
+const casaNumeroBusca = (c, numero) => !!(c && numero && numerosDaCotacao(c['COTAÇÃO']).includes(numero));
+function ehDeOutroVendedor(c, meuVendedor) {
+    return !meuVendedor || !vendedorCorresponde(String((c && c.VENDEDOR) || '').trim(), meuVendedor);
+}
+function anmynaDeOutroVendedor(numero, meuVendedor) {
+    return obterCotacoesAnmynaFormatadas('').filter(c => casaNumeroBusca(c, numero) && ehDeOutroVendedor(c, meuVendedor));
+}
+// Resposta do gerenciador a buscar_cotacao_outro_vendedor. Confere de novo permissão, número e dono antes de entregar.
+function entregarBuscaOutroVendedor(dados) {
+    const cliente = io.sockets.sockets.get(dados.clientId);
+    const user = cliente && cliente.usuarioLogado;
+    if (!cliente || !user || !(user.admin || user.busca_outros_access)) return;
+    const numero = normalizarNumeroBusca(dados.busca_numero);
+    const meuVendedor = String(user.vendedor || '').trim();
+    const daPlanilha = (Array.isArray(dados.cotacoes) ? dados.cotacoes : [])
+        .filter(c => c && c.ORIGEM_PLANILHA !== 'anmyna' && casaNumeroBusca(c, numero) && ehDeOutroVendedor(c, meuVendedor));
+    const chaves = new Set(daPlanilha.map(c => String(c['COTAÇÃO'] || '').trim()));
+    const cotacoes = [...anmynaDeOutroVendedor(numero, meuVendedor).filter(c => !chaves.has(String(c['COTAÇÃO'] || '').trim())), ...daPlanilha];
+    const soDessas = mapa => Object.fromEntries(Object.entries(mapa && typeof mapa === 'object' ? mapa : {})
+        .filter(([k]) => cotacoes.some(c => casaNumeroBusca(c, normalizarNumeroBusca(k)) || String(c['COTAÇÃO'] || '').trim() === k)));
+    cliente.emit('retorno_busca_cotacao_outro_vendedor', {
+        numero, cotacoes,
+        portais_robo: soDessas(dados.portais_robo),
+        onde_encontrar: soDessas(dados.onde_encontrar),
+        prints_robo: obterPrintsParaCotacoes(cotacoes),
+        erros_robo: obterErrosParaCotacoes(cotacoes)
+    });
 }
 
 function obterCotacoesAnmynaFormatadas(vendedorFiltro) {
@@ -939,6 +979,7 @@ io.on('connection', (socket) => {
             const hasDashboardAccess = Boolean(dados.hasDashboardAccess);
             const hasPortaisAccess = Boolean(dados.hasPortaisAccess || dados.hasDashboardAccess || dados.isAdmin);
             const hasPlanilhaAccess = Boolean(dados.hasPlanilhaAccess || dados.isAdmin);
+            const hasBuscaOutrosAccess = Boolean(dados.hasBuscaOutrosAccess || dados.isAdmin);
             cofreSessoes.set(sessionId, JSON.stringify({ 
                 email: dados.user, 
                 admin: dados.isAdmin, 
@@ -946,6 +987,7 @@ io.on('connection', (socket) => {
                 dashboard_access: hasDashboardAccess,
                 portais_access: hasPortaisAccess,
                 planilha_access: hasPlanilhaAccess,
+                busca_outros_access: hasBuscaOutrosAccess,
                 vendedor: dados.vendedor || '',
                 expires: expires 
             }));
@@ -958,6 +1000,7 @@ io.on('connection', (socket) => {
                 dashboard_access: hasDashboardAccess,
                 portais_access: hasPortaisAccess,
                 planilha_access: hasPlanilhaAccess,
+                busca_outros_access: hasBuscaOutrosAccess,
                 vendedor: dados.vendedor || ''
             });
         } else {
@@ -1057,6 +1100,7 @@ io.on('connection', (socket) => {
                 dashboard_access: !!db[email].dashboard_access,
                 planilha_access: !!db[email].planilha_access,
                 portais_access: !!db[email].portais_access,
+                busca_outros_access: !!db[email].busca_outros_access,
                 bloqueado: !!db[email].bloqueado,
                 vendedor: db[email].vendedor || '',
                 online: onlineUsers.includes(email)
@@ -1118,7 +1162,7 @@ io.on('connection', (socket) => {
 
     socket.on('admin_alterar_acesso_dashboard', (dados) => {
         if (!checkRole('admin')) return;
-        const campo = ['dashboard_access', 'planilha_access', 'portais_access'].includes(dados.campo)
+        const campo = ['dashboard_access', 'planilha_access', 'portais_access', 'busca_outros_access'].includes(dados.campo)
             ? dados.campo
             : 'dashboard_access';
 
@@ -1147,6 +1191,7 @@ io.on('connection', (socket) => {
                         if (dados.dashboard_access !== undefined) u.dashboard_access = dados.dashboard_access;
                         if (dados.portais_access !== undefined) u.portais_access = dados.portais_access;
                         if (dados.planilha_access !== undefined) u.planilha_access = dados.planilha_access;
+                        if (dados.busca_outros_access !== undefined) u.busca_outros_access = dados.busca_outros_access || !!u.admin;
                         if (u.dashboard_access) u.portais_access = true;
                         cofreSessoes.set(sId, JSON.stringify(u));
                     }
@@ -1302,10 +1347,26 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Minhas Cotações, permissão "Pesquisar cotações de outros vendedores" (admin sempre tem):
+    // devolve SÓ a cotação com o número exato digitado, de outro vendedor. Quem decide é o servidor.
+    socket.on('buscar_cotacao_outro_vendedor', (dados = {}) => {
+        if (!socket.autenticado) return socket.emit('sessao_invalida');
+        const user = socket.usuarioLogado || {};
+        const numero = normalizarNumeroBusca(dados && dados.numero);
+        const responder = cotacoes => socket.emit('retorno_busca_cotacao_outro_vendedor', { numero, cotacoes, portais_robo: {}, onde_encontrar: {} });
+        if (!(user.admin || user.busca_outros_access) || !numero) return responder([]);
+        const meuVendedor = String(user.vendedor || '').trim();
+        if (!bot_socket_id) return responder(anmynaDeOutroVendedor(numero, meuVendedor));
+        io.to(bot_socket_id).emit('comando_carregar_planilha_json', {
+            origem: 'todas', tela: 'minhas_cotacoes', numero_exato: numero, vendedor_excluir: meuVendedor, clientId: socket.id
+        });
+    });
+
     // Python devolve os dados JSON
     socket.on('retorno_planilha_json', (dados) => {
         if (socket.id !== bot_socket_id) return;
         if (dashboardCotacoes.receber(socket.id, dados)) return;
+        if (dados && dados.busca_numero) return entregarBuscaOutroVendedor(dados);
         if (dados && Array.isArray(dados.cotacoes)) {
             dados.prints_robo = { ...(dados.prints_robo || {}), ...obterPrintsParaCotacoes(dados.cotacoes) };
             dados.erros_robo = { ...(dados.erros_robo || {}), ...obterErrosParaCotacoes(dados.cotacoes) };
@@ -1757,7 +1818,7 @@ app.post('/api/responder', (req, res, next) => uploadResposta(req, res, err => {
         const sessionId = req.body.sessionId;
         const ficha = typeof sessionId === 'string' ? lerSessao(cofreSessoes, { sessionId }) : null;
         if (!ficha) return res.status(401).json({ error: "Sessão inválida ou expirada. Entre novamente." });
-        if (!ficha.admin && !ficha.portais_access) return res.status(403).json({ error: "Sem acesso aos portais." });
+        // Responder cotação (Minhas Cotações) vale para qualquer conta logada: não exige "Acesso aos portais".
         const autor = ficha.email;
 
         const evento = String(req.body.evento || '').trim();

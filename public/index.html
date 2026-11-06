@@ -565,6 +565,7 @@ socket.on("sessao_invalida", () => {
                 localStorage.setItem('maestro_dashboard', resposta.dashboard_access);
                 localStorage.setItem('maestro_planilha', resposta.planilha_access); // <-- NOVO
                 localStorage.setItem('maestro_portais', resposta.portais_access);   // <-- NOVO
+                localStorage.setItem('maestro_busca_outros', resposta.busca_outros_access); // Minhas Cotações: buscar número de outro vendedor
                 localStorage.setItem('maestro_vendedor', resposta.vendedor || '');
 
                 socket.auth = { sessionId: resposta.sessionId };
@@ -619,6 +620,7 @@ socket.on("sessao_invalida", () => {
             localStorage.removeItem('maestro_dashboard');
             localStorage.removeItem('maestro_portais');
             localStorage.removeItem('maestro_planilha');
+            localStorage.removeItem('maestro_busca_outros');
             localStorage.removeItem('maestro_vendedor');
 
             document.getElementById('log-user').value = '';

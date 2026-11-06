@@ -16,6 +16,7 @@
                 dashboard_access: !!d.dashboard_access,
                 portais_access: !!d.portais_access || !!d.dashboard_access,
                 planilha_access: !!d.planilha_access,
+                busca_outros_access: !!d.busca_outros_access,
                 bloqueado: !!d.bloqueado,
                 vendedor: String(d.vendedor || ''),
                 online: !!d.online,
@@ -35,6 +36,7 @@
             if (f.grupo === 'portais' && !(u.portais_access || u.dashboard_access || u.admin)) return false;
             if (f.grupo === 'estatisticas' && !(u.dashboard_access || u.admin)) return false;
             if (f.grupo === 'planilhas' && !(u.planilha_access || u.admin)) return false;
+            if (f.grupo === 'busca_outros' && !(u.busca_outros_access || u.admin)) return false;
             if (f.grupo === 'vendedores' && !u.vendedor.trim()) return false;
             if (f.grupo === 'pendentes' && u.verificado !== false) return false;
             if (termo && !`${u.email} ${u.vendedor}`.toLowerCase().includes(termo)) return false;
@@ -107,6 +109,7 @@
             const hasPortais = u.portais_access || u.dashboard_access || u.admin;
             const hasStats = u.dashboard_access || u.admin;
             const hasPlanilha = u.planilha_access || u.admin;
+            const hasBuscaOutros = u.busca_outros_access || u.admin;
             const disabledAttr = u.admin ? 'disabled title="Administradores sempre têm acesso total"' : '';
             const email = esc(u.email);
             const vend = esc(u.vendedor);
@@ -152,6 +155,12 @@
                     </label>
                 </td>
                 <td>
+                    <label class="contas-switch" title="Em Minhas Cotações, ver a cotação de outro vendedor buscando o número exato">
+                        <input type="checkbox" data-acao-change="toggle-acesso" data-email="${email}" data-campo="busca_outros_access" ${hasBuscaOutros ? 'checked' : ''} ${disabledAttr}>
+                        <span class="contas-slider"></span>
+                    </label>
+                </td>
+                <td>
                     <div class="contas-row-actions">
                         <button type="button" class="icon-button" data-acao="focar-vendedor" data-input="${inputId}" title="Editar vendedor vinculado">${icone('editar')}</button>
                         <button type="button" class="icon-button" data-acao="salvar-vendedor" data-email="${email}" data-input="${inputId}" title="Salvar vínculo do usuário">${icone('salvar')}</button>
@@ -180,6 +189,7 @@
                             <option value="portais" ${f.grupo === 'portais' ? 'selected' : ''}>Com acesso aos portais</option>
                             <option value="estatisticas" ${f.grupo === 'estatisticas' ? 'selected' : ''}>Com acesso a estatísticas</option>
                             <option value="planilhas" ${f.grupo === 'planilhas' ? 'selected' : ''}>Com acesso a planilhas</option>
+                            <option value="busca_outros" ${f.grupo === 'busca_outros' ? 'selected' : ''}>Pesquisam cotações de outros vendedores</option>
                             <option value="vendedores" ${f.grupo === 'vendedores' ? 'selected' : ''}>Com vendedor vinculado</option>
                             <option value="pendentes" ${f.grupo === 'pendentes' ? 'selected' : ''}>Não verificados</option>
                         </select>
@@ -198,6 +208,7 @@
                                 <th>Permissões · Portais (Robôs)</th>
                                 <th>Permissões · Estatísticas (Comercial)</th>
                                 <th>Permissões · Planilhas</th>
+                                <th>Permissões · Pesquisar cotações de outros vendedores</th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
@@ -278,6 +289,7 @@
                             if (r.portais_access !== undefined) u.portais_access = r.portais_access;
                             if (r.dashboard_access !== undefined) u.dashboard_access = r.dashboard_access;
                             if (r.planilha_access !== undefined) u.planilha_access = r.planilha_access;
+                            if (r.busca_outros_access !== undefined) u.busca_outros_access = r.busca_outros_access;
                             if (r.campo) u[r.campo] = r.acesso;
                             if (r.campo === 'dashboard_access' && r.acesso) u.portais_access = true;
                             if (r.campo === 'portais_access' && !r.acesso) u.dashboard_access = false;

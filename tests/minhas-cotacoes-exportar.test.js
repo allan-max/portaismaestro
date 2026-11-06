@@ -1241,3 +1241,33 @@ test('Word padrão Coupa sem recomendações do robô continua sem a seção', (
     assert.ok(!xml.includes('w:hyperlink'));
     assert.ok(xml.includes('MARCA: DELL'));
 });
+
+test('tela: cotação de outro vendedor só aparece com o número exato na busca, ignora filtros e mostra de quem é', () => {
+    const { context } = setupMinhasCotacoesEnv({ vendedor: 'ANA' });
+    const Tela = context.window.Tela;
+
+    Tela.receber([{ 'COTAÇÃO': '801', 'VENDEDOR': 'ANA', 'LOCALIDADE': 'TUBARÃO', 'ITEM': 'A', 'VENCIMENTO': dataRel(2), 'RESPOSTA': '' }]);
+    const antes = Tela.contagem();
+    Object.assign(Tela.estado, { status: 'pendentes', prazo: '7', locais: ['TUBARÃO'], busca: 'ppg0241188' });
+    const outra = { 'COTAÇÃO': 'COTAÇÃO/ES (EDIVIT) > PPG0241188', 'VENDEDOR': 'JOÃO', 'LOCALIDADE': 'SANTOS', 'ITEM': 'B', 'VENCIMENTO': dataRel(20), 'RESPOSTA': 'RESPONDIDO' };
+
+    // resposta de uma busca antiga (o vendedor já digitou outra coisa) é ignorada
+    Tela.receberOutros('PPG02', [outra], {});
+    assert.deepEqual(Tela.filtradas().map(c => c.ITEM), []);
+
+    Tela.receberOutros('PPG0241188', [outra], { 'COTAÇÃO/ES (EDIVIT) > PPG0241188': 'coupa' });
+    const achadas = Tela.filtradas();
+    assert.deepEqual(achadas.map(c => c.ITEM), ['B'], 'respondida, de outra localidade e fora do prazo, mas com o número exato');
+    assert.match(Tela.cartao(achadas[0], 0), /Cotação de JOÃO/);
+    assert.match(Tela.detalhe(achadas[0]), /Cotação de JOÃO/);
+    assert.equal(Tela.portalRobo(achadas[0]), 'coupa');
+    assert.deepEqual(Tela.contagem(), antes, 'contadores continuam só com as cotações do vendedor');
+
+    // cotação própria não ganha a etiqueta
+    Object.assign(Tela.estado, { status: 'todas', prazo: '', locais: [], busca: '801' });
+    assert.doesNotMatch(Tela.cartao(Tela.filtradas()[0], 0), /Cotação de/);
+
+    // número parcial não mostra a de outro vendedor
+    Object.assign(Tela.estado, { busca: 'PPG024118' });
+    assert.deepEqual(Tela.filtradas().map(c => c.ITEM), []);
+});

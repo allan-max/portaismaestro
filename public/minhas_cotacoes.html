@@ -37,6 +37,8 @@
         const temAcessoPlanilha = isAdmin || localStorage.getItem('maestro_planilha') === 'true';
         const temAcessoPortais = isAdmin || localStorage.getItem('maestro_portais') === 'true' || localStorage.getItem('maestro_dashboard') === 'true';
         const temAcessoEstatisticas = isAdmin || localStorage.getItem('maestro_dashboard') === 'true';
+        // Só evita pedir à toa: quem confere a permissão "Pesquisar cotações de outros vendedores" é o servidor
+        const podeBuscarOutrosVendedores = isAdmin || localStorage.getItem('maestro_busca_outros') === 'true';
 
         const socket = io({ auth: { sessionId: sessionAtual }, transports: ['websocket'], upgrade: false });
 
@@ -61,6 +63,7 @@
         // ONDE ENCONTRAR? por cotação, calculado pelo robô com a mesma configuração do Word do robô
         let ondeEncontrar = {};
         window.ondeEncontrar = ondeEncontrar;
+        const ondeEncontrarOutros = {};   // das cotações de outro vendedor achadas pela busca exata
         let printsRobo = {};
         window.printsRobo = printsRobo;
         let errosRobo = {};
@@ -154,6 +157,30 @@
             socket.emit('solicitar_planilha_json', { origem: 'todas', apenas_meu_vendedor: true, tela: 'minhas_cotacoes' });
         }
 
+        // Busca exata de cotação de outro vendedor (tela.js chama ao digitar na busca)
+        function buscarCotacaoOutroVendedor(numero) {
+            if (!podeBuscarOutrosVendedores) return false;
+            socket.emit('buscar_cotacao_outro_vendedor', { numero: String(numero || '').trim() });
+            return true;
+        }
+        window.buscarCotacaoOutroVendedor = buscarCotacaoOutroVendedor;
+
+        socket.on('retorno_busca_cotacao_outro_vendedor', (res) => {
+            if (!res || !Array.isArray(res.cotacoes)) return;
+            const hoje = getHojeMeiaNoite();
+            // mesma regra da lista própria: vencidas ficam de fora (menos Anmyna)
+            const cotacoes = res.cotacoes.filter(c => {
+                const tVenc = parseDataVenc(c['VENCIMENTO']);
+                return tVenc !== null && (tVenc >= hoje || c.ORIGEM_PLANILHA === 'anmyna');
+            });
+            // os mapas da página valem também para a cotação de fora (Responder, Word "ONDE ENCONTRAR?", prints)
+            if (res.onde_encontrar && typeof res.onde_encontrar === 'object') Object.assign(ondeEncontrarOutros, res.onde_encontrar);
+            if (res.prints_robo && typeof res.prints_robo === 'object') { printsRobo = { ...printsRobo, ...res.prints_robo }; window.printsRobo = printsRobo; }
+            if (res.erros_robo && typeof res.erros_robo === 'object') { errosRobo = { ...errosRobo, ...res.erros_robo }; window.errosRobo = errosRobo; }
+            window.ondeEncontrar = { ...ondeEncontrarOutros, ...ondeEncontrar };
+            if (window.Tela && window.Tela.receberOutros) window.Tela.receberOutros(res.numero, cotacoes, res.portais_robo || {});
+        });
+
         function isRespondida(c) {
             const resp = String(c['RESPOSTA'] || '').trim().toUpperCase();
             return (resp.includes('RESPONDID')) && !resp.includes('NÃO') && !resp.includes('NAO');
@@ -222,7 +249,7 @@
             portaisRobo = (res.portais_robo && typeof res.portais_robo === 'object') ? res.portais_robo : {};
             window.portaisRobo = portaisRobo;
             ondeEncontrar = (res.onde_encontrar && typeof res.onde_encontrar === 'object') ? res.onde_encontrar : {};
-            window.ondeEncontrar = ondeEncontrar;
+            window.ondeEncontrar = { ...ondeEncontrarOutros, ...ondeEncontrar };
             if (res.prints_robo && typeof res.prints_robo === 'object') {
                 printsRobo = { ...printsRobo, ...res.prints_robo };
                 window.printsRobo = printsRobo;

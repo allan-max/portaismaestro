@@ -67,13 +67,22 @@
         return { num: num || s, origem };
     }
 
+    const numeroDaBusca = () => estado.busca.trim().toUpperCase();
+    const casaNumeroBusca = c => {
+        const n = numeroDaBusca();
+        return !!n && [String(c['COTAÇÃO'] ?? '').trim().toUpperCase(), numero(c).num.toUpperCase()].includes(n);
+    };
+    const ehDeOutro = c => estado.outros.includes(c);
+    const seloOutro = c => (ehDeOutro(c) ? `<span class="pc-selo-outro" title="Cotação atribuída a outro vendedor">Cotação de ${esc(String(c.VENDEDOR || '').trim() || 'outro vendedor')}</span>` : '');
+
     // portal de origem vindo do gerenciador (só Coupa e Vale exibem o botão Responder na cotação aberta)
     function portalRobo(c) {
         if (!c) return '';
         const mapa = (typeof window !== 'undefined' && window.portaisRobo && Object.keys(window.portaisRobo).length ? window.portaisRobo : null) || estado.portais || {};
         const bruto = String(c['COTAÇÃO'] ?? '').trim();
         const limpo = numero(c).num;
-        const p = String(mapa[bruto] || mapa[limpo] || c.PORTAL || c.portal || '').trim().toLowerCase();
+        const outros = estado.portaisOutros || {};
+        const p = String(mapa[bruto] || mapa[limpo] || outros[bruto] || outros[limpo] || c.PORTAL || c.portal || '').trim().toLowerCase();
         return (p === 'coupa' || p === 'vale') ? p : '';
     }
 
@@ -201,6 +210,8 @@
         locais: arr(lembrado.locais), marcas: arr(lembrado.marcas), ordem: lembrado.ordem || 'prioridade',
         selecionadas: new Set(), aberta: null, confirmando: false, respondeuAgora: null, novos: new Set(), pop: null, portais: {},
         respondendoPortal: false, respostas: {}, printsRobo: {}, captchaImagem: '', printViewer: null, errosResposta: {},
+        // cotações de OUTRO vendedor achadas pela busca do número exato (permissão conferida no servidor)
+        outros: [], outrosNumero: '', portaisOutros: {},
     };
     function dadosResposta(c) {
         if (!c) return null;
@@ -264,6 +275,9 @@
             && (!estado.locais.length || estado.locais.includes(localDe(c)))
             && (!estado.marcas.length || marcasDe(c).split(', ').some(m => estado.marcas.includes(m)))
             && (!b || Object.values(c).some(v => String(v ?? '').toLowerCase().includes(b))));
+        // cotação de outro vendedor: só com o número exato na busca, e aí ignora os filtros
+        const jaTem = new Set(r.map(id));
+        r.push(...estado.outros.filter(c => casaNumeroBusca(c) && !jaTem.has(id(c))));
         const prio = c => (dias(c) === 0 ? 0 : dias(c) <= 7 ? 1 : 2);
         if (estado.ordem === 'prioridade') r.sort((a, z) => prio(a) - prio(z) || dias(a) - dias(z) || respondida(a) - respondida(z));
         else if (estado.ordem === 'venc_asc') r.sort((a, z) => dias(a) - dias(z));
@@ -279,7 +293,7 @@
         };
     }
     const temFiltro = () => !!(estado.busca || estado.prazo || estado.locais.length || estado.marcas.length || estado.status !== 'todas');
-    const porId = v => estado.lista.find(c => id(c) === Number(v));
+    const porId = v => estado.lista.find(c => id(c) === Number(v)) || estado.outros.find(c => id(c) === Number(v));
     const alvoExportacao = () => (estado.selecionadas.size ? estado.lista.filter(c => estado.selecionadas.has(id(c))) : filtradas());
 
     // ---------- pedaços de tela ----------
@@ -660,7 +674,7 @@
         return `<div class="pc-det">
             <header class="pc-det-topo">
                 <div class="eyebrow">Cotação · ${esc(localDe(c))}${origem ? ` · ${esc(origem)}` : ''}${c.ORIGEM_PLANILHA === 'anmyna' ? ' · Planilha Anmyna' : ''}</div>
-                <div class="pc-det-num"><h2>${esc(num)}</h2><button type="button" class="icon-button" data-acao="copiar-num" data-id="${id(c)}" title="Copiar número">${icone('copiar')}</button></div>
+                <div class="pc-det-num"><h2>${esc(num)}</h2><button type="button" class="icon-button" data-acao="copiar-num" data-id="${id(c)}" title="Copiar número">${icone('copiar')}</button>${seloOutro(c)}</div>
                 ${num !== String(c['COTAÇÃO'] ?? '').trim() ? `<small class="pc-det-orig">Na planilha: ${esc(c['COTAÇÃO'])}</small>` : ''}
                 <div class="pc-det-linha">${statusTag(c)}<span class="pc-prazo ${p.cls}">${icone('relogio')}<b>${p.txt}</b>${p.sub ? ` · ${esc(p.sub)}` : ''}</span></div>
                 <div class="pc-urg ${p.cls}" title="Quanto mais cheia, mais perto do vencimento"><i style="--w:${resp ? 0 : Math.round(p.urg * 100)}%"></i></div>
@@ -993,6 +1007,7 @@
                 <span class="b-num" title="${esc(c['COTAÇÃO'])}">${esc(num)}</span>
                 <button type="button" class="b-copiar-num" data-acao="copiar-num" data-id="${k}" title="Copiar número" aria-label="Copiar número ${esc(num)}">${icone('copiar')}</button>
                 ${novo ? '<span class="pc-selo-novo">NOVA</span>' : ''}
+                ${seloOutro(c)}
                 <label class="b-sel" data-acao="sel" title="Selecionar para exportar"><input class="pc-check" type="checkbox" data-sel="${k}" ${estado.selecionadas.has(k) ? 'checked' : ''} aria-label="Selecionar cotação ${esc(num)}"></label>
             </div>
             ${origem ? `<div class="b-origem">${esc(origem)}</div>` : (c.ORIGEM_PLANILHA === 'anmyna' ? `<div class="b-origem" style="color: #a78bfa; font-weight: 600;">ANMYNA${c.PORTAL ? ` · ${esc(c.PORTAL)}` : ''}</div>` : '')}
@@ -1126,6 +1141,29 @@
         estado.carregado = true;
         estado.erro = '';
         redesenhar();
+        // a planilha mudou: a cotação de outro vendedor na tela também precisa do status novo
+        if (estado.outros.length && typeof window !== 'undefined' && window.buscarCotacaoOutroVendedor) window.buscarCotacaoOutroVendedor(estado.outrosNumero);
+    }
+
+    // ---------- busca exata de cotação de outro vendedor ----------
+    let timerBuscaOutros = null;
+    function agendarBuscaOutros() {
+        clearTimeout(timerBuscaOutros);
+        const n = numeroDaBusca();
+        if (n !== estado.outrosNumero) { estado.outros = []; estado.outrosNumero = ''; estado.portaisOutros = {}; }
+        if (!n || n === estado.outrosNumero || typeof window === 'undefined' || !window.buscarCotacaoOutroVendedor) return;
+        timerBuscaOutros = setTimeout(() => window.buscarCotacaoOutroVendedor(estado.busca.trim()), 400);
+    }
+    function receberOutros(numeroBuscado, novaLista, portais) {
+        if (String(numeroBuscado || '') !== numeroDaBusca()) return; // a busca já mudou
+        estado.outros = registrar(Array.isArray(novaLista) ? novaLista : []);
+        estado.outrosNumero = numeroDaBusca();
+        estado.portaisOutros = portais && typeof portais === 'object' ? portais : {};
+        const campo = document.activeElement && document.activeElement.id === 'pc-busca' ? document.activeElement : null;
+        const pos = campo ? campo.selectionStart : null;
+        redesenhar();
+        const novo = campo && document.getElementById('pc-busca');
+        if (novo) { novo.focus(); novo.setSelectionRange(pos, pos); }
     }
 
     function receberPrintsEvento(eventoId, prints) {
@@ -1225,6 +1263,7 @@
         const k = id(c), marcada = { ...c, RESPOSTA: 'RESPONDIDO' };
         ID.set(marcada, k);
         estado.lista = estado.lista.map(x => (x === c ? marcada : x)); // otimista: a recarga do socket confirma
+        estado.outros = estado.outros.map(x => (x === c ? marcada : x));
         estado.confirmando = false;
         estado.respondeuAgora = k;
         marcarComoRespondida(c);
@@ -1468,6 +1507,7 @@
         }
         if (t.id !== 'pc-busca') return;
         estado.busca = t.value;
+        agendarBuscaOutros();
         const pos = t.selectionStart;
         redesenhar();
         const novo = document.getElementById('pc-busca');
@@ -1521,5 +1561,5 @@
     if (topo) topo.innerHTML = nav();
     redesenhar();
 
-    window.Tela = { estado, filtradas, contagem, itens, numero, portalRobo, printsDe, erroDe, formatarErroCurto, bannerErroResposta, receberErroResposta, limparErroResposta, abrirVisualizadorPrint, fecharVisualizadorPrint, abrirPrintEmNovaAba, dadosResposta, alternarDatasheetPorLinha, receberArquivosResposta, enviarRespostaDoModal, receberPrintsEvento, receberCaptcha, fecharCaptcha, painelCaptchaGlobal, cartao, detalhe, dias, alvoExportacao, exportarLista, receber, falhou, conexao, toast, abrir, id };
+    window.Tela = { estado, filtradas, contagem, itens, numero, portalRobo, printsDe, erroDe, formatarErroCurto, bannerErroResposta, receberErroResposta, limparErroResposta, abrirVisualizadorPrint, fecharVisualizadorPrint, abrirPrintEmNovaAba, dadosResposta, alternarDatasheetPorLinha, receberArquivosResposta, enviarRespostaDoModal, receberPrintsEvento, receberCaptcha, fecharCaptcha, painelCaptchaGlobal, cartao, detalhe, dias, alvoExportacao, exportarLista, receber, receberOutros, falhou, conexao, toast, abrir, id };
 })();

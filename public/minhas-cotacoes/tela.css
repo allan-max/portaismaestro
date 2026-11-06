@@ -340,6 +340,8 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .b-copiar-num:hover { background: #304158; color: var(--text); }
 .b-copiar-num svg { width: 14px; height: 14px; }
 .b-num-linha .pc-selo-novo { margin-left: 2px; }
+.pc-selo-outro { font-size: 9px; font-weight: 700; letter-spacing: .4px; color: #10141b; background: var(--amber); border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
+.pc-det-num .pc-selo-outro { align-self: center; margin-left: 6px; font-size: 11px; }
 .b-sel { margin-left: auto; display: inline-flex; padding: 4px; }
 .b-origem { font-size: 10px; color: var(--dim); letter-spacing: .5px; text-transform: uppercase; margin-top: 1px; }
 .b-prazo { display: flex; align-items: center; gap: 8px; margin-top: 8px; }

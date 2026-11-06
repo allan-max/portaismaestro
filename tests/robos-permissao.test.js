@@ -60,11 +60,12 @@ test('comandos aos robôs: sem acesso aos portais nada chega; com acesso só mod
   await pausa(300);
   assert.deepEqual(comandos(), []);
 
-  // /api/responder também exige portais
+  // /api/responder NÃO exige portais: vendedor responde pela tela Minhas Cotações
   const form = new FormData();
-  form.append('sessionId', vendedor.sessionId); form.append('evento', '165060');
+  // (evento inválido de propósito: passa da sessão e para na validação, sem pôr nada na fila)
+  form.append('sessionId', vendedor.sessionId); form.append('evento', '!!');
   const r = await fetch(`http://127.0.0.1:${port}/api/responder`, { method: 'POST', body: form });
-  assert.equal(r.status, 403);
+  assert.equal(r.status, 400);
 
   // Com portais: modo conhecido passa, só com os campos das telas
   const operador = await login('portais@example.test');
