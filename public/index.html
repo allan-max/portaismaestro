@@ -540,8 +540,8 @@ socket.on("sessao_invalida", () => {
             }
             
             // 2. Validação da Senha (Mínimo de 5 dígitos)
-            if (!pass || pass.length < 5) { 
-                erro.innerText = "A sua senha precisa ter no mínimo 5 dígitos."; 
+            if (!pass || pass.length < 10) { 
+                erro.innerText = "A sua senha precisa ter no mínimo 10 caracteres."; 
                 erro.style.display = 'block'; 
                 return; 
             }
@@ -708,8 +708,8 @@ socket.on("sessao_invalida", () => {
             const erro = document.getElementById('erro-newpass');
             const btn = document.querySelector('#box-nova-senha button.btn-entrar');
 
-            if (!pass || pass.length < 4) {
-                erro.innerText = "A senha deve ter pelo menos 4 caracteres.";
+            if (!pass || pass.length < 10) {
+                erro.innerText = "A senha deve ter pelo menos 10 caracteres.";
                 erro.style.display = 'block';
                 return;
             }

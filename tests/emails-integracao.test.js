@@ -61,6 +61,16 @@ test('servidor real: token do serviço, permissão emails_access, offline, respo
     const portais = await login('portais@example.test');
     assert.equal(portais.resposta.emails_access, false);
 
+    // senha nova curta é recusada no servidor, sem chegar ao gerenciador
+    let cadastros = 0; robo.on('registrar_usuario', () => { cadastros++; });
+    const visitante = await cliente(), recusaCadastro = evento(visitante, 'resposta_cadastro');
+    visitante.emit('solicitar_cadastro', { email: 'nova@example.test', senha: '123456789' });
+    assert.match((await recusaCadastro).erro, /10 caracteres/);
+    const recusaSenha = evento(visitante, 'resposta_nova_senha');
+    visitante.emit('salvar_nova_senha', { token: 'x', senha: 'curta' });
+    assert.equal((await recusaSenha).sucesso, false);
+    assert.equal(cadastros, 0);
+
     // sem serviço: erro claro, nunca lista vazia
     let r = evento(leitora.socket, 'emails_retorno'); leitora.socket.emit('emails_pedir', { requestId: 'a', acao: 'listar', params: {} });
     assert.equal((await r).codigo, 'FONTE_OFFLINE');

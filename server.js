@@ -1021,7 +1021,13 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Senha nova com pelo menos 10 caracteres, conferida aqui e não só na tela. Contas antigas continuam entrando.
+    const SENHA_MINIMA = 10;
+    const senhaCurta = s => typeof s !== 'string' || s.length < SENHA_MINIMA;
     socket.on('solicitar_cadastro', (dados) => {
+        if (senhaCurta(dados && dados.senha)) {
+            return socket.emit('resposta_cadastro', { sucesso: false, erro: `A senha precisa ter pelo menos ${SENHA_MINIMA} caracteres.` });
+        }
         if (bot_socket_id) {
             emailsPendentes.set(socket.id, String((dados && dados.email) || '').trim().toLowerCase());
             io.to(bot_socket_id).emit('registrar_usuario', { ...dados, clientId: socket.id });
@@ -1059,6 +1065,9 @@ io.on('connection', (socket) => {
     });
 
     socket.on('salvar_nova_senha', (dados) => {
+        if (senhaCurta(dados && dados.senha)) {
+            return socket.emit('resposta_nova_senha', { sucesso: false, erro: `A senha precisa ter pelo menos ${SENHA_MINIMA} caracteres.` });
+        }
         if (bot_socket_id) io.to(bot_socket_id).emit('processar_nova_senha', { ...dados, clientId: socket.id });
         else socket.emit('resposta_nova_senha', { sucesso: false, erro: "O Servidor Central Maestro está offline." });
     });
