@@ -17,6 +17,7 @@
                 portais_access: !!d.portais_access || !!d.dashboard_access,
                 planilha_access: !!d.planilha_access,
                 busca_outros_access: !!d.busca_outros_access,
+                emails_access: !!d.emails_access,
                 bloqueado: !!d.bloqueado,
                 vendedor: String(d.vendedor || ''),
                 online: !!d.online,
@@ -110,6 +111,7 @@
             const hasStats = u.dashboard_access || u.admin;
             const hasPlanilha = u.planilha_access || u.admin;
             const hasBuscaOutros = u.busca_outros_access || u.admin;
+            const hasEmails = u.emails_access || u.admin;
             const disabledAttr = u.admin ? 'disabled title="Administradores sempre têm acesso total"' : '';
             const email = esc(u.email);
             const vend = esc(u.vendedor);
@@ -157,6 +159,12 @@
                 <td>
                     <label class="contas-switch" title="Em Minhas Cotações, ver a cotação de outro vendedor buscando o número exato">
                         <input type="checkbox" data-acao-change="toggle-acesso" data-email="${email}" data-campo="busca_outros_access" ${hasBuscaOutros ? 'checked' : ''} ${disabledAttr}>
+                        <span class="contas-slider"></span>
+                    </label>
+                </td>
+                <td>
+                    <label class="contas-switch" title="Central de E-mails: ver todos os e-mails das caixas da empresa (não libera os portais)">
+                        <input type="checkbox" data-acao-change="toggle-acesso" data-email="${email}" data-campo="emails_access" ${hasEmails ? 'checked' : ''} ${disabledAttr}>
                         <span class="contas-slider"></span>
                     </label>
                 </td>
@@ -209,6 +217,7 @@
                                 <th>Permissões · Estatísticas (Comercial)</th>
                                 <th>Permissões · Planilhas</th>
                                 <th>Permissões · Pesquisar cotações de outros vendedores</th>
+                                <th>Permissões · E-mails</th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
@@ -290,6 +299,7 @@
                             if (r.dashboard_access !== undefined) u.dashboard_access = r.dashboard_access;
                             if (r.planilha_access !== undefined) u.planilha_access = r.planilha_access;
                             if (r.busca_outros_access !== undefined) u.busca_outros_access = r.busca_outros_access;
+                            if (r.emails_access !== undefined) u.emails_access = r.emails_access;
                             if (r.campo) u[r.campo] = r.acesso;
                             if (r.campo === 'dashboard_access' && r.acesso) u.portais_access = true;
                             if (r.campo === 'portais_access' && !r.acesso) u.dashboard_access = false;

@@ -20,6 +20,7 @@ const { criarDashboardFontes } = require('./lib/dashboard-fontes');
 const { criarAuditoria } = require('./lib/auditoria');
 const { criarDashboardAuditoria, ipDe } = require('./lib/dashboard-auditoria');
 const { criarSincronizacao } = require('./lib/sincronizacao');
+const { criarEmails } = require('./lib/emails');
 
 
 // 🛡️ AIRBAG ANTI-CRASH (Impede o servidor de morrer por erros invisíveis)
@@ -124,6 +125,7 @@ let estado_findes_antigo = { status: 'desligado' };
 let fila_respostas = [];
 let bot_socket_id = null;
 let sync_socket_id = null;   // serviço de NF (cruzar_nf/servico.py)
+let emails_socket_id = null; // serviço da Central de E-mails (repositório privado integracaoEmails)
 let usuarios_logados = {};
 
 // Armazenamento persistente das prints dos itens respondidos por evento
@@ -467,10 +469,16 @@ const dashboardCotacoes = criarDashboardCotacoes({
     sessoes: cofreSessoes, io, obterRobo: () => bot_socket_id,
     obterSocket: id => io.sockets.sockets.get(id)
 });
+// Central de E-mails: o portal só valida a sessão (admin ou emails_access) e repassa ao serviço.
+const centralEmails = criarEmails({
+    sessoes: cofreSessoes, io, obterServico: () => emails_socket_id,
+    obterSocket: id => io.sockets.sockets.get(id)
+});
 // Faixa "Saúde dos serviços": quando cada serviço conectou e mandou a última mensagem (sem batimento extra).
 const conexoes = {
     gerenciador: { online: false, conectado_em: null, visto_em: null, desconectado_em: null },
     nf: { online: false, conectado_em: null, visto_em: null, desconectado_em: null },
+    emails: { online: false, conectado_em: null, visto_em: null, desconectado_em: null },
 };
 function marcarConexao(nome, online) {
     const agora = new Date().toISOString();
@@ -618,6 +626,7 @@ io.on('connection', (socket) => {
     dashboardFontes.conectar(socket);
     dashboardAuditoria.conectar(socket);
     sincronizacao.conectar(socket);
+    centralEmails.conectar(socket);
     for (const evento of ['progresso_sincronizacao', 'retorno_sincronizacao']) {
         socket.on(evento, (dados = {}) => sincronizacao.receber(evento, socket.id, dados));
     }
@@ -626,7 +635,8 @@ io.on('connection', (socket) => {
     });
     const doRobo = () => socket.id === bot_socket_id;
     socket.onAny(() => {
-        const nome = socket.id === bot_socket_id ? 'gerenciador' : socket.id === sync_socket_id ? 'nf' : null;
+        const nome = socket.id === bot_socket_id ? 'gerenciador' : socket.id === sync_socket_id ? 'nf'
+            : socket.id === emails_socket_id ? 'emails' : null;
         if (nome) conexoes[nome].visto_em = new Date().toISOString();
     });
     // Respostas das fontes para os dashboards (Sync, NFs, Atividade): só o socket certo é aceito.
@@ -980,6 +990,7 @@ io.on('connection', (socket) => {
             const hasPortaisAccess = Boolean(dados.hasPortaisAccess || dados.hasDashboardAccess || dados.isAdmin);
             const hasPlanilhaAccess = Boolean(dados.hasPlanilhaAccess || dados.isAdmin);
             const hasBuscaOutrosAccess = Boolean(dados.hasBuscaOutrosAccess || dados.isAdmin);
+            const hasEmailsAccess = Boolean(dados.hasEmailsAccess || dados.isAdmin);   // não libera portais
             cofreSessoes.set(sessionId, JSON.stringify({ 
                 email: dados.user, 
                 admin: dados.isAdmin, 
@@ -988,6 +999,7 @@ io.on('connection', (socket) => {
                 portais_access: hasPortaisAccess,
                 planilha_access: hasPlanilhaAccess,
                 busca_outros_access: hasBuscaOutrosAccess,
+                emails_access: hasEmailsAccess,
                 vendedor: dados.vendedor || '',
                 expires: expires 
             }));
@@ -1001,6 +1013,7 @@ io.on('connection', (socket) => {
                 portais_access: hasPortaisAccess,
                 planilha_access: hasPlanilhaAccess,
                 busca_outros_access: hasBuscaOutrosAccess,
+                emails_access: hasEmailsAccess,
                 vendedor: dados.vendedor || ''
             });
         } else {
@@ -1008,7 +1021,13 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Senha nova com pelo menos 10 caracteres, conferida aqui e não só na tela. Contas antigas continuam entrando.
+    const SENHA_MINIMA = 10;
+    const senhaCurta = s => typeof s !== 'string' || s.length < SENHA_MINIMA;
     socket.on('solicitar_cadastro', (dados) => {
+        if (senhaCurta(dados && dados.senha)) {
+            return socket.emit('resposta_cadastro', { sucesso: false, erro: `A senha precisa ter pelo menos ${SENHA_MINIMA} caracteres.` });
+        }
         if (bot_socket_id) {
             emailsPendentes.set(socket.id, String((dados && dados.email) || '').trim().toLowerCase());
             io.to(bot_socket_id).emit('registrar_usuario', { ...dados, clientId: socket.id });
@@ -1046,6 +1065,9 @@ io.on('connection', (socket) => {
     });
 
     socket.on('salvar_nova_senha', (dados) => {
+        if (senhaCurta(dados && dados.senha)) {
+            return socket.emit('resposta_nova_senha', { sucesso: false, erro: `A senha precisa ter pelo menos ${SENHA_MINIMA} caracteres.` });
+        }
         if (bot_socket_id) io.to(bot_socket_id).emit('processar_nova_senha', { ...dados, clientId: socket.id });
         else socket.emit('resposta_nova_senha', { sucesso: false, erro: "O Servidor Central Maestro está offline." });
     });
@@ -1065,6 +1087,11 @@ io.on('connection', (socket) => {
             bot_socket_id = null; marcarConexao('gerenciador', false);
             sincronizacao.fonteCaiu('robo');
             console.log("❌ Ligação com o Robô Local perdida.");
+        }
+        if (socket.id === emails_socket_id) {
+            emails_socket_id = null; marcarConexao('emails', false);
+            centralEmails.servicoCaiu();
+            console.log("❌ Serviço de e-mails desconectado.");
         }
         if (socket.id === sync_socket_id) {
             sync_socket_id = null; marcarConexao('nf', false);
@@ -1101,6 +1128,7 @@ io.on('connection', (socket) => {
                 planilha_access: !!db[email].planilha_access,
                 portais_access: !!db[email].portais_access,
                 busca_outros_access: !!db[email].busca_outros_access,
+                emails_access: !!db[email].emails_access,
                 bloqueado: !!db[email].bloqueado,
                 vendedor: db[email].vendedor || '',
                 online: onlineUsers.includes(email)
@@ -1162,7 +1190,7 @@ io.on('connection', (socket) => {
 
     socket.on('admin_alterar_acesso_dashboard', (dados) => {
         if (!checkRole('admin')) return;
-        const campo = ['dashboard_access', 'planilha_access', 'portais_access', 'busca_outros_access'].includes(dados.campo)
+        const campo = ['dashboard_access', 'planilha_access', 'portais_access', 'busca_outros_access', 'emails_access'].includes(dados.campo)
             ? dados.campo
             : 'dashboard_access';
 
@@ -1192,6 +1220,7 @@ io.on('connection', (socket) => {
                         if (dados.portais_access !== undefined) u.portais_access = dados.portais_access;
                         if (dados.planilha_access !== undefined) u.planilha_access = dados.planilha_access;
                         if (dados.busca_outros_access !== undefined) u.busca_outros_access = dados.busca_outros_access || !!u.admin;
+                        if (dados.emails_access !== undefined) u.emails_access = dados.emails_access || !!u.admin;
                         if (u.dashboard_access) u.portais_access = true;
                         cofreSessoes.set(sId, JSON.stringify(u));
                     }
@@ -1516,6 +1545,25 @@ io.on('connection', (socket) => {
     // SINCRONIZAÇÃO DE NF (HSE -> pedidos): tela -> serviço de NF -> tela
     // O serviço de NF é um processo separado do gerenciador (cruzar_nf/servico.py);
     // ele se identifica com o token SYNC_NF_TOKEN, configurado aqui e no .env do servidor.
+    // CENTRAL DE E-MAILS: o serviço se identifica com EMAILS_TOKEN (mesmo padrão do SYNC_NF_TOKEN).
+    socket.on('sou_o_servico_emails', (dados = {}) => {
+        const esperado = String(process.env.EMAILS_TOKEN || '');
+        const recebido = String((dados && dados.token) || '');
+        const ok = esperado.length >= 32 && Buffer.byteLength(esperado) === Buffer.byteLength(recebido) &&
+            crypto.timingSafeEqual(Buffer.from(esperado), Buffer.from(recebido));
+        if (!ok) {
+            console.log("⛔ Serviço de e-mails recusado (EMAILS_TOKEN ausente, curto ou diferente).");
+            socket.emit('servico_emails_recusado', {});
+            return socket.disconnect(true);
+        }
+        if (emails_socket_id && emails_socket_id !== socket.id) io.sockets.sockets.get(emails_socket_id)?.disconnect(true);
+        emails_socket_id = socket.id; marcarConexao('emails', true);
+        socket.emit('servico_emails_aceito', {});
+        console.log("📧 Serviço de e-mails conectado.");
+    });
+    socket.on('emails_resposta', (dados = {}) => { centralEmails.receber(socket.id, dados); });
+    socket.on('emails_novidade', (dados = {}) => { centralEmails.novidade(socket.id, dados); });
+
     socket.on('sou_o_sync_nf', (dados = {}) => {
         const esperado = String(process.env.SYNC_NF_TOKEN || '');
         const recebido = String(dados.token || '');
@@ -1980,6 +2028,17 @@ app.get('/api/planilha-anmyna', (req, res) => {
 
 // === ROTA DE SAÚDE EXCLUSIVA PARA O RENDER ===
 // O Render fica acessando essa rota para saber se o seu servidor não travou!
+// Central de E-mails: anexo entregue uma vez, por token de 60 s criado depois de conferir a sessão no socket.
+app.get('/emails/anexo/:token', (req, res) => {
+    const anexo = centralEmails.retirarAnexo(req.params.token);
+    res.set('Cache-Control', 'no-store');
+    if (!anexo) return res.status(404).type('text/plain; charset=utf-8').send('Link de anexo vencido ou já usado. Peça o download de novo na tela de e-mails.');
+    res.attachment(anexo.nome);   // Content-Disposition: attachment, com nome codificado pelo express
+    res.set({ 'Content-Type': 'application/octet-stream', 'X-Content-Type-Options': 'nosniff',
+        'Content-Security-Policy': "default-src 'none'; sandbox" });
+    res.send(anexo.conteudo);
+});
+
 app.get('/health', (req, res) => {
     res.status(200).send("MAESTRO Cloud Server OK!");
 });
