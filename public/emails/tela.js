@@ -273,7 +273,9 @@
         }
         const sel = el('select');
         sel.setAttribute('aria-label', 'Corrigir categoria');
-        for (const c of CATEGORIAS) { const o = el('option', c); o.value = c; if (c === e.categoria) o.selected = true; sel.appendChild(o); }
+        // categoria de regra (interno, enviado...) aparece como opção atual, para não cair em "cotação" por engano
+        const opcoes = CATEGORIAS.includes(e.categoria) || !e.categoria ? CATEGORIAS : [e.categoria].concat(CATEGORIAS);
+        for (const c of opcoes) { const o = el('option', c); o.value = c; if (c === e.categoria) o.selected = true; sel.appendChild(o); }
         const corrigir = el('button', 'Corrigir categoria', 'em-botao em-secundario');
         corrigir.type = 'button';
         corrigir.addEventListener('click', () => { if (sel.value !== e.categoria) alterar('categoria', { id: e.id, categoria: sel.value }); });
@@ -287,6 +289,7 @@
         const r = await pedir(acao, params);
         if (r.cancelado) return;
         if (!r.sucesso) { avisar(r.erro || 'Não foi possível salvar.'); return; }
+        if (!estado.aberto || estado.aberto.id !== params.id) return;   // outro e-mail foi aberto enquanto salvava
         avisar(acao === 'status' ? 'Status salvo.' : 'Categoria corrigida.');
         mostrarDetalhe(r.dados);
     }
