@@ -83,7 +83,7 @@
     });
 
     function lerFiltros() {
-        return { busca: $('em-busca').value.trim(), categoria: $('em-categoria').value, conta: $('em-conta').value,
+        return { busca: $('em-busca').value.trim(), categoria: $('em-categoria').value, status: $('em-status').value, conta: $('em-conta').value,
             de: $('em-de').value, ate: $('em-ate').value, revisao: $('em-revisao').checked };
     }
 

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <!-- CSP própria: o conteúdo dos e-mails é hostil e a sessão fica no localStorage. Nada inline. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' ws: wss:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" />
   <meta name="referrer" content="no-referrer" />
   <title>E-mails — Maestro</title>
   <link rel="icon" type="image/png" href="favicon-32x32.png" />
@@ -48,6 +48,10 @@
           <option>informação</option><option>marketing</option><option>spam</option><option>phishing</option>
           <option>outros</option><option>notificação Coupa</option><option>interno</option><option>enviado</option>
           <option>código de login</option><option value="(não classificado)">Não classificado</option>
+        </select>
+        <label for="em-status">Status</label>
+        <select id="em-status">
+          <option value="">Todos</option><option>pendente</option><option>respondido</option><option>arquivado</option>
         </select>
         <label for="em-conta">Caixa</label>
         <select id="em-conta"><option value="">Todas</option></select>
