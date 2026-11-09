@@ -9,10 +9,12 @@ const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const cron = require('node-cron');
-// Só a nova credencial vem do .env; as demais opções mantêm a configuração existente do processo/PM2.
+// Só as credenciais (ROBO_SECRET e EMAILS_TOKEN) vêm do .env; as demais opções mantêm a configuração do processo/PM2.
+// O ambiente do processo tem prioridade. O atualizador reinicia sem --update-env, por isso o .env é a forma segura.
 const arquivoEnvMaestro = path.join(__dirname, '.env');
-const segredoRoboConfigurado = process.env.ROBO_SECRET ?? (fs.existsSync(arquivoEnvMaestro)
-    ? require('dotenv').parse(fs.readFileSync(arquivoEnvMaestro)).ROBO_SECRET : '');
+const envArquivoMaestro = fs.existsSync(arquivoEnvMaestro) ? require('dotenv').parse(fs.readFileSync(arquivoEnvMaestro)) : null;
+const segredoRoboConfigurado = process.env.ROBO_SECRET ?? (envArquivoMaestro ? envArquivoMaestro.ROBO_SECRET : '');
+const tokenEmailsConfigurado = process.env.EMAILS_TOKEN ?? (envArquivoMaestro ? envArquivoMaestro.EMAILS_TOKEN : '');
 const { criarDashboardCotacoes } = require('./lib/dashboard-cotacoes');
 const { lerSessao, autorizarAdmin } = require('./lib/dashboard-cotacoes');
 const { lerLogPorId, resumirArquivosLog } = require('./lib/logs-txt');
@@ -1547,7 +1549,7 @@ io.on('connection', (socket) => {
     // ele se identifica com o token SYNC_NF_TOKEN, configurado aqui e no .env do servidor.
     // CENTRAL DE E-MAILS: o serviço se identifica com EMAILS_TOKEN (mesmo padrão do SYNC_NF_TOKEN).
     socket.on('sou_o_servico_emails', (dados = {}) => {
-        const esperado = String(process.env.EMAILS_TOKEN || '');
+        const esperado = String(tokenEmailsConfigurado || '');
         const recebido = String((dados && dados.token) || '');
         const ok = esperado.length >= 32 && Buffer.byteLength(esperado) === Buffer.byteLength(recebido) &&
             crypto.timingSafeEqual(Buffer.from(esperado), Buffer.from(recebido));
