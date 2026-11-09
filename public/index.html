@@ -209,6 +209,10 @@
             <button id="btn-planilha-anmyna" class="btn-drawer" style="background: #8b5cf6; color: #fff; display: none;" onclick="window.location.href='planilha_anmyna.html'">
                 <i class="fa-solid fa-table-list"></i> Planilha Anmyna
             </button>
+
+            <button id="btn-emails" class="btn-drawer" style="background: #0ea5e9; color: #fff; display: none;" onclick="window.location.href='emails.html'">
+                <i class="fa-solid fa-envelope"></i> E-mails
+            </button>
             
         </div>
     </div>
@@ -220,8 +224,9 @@
         function atualizarGavetaNoLoad() {
             const isAdmin = localStorage.getItem('maestro_admin') === 'true';
             const hasDashboard = window.maestroEstatisticasPermitidas === true;
+            const hasEmails = isAdmin || localStorage.getItem('maestro_emails') === 'true';   // Central de E-mails
 
-            if (isAdmin || hasDashboard) {
+            if (isAdmin || hasDashboard || hasEmails) {
                 if (gaveta) gaveta.style.display = 'block';
             } else {
                 if (gaveta) gaveta.style.display = 'none';
@@ -234,6 +239,8 @@
             if (btnAdmin) btnAdmin.style.display = isAdmin ? 'flex' : 'none';
             if (btnPlanilhaVale) btnPlanilhaVale.style.display = isAdmin ? 'flex' : 'none';
             if (btnPlanilhaAnmyna) btnPlanilhaAnmyna.style.display = isAdmin ? 'flex' : 'none';
+            const btnEmails = document.getElementById('btn-emails');
+            if (btnEmails) btnEmails.style.display = hasEmails ? 'flex' : 'none';
             document.querySelectorAll('[data-estatisticas]').forEach(btn => {
                 btn.style.display = hasDashboard ? 'flex' : 'none';
             });
@@ -555,8 +562,8 @@ socket.on("sessao_invalida", () => {
             }
             
             // 2. Validação da Senha (Mínimo de 5 dígitos)
-            if (!pass || pass.length < 5) { 
-                erro.innerText = "A sua senha precisa ter no mínimo 5 dígitos."; 
+            if (!pass || pass.length < 10) { 
+                erro.innerText = "A sua senha precisa ter no mínimo 10 caracteres."; 
                 erro.style.display = 'block'; 
                 return; 
             }
@@ -597,6 +604,7 @@ socket.on("sessao_invalida", () => {
                 localStorage.setItem('maestro_planilha', resposta.planilha_access); // <-- NOVO
                 localStorage.setItem('maestro_portais', resposta.portais_access);   // <-- NOVO
                 localStorage.setItem('maestro_busca_outros', resposta.busca_outros_access); // Minhas Cotações: buscar número de outro vendedor
+                localStorage.setItem('maestro_emails', resposta.emails_access === true); // Central de E-mails (só mostra o atalho; o servidor confere)
                 localStorage.setItem('maestro_vendedor', resposta.vendedor || '');
 
                 socket.auth = { sessionId: resposta.sessionId };
@@ -652,6 +660,7 @@ socket.on("sessao_invalida", () => {
             localStorage.removeItem('maestro_portais');
             localStorage.removeItem('maestro_planilha');
             localStorage.removeItem('maestro_busca_outros');
+            localStorage.removeItem('maestro_emails');
             localStorage.removeItem('maestro_vendedor');
 
             document.getElementById('log-user').value = '';
@@ -730,8 +739,8 @@ socket.on("sessao_invalida", () => {
             const erro = document.getElementById('erro-newpass');
             const btn = document.querySelector('#box-nova-senha button.btn-entrar');
 
-            if (!pass || pass.length < 4) {
-                erro.innerText = "A senha deve ter pelo menos 4 caracteres.";
+            if (!pass || pass.length < 10) {
+                erro.innerText = "A senha deve ter pelo menos 10 caracteres.";
                 erro.style.display = 'block';
                 return;
             }
