@@ -13,6 +13,7 @@
 
     <style>
         /* Estilos extras para manter os inputs com o visual glass do site */
+        select.auth-input option { background: #1a1d24; color: #fff; } /* lista do Setor legível no tema escuro */
         .auth-input {
             width: 100%;
             padding: 12px 15px;
@@ -305,8 +306,8 @@
                 <p>Acesso restrito. Faça login para continuar.</p>
                 
                 <div class="form-box" style="margin-top: 20px;">
-                    <label><i class="fa-regular fa-envelope"></i> E-mail Corporativo</label>
-                    <input type="text" id="log-user" class="auth-input" placeholder="seu.email@venturainformatica.com.br" onkeypress="verificarEnter(event, 'login')">
+                    <label><i class="fa-regular fa-user"></i> Usuário ou E-mail</label>
+                    <input type="text" id="log-user" class="auth-input" placeholder="Seu nome completo ou seu.email@venturainformatica.com.br" autocomplete="username" onkeypress="verificarEnter(event, 'login')">
                 </div>
                 <div class="form-box" style="margin-top: 15px;">
                     <label><i class="fa-solid fa-key"></i> Senha</label>
@@ -331,12 +332,24 @@
                 <p>Confirmação automática via e-mail.</p>
                 
                 <div class="form-box" style="margin-top: 20px;">
+                    <label>Nome Completo</label>
+                    <input type="text" id="cad-nome" class="auth-input" placeholder="Ex.: Gustavo Henrique Silva" maxlength="60" autocomplete="name" onkeypress="verificarEnter(event, 'cadastro')">
+                </div>
+                <div class="form-box" style="margin-top: 15px;">
                     <label>E-mail da Ventura</label>
                     <input type="email" id="cad-user" class="auth-input" placeholder="seu.email@venturainformatica.com.br" onkeypress="verificarEnter(event, 'cadastro')">
                 </div>
                 <div class="form-box" style="margin-top: 15px;">
                     <label>Nova Senha</label>
                     <input type="password" id="cad-pass" class="auth-input" placeholder="Crie uma senha segura" onkeypress="verificarEnter(event, 'cadastro')">
+                </div>
+                <div class="form-box" style="margin-top: 15px;">
+                    <label>Setor</label>
+                    <select id="cad-setor" class="auth-input" style="cursor: pointer;">
+                        <option value="" selected disabled>Selecione o seu setor</option>
+                        <option value="comercial">Comercial</option>
+                        <option value="financeiro">Financeiro</option>
+                    </select>
                 </div>
                 
                 <div id="erro-cad" class="msg-erro">Preencha todos os campos!</div>
@@ -527,11 +540,20 @@ socket.on("sessao_invalida", () => {
             socket.emit('solicitar_login', { user: user, pass: pass, localizacao: loc });
         }
         function fazerCadastro() {
+            const nome = document.getElementById('cad-nome').value.trim().replace(/\s+/g, ' ');
             const email = document.getElementById('cad-user').value.trim();
             const pass = document.getElementById('cad-pass').value.trim();
+            const setor = document.getElementById('cad-setor').value;
             const erro = document.getElementById('erro-cad');
             const btn = document.querySelector('#box-cadastro button.btn-entrar');
             
+            // 0. Nome completo: serve de login no lugar do e-mail (Comercial: o primeiro nome vira o vendedor)
+            if (nome.length > 60 || !/^\p{L}[\p{L} .-]*$/u.test(nome) || nome.split(' ').filter(p => /\p{L}/u.test(p)).length < 2) {
+                erro.innerText = "Digite o seu nome completo (nome e sobrenome, sem números).";
+                erro.style.display = 'block';
+                return;
+            }
+
             // 1. Validação do E-mail (Domínio e Minúsculas)
             if (!email.endsWith('@venturainformatica.com.br') || email !== email.toLowerCase()) { 
                 erro.innerText = "Digite o e-mail @venturainformatica.com.br todo em letras minúsculas."; 
@@ -546,12 +568,19 @@ socket.on("sessao_invalida", () => {
                 return; 
             }
             
+            // 3. Setor: Comercial vai para Minhas Cotações; Financeiro para o portal
+            if (setor !== 'comercial' && setor !== 'financeiro') {
+                erro.innerText = "Selecione o seu setor.";
+                erro.style.display = 'block';
+                return;
+            }
+
             // Se passar nas validações, esconde o erro e trava o botão
             erro.style.display = 'none';
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> A ENVIAR E-MAIL...';
             
-            socket.emit('solicitar_cadastro', { email: email, senha: pass });
+            socket.emit('solicitar_cadastro', { nome: nome, email: email, senha: pass, setor: setor });
         }
 
         socket.on('resposta_cadastro', (res) => {
@@ -566,7 +595,9 @@ socket.on("sessao_invalida", () => {
 
             if (resposta.sucesso) {
                 localStorage.setItem('maestro_session', resposta.sessionId);
-                localStorage.setItem('maestro_user', document.getElementById('log-user').value.trim());
+                // pode ter entrado pelo nome: guarda sempre o e-mail da conta
+                const emailConta = resposta.email || document.getElementById('log-user').value.trim();
+                localStorage.setItem('maestro_user', emailConta);
                 localStorage.setItem('maestro_admin', resposta.admin);
                 localStorage.setItem('maestro_dev', resposta.dev);
                 localStorage.setItem('maestro_dashboard', resposta.dashboard_access);
@@ -579,7 +610,7 @@ socket.on("sessao_invalida", () => {
                 socket.auth = { sessionId: resposta.sessionId };
                 socket.disconnect().connect();
 
-                socket.emit('sou_frontend', { usuario: document.getElementById('log-user').value.trim() });
+                socket.emit('sou_frontend', { usuario: emailConta });
 
                 if (resposta.vendedor && resposta.vendedor.trim() !== '') {
                     window.location.href = 'minhas_cotacoes.html';

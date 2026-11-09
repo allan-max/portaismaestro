@@ -1443,7 +1443,10 @@
             const escalaY = (img.naturalHeight || rect.height || 1) / (rect.height || 1);
             const x = Math.round((e.offsetX || 0) * escalaX);
             const y = Math.round((e.offsetY || 0) * escalaY);
-            if (typeof clicarCaptchaGlobal === 'function') clicarCaptchaGlobal(x, y);
+            if (typeof clicarCaptchaGlobal === 'function') {
+                clicarCaptchaGlobal(x, y);
+                toast('Clique enviado ao robô. Aguarde a imagem do captcha atualizar.');
+            }
             return;
         }
         document.querySelectorAll('details.pc-pop[open]').forEach(d => { if (!d.contains(e.target)) d.open = false; });

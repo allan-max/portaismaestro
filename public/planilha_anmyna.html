@@ -996,7 +996,7 @@
                     </div>
                     <div class="form-group">
                         <label>Vendedor</label>
-                        <input type="text" id="edit-vendedor" class="form-control">
+                        <div id="edit-vendedor" class="vend-multi" data-classe-campo="form-control"></div>
                     </div>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
@@ -1091,7 +1091,7 @@
                 <p style="font-size: 0.85rem; color: #768390; margin-bottom: 20px;">Registre o vendedor para as cotações na planilha.</p>
                 
                 <div style="margin-bottom: 15px;">
-                    <input type="text" id="input-vendedor" class="manual-input" placeholder="Ex: João Silva" style="padding: 10px 12px; font-size: 0.9rem;">
+                    <div id="input-vendedor" class="vend-multi" data-classe-campo="manual-input"></div>
                 </div>
 
                 <div style="margin-bottom: 20px;">
@@ -1110,6 +1110,7 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
     <script src="vendor/exceljs-4.4.0.min.js"></script>
+    <script src="vendedores-cadastrados.js"></script>
 
     <script>
         // Texto da planilha/portais vai para innerHTML: sempre passar por esc() (texto e atributo)
@@ -1120,6 +1121,9 @@
             transports: ['websocket'],
             upgrade: false
         });
+        const pedirVendedoresCadastrados = ligarSeletorVendedores(socket);
+        montarSeletor(document.getElementById('input-vendedor'));
+        montarSeletor(document.getElementById('edit-vendedor'));
 
         socket.on("sessao_invalida", () => {
             localStorage.clear();
@@ -1576,7 +1580,7 @@
             document.getElementById('edit-portal').value = item.portal;
             document.getElementById('edit-empresa').value = item.empresa;
             document.getElementById('edit-cliente').value = item.cliente;
-            document.getElementById('edit-vendedor').value = item.vendedor;
+            definirVendedores(document.getElementById('edit-vendedor'), item.vendedor);
             document.getElementById('edit-data-venc').value = item.data_venc;
             document.getElementById('edit-hora-venc').value = item.hora_venc;
             document.getElementById('edit-data-entr').value = item.data_entrega;
@@ -1598,7 +1602,7 @@
                 'PORTAL': document.getElementById('edit-portal').value.trim(),
                 'POR QUAL EMPRESA': document.getElementById('edit-empresa').value.trim(),
                 'CLIENTE': document.getElementById('edit-cliente').value.trim(),
-                'VENDEDOR ': document.getElementById('edit-vendedor').value.trim(),
+                'VENDEDOR ': lerVendedores(document.getElementById('edit-vendedor')),
                 'DATA DE VENCIMENTO': document.getElementById('edit-data-venc').value.trim(),
                 'HORÁRIO DE VENCIMENTO': document.getElementById('edit-hora-venc').value.trim(),
                 'DATA DE ENTREGA': document.getElementById('edit-data-entr').value.trim(),
@@ -1942,6 +1946,7 @@
             }
             if (tipo === 'vendedor') {
                 document.getElementById('form-vendedor').style.display = 'block';
+                pedirVendedoresCadastrados(); // conta nova aparece sem recarregar
             }
         }
 
@@ -1959,7 +1964,7 @@
                 <tr style="vertical-align: top; border-bottom: 1px solid #30363d;">
                     <td style="padding: 4px;">${criarTextareaAutoResize('c-cotacao', 'Nº Cotação')}</td>
                     <td style="padding: 4px;">${criarTextareaAutoResize('c-cliente', 'Cliente')}</td>
-                    <td style="padding: 4px;">${criarTextareaAutoResize('c-vendedor', 'Vendedor')}</td>
+                    <td style="padding: 4px;">${htmlSeletorVendedores('c-vendedor', 'manual-input')}</td>
                     <td style="padding: 4px;">${criarTextareaAutoResize('c-produto', 'Descrição/Produto')}</td>
                     <td style="padding: 4px;">${criarTextareaAutoResize('c-vencimento', 'DD/MM/AAAA')}</td>
                     <td style="padding: 4px;">${criarTextareaAutoResize('c-entrega', 'DD/MM/AAAA')}</td>
@@ -1989,7 +1994,7 @@
                         cotacao: cota,
                         numero: cota,
                         cliente: (tr.querySelector('.c-cliente')?.value || '').trim(),
-                        vendedor: (tr.querySelector('.c-vendedor')?.value || '').trim(),
+                        vendedor: lerVendedores(tr.querySelector('.c-vendedor')),   // "A / B" quando dividida
                         produto: (tr.querySelector('.c-produto')?.value || '').trim(),
                         vencimento: (tr.querySelector('.c-vencimento')?.value || '').trim(),
                         entrega: (tr.querySelector('.c-entrega')?.value || '').trim(),
@@ -2018,14 +2023,14 @@
         }
 
         function registrarVendedor() {
-            const vendedor = document.getElementById('input-vendedor').value.trim();
+            const vendedor = lerVendedores(document.getElementById('input-vendedor'));   // "A / B" quando dividida
             const cotacoes = document.getElementById('input-cotacoes').value.trim();
             const btn = document.getElementById('btn-registrar');
             const msg = document.getElementById('status-msg');
 
             if (!vendedor || !cotacoes) {
                 msg.style.color = '#e5534b';
-                msg.innerText = "⚠️ Preencha o vendedor e as cotações.";
+                msg.innerText = "⚠️ Selecione o vendedor e preencha as cotações.";
                 return;
             }
 
@@ -2056,7 +2061,7 @@
                 if (res.sucesso) {
                     msg.style.color = '#34d399';
                     msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + esc(res.mensagem);
-                    document.getElementById('input-vendedor').value = '';
+                    definirVendedores(document.getElementById('input-vendedor'), '');
                     document.getElementById('input-cotacoes').value = '';
                 } else {
                     msg.style.color = '#e5534b';

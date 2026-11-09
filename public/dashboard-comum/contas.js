@@ -20,6 +20,8 @@
                 emails_access: !!d.emails_access,
                 bloqueado: !!d.bloqueado,
                 vendedor: String(d.vendedor || ''),
+                nome: String(d.nome || ''),     // nome completo do cadastro
+                setor: String(d.setor || ''),   // comercial | financeiro (contas antigas: vazio)
                 online: !!d.online,
             }))
             .sort((a, b) => a.email.localeCompare(b.email));
@@ -40,7 +42,7 @@
             if (f.grupo === 'busca_outros' && !(u.busca_outros_access || u.admin)) return false;
             if (f.grupo === 'vendedores' && !u.vendedor.trim()) return false;
             if (f.grupo === 'pendentes' && u.verificado !== false) return false;
-            if (termo && !`${u.email} ${u.vendedor}`.toLowerCase().includes(termo)) return false;
+            if (termo && !`${u.email} ${u.vendedor} ${u.nome}`.toLowerCase().includes(termo)) return false;
             return true;
         });
     }
@@ -114,8 +116,11 @@
             const hasEmails = u.emails_access || u.admin;
             const disabledAttr = u.admin ? 'disabled title="Administradores sempre têm acesso total"' : '';
             const email = esc(u.email);
-            const vend = esc(u.vendedor);
+            // o quadrado mostra o nome completo; contas antigas sem nome mostram o vendedor que o admin vinculou
+            const nomeQuadro = esc(u.nome || u.vendedor);
             const ini = esc(iniciaisDe(u.email));
+            const opSetor = (valor, rotulo) => `<option value="${valor}" ${u.setor === valor ? 'selected' : ''}>${rotulo}</option>`;
+            const perfil = u.admin ? 'Administrador' : (u.vendedor ? 'Vendedor' : 'Usuário');
             const inputId = `vend_${idx}`;
 
             return `<tr>
@@ -128,15 +133,21 @@
                                 ${u.admin ? '<span class="tag azul">ADMIN</span>' : ''}
                                 ${u.verificado === false ? '<span class="tag vermelho" title="Ainda não clicou no link de ativação">NÃO VERIFICADO</span>' : ''}
                             </div>
-                            <small>${u.admin ? 'Administrador' : (u.vendedor ? 'Vendedor' : 'Usuário')} · <span class="aud-online${u.online ? ' on' : ''}">${u.online ? 'Online' : 'Offline'}</span></small>
+                            <small>${esc(perfil)} · <span class="aud-online${u.online ? ' on' : ''}">${u.online ? 'Online' : 'Offline'}</span></small>
                         </div>
                     </div>
                 </td>
                 <td>
                     <div class="contas-vend-group">
-                        <input type="text" id="${inputId}" class="contas-vend-input" value="${vend}" placeholder="Ex.: JOÃO (vazio = sem vínculo)">
+                        <input type="text" id="${inputId}" class="contas-vend-input" value="${nomeQuadro}" maxlength="60" placeholder="Nome completo (vazio = sem vínculo)" title="Nome completo do vendedor">
                         <button type="button" class="button small primary" data-acao="salvar-vendedor" data-email="${email}" data-input="${inputId}">Salvar</button>
                     </div>
+                    <small class="contas-planilha muted">${u.vendedor ? `Na planilha: ${esc(u.vendedor)}` : 'Sem vínculo com a planilha'}</small>
+                </td>
+                <td>
+                    <select class="contas-setor" data-setor="${esc(u.setor)}" data-acao-change="alterar-setor" data-email="${email}" aria-label="Setor de ${email}">
+                        ${opSetor('', 'Sem setor')}${opSetor('comercial', 'Comercial')}${opSetor('financeiro', 'Financeiro')}
+                    </select>
                 </td>
                 <td>
                     <label class="contas-switch">
@@ -204,7 +215,7 @@
                     </label>
                     <label class="field search-field">
                         <span class="field-label">Buscar usuário</span>
-                        <span class="search-box">${icone('busca')}<input id="pesquisaUsuario" type="search" data-filtro="busca" placeholder="E-mail ou vendedor vinculado…" value="${esc(f.busca)}"></span>
+                        <span class="search-box">${icone('busca')}<input id="pesquisaUsuario" type="search" data-filtro="busca" placeholder="E-mail, nome ou vendedor vinculado…" value="${esc(f.busca)}"></span>
                     </label>
                 </div>
                 ${lista.length ? `<div class="table-scroll">
@@ -213,11 +224,12 @@
                             <tr>
                                 <th>Usuário (E-mail)</th>
                                 <th>Vendedor vinculado (Planilha)</th>
-                                <th>Permissões · Portais (Robôs)</th>
-                                <th>Permissões · Estatísticas (Comercial)</th>
-                                <th>Permissões · Planilhas</th>
-                                <th>Permissões · Pesquisar cotações de outros vendedores</th>
-                                <th>Permissões · E-mails</th>
+                                <th>Setor</th>
+                                <th>Portais (Robôs)</th>
+                                <th>Estatísticas (Comercial)</th>
+                                <th>Planilhas</th>
+                                <th>Pesquisar cotações de outros vendedores</th>
+                                <th>E-mails</th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
@@ -284,11 +296,24 @@
                     if (r && r.sucesso) {
                         if (estado.dados && estado.dados.usuarios && estado.dados.usuarios[r.email]) {
                             estado.dados.usuarios[r.email].vendedor = r.vendedor;
+                            if (r.nome !== undefined) estado.dados.usuarios[r.email].nome = r.nome;
                         }
-                        mostrarToast(`Vendedor "${r.vendedor || 'Nenhum'}" vinculado a ${r.email}.`);
+                        mostrarToast(r.vendedor ? `${r.nome || r.vendedor} vinculado a ${r.email} (na planilha: ${r.vendedor}).` : `${r.email} ficou sem vendedor vinculado.`);
                         desenhar();
                     } else {
                         mostrarToast('Erro ao vincular vendedor: ' + ((r && r.erro) || 'falha desconhecida'));
+                    }
+                });
+                socket.on('admin_setor_alterado', r => {
+                    if (r && r.sucesso) {
+                        const u = estado.dados && estado.dados.usuarios && estado.dados.usuarios[r.email];
+                        if (u) { u.setor = r.setor; u.vendedor = r.vendedor; if (r.nome !== undefined) u.nome = r.nome; }
+                        const rotulo = { comercial: 'Comercial', financeiro: 'Financeiro' }[r.setor] || 'sem setor';
+                        mostrarToast(`Setor de ${r.email}: ${rotulo}.`);
+                        desenhar();
+                    } else {
+                        mostrarToast('Erro ao alterar setor: ' + ((r && r.erro) || 'falha desconhecida'));
+                        socket.emit('admin_pedir_usuarios');
                     }
                 });
                 socket.on('admin_acesso_alterado', r => {
@@ -339,7 +364,13 @@
                     const inp = document.getElementById(el.dataset.input);
                     const socket = ctx.socket && ctx.socket();
                     if (!inp || !socket) return;
-                    socket.emit('admin_alterar_vendedor_usuario', { email: el.dataset.email, vendedor: inp.value.trim() });
+                    socket.emit('admin_alterar_vendedor_usuario', { email: el.dataset.email, nome: inp.value.trim().replace(/\s+/g, ' ') });
+                },
+                'alterar-setor': (el, ctx) => {
+                    const socket = ctx.socket && ctx.socket();
+                    if (!socket) return;
+                    el.dataset.setor = el.value; // cor muda na hora; a resposta do robô confirma (ou volta, se falhar)
+                    socket.emit('admin_alterar_setor_usuario', { email: el.dataset.email, setor: el.value });
                 },
                 'toggle-acesso': (el, ctx) => {
                     const socket = ctx.socket && ctx.socket();

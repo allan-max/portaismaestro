@@ -60,6 +60,22 @@ test('comandos aos robôs: sem acesso aos portais nada chega; com acesso só mod
   await pausa(300);
   assert.deepEqual(comandos(), []);
 
+  // Com captcha na tela (quadro recente do robô), o vendedor logado resolve o captcha pela tela Minhas Cotações
+  bot.emit('imagem_captcha_do_robo', { imagem: 'data:image/jpeg;base64,AAAA' });
+  await pausa(100);
+  const clique = event(bot, 'executar_clique');
+  vendedor.socket.emit('clique_no_captcha', { x: 10.4, y: 20, extra: 'x' });
+  assert.deepEqual(await clique, { x: 10, y: 20 });
+  // Captcha resolvido: o vendedor sem portais volta a não poder clicar
+  bot.emit('captcha_resolvido_do_robo', {});
+  await pausa(100);
+  doRobo.length = 0;
+  const recusa = event(vendedor.socket, 'clique_captcha_recusado');
+  vendedor.socket.emit('clique_no_captcha', { x: 1, y: 2 });
+  await recusa;
+  await pausa(200);
+  assert.deepEqual(comandos(), []);
+
   // /api/responder NÃO exige portais: vendedor responde pela tela Minhas Cotações
   const form = new FormData();
   // (evento inválido de propósito: passa da sessão e para na validação, sem pôr nada na fila)

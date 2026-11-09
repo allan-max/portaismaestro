@@ -23,6 +23,7 @@ const { criarAuditoria } = require('./lib/auditoria');
 const { criarDashboardAuditoria, ipDe } = require('./lib/dashboard-auditoria');
 const { criarSincronizacao } = require('./lib/sincronizacao');
 const { criarEmails } = require('./lib/emails');
+const donoCotacao = require('./lib/dono-cotacao');
 
 
 // 🛡️ AIRBAG ANTI-CRASH (Impede o servidor de morrer por erros invisíveis)
@@ -126,6 +127,10 @@ let estado_findes = { status: 'desligado' };
 let estado_findes_antigo = { status: 'desligado' };
 let fila_respostas = [];
 let bot_socket_id = null;
+// Último quadro de captcha transmitido pelo robô: enquanto houver captcha na tela, qualquer vendedor logado
+// pode clicar nele (Minhas Cotações); fora disso o clique continua exigindo "Acesso aos portais".
+let ultimo_quadro_captcha = 0;
+const CAPTCHA_ATIVO_MS = 10000;
 let sync_socket_id = null;   // serviço de NF (cruzar_nf/servico.py)
 let emails_socket_id = null; // serviço da Central de E-mails (repositório privado integracaoEmails)
 let usuarios_logados = {};
@@ -392,23 +397,50 @@ function numerosDaCotacao(valor) {
     return [bruto.toUpperCase(), (limpo || bruto).toUpperCase()];
 }
 const casaNumeroBusca = (c, numero) => !!(c && numero && numerosDaCotacao(c['COTAÇÃO']).includes(numero));
-function ehDeOutroVendedor(c, meuVendedor) {
-    return !meuVendedor || !vendedorCorresponde(String((c && c.VENDEDOR) || '').trim(), meuVendedor);
+
+// Banco de usuários lido direto do disco: só quando o robô (dono do banco) não mandou a lista de contas
+const CAMINHOS_BANCO_USUARIOS = [
+    path.join(__dirname, '..', 'senhas gerenciador', 'banco_usuarios.json'),
+    path.join(__dirname, '..', 'gerenciador-maestro', 'banco_usuarios.json'),
+    path.join(__dirname, '..', 'gerenciador', 'banco_usuarios.json')
+];
+function lerBancoUsuariosLocal() {
+    for (const p of CAMINHOS_BANCO_USUARIOS) {
+        if (!fs.existsSync(p)) continue;
+        try { return JSON.parse(fs.readFileSync(p, 'utf8').replace(/^﻿/, '')); } catch (e) {}
+    }
+    return null;
 }
-function anmynaDeOutroVendedor(numero, meuVendedor) {
-    return obterCotacoesAnmynaFormatadas('').filter(c => casaNumeroBusca(c, numero) && ehDeOutroVendedor(c, meuVendedor));
+// Contas vendedoras para decidir o dono das cotações (lib/dono-cotacao.js): a lista do robô ou, sem ela, a do disco
+// A conta da sessão sempre entra (o arquivo do disco pode estar desatualizado em relação ao robô).
+function contasVendedoras(doRobo, user = null) {
+    const contas = Array.isArray(doRobo) ? doRobo.slice() : donoCotacao.contasVendedoras(lerBancoUsuariosLocal());
+    const email = user && String(user.email || '').trim();
+    if (email && String(user.vendedor || '').trim() && !contas.some(c => c.email === email)) {
+        contas.push({ email, nome: String(user.nome || ''), vendedor: String(user.vendedor) });
+    }
+    return contas;
 }
+function ehDeOutroVendedor(c, meuEmail, contas) {
+    return !meuEmail || !donoCotacao.ehDono(String((c && c.VENDEDOR) || '').trim(), meuEmail, contas);
+}
+function anmynaDeOutroVendedor(numero, meuEmail, contas) {
+    return obterCotacoesAnmynaFormatadas('').filter(c => casaNumeroBusca(c, numero) && ehDeOutroVendedor(c, meuEmail, contas));
+}
+// Filtro das cotações Anmyna de Minhas Cotações: só as que são deste e-mail
+const anmynaDoEmail = (email, contas) => vLinha => donoCotacao.ehDono(vLinha, email, contas);
 // Resposta do gerenciador a buscar_cotacao_outro_vendedor. Confere de novo permissão, número e dono antes de entregar.
 function entregarBuscaOutroVendedor(dados) {
     const cliente = io.sockets.sockets.get(dados.clientId);
     const user = cliente && cliente.usuarioLogado;
     if (!cliente || !user || !(user.admin || user.busca_outros_access)) return;
     const numero = normalizarNumeroBusca(dados.busca_numero);
-    const meuVendedor = String(user.vendedor || '').trim();
+    const meuEmail = String(user.email || '').trim();
+    const contas = contasVendedoras(dados._contas_vendedores, user);
     const daPlanilha = (Array.isArray(dados.cotacoes) ? dados.cotacoes : [])
-        .filter(c => c && c.ORIGEM_PLANILHA !== 'anmyna' && casaNumeroBusca(c, numero) && ehDeOutroVendedor(c, meuVendedor));
+        .filter(c => c && c.ORIGEM_PLANILHA !== 'anmyna' && casaNumeroBusca(c, numero) && ehDeOutroVendedor(c, meuEmail, contas));
     const chaves = new Set(daPlanilha.map(c => String(c['COTAÇÃO'] || '').trim()));
-    const cotacoes = [...anmynaDeOutroVendedor(numero, meuVendedor).filter(c => !chaves.has(String(c['COTAÇÃO'] || '').trim())), ...daPlanilha];
+    const cotacoes = [...anmynaDeOutroVendedor(numero, meuEmail, contas).filter(c => !chaves.has(String(c['COTAÇÃO'] || '').trim())), ...daPlanilha];
     const soDessas = mapa => Object.fromEntries(Object.entries(mapa && typeof mapa === 'object' ? mapa : {})
         .filter(([k]) => cotacoes.some(c => casaNumeroBusca(c, normalizarNumeroBusca(k)) || String(c['COTAÇÃO'] || '').trim() === k)));
     cliente.emit('retorno_busca_cotacao_outro_vendedor', {
@@ -439,7 +471,8 @@ function obterCotacoesAnmynaFormatadas(vendedorFiltro) {
                 const vLinha = String(r['VENDEDOR '] || r['VENDEDOR'] || '').trim();
                 if (!vLinha || ['N/A', 'NÃO RESPONDER', 'NÃO TIRAR', 'NINGUEM'].includes(vLinha.toUpperCase())) continue;
 
-                if (vendedorFiltro && !vendedorCorresponde(vLinha, vendedorFiltro)) continue;
+                if (typeof vendedorFiltro === 'function' ? !vendedorFiltro(vLinha)
+                    : (vendedorFiltro && !vendedorCorresponde(vLinha, vendedorFiltro))) continue;
 
                 const local = r['CLIENTE'] ? (r['POR QUAL EMPRESA'] ? `${r['CLIENTE']} (${r['POR QUAL EMPRESA']})` : r['CLIENTE']) : (r['POR QUAL EMPRESA'] || 'Anmyna');
                 resultado.push({
@@ -503,6 +536,9 @@ const dashboardFontes = criarDashboardFontes({
 // 🛡️ AUDITORIA: quem mudou o quê (docs/auditoria/plano.md). Admins na sala 'auditoria' recebem ao vivo.
 const auditoria = criarAuditoria({ dir: process.env.AUDITORIA_DIR || path.join(__dirname, '..', 'auditoria'), uuid: uuidv4 });   // AUDITORIA_DIR: testes não sujam a real
 const emailsPendentes = new Map();      // clientId -> e-mail digitado no login/cadastro, até o robô responder
+// clientId do painel admin esperando a lista de contas do robô. Fica fora da conexão: quem pede é o socket do painel,
+// quem responde é o socket do robô; um Set por conexão nunca era limpo e o fallback local sobrescrevia a resposta.
+const pedidosPendentes = new Set();
 const auditPorCliente = new Map();      // `${tipo}:${clientId}` -> id do registro, para respostas sem audit_id
 // comando_direto: portais e campos que as telas (coupa, vale, me, ariba, findes) mandam
 const PORTAIS_COMANDO = new Set(['coupa', 'vale', 'me', 'ariba', 'findes', 'comprasgov']);
@@ -566,7 +602,8 @@ const EVENTOS_DO_ROBO = new Set([
     'relatar_progresso_findes', 'relatar_progresso_ariba', 'sincronizar_estado_me', 'sincronizar_estado_ariba',
     'tarefa_concluida', 'resultado_login', 'resposta_cadastro',
     'resultado_verificacao_token', 'resposta_recuperacao_solicitada', 'resultado_nova_senha', 'receber_config_admin',
-    'admin_resposta_usuarios', 'admin_resposta_acesso', 'admin_resposta_vendedor', 'resposta_acao_linha',
+    'admin_resposta_usuarios', 'admin_resposta_acesso', 'admin_resposta_vendedor', 'admin_resposta_setor',
+    'resposta_vendedores_cadastrados', 'resposta_acao_linha',
     'retorno_planilha_json', 'retorno_dados_dashboard', 'retorno_ler_log_txt',
     'retorno_registro_vendedor_cotacao', 'status_registro_vendedor_cotacao', 'resposta_registro_pedido_manual',
     'retorno_registro_cotacao_manual', 'atualizar_fila_extracao', 'progresso_fila_extracao',
@@ -726,6 +763,7 @@ io.on('connection', (socket) => {
     socket.on('imagem_captcha_do_robo', (dados, ack) => {
         // Só o robô transmite (antes qualquer conexão podia injetar imagem na tela dos vendedores)
         if (doRobo() && dados && typeof dados.imagem === 'string') {
+            ultimo_quadro_captcha = Date.now();
             // volatile: navegador com conexão lenta perde o quadro em vez de acumular fila de quadros velhos
             io.to('frontend').volatile.emit('nova_imagem', { imagem: dados.imagem });
         }
@@ -734,6 +772,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('captcha_resolvido_do_robo', (dados) => {
+        if (doRobo()) ultimo_quadro_captcha = 0;
         io.to('frontend').emit('captcha_resolvido', dados || {});
     });
 
@@ -767,10 +806,18 @@ io.on('connection', (socket) => {
     socket.on('contagem_coupa_vale', (dados) => io.to('frontend').emit('atualizar_contagem_coupa_vale', dados));
 
     socket.on('clique_no_captcha', (dados) => {
-        if (!podeOperarRobos()) return;
-        // Repassa o clique do usuário diretamente para o robô local
+        // Captcha na tela (quadro recente do robô): qualquer vendedor logado resolve pela tela Minhas Cotações.
+        // Sem captcha ativo, só quem tem "Acesso aos portais" (o clique vai direto para o navegador do robô).
+        const captchaAtivo = Date.now() - ultimo_quadro_captcha < CAPTCHA_ATIVO_MS;
+        if (!(podeOperarRobos() || (socket.autenticado && captchaAtivo))) {
+            return socket.emit('clique_captcha_recusado', { erro: socket.autenticado
+                ? 'Nenhum captcha ativo no momento.' : 'Sessão inválida.' });
+        }
+        const x = Math.round(Number(dados && dados.x)), y = Math.round(Number(dados && dados.y));
+        if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || y < 0 || x > 5000 || y > 5000) return;
+        // Repassa o clique do usuário diretamente para o robô local (só as coordenadas)
         if (bot_socket_id) {
-            io.to(bot_socket_id).emit('executar_clique', dados);
+            io.to(bot_socket_id).emit('executar_clique', { x, y });
         }
     });
 
@@ -984,6 +1031,8 @@ io.on('connection', (socket) => {
 
     socket.on('resultado_login', (dados) => {
         if (!socket.isBot || socket.id !== bot_socket_id) return;
+        // login pelo nome da conta: a auditoria guarda o e-mail que o robô achou, não o nome digitado
+        if (dados.sucesso && dados.user) emailsPendentes.set(dados.clientId, String(dados.user).toLowerCase());
         registrarContaPeloRobo(dados, dados.sucesso ? 'login' : 'login_falha', dados.user);
         if (dados.sucesso) {
             const sessionId = uuidv4();
@@ -1003,13 +1052,15 @@ io.on('connection', (socket) => {
                 busca_outros_access: hasBuscaOutrosAccess,
                 emails_access: hasEmailsAccess,
                 vendedor: dados.vendedor || '',
-                expires: expires 
+                nome: dados.nome || '',   // nome completo: decide o dono das cotações (lib/dono-cotacao.js)
+                expires: expires
             }));
             
             io.to(dados.clientId).emit('resposta_login', { 
-                sucesso: true, 
+                sucesso: true,
                 sessionId: sessionId,
-                admin: dados.isAdmin, 
+                email: dados.user,
+                admin: dados.isAdmin,
                 dev: dados.isDev,
                 dashboard_access: hasDashboardAccess,
                 portais_access: hasPortaisAccess,
@@ -1104,20 +1155,7 @@ io.on('connection', (socket) => {
 
     // === PAINEL ADMIN (Contas e Privilégios) ===
     function lerUsuariosLocais() {
-        const possiveisCaminhos = [
-            path.join(__dirname, '..', 'senhas gerenciador', 'banco_usuarios.json'),
-            path.join(__dirname, '..', 'gerenciador-maestro', 'banco_usuarios.json'),
-            path.join(__dirname, '..', 'gerenciador', 'banco_usuarios.json')
-        ];
-        let db = null;
-        for (const p of possiveisCaminhos) {
-            if (fs.existsSync(p)) {
-                try {
-                    db = JSON.parse(fs.readFileSync(p, 'utf8'));
-                    break;
-                } catch(e) {}
-            }
-        }
+        const db = lerBancoUsuariosLocal();
         if (!db) return null;
         const onlineUsers = Object.keys(usuarios_logados);
         const lista = {};
@@ -1133,13 +1171,14 @@ io.on('connection', (socket) => {
                 emails_access: !!db[email].emails_access,
                 bloqueado: !!db[email].bloqueado,
                 vendedor: db[email].vendedor || '',
+                nome: db[email].nome || '',
+                setor: db[email].setor || '',
                 online: onlineUsers.includes(email)
             };
         }
         return lista;
     }
 
-    const pedidosPendentes = new Set();
 
     socket.on('admin_pedir_usuarios', () => {
         if (!socket.autenticado) {
@@ -1235,13 +1274,13 @@ io.on('connection', (socket) => {
     socket.on('admin_alterar_vendedor_usuario', (dados) => {
         if (!checkRole('admin')) return;
         if (bot_socket_id) {
-            const reg = audit('admin', 'vincular_vendedor', { alvo: dados.email, detalhes: { depois: dados.vendedor || null } });
+            // painel novo manda o nome completo (o robô tira o vendedor dele); 'vendedor' cru continua aceito
+            const porNome = dados && Object.prototype.hasOwnProperty.call(dados, 'nome');
+            const reg = audit('admin', 'vincular_vendedor', { alvo: dados.email, detalhes: { depois: (porNome ? dados.nome : dados.vendedor) || null } });
             if (reg) auditPorCliente.set(`vendedor:${socket.id}`, reg.id);
-            io.to(bot_socket_id).emit('admin_alterar_vendedor_usuario', {
-                email: dados.email, 
-                vendedor: dados.vendedor, 
-                clientId: socket.id 
-            });
+            io.to(bot_socket_id).emit('admin_alterar_vendedor_usuario', porNome
+                ? { email: dados.email, nome: String(dados.nome || ''), clientId: socket.id }
+                : { email: dados.email, vendedor: dados.vendedor, clientId: socket.id });
         } else {
             socket.emit('admin_vendedor_alterado', { sucesso: false, erro: "O Robô está offline." });
         }
@@ -1251,6 +1290,23 @@ io.on('connection', (socket) => {
         if (socket.id !== bot_socket_id) return;
         fecharPorCliente('vendedor', dados.clientId, dados);
         io.to(dados.clientId).emit('admin_vendedor_alterado', dados);
+    });
+
+    socket.on('admin_alterar_setor_usuario', (dados = {}) => {
+        if (!checkRole('admin')) return;
+        if (bot_socket_id) {
+            const reg = audit('admin', 'alterar_setor', { alvo: dados.email, detalhes: { depois: dados.setor || null } });
+            if (reg) auditPorCliente.set(`setor:${socket.id}`, reg.id);
+            io.to(bot_socket_id).emit('admin_alterar_setor_usuario', { email: dados.email, setor: String(dados.setor || ''), clientId: socket.id });
+        } else {
+            socket.emit('admin_setor_alterado', { sucesso: false, erro: "O Robô está offline." });
+        }
+    });
+
+    socket.on('admin_resposta_setor', (dados) => {
+        if (socket.id !== bot_socket_id) return;
+        fecharPorCliente('setor', dados.clientId, dados);
+        io.to(dados.clientId).emit('admin_setor_alterado', dados);
     });
 
     socket.on('pedir_config_admin', () => {
@@ -1342,14 +1398,18 @@ io.on('connection', (socket) => {
         const podeVerPlanilhaGeral = !!(user.admin || user.planilha_access);
 
         // Se pediu apenas o vendedor dele OU se não tem permissão de ver a Planilha Geral, trava no vendedor dele
+        delete dados.email_vendedor; delete dados.email_excluir;   // só o servidor decide de quem são as cotações
         if (dados.apenas_meu_vendedor || (vendSessao && !podeVerPlanilhaGeral)) {
             dados.vendedor_filtro = vendSessao || '__NENHUM__';
+            // dono pelo nome na coluna VENDEDOR (nome completo ou primeiro nome sem outro igual): lib/dono-cotacao.js
+            if (vendSessao && user.email) dados.email_vendedor = String(user.email);
         }
 
         const reqInfo = {
             tela: dados.tela || (dados.apenas_meu_vendedor ? 'minhas_cotacoes' : 'planilha_vale'),
             apenas_meu_vendedor: !!dados.apenas_meu_vendedor,
-            vendedor_filtro: dados.vendedor_filtro
+            vendedor_filtro: dados.vendedor_filtro,
+            email_vendedor: dados.email_vendedor || ''
         };
         socket.reqPlanilha = reqInfo;
         if (typeof pedidosPlanilhaPorCliente !== 'undefined') {
@@ -1360,8 +1420,8 @@ io.on('connection', (socket) => {
             io.to(bot_socket_id).emit('comando_carregar_planilha_json', dados);
         } else {
             if (dados.apenas_meu_vendedor || dados.tela === 'minhas_cotacoes') {
-                const vFiltro = dados.vendedor_filtro === '__NENHUM__' ? '' : (dados.vendedor_filtro || vendSessao);
-                const cotacoesAnmyna = vFiltro ? obterCotacoesAnmynaFormatadas(vFiltro) : [];
+                const cotacoesAnmyna = dados.email_vendedor
+                    ? obterCotacoesAnmynaFormatadas(anmynaDoEmail(dados.email_vendedor, contasVendedoras(null, user))) : [];
                 if (cotacoesAnmyna.length > 0) {
                     if (typeof pedidosPlanilhaPorCliente !== 'undefined') pedidosPlanilhaPorCliente.delete(socket.id);
                     return socket.emit('retorno_planilha_json', {
@@ -1387,17 +1447,22 @@ io.on('connection', (socket) => {
         const responder = cotacoes => socket.emit('retorno_busca_cotacao_outro_vendedor', { numero, cotacoes, portais_robo: {}, onde_encontrar: {} });
         if (!(user.admin || user.busca_outros_access) || !numero) return responder([]);
         const meuVendedor = String(user.vendedor || '').trim();
-        if (!bot_socket_id) return responder(anmynaDeOutroVendedor(numero, meuVendedor));
+        const meuEmail = String(user.email || '').trim();
+        if (!bot_socket_id) return responder(anmynaDeOutroVendedor(numero, meuEmail, contasVendedoras(null, user)));
         io.to(bot_socket_id).emit('comando_carregar_planilha_json', {
-            origem: 'todas', tela: 'minhas_cotacoes', numero_exato: numero, vendedor_excluir: meuVendedor, clientId: socket.id
+            origem: 'todas', tela: 'minhas_cotacoes', numero_exato: numero, vendedor_excluir: meuVendedor,
+            email_excluir: meuEmail, clientId: socket.id
         });
     });
 
     // Python devolve os dados JSON
     socket.on('retorno_planilha_json', (dados) => {
         if (socket.id !== bot_socket_id) return;
+        // lista de contas (com e-mails) só serve ao servidor: nunca vai para o navegador
+        const contasDoRobo = dados && dados._contas_vendedores;
+        if (dados) delete dados._contas_vendedores;
         if (dashboardCotacoes.receber(socket.id, dados)) return;
-        if (dados && dados.busca_numero) return entregarBuscaOutroVendedor(dados);
+        if (dados && dados.busca_numero) return entregarBuscaOutroVendedor({ ...dados, _contas_vendedores: contasDoRobo });
         if (dados && Array.isArray(dados.cotacoes)) {
             dados.prints_robo = { ...(dados.prints_robo || {}), ...obterPrintsParaCotacoes(dados.cotacoes) };
             dados.erros_robo = { ...(dados.erros_robo || {}), ...obterErrosParaCotacoes(dados.cotacoes) };
@@ -1418,8 +1483,10 @@ io.on('connection', (socket) => {
 
             if (ehMinhasCotacoes) {
                 const vendFiltro = (reqInfo && reqInfo.vendedor_filtro) || dados.vendedor_filtro || (user && user.vendedor) || '';
-                const filtroParaAnmyna = vendFiltro === '__NENHUM__' ? '__NENHUM__' : vendFiltro;
-                const cotacoesAnmyna = filtroParaAnmyna === '__NENHUM__' ? [] : obterCotacoesAnmynaFormatadas(filtroParaAnmyna);
+                const emailFiltro = (reqInfo && reqInfo.email_vendedor) || '';
+                const cotacoesAnmyna = vendFiltro === '__NENHUM__' ? []
+                    : emailFiltro ? obterCotacoesAnmynaFormatadas(anmynaDoEmail(emailFiltro, contasVendedoras(contasDoRobo, user)))
+                    : obterCotacoesAnmynaFormatadas(vendFiltro);
                 if (cotacoesAnmyna.length > 0) {
                     const chavesExistentes = new Set((dados.cotacoes || []).map(c => String(c['COTAÇÃO'] || '').trim()));
                     const novasAnmyna = cotacoesAnmyna.filter(c => !chavesExistentes.has(String(c['COTAÇÃO'] || '').trim()));
@@ -1700,6 +1767,24 @@ io.on('connection', (socket) => {
         } else {
             socket.emit('resposta_registro_vendedor_cotacao', { sucesso: false, erro: "O Robô (Gerenciador Python) está offline. Inicie o script no seu computador." });
         }
+    });
+
+    // Seletor "Atribuir Vendedor" das planilhas: nomes completos das contas com vendedor vinculado (vem do robô)
+    socket.on('pedir_vendedores_cadastrados', () => {
+        if (!socket.autenticado) return socket.emit('sessao_invalida');
+        const user = socket.usuarioLogado || {};
+        if (!user.admin && !user.planilha_access) {
+            return socket.emit('resposta_vendedores_cadastrados', { sucesso: false, erro: 'Sem permissão para alterar planilhas.' });
+        }
+        if (bot_socket_id) io.to(bot_socket_id).emit('listar_vendedores_cadastrados', { clientId: socket.id });
+        else socket.emit('resposta_vendedores_cadastrados', { sucesso: false, erro: 'O Robô (Gerenciador Python) está offline.' });
+    });
+
+    socket.on('resposta_vendedores_cadastrados', (dados = {}) => {
+        if (!doRobo() || !dados.clientId) return;
+        io.to(dados.clientId).emit('resposta_vendedores_cadastrados', {
+            sucesso: !!dados.sucesso, erro: dados.erro, vendedores: Array.isArray(dados.vendedores) ? dados.vendedores : []
+        });
     });
 
     socket.on('retorno_registro_vendedor_cotacao', (dados) => {

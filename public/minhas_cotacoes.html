@@ -74,6 +74,13 @@
         }
         window.clicarCaptchaGlobal = clicarCaptchaGlobal;
 
+        socket.on('clique_captcha_recusado', (dados) => {
+            if (window.Tela && typeof window.Tela.toast === 'function') {
+                const erro = String((dados && dados.erro) || 'Clique não aceito.').replace(/[&<>"']/g, '');
+                window.Tela.toast(`Clique no captcha não enviado: ${erro}`);
+            }
+        });
+
         socket.on('nova_imagem', (dados) => {
             if (dados && dados.imagem && window.Tela && typeof window.Tela.receberCaptcha === 'function') {
                 window.Tela.receberCaptcha(dados.imagem);
