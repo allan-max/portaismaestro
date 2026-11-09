@@ -123,6 +123,10 @@ let estado_findes = { status: 'desligado' };
 let estado_findes_antigo = { status: 'desligado' };
 let fila_respostas = [];
 let bot_socket_id = null;
+// Último quadro de captcha transmitido pelo robô: enquanto houver captcha na tela, qualquer vendedor logado
+// pode clicar nele (Minhas Cotações); fora disso o clique continua exigindo "Acesso aos portais".
+let ultimo_quadro_captcha = 0;
+const CAPTCHA_ATIVO_MS = 10000;
 let sync_socket_id = null;   // serviço de NF (cruzar_nf/servico.py)
 let usuarios_logados = {};
 
@@ -714,6 +718,7 @@ io.on('connection', (socket) => {
     socket.on('imagem_captcha_do_robo', (dados, ack) => {
         // Só o robô transmite (antes qualquer conexão podia injetar imagem na tela dos vendedores)
         if (doRobo() && dados && typeof dados.imagem === 'string') {
+            ultimo_quadro_captcha = Date.now();
             // volatile: navegador com conexão lenta perde o quadro em vez de acumular fila de quadros velhos
             io.to('frontend').volatile.emit('nova_imagem', { imagem: dados.imagem });
         }
@@ -722,6 +727,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('captcha_resolvido_do_robo', (dados) => {
+        if (doRobo()) ultimo_quadro_captcha = 0;
         io.to('frontend').emit('captcha_resolvido', dados || {});
     });
 
@@ -755,10 +761,18 @@ io.on('connection', (socket) => {
     socket.on('contagem_coupa_vale', (dados) => io.to('frontend').emit('atualizar_contagem_coupa_vale', dados));
 
     socket.on('clique_no_captcha', (dados) => {
-        if (!podeOperarRobos()) return;
-        // Repassa o clique do usuário diretamente para o robô local
+        // Captcha na tela (quadro recente do robô): qualquer vendedor logado resolve pela tela Minhas Cotações.
+        // Sem captcha ativo, só quem tem "Acesso aos portais" (o clique vai direto para o navegador do robô).
+        const captchaAtivo = Date.now() - ultimo_quadro_captcha < CAPTCHA_ATIVO_MS;
+        if (!(podeOperarRobos() || (socket.autenticado && captchaAtivo))) {
+            return socket.emit('clique_captcha_recusado', { erro: socket.autenticado
+                ? 'Nenhum captcha ativo no momento.' : 'Sessão inválida.' });
+        }
+        const x = Math.round(Number(dados && dados.x)), y = Math.round(Number(dados && dados.y));
+        if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || y < 0 || x > 5000 || y > 5000) return;
+        // Repassa o clique do usuário diretamente para o robô local (só as coordenadas)
         if (bot_socket_id) {
-            io.to(bot_socket_id).emit('executar_clique', dados);
+            io.to(bot_socket_id).emit('executar_clique', { x, y });
         }
     });
 
