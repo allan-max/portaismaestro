@@ -36,11 +36,30 @@ test('contas: tabela nao contem coluna de Planilha Geral e contem Portais e Esta
     const ctx = { icone: () => '', num: v => v };
     const html = C.pagina({ usuarios }, ctx, { grupo: '', busca: '' });
 
-    assert.doesNotMatch(html, /Permissões · Planilha Geral/);
-    assert.match(html, /Permissões · Portais \(Robôs\)/);
-    assert.match(html, /Permissões · Estatísticas \(Comercial\)/);
+    assert.doesNotMatch(html, /Planilha Geral/);
+    assert.doesNotMatch(html, /Permissões ·/);
+    const cabecalho = [...html.matchAll(/<th>([^<]*)<\/th>/g)].map(m => m[1]);
+    assert.deepEqual(cabecalho, ['Usuário (E-mail)', 'Vendedor vinculado (Planilha)', 'Setor', 'Portais (Robôs)',
+        'Estatísticas (Comercial)', 'Planilhas', 'Pesquisar cotações de outros vendedores', 'Ações']);
     assert.match(html, /data-campo="portais_access"/);
     assert.match(html, /data-campo="dashboard_access"/);
+});
+
+test('contas: conta do cadastro novo mostra e-mail, nome completo, setor e vendedor vinculado', () => {
+    const usuarios = {
+        'gustavo@teste.com': { nome: 'Gustavo <b>Silva</b>', setor: 'comercial', vendedor: 'GUSTAVO', verificado: false },
+        'rita@teste.com': { nome: 'Rita Souza', setor: 'financeiro', vendedor: '' },
+    };
+    const ctx = { icone: () => '', num: v => v };
+    const html = C.pagina({ usuarios }, ctx, { grupo: '', busca: '' });
+    assert.match(html, /<b>gustavo@teste\.com<\/b>/);
+    // nome completo dentro do quadrado do vendedor vinculado; setor num seletor na coluna seguinte
+    assert.match(html, /<input[^>]*class="contas-vend-input" value="Gustavo &lt;b&gt;Silva&lt;\/b&gt;"[\s\S]*?Na planilha: GUSTAVO[\s\S]*?<\/td>\s*<td>\s*<select class="contas-setor" data-setor="comercial" data-acao-change="alterar-setor" data-email="gustavo@teste\.com"[\s\S]*?<option value="comercial" selected>Comercial/);
+    assert.match(html, /data-email="rita@teste\.com"[\s\S]*?<option value="financeiro" selected>Financeiro/);
+    assert.match(html, /Sem vínculo com a planilha/);
+    assert.match(html, /NÃO VERIFICADO/);
+    const norm = C.normalizarUsuarios(usuarios);
+    assert.deepEqual(C.filtrarUsuarios(norm, { busca: 'rita souza' }).map(u => u.email), ['rita@teste.com']);
 });
 
 test('base: sidebar de nao-admin exibe APENAS Gestao comercial e esconde todas as outras secoes', () => {

@@ -698,7 +698,7 @@
             <p style="font-size: 0.9rem; color: #768390; margin-bottom: 25px;">Registre o vendedor para as cotações na planilha da Vale.</p>
             
             <div style="margin-bottom: 15px;">
-                <input type="text" id="input-vendedor" class="form-input" placeholder="Ex: João Silva">
+                <div id="input-vendedor" class="vend-multi" data-classe-campo="form-input"></div>
             </div>
 
             <div style="margin-bottom: 25px;">
@@ -753,6 +753,7 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script src="vendedores-cadastrados.js"></script>
 <script>
 
 
@@ -830,7 +831,10 @@
             if (document.getElementById('modal-forms-overlay')) document.getElementById('modal-forms-overlay').style.display = 'flex';
             
             if (tipo === 'cotacao') document.getElementById('form-cotacao').style.display = 'block';
-            if (tipo === 'vendedor') document.getElementById('form-vendedor').style.display = 'block';
+            if (tipo === 'vendedor') {
+                document.getElementById('form-vendedor').style.display = 'block';
+                if (window.pedirVendedoresCadastrados) window.pedirVendedoresCadastrados(); // conta nova aparece sem recarregar
+            }
             if (tipo === 'pedido') document.getElementById('form-pedido').style.display = 'block';
         }
 
@@ -844,6 +848,8 @@
         const socket = io({ auth: { sessionId: sessionAtual }, transports: ['websocket'], upgrade: false });
 
         socket.emit('sou_frontend', { sessionId: sessionAtual });
+        window.pedirVendedoresCadastrados = ligarSeletorVendedores(socket);
+        montarSeletor(document.getElementById('input-vendedor'));
 
         socket.on('planilha_atualizada', () => { carregarBancoDados(true); });
 
@@ -1141,14 +1147,14 @@
         });
 
         function registrarVendedor() {
-            const vendedor = document.getElementById('input-vendedor').value.trim();
+            const vendedor = lerVendedores(document.getElementById('input-vendedor'));   // "A / B" quando dividida
             const cotacoes = document.getElementById('input-cotacoes').value.trim();
             const btn = document.getElementById('btn-registrar');
             const msg = document.getElementById('status-msg');
 
             if (!vendedor || !cotacoes) {
                 msg.style.color = '#e5534b';
-                msg.innerText = "⚠️ Preencha o vendedor e as cotações.";
+                msg.innerText = "⚠️ Selecione o vendedor e preencha as cotações.";
                 return;
             }
 
@@ -1176,7 +1182,7 @@
             if (res.sucesso) {
                 msg.style.color = '#34d399';
                 msg.innerHTML = '<i class="fa-solid fa-check"></i> ' + escHtml(res.mensagem || '');
-                document.getElementById('input-vendedor').value = '';
+                definirVendedores(document.getElementById('input-vendedor'), '');
                 document.getElementById('input-cotacoes').value = '';
             } else {
                 msg.style.color = '#e5534b';
@@ -1197,7 +1203,7 @@
                     <td style="padding: 4px;">${criarTextareaAutoResize('c-item')}</td>
                     <td style="padding: 4px;">${criarTextareaAutoResize('c-qtd')}</td>
                     <td style="padding: 4px;">${criarTextareaAutoResize('c-localidade')}</td>
-                    <td style="padding: 4px;">${criarTextareaAutoResize('c-vendedor')}</td>
+                    <td style="padding: 4px;">${htmlSeletorVendedores('c-vendedor', 'form-input')}</td>
                     <td style="padding: 4px;">${criarTextareaAutoResize('c-modelos')}</td>
                     <td style="padding: 4px;">${criarTextareaAutoResize('c-marcas')}</td>
                     <td style="padding: 4px; text-align: center; vertical-align: middle;"><button onclick="this.closest('tr').remove()" style="background: transparent; border: none; color: #e5534b; cursor: pointer; padding: 5px;"><i class="fa-solid fa-trash"></i></button></td>
@@ -1226,7 +1232,7 @@
                         item: tr.querySelector('.c-item').value.trim(),
                         quantidade: tr.querySelector('.c-qtd').value.trim(),
                         localidade: tr.querySelector('.c-localidade').value.trim(),
-                        vendedor: tr.querySelector('.c-vendedor').value.trim(),
+                        vendedor: lerVendedores(tr.querySelector('.c-vendedor')),
                         modelos: tr.querySelector('.c-modelos').value.trim(),
                         marcas: tr.querySelector('.c-marcas').value.trim()
                     });
