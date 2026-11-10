@@ -48,6 +48,19 @@
   --em-cat-phishing: #f87171;     --em-cat-phishing-fundo: rgba(248, 113, 113, .13);
   /* não classificado não tem cor: texto discreto e borda tracejada */
 
+  /* filtros salvos: as 8 cores de etiqueta, pelo nome que o portal guarda */
+  --em-etq-cinza: #9aaec3;
+  --em-etq-azul: #60a5fa;
+  --em-etq-verde: #34d399;
+  --em-etq-ambar: #f4bf68;
+  --em-etq-violeta: #a78bfa;
+  --em-etq-ciano: #22d3ee;
+  --em-etq-rosa: #f472b6;
+  --em-etq-laranja: #fb923c;
+
+  /* fundo do termo buscado, realçado na lista */
+  --em-realce: rgba(244, 191, 104, .28);
+
   /* raios: controle, cartão, painel; pílula só em etiqueta e contador */
   --em-raio-controle: 6px;
   --em-raio-cartao: 8px;

@@ -1,16 +1,20 @@
 /* Central de E-mails: casca (cabeçalho, trilho, visões), caixa unificada e dashboard.
    Regra de segurança: todo campo vindo de e-mail entra por textContent. Nunca HTML montado a partir de texto.
    HTML do e-mail só em iframe sandbox="" (sem scripts e sem mesma origem), por clique, com CSP própria.
-   Lógica pura (rota, categoria, formatos) fica em formato.js, que o node --test carrega. */
+   Lógica pura fica em formato.js (rota, categoria, formatos) e filtro.js (filtro, endereço, realce), que o node --test carrega. */
 (function () {
     'use strict';
     const F = window.EmailsFormato;
+    const Q = window.EmailsFiltro;
     const $ = id => document.getElementById(id);
     const sessao = localStorage.getItem('maestro_session');
-    // só arrumação da tela: o servidor já não manda o dado de administrador (gasto, saúde) a quem não é
+    // só arrumação da tela: o servidor já não manda o dado de administrador (gasto, saúde) a quem não é,
+    // e recusa filtro da equipe gravado por quem não é
     const admin = localStorage.getItem('maestro_admin') === 'true';
     const SVG = 'http://www.w3.org/2000/svg';
-    const estado = { filtros: {}, proximo: null, itens: 0, total: 0, aberto: null, contas: [], visao: '', bloqueado: false };
+    const PREFS_PADRAO = { minhas_caixas: [], filtros: [], sem_ruido: true, agrupar: false, notificar: false, som: false, equipe: [] };
+    const estado = { filtro: Q.novo(), proximo: null, itens: 0, total: 0, aberto: null, contas: [], contagens: null, visao: '',
+        bloqueado: false, iniciado: false, listou: false, carregando: false, seqLista: 0, ultimoDia: '', prefs: PREFS_PADRAO };
     const CANCELADO = { sucesso: false, cancelado: true };
     const esperando = new Map();
     let seq = 0;
@@ -20,6 +24,11 @@
         if (texto !== undefined && texto !== null) e.textContent = String(texto);
         if (classe) e.className = classe;
         return e;
+    }
+    function botao(texto, classe) {
+        const b = el('button', texto, classe);
+        b.type = 'button';
+        return b;
     }
     // ícone de icones.svg; o id vem sempre do código, nunca de texto de e-mail
     function icone(id, classe) {
@@ -43,6 +52,20 @@
         if (ic) s.appendChild(icone(ic));
         s.appendChild(el('span', texto));
         return s;
+    }
+    // texto com o termo buscado realçado: pedaços de texto e <mark> criados por nó, nunca por HTML
+    function comRealce(tag, texto, classe) {
+        const e = el(tag, null, classe);
+        for (const p of Q.realce(texto, estado.filtro.busca)) e.appendChild(p.marca ? el('mark', p.texto) : document.createTextNode(p.texto));
+        return e;
+    }
+    // preferência do aparelho; o navegador pode recusar o armazenamento (janela privada), e aí vale o padrão
+    function local(chave, valor) {
+        try {
+            if (valor === undefined) return localStorage.getItem(chave);
+            localStorage.setItem(chave, valor);
+        } catch (e) { /* sem armazenamento: só não lembra */ }
+        return null;
     }
     const dataHora = F.dataHora, tamanho = F.tamanho;
     function avisar(texto) { $('em-estado').textContent = texto; }
@@ -91,7 +114,7 @@
         });
     }
     socket.on('emails_retorno', r => {
-        if (r && r.sucesso) aoVivo('vivo');
+        if (r && r.sucesso && r.acao !== 'preferencias' && r.acao !== 'preferencias_salvar') aoVivo('vivo');
         else if (r && r.codigo === 'FONTE_OFFLINE') aoVivo('offline');
         const p = r && esperando.get(r.requestId);
         if (!p) {
@@ -99,17 +122,23 @@
             return;
         }
         esperando.delete(r.requestId);
-        if (r.codigo === 'SEM_PERMISSAO') {
+        // nas preferências, SEM_PERMISSAO é "filtro da equipe só para administrador", não falta de acesso à tela
+        if (r.codigo === 'SEM_PERMISSAO' && p.acao !== 'preferencias_salvar') {
             telaAcesso('Acesso restrito', 'Você não tem o acesso "E-mails". Peça a um administrador do Maestro.');
             return;
         }
         p.resolve(r);
     });
     socket.on('sessao_invalida', () => telaAcesso('Sua sessão expirou', 'Entre de novo no Maestro para continuar.'));
-    socket.on('connect', () => {
+    socket.on('connect', async () => {
         aoVivo('conectando');
         socket.emit('emails_entrar');
-        if (!estado.itens) listar(false);
+        if (!estado.iniciado) {
+            // as preferências vêm do portal (funcionam com o serviço offline) e dizem quais são "minhas caixas"
+            await carregarPreferencias();
+            estado.iniciado = true;
+            mostrarVisao();
+        } else if (!estado.itens && estado.visao === 'caixa') listar(false);
         if (estado.visao === 'caixa' || estado.visao === 'filtros') atualizarContadores();
     });
     socket.on('connect_error', () => { aoVivo('reconectando'); avisar('Sem conexão com o Maestro. Tentando de novo…'); });
@@ -201,17 +230,69 @@
     document.addEventListener('keydown', ev => {
         if (ev.key !== 'Escape') return;
         const aberto = MENUS.find(([, m]) => !$(m).hidden);
-        if (!aberto) return;
-        fecharMenus();
-        $(aberto[0]).focus();
+        if (aberto) { fecharMenus(); $(aberto[0]).focus(); return; }
+        if ($('em-app').classList.contains('em-folha')) { abrirFolha(false); $('em-abrir-filtros').focus(); }
     });
     mostrarNovidades();
 
-    // ----- busca do cabeçalho: a mesma busca da Caixa -----
-    function buscar() {
-        if (estado.visao !== 'caixa') location.hash = '#caixa';
-        listar(false);
+    // ----- densidade da lista e painel de filtros recolhido: preferências do aparelho -----
+    function densidade(valor) {
+        const compacta = valor === 'compacta';
+        $('em-app').classList.toggle('em-compacta', compacta);
+        for (const b of $('em-densidade').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.densidade === (compacta ? 'compacta' : 'confortavel')));
     }
+    $('em-densidade').addEventListener('click', ev => {
+        const b = ev.target.closest('button');
+        if (!b) return;
+        local('emails_densidade', b.dataset.densidade);
+        densidade(b.dataset.densidade);
+    });
+    densidade(local('emails_densidade'));
+
+    // largo: o painel recolhe e volta (lembrado no aparelho); estreito: os filtros abrem como folha sobre a lista
+    const estreito = window.matchMedia('(max-width: 1100px)');
+    function recolher(sim) {
+        $('em-app').classList.toggle('em-sem-filtros', sim);
+        local('emails_filtros_recolhido', sim ? '1' : '0');
+        expandido();
+    }
+    function abrirFolha(sim) {
+        $('em-app').classList.toggle('em-folha', sim);
+        expandido();
+        if (sim) $('em-recolher-filtros').focus();
+    }
+    function expandido() {
+        const aberto = estreito.matches ? $('em-app').classList.contains('em-folha') : !$('em-app').classList.contains('em-sem-filtros');
+        $('em-abrir-filtros').setAttribute('aria-expanded', String(aberto));
+        $('em-recolher-filtros').setAttribute('aria-label', estreito.matches ? 'Fechar os filtros' : 'Recolher os filtros');
+        $('em-recolher-filtros').dataset.dica = estreito.matches ? 'Fechar' : 'Recolher';
+    }
+    $('em-abrir-filtros').addEventListener('click', () => {
+        if (estreito.matches) abrirFolha(!$('em-app').classList.contains('em-folha'));
+        else { recolher(false); $('em-recolher-filtros').focus(); }
+    });
+    $('em-recolher-filtros').addEventListener('click', () => {
+        if (estreito.matches) abrirFolha(false);
+        else recolher(true);
+        $('em-abrir-filtros').focus();
+    });
+    $('em-ver-resultados').addEventListener('click', () => { abrirFolha(false); $('em-lista').focus(); });
+    estreito.addEventListener('change', () => { abrirFolha(false); });
+    $('em-app').classList.toggle('em-sem-filtros', local('emails_filtros_recolhido') === '1');
+    expandido();
+
+    // ----- busca do cabeçalho: a mesma busca da Caixa; busca ao digitar, com espera de 300 ms -----
+    let esperaBusca = 0;
+    function buscar() {
+        clearTimeout(esperaBusca);
+        const busca = $('em-busca').value.trim();
+        if (estado.visao === 'caixa' && busca === estado.filtro.busca) return;
+        filtrar(Object.assign({}, estado.filtro, { busca }), estado.visao === 'caixa');
+    }
+    $('em-busca').addEventListener('input', () => {
+        clearTimeout(esperaBusca);
+        esperaBusca = setTimeout(buscar, 300);
+    });
     $('em-busca').addEventListener('keydown', ev => {
         if (ev.key !== 'Enter') return;
         ev.preventDefault();
@@ -222,9 +303,19 @@
         $('em-abrir-busca').setAttribute('aria-expanded', String(aberta));
         if (aberta) $('em-busca').focus();
     });
+    // "/" leva à busca, fora de campo de texto
+    document.addEventListener('keydown', ev => {
+        if (ev.key !== '/' || ev.ctrlKey || ev.metaKey || ev.altKey || estado.bloqueado) return;
+        const alvo = ev.target;
+        if (alvo.closest && alvo.closest('input, textarea, select, [contenteditable]')) return;
+        ev.preventDefault();
+        if (getComputedStyle($('em-busca-global')).display === 'none') $('em-abrir-busca').click();
+        else $('em-busca').focus();
+    });
 
-    // ----- visões pelo endereço: #caixa, #dashboard, #saude, #filtros -----
+    // ----- visões pelo endereço: #caixa (com o filtro), #dashboard, #saude, #filtros -----
     const ITENS_TRILHO = { caixa: 'em-ir-caixa', dashboard: 'em-ir-dash', revisao: 'em-ir-revisao', atrasados: 'em-ir-atrasados', filtros: 'em-ir-filtros', saude: 'em-ir-saude' };
+    const minhas = () => estado.prefs.minhas_caixas || [];
     function mostrarVisao() {
         if (estado.bloqueado) return;
         const r = F.rota(location.hash);
@@ -234,17 +325,23 @@
         $('em-dash').hidden = r.visao !== 'dashboard';
         $('em-saude').hidden = r.visao !== 'saude';
         $('em-filtros-salvos').hidden = r.visao !== 'filtros';
-        const ativo = ITENS_TRILHO[r.revisao ? 'revisao' : r.ver || r.visao];
-        for (const id of Object.values(ITENS_TRILHO)) {
-            if (id === ativo) $(id).setAttribute('aria-current', 'page');
-            else $(id).removeAttribute('aria-current');
+        let item = r.ver || r.visao;
+        if (r.visao === 'caixa') {
+            const f = Q.deHash(location.hash, minhas());
+            item = f.atrasados ? 'atrasados' : f.revisao ? 'revisao' : 'caixa';
+            if (estado.iniciado && (!estado.listou || !Q.igual(f, estado.filtro))) {
+                estado.filtro = f;
+                listar(false);
+            }
+            desenharFiltros();
         }
-        if (r.visao === 'caixa' && r.revisao && !$('em-revisao').checked) {
-            $('em-revisao').checked = true;
-            listar(false);
+        for (const id of Object.values(ITENS_TRILHO)) {
+            if (id === ITENS_TRILHO[item]) $(id).setAttribute('aria-current', 'page');
+            else $(id).removeAttribute('aria-current');
         }
         if (r.visao === 'dashboard') carregarDash(r.ver);
         if (r.visao === 'saude') carregarSaude();
+        if (r.visao === 'filtros') desenharGestao();
     }
     window.addEventListener('hashchange', mostrarVisao);
     // clique no item da visão que já está aberta: o endereço não muda, então aplica de novo
@@ -253,41 +350,352 @@
         if (a && a.getAttribute('href') === location.hash) mostrarVisao();
     });
 
-    // ----- caixa -----
-    function lerFiltros() {
-        return { busca: $('em-busca').value.trim(), categoria: $('em-categoria').value, status: $('em-status').value, conta: $('em-conta').value,
-            de: $('em-de').value, ate: $('em-ate').value, revisao: $('em-revisao').checked };
-    }
-
-    function preencherContas(contas) {
-        if (!Array.isArray(contas) || contas.join() === estado.contas.join()) return;
-        estado.contas = contas.slice();
-        const sel = $('em-conta'), atual = sel.value;
-        while (sel.options.length > 1) sel.remove(1);
-        for (const c of contas) {
-            const o = el('option', F.nomeCaixa(c));
-            o.value = String(c);
-            sel.appendChild(o);
+    // aplica um filtro: ele vai para o endereço, e o endereço manda listar (voltar, avançar e recarregar funcionam)
+    function filtrar(f, substituir) {
+        const hash = Q.paraHash(f, minhas());
+        if (estado.visao === 'caixa' && location.hash === hash) {
+            if (!Q.igual(f, estado.filtro)) { estado.filtro = Q.normalizar(f); listar(false); desenharFiltros(); }
+            return;
         }
-        sel.value = atual;
+        if (substituir) { history.replaceState(null, '', hash); mostrarVisao(); }
+        else location.hash = hash;
+    }
+    const padrao = () => Q.deHash('#caixa', minhas());
+
+    // ----- preferências (no portal) -----
+    async function carregarPreferencias() {
+        const r = await pedir('preferencias', {});
+        if (r.sucesso && r.dados) estado.prefs = Object.assign({}, PREFS_PADRAO, r.dados);
+        else if (!r.cancelado) $('em-salvar-estado').textContent = Q.erroPreferencias(r.codigo, r.erro);
+    }
+    // grava só as chaves que mudaram; devolve verdadeiro se gravou. A frase de erro vai para `onde`.
+    async function salvarPreferencias(parcial, onde) {
+        const r = await pedir('preferencias_salvar', parcial);
+        if (r.cancelado) return false;
+        if (!r.sucesso) { $(onde).textContent = Q.erroPreferencias(r.codigo, r.erro); return false; }
+        estado.prefs = Object.assign({}, PREFS_PADRAO, r.dados);
+        $(onde).textContent = '';
+        return true;
     }
 
+    // ----- painel de filtros -----
+    const hoje = () => Q.hojeBrasilia();
+    // redesenha os chips sem perder o foco do teclado (o chip ligado continua focado)
+    function manterFoco(fn) {
+        const foco = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.foco : '';
+        fn();
+        if (!foco) return;
+        const alvo = [...document.querySelectorAll('[data-foco]')].find(x => x.dataset.foco === foco);
+        if (alvo) alvo.focus({ preventScroll: true });
+    }
+    function chip(texto, acao, valor, ligado, classe) {
+        const b = botao(null, 'em-chip' + (classe ? ' ' + classe : ''));
+        b.dataset.acao = acao;
+        b.dataset.valor = valor;
+        b.dataset.foco = acao + ':' + valor;
+        b.setAttribute('aria-pressed', String(ligado));
+        if (texto) b.appendChild(el('span', texto, 'em-chip-texto'));
+        return b;
+    }
+    function itemFiltro(nome, acao, valor, ligado, extra, cor) {
+        const b = chip(null, acao, valor, ligado, 'em-filtro-item');
+        if (cor) b.appendChild(el('span', null, 'em-cor em-etq-' + cor));
+        b.appendChild(el('span', nome, 'em-chip-texto'));
+        if (extra) b.appendChild(el('span', extra, 'em-filtro-extra'));
+        return b;
+    }
+    function salvosOrdenados() {
+        const p = estado.prefs;
+        const todos = (p.equipe || []).map(s => Object.assign({ equipe: true }, s)).concat(p.filtros || []);
+        return todos.filter(s => s.fixado).concat(todos.filter(s => !s.fixado));
+    }
+    function desenharFiltros() {
+        const f = estado.filtro;
+        manterFoco(() => {
+            const m = minhas();
+            for (const b of $('em-escopo').querySelectorAll('button')) {
+                const minhasLigado = m.length > 0 && Q.igual(Object.assign({}, f, { contas: m }), f);
+                b.setAttribute('aria-pressed', String(b.dataset.valor === 'minhas' ? minhasLigado : !f.contas.length));
+                if (b.dataset.valor === 'minhas') {
+                    b.disabled = !m.length;
+                    b.title = m.length ? m.map(F.nomeCaixa).join(', ') : 'Escolha caixas abaixo e use "Usar como minhas caixas".';
+                }
+            }
+            $('em-sem-ruido').setAttribute('aria-pressed', String(f.sem_ruido));
+            $('em-ruido-dica').textContent = Q.ruidoDesligadoPeloFiltro(f)
+                ? 'Desligado por este filtro, que pede uma categoria escondida.'
+                : 'Esconde marketing, spam, Coupa e códigos de login.';
+
+            const ativo = Q.prontoAtivo(f, hoje());
+            $('em-prontos').replaceChildren(...Q.PRONTOS.map(p => itemFiltro(p.nome, 'pronto', p.id, p.id === ativo)));
+            const salvos = salvosOrdenados();
+            $('em-salvos').replaceChildren(...salvos.map(s => itemFiltro(s.nome, 'salvo', (s.equipe ? 'e:' : 'u:') + s.id,
+                Q.igual(Q.deParams(s.filtro), f), s.equipe ? 'equipe' : '', s.cor)));
+            if (!salvos.length) $('em-salvos').appendChild(el('p', 'Nenhum filtro salvo ainda.', 'em-dica-texto'));
+
+            const contas = estado.contas.concat(f.contas.filter(c => !estado.contas.includes(c)));
+            $('em-chips-contas').replaceChildren(...contas.map(c => {
+                const b = chip(F.nomeCaixa(c), 'contas', c, f.contas.includes(c));
+                b.title = c;
+                return b;
+            }));
+            if (!contas.length) $('em-chips-contas').appendChild(el('p', 'As caixas aparecem quando a lista carrega.', 'em-dica-texto'));
+            const definir = $('em-definir-minhas');
+            definir.hidden = !f.contas.length && !m.length;
+            definir.textContent = f.contas.length ? 'Usar como minhas caixas' : 'Esquecer minhas caixas';
+            definir.disabled = f.contas.length > 0 && Q.igual(Object.assign({}, f, { contas: m }), f);
+
+            $('em-chips-categorias').replaceChildren(...Q.CATEGORIAS.map(nome => {
+                const c = F.categoria(nome === Q.SEM_CLASSIFICACAO ? null : nome);
+                const b = chip(null, 'categorias', nome, f.categorias.includes(nome), 'em-chip-cat ' + c.classe);
+                b.appendChild(icone(c.icone));
+                b.appendChild(el('span', c.nome, 'em-chip-texto'));
+                if (estado.contagens) {
+                    const n = estado.contagens[nome] || 0;
+                    b.appendChild(el('span', n.toLocaleString('pt-BR'), 'em-chip-num em-num'));
+                    b.setAttribute('aria-label', c.nome + ', ' + (n === 1 ? '1 e-mail' : n.toLocaleString('pt-BR') + ' e-mails'));
+                }
+                return b;
+            }));
+            $('em-chips-estados').replaceChildren(...Q.ESTADOS.map(s => chip(s, 'estados', s, f.estados.includes(s))));
+            for (const b of $('em-atalhos').querySelectorAll('button')) {
+                const p = Q.periodo(b.dataset.valor, hoje());
+                b.setAttribute('aria-pressed', String(f.de === p.de && f.ate === p.ate));
+            }
+            if ($('em-de').value !== f.de) $('em-de').value = f.de;
+            if ($('em-ate').value !== f.ate) $('em-ate').value = f.ate;
+            for (const b of $('em-form').querySelectorAll('[data-acao=opcao]')) b.setAttribute('aria-pressed', String(f[b.dataset.valor]));
+            desenharAtivos();
+        });
+        if (document.activeElement !== $('em-busca') && $('em-busca').value.trim() !== f.busca) $('em-busca').value = f.busca;
+    }
+    function desenharAtivos() {
+        const lista = Q.ativos(estado.filtro);
+        const caixa = $('em-ativos');
+        caixa.replaceChildren();
+        for (const a of lista) {
+            if (a.fixo) { caixa.appendChild(el('span', a.rotulo, 'em-ativo-nota')); continue; }
+            const b = botao(null, 'em-ativo');
+            b.dataset.acao = 'remover';
+            b.dataset.chave = a.chave;
+            b.dataset.valor = a.valor;
+            b.dataset.foco = 'remover:' + a.chave + ':' + a.valor;
+            b.setAttribute('aria-label', 'Remover o filtro ' + a.rotulo);
+            b.appendChild(el('span', a.rotulo, 'em-chip-texto'));
+            b.appendChild(icone('fechar', 'em-ic-p'));
+            caixa.appendChild(b);
+        }
+        const removiveis = lista.filter(a => !a.fixo && a.chave !== 'sem_ruido').length;
+        if (removiveis) {
+            const limpar = botao('Limpar tudo', 'em-link');
+            limpar.dataset.acao = 'limpar';
+            limpar.dataset.foco = 'limpar-tudo';
+            caixa.appendChild(limpar);
+        }
+        caixa.hidden = !lista.length;
+        $('em-num-filtros').hidden = !removiveis;
+        $('em-num-filtros').textContent = String(removiveis);
+    }
+    function acaoFiltro(b) {
+        const f = estado.filtro, v = b.dataset.valor;
+        switch (b.dataset.acao) {
+        case 'contas': case 'categorias': case 'estados': return filtrar(Q.alternar(f, b.dataset.acao, v));
+        case 'opcao': return filtrar(Object.assign({}, f, { [v]: !f[v] }));
+        case 'sem-ruido': return filtrar(Object.assign({}, f, { sem_ruido: !f.sem_ruido }));
+        case 'escopo': return filtrar(Object.assign({}, f, { contas: v === 'minhas' ? minhas() : [] }));
+        case 'periodo': {
+            const p = Q.periodo(v, hoje());
+            const ligado = f.de === p.de && f.ate === p.ate;
+            return filtrar(Object.assign({}, f, ligado ? { de: '', ate: '' } : p));
+        }
+        case 'pronto': return filtrar(Q.pronto(v, f, hoje()));
+        case 'salvo': {
+            const s = salvosOrdenados().find(x => (x.equipe ? 'e:' : 'u:') + x.id === v);
+            return s && filtrar(Q.deParams(s.filtro));
+        }
+        case 'remover': return filtrar(Q.remover(f, b.dataset.chave, v));
+        case 'limpar': return filtrar(padrao());
+        }
+        return undefined;
+    }
+    $('em-form').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-acao]');
+        if (b && !b.disabled) acaoFiltro(b);
+    });
+    $('em-ativos').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-acao]');
+        if (!b) return;
+        // o chip removido some: o foco passa para o vizinho, ou para a lista
+        const vizinho = b.nextElementSibling || b.previousElementSibling;
+        if (vizinho && vizinho.dataset && vizinho.dataset.foco) vizinho.focus();
+        acaoFiltro(b);
+    });
+    $('em-form').addEventListener('submit', ev => { ev.preventDefault(); buscar(); });
+    for (const id of ['em-de', 'em-ate']) {
+        $(id).addEventListener('change', () => filtrar(Object.assign({}, estado.filtro, { de: $('em-de').value, ate: $('em-ate').value })));
+    }
+    for (const id of ['em-limpar', 'em-limpar-vazio']) $(id).addEventListener('click', () => filtrar(padrao()));
+    $('em-definir-minhas').addEventListener('click', async () => {
+        const contas = estado.filtro.contas;
+        if (!(await salvarPreferencias({ minhas_caixas: contas }, 'em-salvar-estado'))) return;
+        history.replaceState(null, '', Q.paraHash(estado.filtro, minhas()));
+        $('em-salvar-estado').textContent = contas.length ? 'Minhas caixas: ' + contas.map(F.nomeCaixa).join(', ') + '.' : 'Minhas caixas esquecidas.';
+        desenharFiltros();
+    });
+
+    // ----- salvar o filtro atual -----
+    const NOMES_COR = { cinza: 'Cinza', azul: 'Azul', verde: 'Verde', ambar: 'Âmbar', violeta: 'Violeta', ciano: 'Ciano', rosa: 'Rosa', laranja: 'Laranja' };
+    function opcoesCor(sel, atual) {
+        sel.replaceChildren(...Q.CORES.map(c => { const o = el('option', NOMES_COR[c]); o.value = c; o.selected = c === atual; return o; }));
+    }
+    opcoesCor($('em-salvar-cor'), 'azul');
+    $('em-salvar-equipe-rotulo').hidden = !admin;
+    const novoId = () => 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    $('em-salvar-filtro').addEventListener('click', () => {
+        $('em-salvar-form').hidden = false;
+        $('em-salvar-filtro').hidden = true;
+        $('em-salvar-nome').value = '';
+        $('em-salvar-nome').focus();
+    });
+    function fecharSalvar() {
+        $('em-salvar-form').hidden = true;
+        $('em-salvar-filtro').hidden = false;
+    }
+    $('em-salvar-cancelar').addEventListener('click', () => { fecharSalvar(); $('em-salvar-filtro').focus(); });
+    async function salvarFiltro() {
+        const nome = $('em-salvar-nome').value.trim();
+        if (!nome) { $('em-salvar-estado').textContent = 'Dê um nome ao filtro.'; $('em-salvar-nome').focus(); return; }
+        const chave = admin && $('em-salvar-equipe').checked ? 'equipe' : 'filtros';
+        const novo = { id: novoId(), nome, cor: $('em-salvar-cor').value, fixado: $('em-salvar-fixar').checked, filtro: Q.params(estado.filtro) };
+        if (!(await salvarPreferencias({ [chave]: (estado.prefs[chave] || []).concat(novo) }, 'em-salvar-estado'))) return;
+        fecharSalvar();
+        $('em-salvar-estado').textContent = 'Filtro "' + nome + '" salvo.';
+        desenharFiltros();
+        $('em-salvar-filtro').focus();
+    }
+    $('em-salvar-ok').addEventListener('click', salvarFiltro);
+    $('em-salvar-nome').addEventListener('keydown', ev => {
+        if (ev.key === 'Enter') { ev.preventDefault(); salvarFiltro(); }
+        if (ev.key === 'Escape') { ev.stopPropagation(); fecharSalvar(); $('em-salvar-filtro').focus(); }
+    });
+
+    // ----- gestão dos filtros salvos (#filtros): renomear, cor, fixar, apagar; os da equipe só o administrador -----
+    async function alterarSalvos(chave, mudar) {
+        const lista = (estado.prefs[chave] || []).map(s => Object.assign({}, s));
+        mudar(lista);
+        if (await salvarPreferencias({ [chave]: lista }, 'em-gestao-estado')) desenharGestao();
+    }
+    function linhaGestao(s, chave, editavel) {
+        const li = el('li', null, 'em-gestao-linha');
+        const topo = el('div', null, 'em-gestao-topo');
+        topo.appendChild(el('span', null, 'em-cor em-etq-' + s.cor));
+        const nome = el('span', s.nome, 'em-gestao-nome');
+        topo.appendChild(nome);
+        if (s.fixado) topo.appendChild(etiqueta('fixado'));
+        li.appendChild(topo);
+        const resumo = Q.ativos(Q.deParams(s.filtro)).map(a => a.rotulo).join(', ');
+        li.appendChild(el('p', resumo || 'Sem filtro: todos os e-mails.', 'em-dica-texto'));
+        const acoes = el('div', null, 'em-gestao-acoes');
+        const aplicar = botao('Aplicar', 'em-botao');
+        aplicar.addEventListener('click', () => filtrar(Q.deParams(s.filtro)));
+        acoes.appendChild(aplicar);
+        if (editavel) {
+            const renomear = botao('Renomear', 'em-botao em-secundario');
+            renomear.addEventListener('click', () => {
+                const campo = el('input', null, 'em-entrada em-gestao-campo');
+                campo.type = 'text'; campo.maxLength = 40; campo.value = s.nome;
+                campo.setAttribute('aria-label', 'Novo nome do filtro ' + s.nome);
+                const gravar = () => {
+                    const novo = campo.value.trim();
+                    if (!novo) { $('em-gestao-estado').textContent = 'O nome não pode ficar vazio.'; return; }
+                    alterarSalvos(chave, l => { l.find(x => x.id === s.id).nome = novo; });
+                };
+                campo.addEventListener('keydown', ev => {
+                    if (ev.key === 'Enter') { ev.preventDefault(); gravar(); }
+                    if (ev.key === 'Escape') desenharGestao();
+                });
+                const ok = botao('Salvar nome', 'em-botao');
+                ok.addEventListener('click', gravar);
+                nome.replaceWith(campo);
+                renomear.replaceWith(ok);
+                campo.focus();
+                campo.select();
+            });
+            const cor = el('select', null, 'em-entrada em-gestao-cor');
+            cor.setAttribute('aria-label', 'Cor do filtro ' + s.nome);
+            opcoesCor(cor, s.cor);
+            cor.addEventListener('change', () => alterarSalvos(chave, l => { l.find(x => x.id === s.id).cor = cor.value; }));
+            const fixar = botao(s.fixado ? 'Desafixar' : 'Fixar no topo', 'em-botao em-secundario');
+            fixar.addEventListener('click', () => alterarSalvos(chave, l => { const x = l.find(y => y.id === s.id); x.fixado = !x.fixado; }));
+            // apagar pede um segundo clique (sem janela de confirmação do navegador)
+            const apagar = botao('Apagar', 'em-botao em-secundario em-perigo');
+            let armado = 0;
+            apagar.addEventListener('click', () => {
+                if (!armado) {
+                    apagar.textContent = 'Confirmar: apagar';
+                    armado = setTimeout(() => { armado = 0; apagar.textContent = 'Apagar'; }, 4000);
+                    return;
+                }
+                clearTimeout(armado);
+                alterarSalvos(chave, l => { l.splice(l.findIndex(x => x.id === s.id), 1); });
+            });
+            acoes.append(renomear, cor, fixar, apagar);
+        }
+        li.appendChild(acoes);
+        return li;
+    }
+    function blocoGestao(titulo, lista, chave, editavel, vazio) {
+        const p = el('section', null, 'em-painel em-bloco');
+        p.appendChild(el('h3', titulo, 'em-secao'));
+        if (!lista.length) { p.appendChild(el('p', vazio, 'em-estado')); return p; }
+        const ul = el('ul', null, 'em-gestao-lista');
+        lista.forEach(s => ul.appendChild(linhaGestao(s, chave, editavel)));
+        p.appendChild(ul);
+        return p;
+    }
+    function desenharGestao() {
+        const p = estado.prefs;
+        $('em-gestao').replaceChildren(
+            blocoGestao('Meus filtros', p.filtros || [], 'filtros', true, 'Nenhum filtro salvo. Escolha os filtros na Caixa e use "Salvar filtro atual".'),
+            blocoGestao('Filtros da equipe', p.equipe || [], 'equipe', admin,
+                admin ? 'Nenhum filtro da equipe. Ao salvar um filtro na Caixa, marque "Publicar para a equipe".' : 'Nenhum filtro da equipe.'));
+        if (!admin && (p.equipe || []).length) $('em-gestao').lastChild.appendChild(el('p', 'Só administrador edita os filtros da equipe.', 'em-dica-texto'));
+    }
+
+    // ----- lista -----
+    const hora = iso => {
+        const d = iso ? new Date(iso) : null;
+        return d && !isNaN(d) ? d.toLocaleTimeString('pt-BR', { timeZone: F.FUSO, hour: '2-digit', minute: '2-digit' }) : '';
+    };
     function itemLista(e) {
-        const li = el('li');
-        const b = el('button', null, 'em-item ' + F.categoria(e.categoria).classe);
-        b.type = 'button';
+        const li = el('li', null, 'em-linha');
+        const st = ['pendente', 'respondido', 'arquivado'].includes(e.status) ? e.status : 'pendente';
+        const b = botao(null, 'em-item ' + F.categoria(e.categoria).classe + ' em-st-' + st);
         b.dataset.id = String(e.id);
         if (e.revisao) b.classList.add('em-revisao');
+        if (e.removido) b.classList.add('em-removido');
         const topo = el('span', null, 'em-item-topo');
-        topo.appendChild(el('span', e.remetente_nome || e.remetente || '(sem remetente)', 'em-de'));
-        topo.appendChild(el('span', dataHora(e.data), 'em-data em-num'));
+        topo.appendChild(comRealce('span', e.remetente_nome || e.remetente || '(sem remetente)', 'em-de'));
+        const quando = el('span', hora(e.data), 'em-data em-num');
+        quando.title = dataHora(e.data);
+        topo.appendChild(quando);
         b.appendChild(topo);
-        b.appendChild(el('span', e.assunto || '(sem assunto)', 'em-assunto-linha'));
-        if (e.resumo) b.appendChild(el('span', e.resumo, 'em-resumo'));
+        b.appendChild(comRealce('span', e.assunto || '(sem assunto)', 'em-assunto-linha'));
+        if (e.resumo) b.appendChild(comRealce('span', e.resumo, 'em-resumo'));
         const rodape = el('span', null, 'em-item-rodape');
         rodape.appendChild(etiquetaCategoria(e.categoria));
+        if (e.urgencia === 'alta') rodape.appendChild(etiqueta('urgente', 'em-etiqueta-erro', 'alerta'));
+        const prazo = Q.prazo(e);
+        if (prazo) {
+            const r = el('span', null, 'em-prazo em-prazo-' + prazo);
+            r.appendChild(icone('relogio', 'em-ic-p'));
+            r.appendChild(el('span', F.decimal(e.horas_uteis) + ' h', 'em-num'));
+            r.appendChild(el('span', prazo === 'atrasado' ? ' úteis, atrasado' : ' úteis', 'em-prazo-txt'));
+            rodape.appendChild(r);
+        }
         if (e.revisao) rodape.appendChild(etiqueta('revisar', 'em-etiqueta-atencao', 'revisao'));
-        if (e.removido) rodape.appendChild(etiqueta('removido da caixa'));
+        if (st !== 'pendente') rodape.appendChild(el('span', st, 'em-st-texto'));
+        if (e.removido) rodape.appendChild(el('span', 'removido da caixa', 'em-removido-texto'));
         if (e.anexos) {
             const a = el('span', null, 'em-item-anexos');
             a.appendChild(icone('anexo', 'em-ic-p'));
@@ -298,6 +706,11 @@
         b.appendChild(rodape);
         b.addEventListener('click', () => abrir(e.id, b));
         li.appendChild(b);
+        return li;
+    }
+    function separador(rotulo) {
+        const li = el('li', null, 'em-dia');
+        li.appendChild(el('h3', rotulo, 'em-secao'));
         return li;
     }
 
@@ -312,32 +725,70 @@
     }
 
     async function listar(mais) {
+        const meu = ++estado.seqLista;
         if (!mais) {
-            estado.filtros = lerFiltros(); estado.proximo = null; estado.itens = 0;
-            $('em-lista').replaceChildren(); $('em-novidade').hidden = true;
+            estado.proximo = null; estado.itens = 0; estado.ultimoDia = ''; estado.listou = true;
+            $('em-lista').replaceChildren(); $('em-novidade').hidden = true; $('em-vazio-lista').hidden = true;
             esqueleto();
         }
-        avisar('Carregando e-mails…');
+        estado.carregando = true;
+        $('em-lista').setAttribute('aria-busy', 'true');
+        $('em-tentar').hidden = true;
+        avisar(mais ? 'Carregando mais e-mails…' : 'Carregando e-mails…');
         $('em-mais').hidden = true;
-        const r = await pedir('listar', Object.assign({}, estado.filtros, { cursor: mais ? estado.proximo : '' }));
-        if (r.cancelado) return;
+        const r = await pedir('listar', Object.assign(Q.params(estado.filtro), { cursor: mais ? estado.proximo : '' }));
+        if (meu !== estado.seqLista) return;   // outro pedido da lista já tomou o lugar deste
+        estado.carregando = false;
+        $('em-lista').setAttribute('aria-busy', 'false');
         $('em-lista').querySelectorAll('.em-esqueleto-item').forEach(x => x.remove());
+        if (r.cancelado) return;
         if (!r.sucesso) {
             avisar(r.erro || 'Não foi possível carregar os e-mails.');
+            $('em-tentar').hidden = false;
+            if (mais) $('em-mais').hidden = !estado.proximo;
             return;
         }
         const d = r.dados || {};
-        if (Number.isFinite(d.total)) estado.total = d.total;
-        preencherContas(d.contas);
+        $('em-versao').hidden = Q.v2(d);   // serviço antigo: avisa e segue com o que veio
+        if (!mais) {
+            if (Number.isFinite(d.total)) estado.total = d.total;
+            if (Array.isArray(d.contas)) estado.contas = d.contas.filter(c => typeof c === 'string');
+            estado.contagens = d.contagens && typeof d.contagens === 'object' ? d.contagens : null;
+            desenharFiltros();
+        }
         const itens = Array.isArray(d.itens) ? d.itens : [];
         const frag = document.createDocumentFragment();
-        itens.forEach(e => frag.appendChild(itemLista(e)));
+        for (const e of itens) {
+            const dia = Q.grupoDia(e.data);
+            if (dia !== estado.ultimoDia) { frag.appendChild(separador(dia)); estado.ultimoDia = dia; }
+            frag.appendChild(itemLista(e));
+        }
         $('em-lista').appendChild(frag);
         estado.itens += itens.length;
         estado.proximo = d.proximo || null;
         $('em-mais').hidden = !estado.proximo;
-        avisar(estado.itens ? `${estado.itens} de ${Math.max(estado.total, estado.itens).toLocaleString('pt-BR')} e-mails` : 'Nenhum e-mail encontrado com esses filtros.');
+        $('em-vazio-lista').hidden = estado.itens > 0;
+        const total = Math.max(estado.total, estado.itens);
+        avisar(estado.itens ? (total === 1 ? '1 e-mail' : total.toLocaleString('pt-BR') + ' e-mails') : 'Nenhum e-mail encontrado.');
+        $('em-ver-resultados').textContent = estado.itens ? 'Ver ' + (total === 1 ? '1 e-mail' : total.toLocaleString('pt-BR') + ' e-mails') : 'Ver e-mails';
     }
+    // carregar mais sozinho ao chegar ao fim; o botão continua como reserva
+    if ('IntersectionObserver' in window) {
+        new IntersectionObserver(entradas => {
+            if (entradas.some(x => x.isIntersecting) && estado.proximo && !estado.carregando) listar(true);
+        }, { rootMargin: '200px' }).observe($('em-mais'));
+    }
+    // setas percorrem a lista de e-mail em e-mail
+    $('em-lista').addEventListener('keydown', ev => {
+        if (ev.key !== 'ArrowDown' && ev.key !== 'ArrowUp' && ev.key !== 'Home' && ev.key !== 'End') return;
+        const itens = [...$('em-lista').querySelectorAll('.em-item')];
+        if (!itens.length) return;
+        const i = itens.indexOf(document.activeElement);
+        const alvo = ev.key === 'Home' ? 0 : ev.key === 'End' ? itens.length - 1
+            : Math.max(0, Math.min(itens.length - 1, i < 0 ? 0 : i + (ev.key === 'ArrowDown' ? 1 : -1)));
+        ev.preventDefault();
+        itens[alvo].focus();
+    });
 
     function meta(rotulo, valor) {
         const dl = $('em-meta');
@@ -499,9 +950,9 @@
         mostrarDetalhe(r.dados);
     }
 
-    async function abrir(id, botao) {
+    async function abrir(id, botaoItem) {
         document.querySelectorAll('.em-item.em-ativo').forEach(b => b.classList.remove('em-ativo'));
-        if (botao) botao.classList.add('em-ativo');
+        if (botaoItem) botaoItem.classList.add('em-ativo');
         const painelDetalhe = $('em-detalhe');
         painelDetalhe.hidden = false;
         $('em-app').classList.add('em-com-detalhe');
@@ -572,12 +1023,12 @@
         $('em-ver-html').hidden = !e.tem_html || e.corpo_oculto;
         controles(e);
     }
-    async function baixar(id, anexo, botao, rotulo) {
-        botao.disabled = true;
+    async function baixar(id, anexo, botaoAnexo, rotulo) {
+        botaoAnexo.disabled = true;
         const texto = rotulo.textContent;
         rotulo.textContent = 'Baixando…';
         const r = await pedir('anexo', { id, anexo });
-        botao.disabled = false;
+        botaoAnexo.disabled = false;
         rotulo.textContent = texto;
         if (r.cancelado) return;
         if (!r.sucesso) { avisar(r.erro || 'Não foi possível baixar o anexo.'); return; }
@@ -614,9 +1065,8 @@
         if (estado.aberto && estado.aberto.tem_html && !estado.aberto.corpo_oculto) $('em-ver-html').hidden = false;
     }
 
-    $('em-form').addEventListener('submit', ev => { ev.preventDefault(); listar(false); });
-    $('em-limpar').addEventListener('click', () => { $('em-form').reset(); listar(false); });
     $('em-mais').addEventListener('click', () => listar(true));
+    $('em-tentar').addEventListener('click', () => listar(estado.itens > 0 && !!estado.proximo));
     $('em-recarregar').addEventListener('click', () => listar(false));
     $('em-ver-html').addEventListener('click', verHtml);
     $('em-ver-texto').addEventListener('click', mostrarTexto);

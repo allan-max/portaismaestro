@@ -92,6 +92,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 .em-etiqueta .em-ic { width: 12px; height: 12px; }
 .em-etiqueta-atencao { background: var(--em-atencao-fundo); color: var(--em-atencao); }
+.em-etiqueta-erro { background: var(--em-erro-fundo); color: var(--em-erro); }
 .em-etiqueta-cat { background: var(--em-cat-fundo); color: var(--em-cat); }
 .em-etiqueta-cat.em-cat-indefinida { background: transparent; color: var(--em-discreto); border: 1px dashed var(--em-borda-controle); }
 
@@ -111,18 +112,46 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .em-cat-phishing { --em-cat: var(--em-cat-phishing); --em-cat-fundo: var(--em-cat-phishing-fundo); }
 .em-cat-indefinida { --em-cat: var(--em-borda-controle); --em-cat-fundo: transparent; }
 
-/* ----- chip de filtro: caixa de marcação com cara de chip, ligado ou desligado ----- */
-.em-chip-rotulo { display: inline-flex; cursor: pointer; }
-.em-chip-entrada { position: absolute; opacity: 0; width: 1px; height: 1px; }
+/* ----- chip de filtro: botão com aria-pressed, ligado ou desligado ----- */
 .em-chip {
-  display: inline-flex; align-items: center; gap: var(--em-e2); min-height: 28px; padding: 0 var(--em-e3);
-  border-radius: var(--em-raio-controle); border: 1px solid var(--em-borda-controle); color: var(--em-apoio); font-weight: 500;
+  display: inline-flex; align-items: center; gap: var(--em-e1); min-height: 28px; max-width: 100%; padding: 0 var(--em-e2);
+  border-radius: var(--em-raio-controle); border: 1px solid var(--em-borda-controle); color: var(--em-apoio);
+  font-size: var(--em-t-apoio); font-weight: 500; text-align: left;
   transition: transform var(--em-rapido) var(--em-curva);
 }
+.em-chip:active { transform: scale(.97); }
 .em-chip .em-ic { width: 14px; height: 14px; }
-.em-chip-entrada:checked + .em-chip { background: var(--em-destaque-fundo); border-color: var(--em-destaque); color: var(--em-destaque); }
-.em-chip-entrada:focus-visible + .em-chip { outline: 2px solid var(--em-destaque); outline-offset: 2px; }
-.em-chip-rotulo:active .em-chip { transform: scale(.97); }
+.em-chip-texto { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.em-chip-num { color: var(--em-discreto); font-size: var(--em-t-secao); }
+.em-chip[aria-pressed=true] { background: var(--em-destaque-fundo); border-color: var(--em-destaque); color: var(--em-destaque); }
+.em-chip[aria-pressed=true] .em-chip-num { color: inherit; }
+/* categoria: o ícone leva a cor; ligada, o chip inteiro fica na cor da categoria */
+.em-chip-cat .em-ic { color: var(--em-cat); }
+.em-chip-cat[aria-pressed=true] { background: var(--em-cat-fundo); border-color: var(--em-cat); color: var(--em-cat); }
+.em-chip-cat.em-cat-indefinida { border-style: dashed; }
+.em-chip-cat.em-cat-indefinida .em-ic { color: var(--em-discreto); }
+.em-chip-cat.em-cat-indefinida[aria-pressed=true] { background: var(--em-neutro-fundo); border-color: var(--em-apoio); color: var(--em-texto); }
+@media (hover: hover) and (pointer: fine) {
+  .em-chip:hover:not([aria-pressed=true]):not(:disabled) { background: var(--em-painel-foco); color: var(--em-texto); }
+}
+
+/* ----- termo buscado, realçado ----- */
+mark { background: var(--em-realce); color: inherit; border-radius: 2px; }
+
+/* ----- botão com cara de link, para ação secundária curta ----- */
+.em-link { min-height: 24px; color: var(--em-destaque); font-weight: 500; text-align: left; }
+@media (hover: hover) and (pointer: fine) { .em-link:hover:not(:disabled) { text-decoration: underline; } }
+
+/* ----- cor de filtro salvo ----- */
+.em-cor { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; background: var(--em-etq, var(--em-etq-cinza)); }
+.em-etq-cinza { --em-etq: var(--em-etq-cinza); }
+.em-etq-azul { --em-etq: var(--em-etq-azul); }
+.em-etq-verde { --em-etq: var(--em-etq-verde); }
+.em-etq-ambar { --em-etq: var(--em-etq-ambar); }
+.em-etq-violeta { --em-etq: var(--em-etq-violeta); }
+.em-etq-ciano { --em-etq: var(--em-etq-ciano); }
+.em-etq-rosa { --em-etq: var(--em-etq-rosa); }
+.em-etq-laranja { --em-etq: var(--em-etq-laranja); }
 
 /* ----- controle segmentado: grupo de opções, uma ligada ----- */
 .em-segmentado { display: inline-flex; padding: 2px; gap: 2px; border-radius: var(--em-raio-controle); background: var(--em-fundo); border: 1px solid var(--em-borda-controle); }

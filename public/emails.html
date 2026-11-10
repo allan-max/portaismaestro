@@ -50,6 +50,13 @@
         </button>
         <div id="em-menu-usuario" class="em-menu" hidden>
           <p class="em-menu-texto"><strong id="em-usuario"></strong>Conectado ao Maestro</p>
+          <div class="em-menu-grupo">
+            <p id="em-densidade-rotulo" class="em-menu-texto">Densidade da lista</p>
+            <div id="em-densidade" class="em-segmentado" role="group" aria-labelledby="em-densidade-rotulo">
+              <button type="button" data-densidade="confortavel" aria-pressed="true">Confortável</button>
+              <button type="button" data-densidade="compacta" aria-pressed="false">Compacta</button>
+            </div>
+          </div>
           <a class="em-menu-item" href="index.html?portais=1">
             <svg class="em-ic em-ic-p" aria-hidden="true"><use href="emails/icones.svg#voltar"></use></svg>Voltar ao portal
           </a>
@@ -69,7 +76,7 @@
       <svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#revisao"></use></svg><span class="em-trilho-rotulo">Revisão</span>
       <span id="em-cont-revisao" class="em-contador em-trilho-num" hidden></span>
     </a>
-    <a id="em-ir-atrasados" class="em-trilho-item" href="#dashboard?ver=atrasados" data-dica="Atrasados" data-dica-lado="direita">
+    <a id="em-ir-atrasados" class="em-trilho-item" href="#caixa?atrasados=1" data-dica="Atrasados" data-dica-lado="direita">
       <svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#relogio"></use></svg><span class="em-trilho-rotulo">Atrasados</span>
       <span id="em-contador" class="em-contador em-contador-erro em-trilho-num" hidden></span>
     </a>
@@ -106,67 +113,136 @@
     </section>
 
     <section id="em-filtros-salvos" class="em-visao" aria-labelledby="em-filtros-titulo" hidden>
-      <div class="em-visao-topo"><h2 id="em-filtros-titulo">Filtros salvos</h2></div>
-      <div class="em-painel em-vazio">
-        <svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#filtros-salvos"></use></svg>
-        <p>Filtros salvos ainda não estão disponíveis. Use os filtros da Caixa.</p>
-        <a class="em-botao em-secundario" href="#caixa">Abrir a Caixa</a>
+      <div class="em-visao-topo">
+        <h2 id="em-filtros-titulo">Filtros salvos</h2>
+        <p id="em-gestao-estado" class="em-estado" role="status" aria-live="polite"></p>
       </div>
+      <div id="em-gestao" class="em-gestao"></div>
     </section>
 
     <div id="em-app" class="em-app">
-      <aside class="em-filtros em-painel" aria-label="Filtros">
+      <aside id="em-filtros" class="em-filtros em-painel" aria-labelledby="em-filtros-rotulo">
         <form id="em-form" class="em-form">
-          <p class="em-secao">Filtros</p>
-          <div class="em-campo">
-            <label for="em-categoria">Categoria</label>
-            <select id="em-categoria" class="em-entrada">
-              <option value="">Todas</option>
-              <option>cotação</option><option>pedido</option><option>financeiro/NF</option><option>cadastro</option>
-              <option>informação</option><option>marketing</option><option>spam</option><option>phishing</option>
-              <option>outros</option><option>notificação Coupa</option><option>interno</option><option>enviado</option>
-              <option>código de login</option><option value="(não classificado)">Não classificado</option>
-            </select>
+          <div class="em-filtros-topo">
+            <h2 id="em-filtros-rotulo" class="em-secao">Filtros</h2>
+            <button type="button" id="em-recolher-filtros" class="em-icone" aria-label="Recolher os filtros" data-dica="Recolher" aria-controls="em-filtros">
+              <svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#recolher"></use></svg>
+            </button>
           </div>
-          <div class="em-campo">
-            <label for="em-status">Status</label>
-            <select id="em-status" class="em-entrada">
-              <option value="">Todos</option><option>pendente</option><option>respondido</option><option>arquivado</option>
-            </select>
+          <div id="em-escopo" class="em-segmentado em-escopo" role="group" aria-label="Caixas mostradas">
+            <button type="button" data-acao="escopo" data-valor="minhas" data-foco="escopo:minhas" aria-pressed="false">Minhas caixas</button>
+            <button type="button" data-acao="escopo" data-valor="todas" data-foco="escopo:todas" aria-pressed="true">Todas</button>
           </div>
-          <div class="em-campo">
-            <label for="em-conta">Caixa</label>
-            <select id="em-conta" class="em-entrada"><option value="">Todas</option></select>
+          <div class="em-ruido">
+            <button type="button" id="em-sem-ruido" class="em-chip" data-acao="sem-ruido" data-foco="sem-ruido" aria-pressed="true" aria-describedby="em-ruido-dica">Sem ruído</button>
+            <p id="em-ruido-dica" class="em-dica-texto">Esconde marketing, spam, Coupa e códigos de login.</p>
           </div>
-          <div class="em-datas">
-            <div class="em-campo">
-              <label for="em-de">De</label>
-              <input id="em-de" class="em-entrada" type="date" />
+
+          <fieldset class="em-grupo">
+            <legend class="em-secao">Filtros prontos</legend>
+            <div id="em-prontos" class="em-lista-filtros"></div>
+          </fieldset>
+
+          <fieldset class="em-grupo">
+            <legend class="em-secao">Filtros salvos</legend>
+            <div id="em-salvos" class="em-lista-filtros"></div>
+            <div id="em-salvar-form" class="em-salvar" hidden>
+              <div class="em-campo">
+                <label for="em-salvar-nome">Nome do filtro</label>
+                <input id="em-salvar-nome" class="em-entrada" type="text" maxlength="40" autocomplete="off" />
+              </div>
+              <div class="em-campo">
+                <label for="em-salvar-cor">Cor</label>
+                <select id="em-salvar-cor" class="em-entrada"></select>
+              </div>
+              <label class="em-marcar"><input id="em-salvar-fixar" type="checkbox" /> Fixar no topo</label>
+              <label id="em-salvar-equipe-rotulo" class="em-marcar" hidden><input id="em-salvar-equipe" type="checkbox" /> Publicar para a equipe</label>
+              <div class="em-acoes">
+                <button type="button" id="em-salvar-ok" class="em-botao">Salvar</button>
+                <button type="button" id="em-salvar-cancelar" class="em-botao em-secundario">Cancelar</button>
+              </div>
             </div>
-            <div class="em-campo">
-              <label for="em-ate">Até</label>
-              <input id="em-ate" class="em-entrada" type="date" />
+            <p id="em-salvar-estado" class="em-dica-texto" role="status" aria-live="polite"></p>
+            <div class="em-acoes-texto">
+              <button type="button" id="em-salvar-filtro" class="em-link">Salvar filtro atual</button>
+              <a class="em-link" href="#filtros">Gerenciar</a>
             </div>
-          </div>
-          <label class="em-chip-rotulo">
-            <input id="em-revisao" class="em-chip-entrada" type="checkbox" />
-            <span class="em-chip"><svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#revisao"></use></svg>Só fila de revisão</span>
-          </label>
-          <div class="em-acoes">
-            <button type="submit" class="em-botao">Filtrar</button>
-            <button type="button" id="em-limpar" class="em-botao em-secundario">Limpar</button>
+          </fieldset>
+
+          <fieldset class="em-grupo">
+            <legend class="em-secao">Caixa</legend>
+            <div id="em-chips-contas" class="em-chips"></div>
+            <button type="button" id="em-definir-minhas" class="em-link" hidden></button>
+          </fieldset>
+
+          <fieldset class="em-grupo">
+            <legend class="em-secao">Categoria</legend>
+            <div id="em-chips-categorias" class="em-chips"></div>
+          </fieldset>
+
+          <fieldset class="em-grupo">
+            <legend class="em-secao">Status</legend>
+            <div id="em-chips-estados" class="em-chips"></div>
+          </fieldset>
+
+          <fieldset class="em-grupo">
+            <legend class="em-secao">Período</legend>
+            <div id="em-atalhos" class="em-chips">
+              <button type="button" class="em-chip" data-acao="periodo" data-valor="hoje" data-foco="periodo:hoje" aria-pressed="false">Hoje</button>
+              <button type="button" class="em-chip" data-acao="periodo" data-valor="7d" data-foco="periodo:7d" aria-pressed="false">7 dias</button>
+              <button type="button" class="em-chip" data-acao="periodo" data-valor="30d" data-foco="periodo:30d" aria-pressed="false">30 dias</button>
+            </div>
+            <div class="em-datas">
+              <div class="em-campo">
+                <label for="em-de">De</label>
+                <input id="em-de" class="em-entrada" type="date" />
+              </div>
+              <div class="em-campo">
+                <label for="em-ate">Até</label>
+                <input id="em-ate" class="em-entrada" type="date" />
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="em-grupo">
+            <legend class="em-secao">Opções</legend>
+            <div class="em-chips">
+              <button type="button" class="em-chip" data-acao="opcao" data-valor="revisao" data-foco="opcao:revisao" aria-pressed="false">Só fila de revisão</button>
+              <button type="button" class="em-chip" data-acao="opcao" data-valor="anexo" data-foco="opcao:anexo" aria-pressed="false">Só com anexo</button>
+              <button type="button" class="em-chip" data-acao="opcao" data-valor="atrasados" data-foco="opcao:atrasados" aria-pressed="false">Só atrasados</button>
+            </div>
+          </fieldset>
+
+          <div class="em-acoes em-filtros-fim">
+            <button type="button" id="em-limpar" class="em-botao em-secundario">Limpar filtros</button>
+            <button type="button" id="em-ver-resultados" class="em-botao em-so-folha">Ver e-mails</button>
           </div>
         </form>
       </aside>
 
       <section class="em-lista-area em-painel" aria-labelledby="em-lista-titulo">
         <h2 id="em-lista-titulo" class="em-sr">Lista de e-mails</h2>
+        <div class="em-lista-topo">
+          <button type="button" id="em-abrir-filtros" class="em-botao em-secundario em-abrir-filtros" aria-controls="em-filtros" aria-expanded="false">
+            <svg class="em-ic em-ic-p" aria-hidden="true"><use href="emails/icones.svg#filtrar"></use></svg>Filtros<span id="em-num-filtros" class="em-contador" hidden></span>
+          </button>
+          <p id="em-estado" class="em-estado em-lista-estado" role="status" aria-live="polite"></p>
+          <button type="button" id="em-tentar" class="em-botao em-secundario" hidden>Tentar de novo</button>
+        </div>
+        <div id="em-ativos" class="em-ativos" role="group" aria-label="Filtros ativos"></div>
+        <div id="em-versao" class="em-aviso" hidden>
+          <svg class="em-ic em-ic-p" aria-hidden="true"><use href="emails/icones.svg#alerta"></use></svg>
+          <p>O serviço de e-mails está numa versão antiga. A lista funciona, mas os filtros novos e as contagens só valem depois que ele for atualizado.</p>
+        </div>
         <div id="em-novidade" class="em-novidade" hidden>
           <span id="em-novidade-texto"></span>
           <button type="button" id="em-recarregar" class="em-botao">Atualizar</button>
         </div>
-        <p id="em-estado" class="em-estado em-lista-estado" role="status" aria-live="polite"></p>
-        <ul id="em-lista" class="em-lista" tabindex="-1"></ul>
+        <ul id="em-lista" class="em-lista" tabindex="-1" aria-labelledby="em-lista-titulo"></ul>
+        <div id="em-vazio-lista" class="em-vazio" hidden>
+          <p>Nenhum e-mail com esses filtros.</p>
+          <button type="button" id="em-limpar-vazio" class="em-botao em-secundario">Limpar filtros</button>
+        </div>
         <button type="button" id="em-mais" class="em-botao em-secundario em-mais" hidden>Carregar mais</button>
       </section>
 
@@ -194,6 +270,7 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="emails/formato.js"></script>
+  <script src="emails/filtro.js"></script>
   <script src="emails/tela.js"></script>
 </body>
 </html>
