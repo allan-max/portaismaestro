@@ -1329,7 +1329,7 @@
         $('em-app').classList.add('em-largura-fixa');
         const d = $('em-divisor');
         d.setAttribute('aria-valuenow', String(w));
-        d.setAttribute('aria-valuemax', String(A.largura(Infinity, total, outros)));
+        d.setAttribute('aria-valuemax', String(A.largura(1e6, total, outros)));
         if (gravar) local(LARGURA, String(w));
     }
     const divisor = $('em-divisor');
@@ -1353,7 +1353,7 @@
     // seta para a esquerda alarga o detalhe (o divisor anda para a esquerda); Shift anda mais
     divisor.addEventListener('keydown', ev => {
         const passo = ev.shiftKey ? 64 : 16;
-        const alvo = { ArrowLeft: larguraAtual() + passo, ArrowRight: larguraAtual() - passo, Home: 0, End: Infinity }[ev.key];
+        const alvo = { ArrowLeft: larguraAtual() + passo, ArrowRight: larguraAtual() - passo, Home: 0, End: 1e6 }[ev.key];
         if (alvo === undefined) return;
         ev.preventDefault();
         aplicarLargura(alvo, true);
