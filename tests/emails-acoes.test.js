@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const A = require('../public/emails/acoes.js');
+const F = require('../public/emails/formato.js');
 
 const AGORA = new Date('2026-11-10T15:00:00Z');   // 12:00 em Brasília
 
@@ -91,4 +92,37 @@ test('confiança em percentual inteiro, entre 0 e 100', () => {
     assert.equal(A.percentual(-1), 0);
     assert.equal(A.percentual(null), null);
     assert.equal(A.percentual('0,5'), null);
+});
+
+test('aviso de cotação e pedido novos: só a contagem, e nada quando é zero ou não veio', () => {
+    assert.equal(A.textoAviso(0, 0), '');
+    assert.equal(A.textoAviso(undefined, null), '');   // serviço antigo: o evento não traz as contagens
+    assert.equal(A.textoAviso(-2, 1.5), '');
+    assert.equal(A.textoAviso('3', {}), '');
+    assert.equal(A.textoAviso(1, 0), '1 cotação nova');
+    assert.equal(A.textoAviso(3, undefined), '3 cotações novas');
+    assert.equal(A.textoAviso(0, 1), '1 pedido novo');
+    assert.equal(A.textoAviso(null, 2), '2 pedidos novos');
+    assert.equal(A.textoAviso(2, 1), '2 cotações e 1 pedido novos');
+    assert.equal(A.textoAviso(1, 1), '1 cotação e 1 pedido novos');
+});
+
+test('planilha: colunas da seção 8, todo valor como texto e nunca o corpo do e-mail', () => {
+    assert.deepEqual(A.COLUNAS_PLANILHA, ['Data', 'Remetente', 'Nome', 'Assunto', 'Categoria', 'Status', 'Caixas', 'Urgência',
+        'Horas úteis de espera', 'Resumo']);
+    assert.equal(A.MAX_EXPORTAR, 2000);
+    const e = { data: '2026-11-10T15:00:00Z', remetente: 'ana@cliente.test', remetente_nome: 'Ana', assunto: '=HYPERLINK("http://x.example")',
+        categoria: 'cotação', status: 'pendente', caixas: ['vendas@empresa.test', 'compras@empresa.test'], urgencia: 'alta', horas_uteis: 4.5,
+        resumo: 'Pede preço de cabos.', corpo_texto: 'texto do corpo' };
+    const linha = A.linhaPlanilha(e);
+    assert.deepEqual(linha, [F.dataHora(e.data), 'ana@cliente.test', 'Ana', '=HYPERLINK("http://x.example")', 'cotação', 'pendente',
+        'vendas, compras', 'alta', '4,5', 'Pede preço de cabos.']);
+    for (const v of linha) assert.equal(typeof v, 'string');
+    assert.ok(!linha.includes('texto do corpo'));
+    const vazia = A.linhaPlanilha({ id: 7, horas_uteis: null, caixas: 'x' });
+    assert.equal(vazia.length, A.COLUNAS_PLANILHA.length);
+    for (const v of vazia) assert.equal(typeof v, 'string');
+    assert.equal(vazia[0], '');
+    assert.equal(vazia[4], 'não classificado');
+    assert.equal(vazia[8], '');
 });

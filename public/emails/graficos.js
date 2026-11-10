@@ -117,8 +117,16 @@
         return p.de === p.ate ? diaCurto(p.ate) : diaCurto(p.de) + ' a ' + diaCurto(p.ate);
     }
 
+    // número contando até o valor: curva de saída (cúbica), arredondado nas casas do indicador; t vai de 0 a 1
+    function contagem(final, t, casas) {
+        if (typeof final !== 'number' || !Number.isFinite(final)) return 0;
+        if (!(t < 1)) return final;
+        const f = Math.pow(10, casas || 0);
+        return Math.round(final * (1 - Math.pow(1 - Math.max(0, t), 3)) * f) / f;
+    }
+
     const api = { DIAS, marcas, escala, seriesVolume, empilhar, nivelCalor, maximoMapa, numero, dolar, variacao, tom,
-        suficiente, linhaMini, diaCurto, diaSemana, periodoTexto };
+        suficiente, linhaMini, diaCurto, diaSemana, periodoTexto, contagem };
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
     else root.EmailsGraficos = api;
 })(typeof window !== 'undefined' ? window : globalThis);

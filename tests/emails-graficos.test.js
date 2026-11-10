@@ -144,3 +144,14 @@ test('datas do eixo: dia curto e dia da semana, sem fuso mexendo no dia', () => 
     assert.equal(G.periodoTexto({ de: '2026-11-10', ate: '2026-11-10' }), '10/11');
     assert.equal(G.periodoTexto(null), '');
 });
+
+test('contagem do número: sai de zero, desacelera e termina exatamente no valor', () => {
+    assert.equal(G.contagem(120, 0), 0);
+    assert.equal(G.contagem(120, 1), 120);
+    assert.equal(G.contagem(120, 2), 120);
+    assert.equal(G.contagem(120, .5), 105);               // curva de saída: na metade do tempo já passou da metade
+    assert.equal(G.contagem(43.5, .5, 1), 38.1);
+    assert.equal(G.contagem(43.5, 1, 1), 43.5);
+    assert.ok(G.contagem(7, .2) <= 7);
+    assert.equal(G.contagem(NaN, .5), 0);
+});

@@ -86,7 +86,29 @@
     }
     const percentual = c => (typeof c === 'number' && Number.isFinite(c) ? Math.round(100 * Math.min(1, Math.max(0, c))) : null);
 
-    const api = { MAX_LOTE, iniciais, relativa, porExtenso, intervalo, partes, largura, historico, desfeito, percentual };
+    // aviso do navegador: só a contagem, nunca assunto nem remetente; '' quando não há o que avisar
+    const qtd = n => (Number.isSafeInteger(n) && n > 0 ? n : 0);
+    function textoAviso(cotacoes, pedidos) {
+        const c = qtd(cotacoes), p = qtd(pedidos);
+        const tc = c === 1 ? '1 cotação' : c + ' cotações', tp = p === 1 ? '1 pedido' : p + ' pedidos';
+        if (c && p) return tc + ' e ' + tp + ' novos';
+        if (c) return tc + (c === 1 ? ' nova' : ' novas');
+        if (p) return tp + (p === 1 ? ' novo' : ' novos');
+        return '';
+    }
+
+    // planilha exportada: as colunas da seção 8, tudo como texto (o exceljs nunca vê fórmula) e sem o corpo do e-mail
+    const MAX_EXPORTAR = 2000;
+    const COLUNAS_PLANILHA = ['Data', 'Remetente', 'Nome', 'Assunto', 'Categoria', 'Status', 'Caixas', 'Urgência', 'Horas úteis de espera', 'Resumo'];
+    const texto = v => (typeof v === 'string' ? v : '');
+    function linhaPlanilha(e) {
+        return [e.data ? F.dataHora(e.data) : '', texto(e.remetente), texto(e.remetente_nome), texto(e.assunto), F.categoria(e.categoria).nome,
+            texto(e.status), (Array.isArray(e.caixas) ? e.caixas : []).map(F.nomeCaixa).join(', '), texto(e.urgencia),
+            typeof e.horas_uteis === 'number' && Number.isFinite(e.horas_uteis) ? F.decimal(e.horas_uteis) : '', texto(e.resumo)];
+    }
+
+    const api = { MAX_LOTE, MAX_EXPORTAR, COLUNAS_PLANILHA, iniciais, relativa, porExtenso, intervalo, partes, largura, historico, desfeito,
+        percentual, textoAviso, linhaPlanilha };
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
     else root.EmailsAcoes = api;
 })(typeof window !== 'undefined' ? window : globalThis);
