@@ -240,7 +240,7 @@
         SEM_PERMISSAO: 'Só administrador pode alterar os filtros da equipe.',
         LIMITE_FILTROS: 'O limite é de 20 filtros salvos. Apague um filtro para salvar outro.',
         PREFERENCIAS_GRANDES: 'As preferências passaram do tamanho permitido. Apague filtros que não usa mais.',
-        ERRO_PREFERENCIAS: 'Não foi possível gravar as preferências agora. Tente de novo em instantes.',
+        ERRO_PREFERENCIAS: 'As preferências estão indisponíveis agora: vale o padrão. Tente de novo em instantes.',
     };
     const erroPreferencias = (codigo, reserva) => ERROS_PREF[codigo] || reserva || ERROS_PREF.ERRO_PREFERENCIAS;
 

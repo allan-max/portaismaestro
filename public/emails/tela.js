@@ -9,10 +9,10 @@
     const Q = window.EmailsFiltro;
     const A = window.EmailsAcoes;
     const $ = id => document.getElementById(id);
-    const sessao = localStorage.getItem('maestro_session');
-    // só arrumação da tela: o servidor já não manda o dado de administrador (gasto, saúde) a quem não é,
-    // e recusa filtro da equipe gravado por quem não é
-    const admin = localStorage.getItem('maestro_admin') === 'true';
+    // local(): o navegador pode bloquear o armazenamento, e aí a tela pede o login em vez de quebrar
+    const sessao = local('maestro_session');
+    // só arrumação da tela: o servidor corta o dado de administrador e recusa filtro da equipe de quem não é
+    const admin = local('maestro_admin') === 'true';
     const SVG = 'http://www.w3.org/2000/svg';
     const PREFS_PADRAO = { minhas_caixas: [], filtros: [], sem_ruido: true, agrupar: false, notificar: false, som: false, equipe: [] };
     const estado = { filtro: Q.novo(), proximo: null, itens: 0, total: 0, aberto: null, contas: [], contagens: null, visao: '',
@@ -62,7 +62,7 @@
         for (const p of Q.realce(texto, estado.filtro.busca)) e.appendChild(p.marca ? el('mark', p.texto) : document.createTextNode(p.texto));
         return e;
     }
-    // preferência do aparelho; o navegador pode recusar o armazenamento (janela privada), e aí vale o padrão
+    // preferência do aparelho; sem armazenamento, vale o padrão
     function local(chave, valor) {
         try {
             if (valor === undefined) return localStorage.getItem(chave);
@@ -71,7 +71,7 @@
         return null;
     }
     const dataHora = F.dataHora, tamanho = F.tamanho;
-    // movimento (seção 11): o CSS zera transição e animação com prefers-reduced-motion; o que é script pergunta aqui
+    // movimento reduzido: o CSS zera o dele; o script pergunta aqui
     const reduzido = window.matchMedia('(prefers-reduced-motion: reduce)');
     const comMovimento = () => !reduzido.matches;
     const tempo = nome => parseFloat(getComputedStyle(document.documentElement).getPropertyValue(nome)) || 0;
@@ -84,7 +84,7 @@
         e.addEventListener('animationend', () => e.classList.remove(classe), { once: true });
     }
     function avisar(texto) { $('em-estado').textContent = texto; }
-    // aviso flutuante: confirmação, erro ou alteração com "Desfazer" por 5 s (o prazo para enquanto o foco estiver nele)
+    // aviso flutuante; com "Desfazer", 5 s (o prazo para com o foco nele)
     let avisoTempo = 0, avisoMs = 0, avisoVez = 0;
     function esconderAviso() {
         const a = $('em-aviso-flutuante');
@@ -126,10 +126,10 @@
         telaAcesso('Entre no Maestro', 'Faça login no portal para ver os e-mails.');
         return;
     }
-    $('em-usuario').textContent = localStorage.getItem('maestro_user') || '';
+    $('em-usuario').textContent = local('maestro_user') || '';
     $('em-ir-saude').hidden = !admin;
 
-    // ----- indicador "ao vivo": verde com o serviço respondendo, âmbar reconectando, vermelho offline -----
+    // ----- indicador "ao vivo" -----
     const AO_VIVO = { vivo: 'Ao vivo', conectando: 'Conectando', reconectando: 'Reconectando', offline: 'Serviço offline' };
     function aoVivo(s) {
         if ($('em-ao-vivo').dataset.estado === s) return;
@@ -150,7 +150,7 @@
             enviarFila();
         });
     }
-    // o portal guarda um pedido por ação e por tela: um pedido espera a resposta do que está lá, da mesma ação e de outro grupo
+    // o portal guarda um pedido por ação e tela: espera o da mesma ação e de outro grupo
     function enviarFila() {
         const todos = [...esperando.values()];
         for (const p of todos) {
@@ -173,7 +173,7 @@
         }
         esperando.delete(r.requestId);
         enviarFila();
-        // nas preferências, SEM_PERMISSAO é "filtro da equipe só para administrador", não falta de acesso à tela
+        // nas preferências, SEM_PERMISSAO é "equipe só para administrador"
         if (r.codigo === 'SEM_PERMISSAO' && p.acao !== 'preferencias_salvar') {
             telaAcesso('Acesso restrito', 'Você não tem o acesso "E-mails". Peça a um administrador do Maestro.');
             return;
@@ -185,7 +185,7 @@
         aoVivo('conectando');
         socket.emit('emails_entrar');
         if (!estado.iniciado) {
-            // as preferências vêm do portal (funcionam com o serviço offline) e dizem quais são "minhas caixas"
+            // as preferências vêm do portal (valem com o serviço offline)
             await carregarPreferencias();
             desenharAvisos();
             estado.iniciado = true;
@@ -214,7 +214,7 @@
         if (aviso) avisarNovidade(aviso);
     });
 
-    // ----- aviso de cotação e pedido novos: notificação do navegador (só contagem) e som curto, cada um com a sua chave -----
+    // ----- aviso de cotação e pedido novos: notificação (só contagem) e som, cada um com a sua chave -----
     const temNotificacao = () => 'Notification' in window;
     function avisarNovidade(texto) {
         if (estado.prefs.notificar && temNotificacao() && Notification.permission === 'granted') {
@@ -222,7 +222,7 @@
         }
         if (estado.prefs.som) tocar();
     }
-    // o navegador só deixa criar ou retomar o áudio dentro de um clique: o clique que liga o som (ou "Testar") prepara
+    // o áudio só nasce ou volta dentro de um clique (ligar o som ou "Testar")
     let audio = null;
     function somPronto() {
         const Contexto = window.AudioContext || window.webkitAudioContext;
@@ -346,11 +346,12 @@
             if (!abrir) return;
             $(m).hidden = false;
             $(b).setAttribute('aria-expanded', 'true');
+            $(m).scrollIntoView({ block: 'nearest' });   // no celular, acima da barra inferior
             if (aoAbrir) aoAbrir();
         });
     }
     document.addEventListener('click', ev => { if (!ev.target.closest('.em-ancora')) fecharMenus(); });
-    // Esc fecha uma coisa por vez: menu, folha de filtros, e-mail aberto, seleção, modo foco. A ajuda (dialog) fecha sozinha.
+    // Esc fecha uma coisa por vez: menu, dica, folha, e-mail aberto, seleção, modo foco (a ajuda fecha sozinha)
     document.addEventListener('keydown', ev => {
         if (ev.key !== 'Escape' || $('em-ajuda').open) return;
         const aberto = MENUS.find(([, m]) => !$(m).hidden);
@@ -364,7 +365,7 @@
     });
     mostrarNovidades();
 
-    // ----- modo foco: só a lista e o e-mail aberto; f ou o botão liga e desliga, Esc sai. Só na Caixa. -----
+    // ----- modo foco (só na Caixa): f ou o botão, Esc sai -----
     const emFoco = () => document.body.classList.contains('em-modo-foco');
     function modoFoco(sim) {
         document.body.classList.toggle('em-modo-foco', sim);
@@ -373,6 +374,7 @@
         b.setAttribute('aria-label', sim ? 'Sair do modo foco' : 'Modo foco');
         b.dataset.dica = sim ? 'Sair do modo foco' : 'Modo foco';
         if (sim) abrirFolha(false);
+        if (sim && document.activeElement.closest('#em-trilho, #em-filtros')) focoNaLista();   // o foco não some
     }
     $('em-foco').addEventListener('click', () => modoFoco(!emFoco()));
 
@@ -390,7 +392,7 @@
     });
     densidade(local('emails_densidade'));
 
-    // largo: o painel recolhe e volta (lembrado no aparelho); estreito: os filtros abrem como folha sobre a lista
+    // largo: o painel recolhe; estreito: os filtros abrem como folha
     const estreito = window.matchMedia('(max-width: 1100px)');
     function recolher(sim) {
         $('em-app').classList.toggle('em-sem-filtros', sim);
@@ -422,7 +424,7 @@
     $('em-app').classList.toggle('em-sem-filtros', local('emails_filtros_recolhido') === '1');
     expandido();
 
-    // ----- busca do cabeçalho: a mesma busca da Caixa; busca ao digitar, com espera de 300 ms -----
+    // ----- busca do cabeçalho (a mesma da Caixa), 300 ms depois de digitar -----
     let esperaBusca = 0;
     function buscar() {
         clearTimeout(esperaBusca);
@@ -482,18 +484,20 @@
             if (id === ITENS_TRILHO[item]) $(id).setAttribute('aria-current', 'page');
             else $(id).removeAttribute('aria-current');
         }
+        // veio de um clique que sumiu com a visão anterior (gráfico, filtro salvo): o foco vai para a lista
+        if (r.visao === 'caixa' && !document.activeElement.getClientRects().length) $('em-lista').focus({ preventScroll: true });
         if (r.visao === 'dashboard') carregarDash(r.ver);
         if (r.visao === 'saude') carregarSaude();
         if (r.visao === 'filtros') desenharGestao();
     }
     window.addEventListener('hashchange', mostrarVisao);
-    // clique no item da visão que já está aberta: o endereço não muda, então aplica de novo
+    // clique na visão já aberta: aplica de novo
     $('em-trilho').addEventListener('click', ev => {
         const a = ev.target.closest('a');
         if (a && a.getAttribute('href') === location.hash) mostrarVisao();
     });
 
-    // aplica um filtro: ele vai para o endereço, e o endereço manda listar (voltar, avançar e recarregar funcionam)
+    // o filtro vai para o endereço, e o endereço manda listar
     function filtrar(f, substituir) {
         const hash = Q.paraHash(f, minhas());
         if (estado.visao === 'caixa' && location.hash === hash) {
@@ -616,7 +620,7 @@
     function desenharAtivos() {
         const lista = Q.ativos(estado.filtro);
         const caixa = $('em-ativos');
-        // o chip que entra aparece com escala; o que sai fica um instante no lugar, sumindo (nunca na primeira vez)
+        // o chip que entra cresce; o que sai some no lugar (nunca na primeira vez)
         const antes = new Map([...caixa.children].filter(x => x.dataset.foco && !x.classList.contains('em-saindo')).map((x, i) => [x.dataset.foco, [x, i]]));
         const novos = [];
         for (const a of lista) {
@@ -740,7 +744,7 @@
         if (ev.key === 'Escape') { ev.stopPropagation(); fecharSalvar(); $('em-salvar-filtro').focus(); }
     });
 
-    // ----- gestão dos filtros salvos (#filtros): renomear, cor, fixar, apagar; os da equipe só o administrador -----
+    // ----- gestão dos filtros salvos (#filtros); os da equipe só o administrador -----
     async function alterarSalvos(chave, mudar) {
         const lista = (estado.prefs[chave] || []).map(s => Object.assign({}, s));
         mudar(lista);
@@ -828,7 +832,7 @@
         const d = iso ? new Date(iso) : null;
         return d && !isNaN(d) ? d.toLocaleTimeString('pt-BR', { timeZone: F.FUSO, hour: '2-digit', minute: '2-digit' }) : '';
     };
-    // um item por e-mail: caixa de seleção e botão lado a lado (controle dentro de controle não pode)
+    // caixa de seleção e botão lado a lado (controle dentro de controle não pode)
     function itemLista(e) {
         estado.dados.set(e.id, e);
         const li = el('li', null, 'em-linha');
@@ -845,6 +849,7 @@
         caixa.checked = marcado;
         caixa.setAttribute('aria-label', 'Selecionar: ' + (e.assunto || '(sem assunto)'));
         caixa.addEventListener('click', ev => selecionar(e.id, ev.shiftKey, caixa.checked));
+        li.addEventListener('click', ev => { if (ev.target === li) caixa.click(); });   // a coluna é o alvo de toque
         li.appendChild(caixa);
         if (e.revisao) b.classList.add('em-revisao');
         if (e.removido) b.classList.add('em-removido');
@@ -921,7 +926,7 @@
             avisar(r.erro || 'Não foi possível carregar os e-mails.');
             $('em-tentar').hidden = false;
             if (!mais) $('em-exportar').disabled = true;
-            // o botão volta, mas o carregamento sozinho espera um clique: sem isso, falha e botão visível viram laço
+            // o carregamento sozinho espera um clique (sem laço de falhas)
             if (mais) { estado.parouMais = true; $('em-mais').hidden = !estado.proximo; }
             return;
         }
@@ -942,7 +947,7 @@
             linhas.push(frag.appendChild(itemLista(e)));
         }
         $('em-lista').appendChild(frag);
-        // depois de "Atualizar", só o que chegou desce de cima; numa lista nova, os 12 primeiros entram em escada
+        // depois de "Atualizar", só o que chegou desce; lista nova: os 12 primeiros em escada
         const antes = estado.idsAntes;
         estado.idsAntes = null;
         if (!mais && comMovimento()) {
@@ -956,7 +961,7 @@
         $('em-mais').hidden = !estado.proximo;
         $('em-vazio-lista').hidden = estado.itens > 0;
         const total = Math.max(estado.total, estado.itens);
-        avisar(estado.itens ? (total === 1 ? '1 e-mail' : total.toLocaleString('pt-BR') + ' e-mails') : '0 e-mails');   // o estado vazio, logo abaixo, diz o resto
+        avisar(estado.itens ? (total === 1 ? '1 e-mail' : total.toLocaleString('pt-BR') + ' e-mails') : '0 e-mails');   // o estado vazio diz o resto
         $('em-exportar').disabled = !estado.itens || !!exportacao;
         $('em-ver-resultados').textContent = estado.itens ? 'Ver ' + (total === 1 ? '1 e-mail' : total.toLocaleString('pt-BR') + ' e-mails') : 'Ver e-mails';
     }
@@ -1004,7 +1009,7 @@
         const tbody = el('tbody');
         for (const l of linhas) {
             const r = el('tr');
-            l.forEach(c => { const td = el('td'); if (c instanceof Node) td.appendChild(c); else td.textContent = c; r.appendChild(td); });
+            l.forEach((c, i) => { const td = el('td'); td.dataset.rotulo = cabecalho[i]; if (c instanceof Node) td.appendChild(c); else td.textContent = c; r.appendChild(td); });
             tbody.appendChild(r);
         }
         t.appendChild(tbody);
@@ -1041,12 +1046,12 @@
         return tabela('Manutenção', ['Item', 'Situação', 'Detalhe'], linhas, null, 'Nenhuma manutenção registrada ainda.');
     }
 
-    // ----- dashboard (seção 7): período, caixas, indicadores e painéis em SVG; cada número leva à Caixa filtrada -----
+    // ----- dashboard (seção 7): cada número leva à Caixa filtrada -----
     const G = window.EmailsGraficos;
     const dash = { periodo: 'hoje', escopo: '', ocultas: new Set(), d: null, em: 0 };
     const escopoDash = () => (minhas().length ? dash.escopo || 'minhas' : 'todas');
     const contasDash = () => (escopoDash() === 'minhas' ? minhas() : []);
-    // endereço da Caixa com o filtro do clique. Sem categoria, "sem ruído" vai desligado: a lista conta o mesmo que o painel
+    // endereço da Caixa com o filtro do clique; sem categoria, "sem ruído" desliga (a lista conta o mesmo que o painel)
     function paraCaixa(campos) {
         const f = Object.assign(Q.novo(), { contas: contasDash() }, campos);
         if (!f.categorias.length) f.sem_ruido = false;
@@ -1063,7 +1068,7 @@
         t.textContent = texto;
         return t;
     }
-    // marca clicável: um link de verdade para a Caixa, com o valor exato no nome acessível e na dica
+    // marca: link para a Caixa, com o valor no nome acessível e na dica
     function marca(href, rotulo) {
         const a = href ? svg('a', { href }) : svg('g');
         if (!href) a.setAttribute('role', 'img');
@@ -1071,7 +1076,7 @@
         a.dataset.ponto = rotulo;
         return a;
     }
-    // barra com a ponta do dado arredondada (em cima na coluna, à direita na barra deitada); a base fica reta
+    // barra com a ponta arredondada e a base reta
     function coluna(x, y, w, h, r) {
         r = Math.max(0, Math.min(r, w / 2, h));
         return `M${x} ${y + h}V${y + r}Q${x} ${y} ${x + r} ${y}H${x + w - r}Q${x + w} ${y} ${x + w} ${y + r}V${y + h}Z`;
@@ -1094,11 +1099,12 @@
         if (descricao) { const p = el('p', descricao, 'em-figura-desc'); p.id = id + '-d'; f.appendChild(p); f.setAttribute('aria-describedby', p.id); }
         return f;
     }
-    // a mesma informação do gráfico em tabela, para leitor de tela e para quem prefere ler números
+    // a informação do gráfico em tabela
     function tabelaEquivalente(cabecalho, linhas) {
         const d = el('details', null, 'em-tabela-equiv');
         d.appendChild(el('summary', 'Ver em tabela'));
-        d.appendChild(tabelaSimples(cabecalho, linhas));
+        // montada só ao abrir; rola de lado, também pelo teclado
+        d.addEventListener('toggle', () => { if (d.open && d.children.length < 2) d.appendChild(tabelaSimples(cabecalho, linhas)).tabIndex = 0; });
         return d;
     }
     function insuficiente(alvo, porque) {
@@ -1133,7 +1139,7 @@
         const W = larguraDe(area), H = 188, esq = 40, base = H - 24, topo = 8;
         const marcas = G.marcas(Math.max(0, ...pilhas.map(p => p.total)));
         const teto = marcas[marcas.length - 1], altura = base - topo;
-        const s = svg('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}` }, 'em-grafico em-colunas');
+        const s = svg('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'group' }, 'em-grafico em-colunas');
         for (const m of marcas) {
             const y = base - G.escala(m, teto, altura) + .5;
             s.appendChild(svg('line', { x1: esq, x2: W, y1: y, y2: y }, m ? 'em-grade' : 'em-grade em-grade-base'));
@@ -1154,7 +1160,7 @@
         });
         return s;
     }
-    // um dia só (Hoje): uma coluna perdida na largura não diz nada; vira uma barra deitada por série
+    // um dia só (Hoje): uma barra deitada por série
     function colunasOuBarras(area, pilhas, nome, classe, link) {
         if (pilhas.length !== 1) return colunasEmpilhadas(area, pilhas, nome, classe, link);
         const dia = pilhas[0].dia;
@@ -1163,12 +1169,12 @@
             return { rotulo: nome(p.chave), href, dica, partes: [{ valor: p.valor, classe: classe(p.chave), href, dica }] };
         }));
     }
-    // barras deitadas, uma linha por item; cada linha pode ter partes (pendentes e atrasados de uma caixa)
+    // barras deitadas, uma linha por item, com partes
     function barrasDeitadas(area, linhas) {
         const W = larguraDe(area), esq = Math.min(176, Math.round(W * .38)), dir = 48, alt = 30, H = linhas.length * alt;
         const totalDe = l => l.partes.reduce((t, p) => t + p.valor, 0);
         const max = Math.max(1, ...linhas.map(totalDe));
-        const s = svg('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}` }, 'em-grafico em-barras');
+        const s = svg('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'group' }, 'em-grafico em-barras');
         linhas.forEach((l, i) => {
             const y = i * alt, meio = y + alt / 2;
             const rot = marca(l.href, l.dica);
@@ -1188,28 +1194,30 @@
         });
         return s;
     }
-    // mapa de calor dia da semana x hora: só leitura (a Caixa não filtra por hora); o valor exato vai na dica e na tabela
+    // mapa de calor: só leitura; o valor exato na dica e na tabela, que é o que o leitor de tela lê.
+    // Estreito: dias nas colunas e horas nas linhas.
     function mapaCalor(area, mapa) {
-        const W = larguraDe(area), esq = 36, topo = 18, gap = 2;
-        const cel = (W - esq) / 24, alt = 20, H = topo + 7 * alt;
+        const W = larguraDe(area), pe = W < 520, esq = 36, topo = 18, gap = 2;
+        const cel = (W - esq) / (pe ? 7 : 24), alt = 20, H = topo + (pe ? 24 : 7) * alt;
         const max = G.maximoMapa(mapa);
-        const s = svg('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}` }, 'em-grafico');
-        for (let h = 0; h < 24; h += 3) s.appendChild(textoSvg(String(h).padStart(2, '0') + 'h', { x: esq + h * cel, y: 12 }, 'em-eixo'));
+        const s = svg('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, 'aria-hidden': 'true' }, 'em-grafico');
+        const esquerda = n => ({ x: 0, y: topo + n * alt + alt / 2 + 3 }), cima = n => ({ x: esq + n * cel, y: 12 });
+        for (let h = 0; h < 24; h += 3) s.appendChild(textoSvg(String(h).padStart(2, '0') + 'h', pe ? esquerda(h) : cima(h), 'em-eixo'));
         G.DIAS.forEach((dia, i) => {
-            const y = topo + i * alt;
-            s.appendChild(textoSvg(dia.slice(0, 3), { x: 0, y: y + alt / 2 + 3 }, 'em-eixo'));
+            s.appendChild(textoSvg(dia.slice(0, 3), pe ? cima(i) : esquerda(i), 'em-eixo'));
             const linha = s.appendChild(svg('g', null, 'em-calor-linha'));   // aparece linha a linha ao abrir
             linha.style.animationDelay = i * 2 * tempo('--em-passo') + 'ms';
             for (let h = 0; h < 24; h++) {
                 const v = (mapa[i] || [])[h] || 0;
                 const g = marca('', dia + ', ' + String(h).padStart(2, '0') + 'h: ' + G.numero(v) + (v === 1 ? ' e-mail' : ' e-mails'));
-                g.appendChild(svg('rect', { x: esq + h * cel, y, width: Math.max(1, cel - gap), height: alt - gap, rx: 2 }, 'em-calor em-calor-' + G.nivelCalor(v, max)));
+                g.appendChild(svg('rect', { x: esq + (pe ? i : h) * cel, y: topo + (pe ? h : i) * alt, width: Math.max(1, cel - gap), height: alt - gap, rx: 2 },
+                    'em-calor em-calor-' + G.nivelCalor(v, max)));
                 linha.appendChild(g);
             }
         });
         return s;
     }
-    // mini-gráfico do indicador: linha discreta, sem eixo; os valores por dia estão no gráfico de volume e na tabela dele
+    // mini-gráfico do indicador: linha discreta, sem eixo
     function miniGrafico(serie) {
         const d = G.linhaMini(serie, 120, 24);
         if (!d) return null;
@@ -1218,7 +1226,7 @@
         return s;
     }
 
-    // indicador: um link para a Caixa filtrada. "No período" leva variação e mini-gráfico.
+    // indicador: link para a Caixa filtrada
     function indicador(rotulo, valor, href, extra) {
         const o = extra || {};
         const a = el('a', null, 'em-kpi em-painel' + (o.alerta ? ' em-kpi-alerta' : ''));
@@ -1445,7 +1453,7 @@
         $('em-dash-escopo').hidden = !minhas().length;
         for (const b of $('em-dash-escopo').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.escopo === escopoDash()));
     }
-    // números contam até o valor (o texto final é o mesmo de sempre); a marca data-contando sai no fim
+    // números contam até o valor; data-contando sai no fim
     let contaVez = 0;
     function contarNumeros(alvo) {
         const nums = [...alvo.querySelectorAll('[data-num]')];
@@ -1465,8 +1473,7 @@
         };
         requestAnimationFrame(passo);
     }
-    // animar: só na primeira montagem e na troca de período ou de caixas; nunca na atualização automática, na legenda
-    // nem na troca de largura
+    // animar: só ao abrir e ao trocar período ou caixas
     function montarDash(ver, animar) {
         const d = dash.d, alvo = $('em-dash-conteudo');
         if (!d) return;
@@ -1495,7 +1502,7 @@
         }
         if (ver === 'atrasados' && $('em-atrasados')) { $('em-atrasados').scrollIntoView({ block: 'start' }); $('em-atrasados').focus({ preventScroll: true }); }
     }
-    // pede o resumo; numa atualização, o que já está na tela fica (esmaecido) até a resposta chegar
+    // numa atualização, o que está na tela fica esmaecido até a resposta
     async function carregarDash(ver, auto) {
         desenharControlesDash();
         if (!auto) $('em-dash-estado').textContent = 'Carregando o dashboard…';
@@ -1523,7 +1530,7 @@
         dash.escopo = b.dataset.escopo;
         carregarDash('');
     });
-    // a cada 2 minutos, só com a aba à vista; ao voltar para a aba depois disso, atualiza na hora
+    // a cada 2 minutos, só com a aba à vista
     const DOIS_MINUTOS = 120000;
     setInterval(() => { if (estado.visao === 'dashboard' && !document.hidden) carregarDash('', true); }, DOIS_MINUTOS);
     document.addEventListener('visibilitychange', () => {
@@ -1606,7 +1613,7 @@
         if (b) aplicarLote(b.dataset.lote);
     });
 
-    // ----- alterações: a lista se atualiza no próprio item, sem pedir a lista de novo (posição e seleção ficam) -----
+    // ----- alterações: o item se atualiza no lugar (posição e seleção ficam) -----
     function atualizarItem(id, mudou) {
         const atual = estado.dados.get(id), velho = linha(id);
         if (!atual) return;
@@ -1639,7 +1646,7 @@
     }
 
     const FRASE_LOTE = { respondido: 'marcados como respondidos', arquivado: 'arquivados', pendente: 'de volta a pendente' };
-    // até 100 por pedido; acima disso, um pedido depois do outro (pedir cancela o anterior da mesma ação)
+    // até 100 por pedido, um pedido depois do outro
     async function aplicarLote(status) {
         const ids = idsNaLista().filter(id => estado.sel.has(id));
         if (!ids.length || !FRASE_LOTE[status]) return;
@@ -1651,7 +1658,7 @@
             if (!r.sucesso) { erro = r.erro || 'Não foi possível alterar os e-mails.'; break; }
             const falhou = new Set(Array.isArray(r.dados.falhas) ? r.dados.falhas : []);
             const aud = auditoriaDe(r.dados);
-            // o serviço devolve uma linha de auditoria por e-mail alterado, na ordem do pedido
+            // uma linha de auditoria por e-mail alterado, na ordem do pedido
             parte.filter(id => !falhou.has(id)).forEach((id, i) => {
                 if (aud[i] !== undefined) { antes.set(aud[i], Object.assign({}, estado.dados.get(id))); auditoria.push(aud[i]); }
                 atualizarItem(id, { status });
@@ -1748,7 +1755,7 @@
         botaoCat.className = 'em-categoria-botao ' + c.classe;
         botaoCat.replaceChildren(etiquetaCategoria(e.categoria), icone('abrir-lista', 'em-ic-p'));
         botaoCat.setAttribute('aria-label', 'Categoria: ' + c.nome + '. Corrigir a categoria');
-        // só as 9 de correção manual são opção; a de regra (interno, enviado...) aparece no botão, nunca vira escolha
+        // só as 9 de correção manual são opção; a de regra só aparece no botão
         $('em-categorias').replaceChildren(...F.CORRIGIVEIS.map(nome => {
             const k = F.categoria(nome);
             const b = botao(null, 'em-cat-opcao ' + k.classe);
@@ -2001,7 +2008,7 @@
         if (i < 0 && estado.idAberto !== null) i = itens.findIndex(b => Number(b.dataset.id) === estado.idAberto);
         itens[i < 0 ? 0 : Math.max(0, Math.min(itens.length - 1, i + passo))].focus();
     }
-    // r e e: na seleção, se houver; senão no e-mail focado na lista; senão no e-mail aberto
+    // r e e: na seleção; senão no e-mail focado; senão no aberto
     function marcarPorAtalho(status) {
         if (estado.sel.size) return aplicarLote(status);
         const id = itemFocado() !== null ? itemFocado() : estado.idAberto;
@@ -2035,7 +2042,7 @@
         acao();
     });
 
-    // ----- exportar para Excel (seção 8): a lista filtrada, até 2.000 linhas, tudo como texto e sem corpo de e-mail -----
+    // ----- exportar para Excel (seção 8): até 2.000 linhas, tudo texto, sem corpo -----
     // o exceljs (quase 1 MB) só carrega no primeiro clique, do próprio portal: a CSP não muda
     let excel = null, exportacao = null;
     function carregarExcel() {
@@ -2097,7 +2104,7 @@
             const larguras = [17, 32, 24, 48, 16, 12, 24, 10, 12, 60];
             folha.columns = A.COLUNAS_PLANILHA.map((titulo, i) => ({ header: titulo, width: larguras[i], style: { numFmt: '@' } }));
             folha.getRow(1).font = { bold: true };
-            // cada valor vai como texto (string): o exceljs só grava fórmula quando recebe { formula }, nunca de uma string
+            // valor como string: o exceljs só grava fórmula de { formula }
             for (const l of linhas) folha.addRow(l);
             const blob = new Blob([await livro.xlsx.writeBuffer()], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             if (minha.cancelado) return;
