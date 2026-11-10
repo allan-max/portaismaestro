@@ -475,7 +475,7 @@
         caixa.replaceChildren();
         for (const a of lista) {
             if (a.fixo) { caixa.appendChild(el('span', a.rotulo, 'em-ativo-nota')); continue; }
-            const b = botao(null, 'em-ativo');
+            const b = botao(null, 'em-chip-ativo');
             b.dataset.acao = 'remover';
             b.dataset.chave = a.chave;
             b.dataset.valor = a.valor;

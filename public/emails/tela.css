@@ -91,14 +91,15 @@ body { background: var(--em-fundo); min-height: 100vh; }
 .em-abrir-filtros { display: none; min-height: 28px; padding: 0 var(--em-e2); }
 .em-abrir-filtros .em-contador { min-width: 16px; height: 16px; padding: 0 4px; }
 .em-ativos { display: flex; flex-wrap: wrap; align-items: center; gap: var(--em-e1); padding: 0 var(--em-e1) var(--em-e2); }
-.em-ativo {
+/* chip de filtro ativo; .em-ativo fica só para o e-mail aberto na lista */
+.em-chip-ativo {
   display: inline-flex; align-items: center; gap: var(--em-e1); max-width: 100%; height: 24px; padding: 0 var(--em-e1) 0 var(--em-e2);
   border-radius: var(--em-raio-controle); background: var(--em-neutro-fundo); color: var(--em-texto); font-size: var(--em-t-apoio);
   transition: transform var(--em-rapido) var(--em-curva);
 }
-.em-ativo:active { transform: scale(.97); }
-.em-ativo .em-ic { width: 14px; height: 14px; color: var(--em-apoio); }
-@media (hover: hover) and (pointer: fine) { .em-ativo:hover { background: var(--em-painel-foco); } }
+.em-chip-ativo:active { transform: scale(.97); }
+.em-chip-ativo .em-ic { width: 14px; height: 14px; color: var(--em-apoio); }
+@media (hover: hover) and (pointer: fine) { .em-chip-ativo:hover { background: var(--em-painel-foco); } }
 .em-ativo-nota { color: var(--em-apoio); font-size: var(--em-t-apoio); }
 .em-ativos .em-link { margin-left: var(--em-e1); font-size: var(--em-t-apoio); }
 .em-lista-area > .em-aviso { margin: 0 var(--em-e1) var(--em-e2); }
