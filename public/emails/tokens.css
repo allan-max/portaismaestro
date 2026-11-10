@@ -97,6 +97,9 @@
   --em-lento: 240ms;
   --em-curva: cubic-bezier(.23, 1, .32, 1);
 
+  /* véu atrás da janela de atalhos */
+  --em-veu: rgba(5, 8, 12, .62);
+
   /* sombra só em elemento flutuante: curta e escura */
   --em-sombra: 0 4px 12px rgba(0, 0, 0, .45);
 }

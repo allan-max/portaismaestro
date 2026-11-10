@@ -57,6 +57,9 @@
               <button type="button" data-densidade="compacta" aria-pressed="false">Compacta</button>
             </div>
           </div>
+          <button type="button" id="em-abrir-ajuda" class="em-menu-item">
+            <svg class="em-ic em-ic-p" aria-hidden="true"><use href="emails/icones.svg#teclado"></use></svg>Atalhos de teclado
+          </button>
           <a class="em-menu-item" href="index.html?portais=1">
             <svg class="em-ic em-ic-p" aria-hidden="true"><use href="emails/icones.svg#voltar"></use></svg>Voltar ao portal
           </a>
@@ -230,6 +233,13 @@
           <button type="button" id="em-tentar" class="em-botao em-secundario" hidden>Tentar de novo</button>
         </div>
         <div id="em-ativos" class="em-ativos" role="group" aria-label="Filtros ativos"></div>
+        <div id="em-lote" class="em-lote" role="group" aria-label="Ações nos e-mails selecionados" hidden>
+          <span id="em-lote-num" class="em-lote-num em-num" aria-live="polite"></span>
+          <button type="button" class="em-botao em-secundario" data-lote="respondido">Marcar respondido</button>
+          <button type="button" class="em-botao em-secundario" data-lote="arquivado">Arquivar</button>
+          <button type="button" class="em-botao em-secundario" data-lote="pendente">Voltar a pendente</button>
+          <button type="button" id="em-lote-limpar" class="em-link">Limpar seleção</button>
+        </div>
         <div id="em-versao" class="em-aviso" hidden>
           <svg class="em-ic em-ic-p" aria-hidden="true"><use href="emails/icones.svg#alerta"></use></svg>
           <p>O serviço de e-mails está numa versão antiga. A lista funciona, mas os filtros novos e as contagens só valem depois que ele for atualizado.</p>
@@ -250,27 +260,109 @@
         <svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#caixa"></use></svg>
         <p>Escolha um e-mail na lista para ler.</p>
       </div>
+      <div id="em-divisor" class="em-divisor" role="separator" tabindex="0" aria-orientation="vertical" aria-controls="em-detalhe"
+        aria-label="Largura do e-mail aberto" aria-valuemin="420" aria-valuemax="1000" aria-valuenow="560"></div>
       <section id="em-detalhe" class="em-detalhe em-painel" aria-labelledby="em-assunto" hidden>
-        <h2 id="em-assunto" tabindex="-1"></h2>
+        <div class="em-detalhe-barra">
+          <button type="button" id="em-voltar" class="em-botao em-secundario em-voltar">
+            <svg class="em-ic em-ic-p" aria-hidden="true"><use href="emails/icones.svg#voltar"></use></svg>Voltar à lista
+          </button>
+          <button type="button" id="em-fechar-detalhe" class="em-icone em-fechar-detalhe" aria-label="Fechar o e-mail" data-dica="Fechar" data-dica-lado="fim">
+            <svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#fechar"></use></svg>
+          </button>
+        </div>
+        <div class="em-cabeca">
+          <span id="em-avatar" class="em-avatar" aria-hidden="true"></span>
+          <div class="em-cabeca-texto">
+            <p class="em-remetente">
+              <strong id="em-rem-nome" class="em-rem-nome"></strong>
+              <span id="em-rem-email" class="em-rem-email"></span>
+              <button type="button" id="em-copiar-email" class="em-icone em-copiar" aria-label="Copiar o endereço" data-dica="Copiar endereço">
+                <svg class="em-ic em-ic-p" aria-hidden="true"><use href="emails/icones.svg#copiar"></use></svg>
+              </button>
+            </p>
+            <p id="em-quando" class="em-quando"></p>
+          </div>
+        </div>
+        <div class="em-assunto-bloco">
+          <h2 id="em-assunto" tabindex="-1"></h2>
+          <button type="button" id="em-copiar-assunto" class="em-icone em-copiar" aria-label="Copiar o assunto" data-dica="Copiar assunto" data-dica-lado="fim">
+            <svg class="em-ic em-ic-p" aria-hidden="true"><use href="emails/icones.svg#copiar"></use></svg>
+          </button>
+        </div>
         <dl id="em-meta" class="em-meta"></dl>
         <div id="em-avisos" class="em-avisos"></div>
-        <div id="em-controle" class="em-controle"></div>
+        <div id="em-controle" class="em-controle">
+          <div id="em-status" class="em-segmentado" role="group" aria-label="Status">
+            <button type="button" data-status="pendente" aria-pressed="false">Pendente</button>
+            <button type="button" data-status="respondido" aria-pressed="false">Respondido</button>
+            <button type="button" data-status="arquivado" aria-pressed="false">Arquivado</button>
+          </div>
+          <span class="em-ancora">
+            <button type="button" id="em-categoria-botao" class="em-categoria-botao" aria-expanded="false" aria-controls="em-menu-categoria"></button>
+            <div id="em-menu-categoria" class="em-menu em-menu-categoria" hidden>
+              <p class="em-secao em-menu-titulo">Corrigir categoria</p>
+              <div id="em-categorias" class="em-categorias" role="group" aria-label="Categorias"></div>
+            </div>
+          </span>
+          <p id="em-status-atual" class="em-status-atual"></p>
+        </div>
+        <section id="em-ia" class="em-ia" aria-labelledby="em-ia-titulo">
+          <h3 id="em-ia-titulo" class="em-secao">Resumo da IA</h3>
+          <p id="em-ia-resumo" class="em-ia-resumo"></p>
+          <div id="em-ia-confianca" class="em-ia-confianca">
+            <span class="em-barra-trilho"><span id="em-ia-barra" class="em-barra-valor"></span></span>
+            <span id="em-ia-pct" class="em-num"></span>
+          </div>
+          <p id="em-ia-motivo" class="em-ia-motivo"></p>
+          <p id="em-ia-revisao" class="em-ia-revisao" hidden>Confiança abaixo do mínimo: este e-mail está na fila de revisão.</p>
+        </section>
         <div id="em-anexos" class="em-anexos"></div>
         <div class="em-corpo-acoes">
-          <button type="button" id="em-ver-html" class="em-botao em-secundario" hidden>Ver versão formatada (HTML)</button>
+          <button type="button" id="em-ver-html" class="em-botao em-secundario" hidden>Ver versão formatada</button>
           <button type="button" id="em-ver-texto" class="em-botao em-secundario" hidden>Ver texto puro</button>
         </div>
         <pre id="em-corpo" class="em-corpo"></pre>
         <iframe id="em-html" class="em-html" title="Versão formatada do e-mail, sem scripts e sem imagens externas" sandbox="" referrerpolicy="no-referrer" hidden></iframe>
+        <section class="em-bloco-detalhe" aria-labelledby="em-hist-titulo">
+          <h3 id="em-hist-titulo" class="em-secao">Histórico</h3>
+          <ol id="em-historico" class="em-historico"></ol>
+        </section>
+        <section id="em-outros" class="em-bloco-detalhe" aria-labelledby="em-outros-titulo">
+          <h3 id="em-outros-titulo" class="em-secao">Outros e-mails deste remetente</h3>
+          <ul id="em-do-remetente" class="em-do-remetente"></ul>
+        </section>
       </section>
     </div>
   </main>
 
   <div id="em-aviso-flutuante" class="em-aviso-flutuante" role="status" aria-live="polite" hidden></div>
 
+  <dialog id="em-ajuda" class="em-ajuda" aria-labelledby="em-ajuda-titulo">
+    <div class="em-ajuda-topo">
+      <h2 id="em-ajuda-titulo">Atalhos de teclado</h2>
+      <button type="button" id="em-fechar-ajuda" class="em-icone" aria-label="Fechar os atalhos">
+        <svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#fechar"></use></svg>
+      </button>
+    </div>
+    <dl class="em-atalhos">
+      <dt><kbd>j</kbd></dt><dd>Próximo e-mail da lista</dd>
+      <dt><kbd>k</kbd></dt><dd>E-mail anterior da lista</dd>
+      <dt><kbd>Enter</kbd></dt><dd>Abrir o e-mail</dd>
+      <dt><kbd>r</kbd></dt><dd>Marcar como respondido</dd>
+      <dt><kbd>e</kbd></dt><dd>Arquivar</dd>
+      <dt><kbd>x</kbd></dt><dd>Selecionar o e-mail; com Shift, o intervalo</dd>
+      <dt><kbd>/</kbd></dt><dd>Buscar</dd>
+      <dt><kbd>Esc</kbd></dt><dd>Fechar o menu, o e-mail aberto ou a seleção</dd>
+      <dt><kbd>?</kbd></dt><dd>Esta lista de atalhos</dd>
+    </dl>
+    <p class="em-dica-texto">Com e-mails selecionados, r e e valem para todos eles. Os atalhos não funcionam enquanto se digita num campo.</p>
+  </dialog>
+
   <script src="/socket.io/socket.io.js"></script>
   <script src="emails/formato.js"></script>
   <script src="emails/filtro.js"></script>
+  <script src="emails/acoes.js"></script>
   <script src="emails/tela.js"></script>
 </body>
 </html>

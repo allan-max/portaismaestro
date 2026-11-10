@@ -1,11 +1,13 @@
 /* Central de E-mails: casca (cabeçalho, trilho, visões), caixa unificada e dashboard.
    Regra de segurança: todo campo vindo de e-mail entra por textContent. Nunca HTML montado a partir de texto.
    HTML do e-mail só em iframe sandbox="" (sem scripts e sem mesma origem), por clique, com CSP própria.
-   Lógica pura fica em formato.js (rota, categoria, formatos) e filtro.js (filtro, endereço, realce), que o node --test carrega. */
+   Lógica pura fica em formato.js (rota, categoria, formatos), filtro.js (filtro, endereço, realce) e acoes.js (detalhe,
+   seleção, lote, desfazer), que o node --test carrega. */
 (function () {
     'use strict';
     const F = window.EmailsFormato;
     const Q = window.EmailsFiltro;
+    const A = window.EmailsAcoes;
     const $ = id => document.getElementById(id);
     const sessao = localStorage.getItem('maestro_session');
     // só arrumação da tela: o servidor já não manda o dado de administrador (gasto, saúde) a quem não é,
@@ -14,7 +16,8 @@
     const SVG = 'http://www.w3.org/2000/svg';
     const PREFS_PADRAO = { minhas_caixas: [], filtros: [], sem_ruido: true, agrupar: false, notificar: false, som: false, equipe: [] };
     const estado = { filtro: Q.novo(), proximo: null, itens: 0, total: 0, aberto: null, contas: [], contagens: null, visao: '',
-        bloqueado: false, iniciado: false, listou: false, carregando: false, parouMais: false, seqLista: 0, ultimoDia: '', prefs: PREFS_PADRAO };
+        bloqueado: false, iniciado: false, listou: false, carregando: false, parouMais: false, seqLista: 0, ultimoDia: '', prefs: PREFS_PADRAO,
+        idAberto: null, sel: new Set(), ancora: null, dados: new Map() };
     const CANCELADO = { sucesso: false, cancelado: true };
     const esperando = new Map();
     let seq = 0;
@@ -69,15 +72,29 @@
     }
     const dataHora = F.dataHora, tamanho = F.tamanho;
     function avisar(texto) { $('em-estado').textContent = texto; }
-    // aviso flutuante de confirmação; a fase do "desfazer" acrescenta o botão aqui
-    let avisoTempo = 0;
-    function avisoFlutuante(texto) {
+    // aviso flutuante: confirmação, erro ou alteração com "Desfazer" por 5 s (o prazo para enquanto o foco estiver nele)
+    let avisoTempo = 0, avisoMs = 0;
+    function esconderAviso() {
         const a = $('em-aviso-flutuante');
-        a.replaceChildren(icone('conferir', 'em-ic-p em-ok'), el('span', texto));
-        a.hidden = false;
-        clearTimeout(avisoTempo);
-        avisoTempo = setTimeout(() => { a.hidden = true; }, 4000);
+        if (a.contains(document.activeElement)) focoNaLista();
+        a.hidden = true;
     }
+    function avisoFlutuante(texto, aoDesfazer, erro) {
+        const a = $('em-aviso-flutuante');
+        const filhos = [icone(erro ? 'alerta' : 'conferir', 'em-ic-p ' + (erro ? 'em-ruim' : 'em-ok')), el('span', texto)];
+        if (aoDesfazer) {
+            const b = botao('Desfazer', 'em-botao em-secundario em-desfazer');
+            b.addEventListener('click', () => { clearTimeout(avisoTempo); esconderAviso(); aoDesfazer(); });
+            filhos.push(b);
+        }
+        a.replaceChildren(...filhos);
+        a.hidden = false;
+        avisoMs = aoDesfazer ? 5000 : 4000;
+        clearTimeout(avisoTempo);
+        avisoTempo = setTimeout(esconderAviso, avisoMs);
+    }
+    $('em-aviso-flutuante').addEventListener('focusin', () => clearTimeout(avisoTempo));
+    $('em-aviso-flutuante').addEventListener('focusout', () => { clearTimeout(avisoTempo); avisoTempo = setTimeout(esconderAviso, avisoMs); });
     function telaAcesso(titulo, texto) {
         estado.bloqueado = true;
         for (const id of ['em-app', 'em-dash', 'em-saude', 'em-filtros-salvos', 'em-trilho', 'em-busca-global', 'em-abrir-busca', 'em-sino']) $(id).hidden = true;
@@ -212,7 +229,8 @@
     }
 
     // ----- menus flutuantes do cabeçalho -----
-    const MENUS = [['em-sino', 'em-menu-sino', sinoVisto], ['em-usuario-botao', 'em-menu-usuario', null]];
+    const MENUS = [['em-sino', 'em-menu-sino', sinoVisto], ['em-usuario-botao', 'em-menu-usuario', null],
+        ['em-categoria-botao', 'em-menu-categoria', () => focarCategoria(0)]];
     function fecharMenus() {
         for (const [b, m] of MENUS) { $(m).hidden = true; $(b).setAttribute('aria-expanded', 'false'); }
     }
@@ -227,13 +245,19 @@
         });
     }
     document.addEventListener('click', ev => { if (!ev.target.closest('.em-ancora')) fecharMenus(); });
+    // Esc fecha uma coisa por vez: menu, folha de filtros, e-mail aberto, seleção. A ajuda (dialog) fecha sozinha.
     document.addEventListener('keydown', ev => {
-        if (ev.key !== 'Escape') return;
+        if (ev.key !== 'Escape' || $('em-ajuda').open) return;
         const aberto = MENUS.find(([, m]) => !$(m).hidden);
         if (aberto) { fecharMenus(); $(aberto[0]).focus(); return; }
-        if ($('em-app').classList.contains('em-folha')) { abrirFolha(false); $('em-abrir-filtros').focus(); }
+        if ($('em-app').classList.contains('em-folha')) { abrirFolha(false); $('em-abrir-filtros').focus(); return; }
+        if (emCampo(ev.target) || estado.visao !== 'caixa') return;
+        if (estado.idAberto !== null) { ev.preventDefault(); fecharDetalhe(); return; }
+        if (estado.sel.size) { limparSelecao(); focoNaLista(); }
     });
     mostrarNovidades();
+
+    // ----- densidade    mostrarNovidades();
 
     // ----- densidade da lista e painel de filtros recolhido: preferências do aparelho -----
     function densidade(valor) {
@@ -303,11 +327,12 @@
         $('em-abrir-busca').setAttribute('aria-expanded', String(aberta));
         if (aberta) $('em-busca').focus();
     });
+    // atalhos não disparam com o foco num campo de texto (a caixa de seleção da lista não conta)
+    const emCampo = alvo => !!(alvo && alvo.closest && alvo.closest('input:not([type=checkbox]), textarea, select, [contenteditable]'));
     // "/" leva à busca, fora de campo de texto
     document.addEventListener('keydown', ev => {
         if (ev.key !== '/' || ev.ctrlKey || ev.metaKey || ev.altKey || estado.bloqueado) return;
-        const alvo = ev.target;
-        if (alvo.closest && alvo.closest('input, textarea, select, [contenteditable]')) return;
+        if (emCampo(ev.target)) return;
         ev.preventDefault();
         if (getComputedStyle($('em-busca-global')).display === 'none') $('em-abrir-busca').click();
         else $('em-busca').focus();
@@ -492,7 +517,7 @@
             limpar.dataset.foco = 'limpar-tudo';
             caixa.appendChild(limpar);
         }
-        caixa.hidden = !lista.length;
+        caixa.hidden = !lista.length || estado.sel.size > 0;
         $('em-num-filtros').hidden = !removiveis;
         $('em-num-filtros').textContent = String(removiveis);
     }
@@ -667,11 +692,24 @@
         const d = iso ? new Date(iso) : null;
         return d && !isNaN(d) ? d.toLocaleTimeString('pt-BR', { timeZone: F.FUSO, hour: '2-digit', minute: '2-digit' }) : '';
     };
+    // um item por e-mail: caixa de seleção e botão lado a lado (controle dentro de controle não pode)
     function itemLista(e) {
+        estado.dados.set(e.id, e);
         const li = el('li', null, 'em-linha');
+        li.dataset.id = String(e.id);
         const st = ['pendente', 'respondido', 'arquivado'].includes(e.status) ? e.status : 'pendente';
         const b = botao(null, 'em-item ' + F.categoria(e.categoria).classe + ' em-st-' + st);
         b.dataset.id = String(e.id);
+        if (e.id === estado.idAberto) b.classList.add('em-ativo');
+        const marcado = estado.sel.has(e.id);
+        li.classList.toggle('em-selecionado', marcado);
+        const caixa = el('input', null, 'em-sel');
+        caixa.type = 'checkbox';
+        caixa.tabIndex = -1;   // pelo teclado a seleção é a tecla x; a lista fica com uma parada por e-mail
+        caixa.checked = marcado;
+        caixa.setAttribute('aria-label', 'Selecionar: ' + (e.assunto || '(sem assunto)'));
+        caixa.addEventListener('click', ev => selecionar(e.id, ev.shiftKey, caixa.checked));
+        li.appendChild(caixa);
         if (e.revisao) b.classList.add('em-revisao');
         if (e.removido) b.classList.add('em-removido');
         const topo = el('span', null, 'em-item-topo');
@@ -704,7 +742,7 @@
         }
         rodape.appendChild(el('span', (e.caixas || []).map(F.nomeCaixa).join(', '), 'em-caixas'));
         b.appendChild(rodape);
-        b.addEventListener('click', () => abrir(e.id, b));
+        b.addEventListener('click', () => abrir(e.id));
         li.appendChild(b);
         return li;
     }
@@ -727,7 +765,7 @@
     async function listar(mais) {
         const meu = ++estado.seqLista;
         if (!mais) {
-            estado.proximo = null; estado.itens = 0; estado.ultimoDia = ''; estado.listou = true;
+            estado.proximo = null; estado.itens = 0; estado.ultimoDia = ''; estado.listou = true; estado.dados.clear();
             $('em-lista').replaceChildren(); $('em-novidade').hidden = true; $('em-vazio-lista').hidden = true;
             esqueleto();
         }
@@ -766,6 +804,8 @@
             frag.appendChild(itemLista(e));
         }
         $('em-lista').appendChild(frag);
+        // a seleção fica só com o que está na lista: nada de alterar em lote um e-mail que não se vê
+        if (!mais && estado.sel.size) { for (const id of [...estado.sel]) if (!estado.dados.has(id)) estado.sel.delete(id); desenharSelecao(); }
         estado.itens += itens.length;
         estado.proximo = d.proximo || null;
         $('em-mais').hidden = !estado.proximo;
@@ -912,62 +952,163 @@
         alvo.appendChild(tabelaSaude(r.dados));
     }
 
-    // ----- status e categoria no detalhe -----
-    function controles(e) {
-        const caixa = $('em-controle');
-        caixa.replaceChildren();
-        const grupo = el('div', null, 'em-segmentado');
-        grupo.setAttribute('role', 'group');
-        grupo.setAttribute('aria-label', 'Status');
-        for (const [valor, rotulo] of [['pendente', 'Pendente'], ['respondido', 'Respondido'], ['arquivado', 'Arquivado']]) {
-            const b = el('button', rotulo);
-            b.type = 'button';
-            b.setAttribute('aria-pressed', String(e.status === valor));
-            b.addEventListener('click', () => alterar('status', { id: e.id, status: valor }));
-            grupo.appendChild(b);
+    // ----- seleção em lote -----
+    const idsNaLista = () => [...$('em-lista').querySelectorAll('.em-linha')].map(li => Number(li.dataset.id));
+    const linha = id => $('em-lista').querySelector('.em-linha[data-id="' + Number(id) + '"]');
+    function desenharSelecao() {
+        for (const li of $('em-lista').querySelectorAll('.em-linha')) {
+            const marcado = estado.sel.has(Number(li.dataset.id));
+            li.classList.toggle('em-selecionado', marcado);
+            li.querySelector('.em-sel').checked = marcado;
         }
-        caixa.appendChild(grupo);
-        const sel = el('select', null, 'em-entrada em-categoria-sel');
-        sel.setAttribute('aria-label', 'Corrigir categoria');
-        // categoria de regra (interno, enviado...) aparece como opção atual, para não cair em "cotação" por engano
-        const opcoes = F.CORRIGIVEIS.includes(e.categoria) || !e.categoria ? F.CORRIGIVEIS : [e.categoria].concat(F.CORRIGIVEIS);
-        for (const c of opcoes) { const o = el('option', c); o.value = c; if (c === e.categoria) o.selected = true; sel.appendChild(o); }
-        const corrigir = el('button', 'Corrigir categoria', 'em-botao em-secundario');
-        corrigir.type = 'button';
-        corrigir.addEventListener('click', () => { if (sel.value !== e.categoria) alterar('categoria', { id: e.id, categoria: sel.value }); });
-        caixa.appendChild(sel);
-        caixa.appendChild(corrigir);
-        caixa.appendChild(el('span', 'Status: ' + (e.status || '—') + (e.status_por ? ', por ' + e.status_por : '') +
-            (e.status_em ? ' em ' + dataHora(e.status_em) : ''), 'em-status-atual'));
-        if (e.categoria_original && e.categoria_original !== e.categoria) {
-            caixa.appendChild(el('span', 'Categoria original da IA: ' + e.categoria_original, 'em-status-atual'));
-        }
+        const n = estado.sel.size;
+        $('em-app').classList.toggle('em-com-selecao', n > 0);
+        $('em-lote').hidden = !n;
+        $('em-lote-num').textContent = n === 1 ? '1 selecionado' : n.toLocaleString('pt-BR') + ' selecionados';
+        desenharAtivos();
     }
+    // Shift: do último marcado até este
+    function selecionar(id, intervalo, marcar) {
+        const ids = intervalo ? A.intervalo(idsNaLista(), estado.ancora, id) : [id];
+        for (const x of ids) { if (marcar) estado.sel.add(x); else estado.sel.delete(x); }
+        estado.ancora = id;
+        desenharSelecao();
+    }
+    function limparSelecao() {
+        estado.sel.clear();
+        estado.ancora = null;
+        desenharSelecao();
+    }
+    $('em-lote-limpar').addEventListener('click', () => { limparSelecao(); focoNaLista(); });
+    $('em-lote').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-lote]');
+        if (b) aplicarLote(b.dataset.lote);
+    });
+
+    // ----- alterações: a lista se atualiza no próprio item, sem pedir a lista de novo (posição e seleção ficam) -----
+    function atualizarItem(id, mudou) {
+        const atual = estado.dados.get(id), velho = linha(id);
+        if (!atual) return;
+        Object.assign(atual, mudou);
+        if (atual.status !== 'pendente') atual.atrasado = false;
+        if (!velho) return;
+        const foco = velho.contains(document.activeElement) ? (document.activeElement.classList.contains('em-sel') ? '.em-sel' : '.em-item') : '';
+        const novo = itemLista(atual);
+        velho.replaceWith(novo);
+        if (foco) novo.querySelector(foco).focus({ preventScroll: true });
+    }
+    // o que o detalhe traz e o item da lista mostra
+    const doDetalhe = e => ({ status: e.status, categoria: e.categoria, revisao: !!e.revisao, confianca: e.confianca,
+        horas_uteis: typeof e.horas_uteis === 'number' ? e.horas_uteis : null });
+    const auditoriaDe = d => (d && Array.isArray(d.auditoria) ? d.auditoria.filter(Number.isSafeInteger) : []);
+    const ROTULO_STATUS = { pendente: 'pendente', respondido: 'respondido', arquivado: 'arquivado' };
+
     async function alterar(acao, params) {
+        const copia = estado.dados.has(params.id) ? Object.assign({}, estado.dados.get(params.id)) : null;
         const r = await pedir(acao, params);
         if (r.cancelado) return;
-        if (!r.sucesso) { avisar(r.erro || 'Não foi possível salvar.'); return; }
-        if (!estado.aberto || estado.aberto.id !== params.id) return;   // outro e-mail foi aberto enquanto salvava
-        avisoFlutuante(acao === 'status' ? 'Status salvo.' : 'Categoria corrigida.');
-        mostrarDetalhe(r.dados);
+        if (!r.sucesso) { avisoFlutuante(r.erro || 'Não foi possível salvar.', null, true); return; }
+        const e = r.dados;
+        atualizarItem(e.id, doDetalhe(e));
+        if (estado.idAberto === e.id) mostrarDetalhe(e);
+        atualizarContadores();
+        const ids = auditoriaDe(e);
+        const texto = acao === 'status' ? 'Status alterado para ' + (ROTULO_STATUS[e.status] || e.status) + '.' : 'Categoria corrigida para ' + F.categoria(e.categoria).nome + '.';
+        avisoFlutuante(texto, ids.length ? () => desfazer(ids, new Map(copia ? ids.map(a => [a, copia]) : []), [e.id]) : null);
     }
 
-    async function abrir(id, botaoItem) {
-        document.querySelectorAll('.em-item.em-ativo').forEach(b => b.classList.remove('em-ativo'));
-        if (botaoItem) botaoItem.classList.add('em-ativo');
-        const painelDetalhe = $('em-detalhe');
-        painelDetalhe.hidden = false;
+    const FRASE_LOTE = { respondido: 'marcados como respondidos', arquivado: 'arquivados', pendente: 'de volta a pendente' };
+    // até 100 por pedido; acima disso, um pedido depois do outro (pedir cancela o anterior da mesma ação)
+    async function aplicarLote(status) {
+        const ids = idsNaLista().filter(id => estado.sel.has(id));
+        if (!ids.length || !FRASE_LOTE[status]) return;
+        const antes = new Map(), auditoria = [];
+        let feitos = 0, falhas = 0, erro = '';
+        for (const parte of A.partes(ids)) {
+            const r = await pedir('lote', { itens: parte.map(id => ({ id, status })) });
+            if (r.cancelado) return;
+            if (!r.sucesso) { erro = r.erro || 'Não foi possível alterar os e-mails.'; break; }
+            const falhou = new Set(Array.isArray(r.dados.falhas) ? r.dados.falhas : []);
+            const aud = auditoriaDe(r.dados);
+            // o serviço devolve uma linha de auditoria por e-mail alterado, na ordem do pedido
+            parte.filter(id => !falhou.has(id)).forEach((id, i) => {
+                if (aud[i] !== undefined) { antes.set(aud[i], Object.assign({}, estado.dados.get(id))); auditoria.push(aud[i]); }
+                atualizarItem(id, { status });
+                feitos++;
+            });
+            falhas += falhou.size;
+        }
+        atualizarContadores();
+        if (estado.idAberto !== null && ids.includes(estado.idAberto)) recarregarDetalhe();
+        const texto = (feitos === 1 ? '1 e-mail ' + FRASE_LOTE[status].replace(/s\b/g, '') : feitos + ' e-mails ' + FRASE_LOTE[status]) + '.' +
+            (falhas ? ' ' + falhas + ' não puderam ser alterados.' : '') + (erro ? ' ' + erro : '');
+        avisoFlutuante(texto, auditoria.length ? () => desfazer(auditoria, antes, ids) : null, !!erro || falhas > 0);
+    }
+
+    // desfaz pelos ids de auditoria recebidos; o serviço decide e restaura o estado guardado
+    async function desfazer(auditoria, antes, ids) {
+        let feitos = 0;
+        const recusados = new Set();
+        for (const parte of A.partes(auditoria)) {
+            const r = await pedir('desfazer', { auditoria: parte });
+            if (r.cancelado) return;
+            if (!r.sucesso) { avisoFlutuante(r.erro || 'Não foi possível desfazer.', null, true); return; }
+            feitos += Number.isSafeInteger(r.dados.desfeitos) ? r.dados.desfeitos : 0;
+            for (const x of Array.isArray(r.dados.recusados) ? r.dados.recusados : []) recusados.add(x);
+        }
+        for (const [aud, item] of antes) if (!recusados.has(aud)) atualizarItem(item.id, item);
+        avisoFlutuante(A.desfeito(feitos, recusados.size), null, recusados.size > 0);
+        atualizarContadores();
+        if (estado.idAberto !== null && ids.includes(estado.idAberto)) recarregarDetalhe();
+    }
+
+    // ----- detalhe -----
+    async function abrir(id) {
+        estado.idAberto = id;
+        for (const b of $('em-lista').querySelectorAll('.em-item')) b.classList.toggle('em-ativo', Number(b.dataset.id) === id);
+        $('em-detalhe').hidden = false;
         $('em-app').classList.add('em-com-detalhe');
+        fecharMenus();
         $('em-assunto').textContent = 'Carregando…';
-        $('em-meta').replaceChildren(); $('em-avisos').replaceChildren(); $('em-anexos').replaceChildren(); $('em-controle').replaceChildren();
-        $('em-corpo').textContent = ''; mostrarTexto();
-        $('em-ver-html').hidden = true;
+        for (const x of ['em-meta', 'em-avisos', 'em-anexos', 'em-historico', 'em-do-remetente']) $(x).replaceChildren();
+        for (const x of ['em-avatar', 'em-rem-nome', 'em-rem-email', 'em-quando', 'em-status-atual', 'em-corpo']) $(x).textContent = '';
+        $('em-controle').hidden = true; $('em-ia').hidden = true; $('em-outros').hidden = true;
+        estado.aberto = null;
+        mostrarTexto();
+        $('em-assunto').focus({ preventScroll: true });
         const r = await pedir('detalhe', { id });
-        if (r.cancelado) return;
+        if (r.cancelado || estado.idAberto !== id) return;
         if (!r.sucesso) { $('em-assunto').textContent = r.erro || 'Não foi possível abrir o e-mail.'; return; }
         mostrarDetalhe(r.dados);
-        $('em-assunto').focus();
+        atualizarItem(id, doDetalhe(r.dados));
     }
+    async function recarregarDetalhe() {
+        const id = estado.idAberto;
+        const r = await pedir('detalhe', { id });
+        if (r.cancelado || !r.sucesso || estado.idAberto !== id) return;
+        mostrarDetalhe(r.dados);
+        atualizarItem(id, doDetalhe(r.dados));
+    }
+    function fecharDetalhe() {
+        const id = estado.idAberto;
+        estado.aberto = null; estado.idAberto = null;
+        mostrarTexto();
+        fecharMenus();
+        $('em-detalhe').hidden = true;
+        $('em-app').classList.remove('em-com-detalhe');
+        for (const b of $('em-lista').querySelectorAll('.em-item.em-ativo')) b.classList.remove('em-ativo');
+        const item = id !== null && linha(id);
+        if (item) item.querySelector('.em-item').focus();
+        else $('em-lista').focus();
+    }
+    // o foco nunca fica perdido: volta ao e-mail aberto na lista, ou à lista
+    function focoNaLista() {
+        const item = estado.idAberto !== null && linha(estado.idAberto);
+        if (item) item.querySelector('.em-item').focus({ preventScroll: true });
+        else $('em-lista').focus({ preventScroll: true });
+    }
+    $('em-fechar-detalhe').addEventListener('click', fecharDetalhe);
+    $('em-voltar').addEventListener('click', fecharDetalhe);
 
     function aviso(texto, forte) {
         const d = el('div', null, 'em-aviso' + (forte ? ' em-aviso-forte' : ''));
@@ -975,56 +1116,159 @@
         d.appendChild(el('p', texto));
         return d;
     }
+    function controles(e) {
+        $('em-controle').hidden = false;
+        for (const b of $('em-status').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.status === e.status));
+        const c = F.categoria(e.categoria);
+        const botaoCat = $('em-categoria-botao');
+        botaoCat.className = 'em-categoria-botao ' + c.classe;
+        botaoCat.replaceChildren(etiquetaCategoria(e.categoria), icone('abrir-lista', 'em-ic-p'));
+        botaoCat.setAttribute('aria-label', 'Categoria: ' + c.nome + '. Corrigir a categoria');
+        // só as 9 de correção manual são opção; a de regra (interno, enviado...) aparece no botão, nunca vira escolha
+        $('em-categorias').replaceChildren(...F.CORRIGIVEIS.map(nome => {
+            const k = F.categoria(nome);
+            const b = botao(null, 'em-cat-opcao ' + k.classe);
+            b.dataset.categoria = nome;
+            b.setAttribute('aria-pressed', String(nome === e.categoria));
+            b.append(icone(k.icone), el('span', k.nome));
+            if (nome === e.categoria) b.appendChild(icone('conferir', 'em-ic-p em-cat-atual'));
+            return b;
+        }));
+        $('em-status-atual').textContent = 'Status ' + (e.status || '—') + (e.status_por ? ', por ' + e.status_por : '') +
+            (e.status_em ? ' em ' + dataHora(e.status_em) : '') +
+            (e.categoria_original && e.categoria_original !== e.categoria ? '. Categoria original da IA: ' + e.categoria_original : '') + '.';
+    }
+    function focarCategoria(passo) {
+        const ops = [...$('em-categorias').querySelectorAll('button')];
+        if (!ops.length) return;
+        const i = ops.indexOf(document.activeElement);
+        const atual = i < 0 ? Math.max(0, ops.findIndex(b => b.getAttribute('aria-pressed') === 'true')) : i;
+        ops[i < 0 ? atual : (atual + passo + ops.length) % ops.length].focus();
+    }
+    $('em-categorias').addEventListener('keydown', ev => {
+        if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') { ev.preventDefault(); focarCategoria(ev.key === 'ArrowDown' ? 1 : -1); }
+    });
+    $('em-categorias').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-categoria]');
+        const e = estado.aberto;
+        if (!b || !e) return;
+        fecharMenus();
+        $('em-categoria-botao').focus();
+        if (b.dataset.categoria !== e.categoria) alterar('categoria', { id: e.id, categoria: b.dataset.categoria });
+    });
+    $('em-status').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-status]');
+        const e = estado.aberto;
+        if (b && e && b.dataset.status !== e.status) alterar('status', { id: e.id, status: b.dataset.status });
+    });
 
+    function cartaoIa(e) {
+        const pct = A.percentual(e.confianca);
+        $('em-ia').hidden = !e.resumo && pct === null && !e.motivo;
+        $('em-ia').classList.toggle('em-ia-baixa', !!e.revisao);
+        $('em-ia-resumo').textContent = e.resumo || 'Sem resumo.';
+        $('em-ia-confianca').hidden = pct === null;
+        if (pct !== null) {
+            $('em-ia-barra').style.setProperty('--em-largura', pct + '%');   // CSSOM: permitido pela CSP
+            $('em-ia-pct').textContent = 'confiança ' + pct + '%';
+        }
+        $('em-ia-motivo').textContent = e.motivo || '';
+        $('em-ia-revisao').hidden = !e.revisao;
+    }
+    function listaAnexos(e) {
+        const anexos = $('em-anexos');
+        if (!(e.anexos || []).length) return;
+        anexos.appendChild(el('h3', 'Anexos', 'em-secao'));
+        const ul = el('ul');
+        for (const a of e.anexos) {
+            const li = el('li');
+            const nome = el('span', null, 'em-anexo-nome');
+            nome.appendChild(icone('anexo', 'em-ic-p'));
+            nome.appendChild(el('span', a.nome || 'anexo sem nome'));
+            const tipo = typeof a.tipo === 'string' ? a.tipo.split('/').pop().slice(0, 24) : '';
+            nome.appendChild(el('span', [tipo, tamanho(a.tamanho)].filter(Boolean).join(', '), 'em-anexo-tamanho em-num'));
+            li.appendChild(nome);
+            const b = botao(null, 'em-botao em-secundario');
+            b.appendChild(icone(a.bloqueado ? 'alerta' : 'baixar', 'em-ic-p'));
+            const rotulo = el('span', a.bloqueado ? 'Bloqueado' : 'Baixar');
+            b.appendChild(rotulo);
+            b.disabled = !!a.bloqueado;
+            if (a.bloqueado) b.title = a.motivo_bloqueio || 'Anexo bloqueado';
+            b.addEventListener('click', () => baixar(e.id, a.id, b, rotulo));
+            li.appendChild(b);
+            ul.appendChild(li);
+        }
+        anexos.appendChild(ul);
+    }
+    function linhaDoTempo(e) {
+        $('em-historico').replaceChildren(...A.historico(e).map(h => {
+            const li = el('li', null, 'em-hist');
+            li.appendChild(el('span', h.texto, 'em-hist-texto'));
+            li.appendChild(el('span', dataHora(h.em) + (h.quem === 'IA' ? ', pela IA' : h.quem ? ', por ' + h.quem : ''), 'em-hist-sub em-num'));
+            return li;
+        }));
+    }
+    function doRemetente(e) {
+        const lista = Array.isArray(e.do_remetente) ? e.do_remetente.filter(o => o && Number.isSafeInteger(o.id)) : [];
+        $('em-outros').hidden = !lista.length;
+        $('em-do-remetente').replaceChildren(...lista.map(o => {
+            const li = el('li');
+            const b = botao(null, 'em-outro');
+            const topo = el('span', null, 'em-outro-topo');
+            topo.appendChild(el('span', dataHora(o.data), 'em-data em-num'));
+            if (o.status && o.status !== 'pendente') topo.appendChild(el('span', o.status, 'em-st-texto'));
+            b.appendChild(topo);
+            b.appendChild(el('span', o.assunto || '(sem assunto)', 'em-assunto-linha'));
+            b.appendChild(etiquetaCategoria(o.categoria));
+            b.addEventListener('click', () => abrir(o.id));
+            li.appendChild(b);
+            return li;
+        }));
+    }
     function mostrarDetalhe(e) {
         $('em-meta').replaceChildren(); $('em-avisos').replaceChildren(); $('em-anexos').replaceChildren();
-        mostrarTexto();
+        const trocou = !estado.aberto || estado.aberto.id !== e.id;
         estado.aberto = e;
+        estado.idAberto = e.id;
+        if (trocou) mostrarTexto();
+        const nome = e.remetente_nome || '';
+        $('em-avatar').textContent = A.iniciais(nome, e.remetente);
+        $('em-rem-nome').textContent = nome || e.remetente || '(sem remetente)';
+        $('em-rem-email').textContent = nome && e.remetente ? e.remetente : '';
+        $('em-copiar-email').hidden = !e.remetente;
+        const rel = A.relativa(e.data);
+        $('em-quando').textContent = (A.porExtenso(e.data) || dataHora(e.data)) + (rel ? ', ' + rel : '');
         $('em-assunto').textContent = e.assunto || '(sem assunto)';
-        meta('De', (e.remetente_nome ? e.remetente_nome + ' ' : '') + '<' + (e.remetente || '') + '>');
         meta('Para', e.destinatarios);
         if (e.cc) meta('Cc', e.cc);
-        meta('Data', dataHora(e.data));
         meta('Caixas', (e.ocorrencias || []).map(o => F.nomeCaixa(o.conta) + ' / ' + o.pasta + (o.removida_em ? ' (removido)' : '')).join('; '));
-        const cat = el('span', null, 'em-meta-categoria');
-        cat.appendChild(etiquetaCategoria(e.categoria));
-        if (e.confianca != null) cat.appendChild(el('span', `confiança ${Math.round(e.confianca * 100)}%`, 'em-num'));
-        meta('Categoria', cat);
-        if (e.resumo) meta('Resumo', e.resumo);
         meta('Autenticação', `SPF ${e.spf || 'ausente'}, DKIM ${e.dkim || 'ausente'}`);
         const avisos = $('em-avisos');
+        if (e.categoria === 'phishing') avisos.appendChild(aviso('Possível golpe (phishing): não abra links, não responda e não baixe anexos. Avise o responsável pela segurança.', true));
+        else if (e.categoria === 'spam') avisos.appendChild(aviso('Classificado como spam: não abra links e não responda. Anexos bloqueados.', true));
         if (e.removido) avisos.appendChild(aviso('Este e-mail foi apagado ou movido em todas as caixas. A central guarda a cópia.'));
-        if (e.categoria === 'phishing' || e.categoria === 'spam') avisos.appendChild(aviso('Classificado como ' + e.categoria + ': não abra links e não responda. Anexos bloqueados.', true));
-        if (e.revisao) avisos.appendChild(aviso('Classificação com baixa confiança: está na fila de revisão.'));
-        const anexos = $('em-anexos');
-        if ((e.anexos || []).length) {
-            anexos.appendChild(el('h3', 'Anexos', 'em-secao'));
-            const ul = el('ul');
-            for (const a of e.anexos) {
-                const li = el('li');
-                const nome = el('span', null, 'em-anexo-nome');
-                nome.appendChild(icone('anexo', 'em-ic-p'));
-                nome.appendChild(el('span', a.nome || 'anexo sem nome'));
-                nome.appendChild(el('span', tamanho(a.tamanho), 'em-anexo-tamanho em-num'));
-                li.appendChild(nome);
-                const b = el('button', null, 'em-botao em-secundario');
-                b.type = 'button';
-                b.appendChild(icone(a.bloqueado ? 'alerta' : 'baixar', 'em-ic-p'));
-                const rotulo = el('span', a.bloqueado ? 'Bloqueado' : 'Baixar');
-                b.appendChild(rotulo);
-                b.disabled = !!a.bloqueado;
-                if (a.bloqueado) b.title = a.motivo_bloqueio || 'Anexo bloqueado';
-                b.addEventListener('click', () => baixar(e.id, a.id, b, rotulo));
-                li.appendChild(b);
-                ul.appendChild(li);
-            }
-            anexos.appendChild(ul);
-        }
+        controles(e);
+        cartaoIa(e);
+        listaAnexos(e);
         if (e.corpo_oculto) $('em-corpo').textContent = 'Corpo oculto: este e-mail traz código de acesso ou senha e não é exibido na central.';
         else $('em-corpo').textContent = e.corpo_texto || '(e-mail sem texto)';
-        $('em-ver-html').hidden = !e.tem_html || e.corpo_oculto;
-        controles(e);
+        if (!$('em-html').hidden) $('em-ver-html').hidden = true;
+        else $('em-ver-html').hidden = !e.tem_html || e.corpo_oculto;
+        linhaDoTempo(e);
+        doRemetente(e);
     }
+
+    async function copiar(texto, oQue) {
+        try {
+            await navigator.clipboard.writeText(texto);
+            avisoFlutuante(oQue + ' copiado.');
+        } catch (erro) {
+            avisoFlutuante('Não foi possível copiar. Selecione o texto e use Ctrl+C.', null, true);
+        }
+    }
+    $('em-copiar-email').addEventListener('click', () => { if (estado.aberto) copiar(estado.aberto.remetente || '', 'Endereço'); });
+    $('em-copiar-assunto').addEventListener('click', () => { if (estado.aberto) copiar(estado.aberto.assunto || '', 'Assunto'); });
+
     async function baixar(id, anexo, botaoAnexo, rotulo) {
         botaoAnexo.disabled = true;
         const texto = rotulo.textContent;
@@ -1033,26 +1277,26 @@
         botaoAnexo.disabled = false;
         rotulo.textContent = texto;
         if (r.cancelado) return;
-        if (!r.sucesso) { avisar(r.erro || 'Não foi possível baixar o anexo.'); return; }
+        if (!r.sucesso) { avisoFlutuante(r.erro || 'Não foi possível baixar o anexo.', null, true); return; }
         const url = r.dados && r.dados.url;
         if (typeof url === 'string' && /^\/emails\/anexo\/[0-9a-f]{64}$/.test(url)) window.location.assign(url);
     }
 
-    // CSP do documento do iframe: nada de rede, nada de script, nada de formulário; links não clicáveis.
-    // O fundo branco vem da regra .em-html de tela.css (--em-papel).
-    const CABECALHO_HTML = '<!DOCTYPE html><html><head><meta charset="utf-8">' +
-        '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src data:; font-src data:; form-action \'none\'">' +
-        '<style>a,area{pointer-events:none!important;cursor:default!important}body{font-family:sans-serif}</style></head><body>';
-
+    // versão formatada: o portal entrega o documento por um endereço de uso único, com CSP própria e fechada
+    // (sem script, sem rede); o iframe continua com sandbox="" (sem scripts e sem mesma origem)
     async function verHtml() {
         const e = estado.aberto;
         if (!e) return;
         const r = await pedir('html', { id: e.id });
         if (r.cancelado || estado.aberto !== e) return;   // outro e-mail foi aberto enquanto esperava
-        if (!r.sucesso) { avisar(r.erro || 'Não foi possível abrir a versão formatada.'); return; }
+        const url = r.sucesso && r.dados && r.dados.url;
+        if (typeof url !== 'string' || !/^\/emails\/html\/[0-9a-f]{64}$/.test(url)) {
+            avisoFlutuante(r.erro || 'Não foi possível abrir a versão formatada.', null, true);
+            return;
+        }
         const quadro = $('em-html');
         quadro.setAttribute('sandbox', '');   // reforço: sem allow-scripts e sem allow-same-origin
-        quadro.srcdoc = CABECALHO_HTML + String((r.dados && r.dados.html) || '') + '</body></html>';
+        quadro.src = url;
         quadro.hidden = false;
         $('em-corpo').hidden = true;
         $('em-ver-html').hidden = true;
@@ -1060,17 +1304,117 @@
     }
     function mostrarTexto() {
         const quadro = $('em-html');
+        if (quadro.getAttribute('src')) quadro.src = 'about:blank';
         quadro.hidden = true;
-        quadro.removeAttribute('srcdoc');
         $('em-corpo').hidden = false;
         $('em-ver-texto').hidden = true;
-        if (estado.aberto && estado.aberto.tem_html && !estado.aberto.corpo_oculto) $('em-ver-html').hidden = false;
+        $('em-ver-html').hidden = !(estado.aberto && estado.aberto.tem_html && !estado.aberto.corpo_oculto);
     }
+
+    // ----- coluna do detalhe: arraste ou setas no divisor; a largura fica no aparelho -----
+    const LARGURA = 'emails_largura_detalhe';
+    function ocupado() {
+        const app = $('em-app');
+        const vao = parseFloat(getComputedStyle(app).columnGap) || 12;
+        const filtros = getComputedStyle($('em-filtros')).display !== 'none' ? $('em-filtros').offsetWidth + vao : 0;
+        return filtros + vao;
+    }
+    const larguraAtual = () => (estado.idAberto !== null ? $('em-detalhe') : $('em-detalhe-vazio')).offsetWidth;
+    function aplicarLargura(px, gravar) {
+        if (estreito.matches) return;
+        const total = $('em-app').clientWidth, outros = ocupado();
+        const w = A.largura(px, total, outros);
+        if (w === null) return;
+        $('em-app').style.setProperty('--em-detalhe', w + 'px');   // CSSOM: permitido pela CSP
+        $('em-app').classList.add('em-largura-fixa');
+        const d = $('em-divisor');
+        d.setAttribute('aria-valuenow', String(w));
+        d.setAttribute('aria-valuemax', String(A.largura(Infinity, total, outros)));
+        if (gravar) local(LARGURA, String(w));
+    }
+    const divisor = $('em-divisor');
+    divisor.addEventListener('pointerdown', ev => {
+        if (ev.button !== 0) return;
+        ev.preventDefault();
+        divisor.setPointerCapture(ev.pointerId);
+        divisor.classList.add('em-arrastando');
+    });
+    divisor.addEventListener('pointermove', ev => {
+        if (divisor.hasPointerCapture(ev.pointerId)) aplicarLargura($('em-app').getBoundingClientRect().right - ev.clientX, false);
+    });
+    function soltar(ev) {
+        if (!divisor.hasPointerCapture(ev.pointerId)) return;
+        divisor.releasePointerCapture(ev.pointerId);
+        divisor.classList.remove('em-arrastando');
+        if ($('em-app').classList.contains('em-largura-fixa')) local(LARGURA, divisor.getAttribute('aria-valuenow'));
+    }
+    divisor.addEventListener('pointerup', soltar);
+    divisor.addEventListener('pointercancel', soltar);
+    // seta para a esquerda alarga o detalhe (o divisor anda para a esquerda); Shift anda mais
+    divisor.addEventListener('keydown', ev => {
+        const passo = ev.shiftKey ? 64 : 16;
+        const alvo = { ArrowLeft: larguraAtual() + passo, ArrowRight: larguraAtual() - passo, Home: 0, End: Infinity }[ev.key];
+        if (alvo === undefined) return;
+        ev.preventDefault();
+        aplicarLargura(alvo, true);
+    });
+    function larguraGuardada() {
+        const w = Number(local(LARGURA));
+        if (w > 0) aplicarLargura(w, false);
+        else divisor.setAttribute('aria-valuenow', String(larguraAtual()));
+    }
+    window.addEventListener('resize', () => { if ($('em-app').classList.contains('em-largura-fixa')) larguraGuardada(); });
+
+    // ----- atalhos (seção 8): fora de campo de texto e sem Ctrl, Alt ou Meta -----
+    function itemFocado() {
+        const li = document.activeElement && document.activeElement.closest ? document.activeElement.closest('#em-lista .em-linha') : null;
+        return li ? Number(li.dataset.id) : null;
+    }
+    function mover(passo) {
+        const itens = [...$('em-lista').querySelectorAll('.em-item')];
+        if (!itens.length) return;
+        let i = itens.indexOf(document.activeElement);
+        if (i < 0 && estado.idAberto !== null) i = itens.findIndex(b => Number(b.dataset.id) === estado.idAberto);
+        itens[i < 0 ? 0 : Math.max(0, Math.min(itens.length - 1, i + passo))].focus();
+    }
+    // r e e: na seleção, se houver; senão no e-mail focado na lista; senão no e-mail aberto
+    function marcarPorAtalho(status) {
+        if (estado.sel.size) return aplicarLote(status);
+        const id = itemFocado() !== null ? itemFocado() : estado.idAberto;
+        if (id === null) return undefined;
+        const atual = estado.dados.get(id) || estado.aberto;
+        if (atual && atual.status === status) return avisoFlutuante('Este e-mail já está ' + status + '.');
+        return alterar('status', { id, status });
+    }
+    function abrirAjuda() {
+        fecharMenus();
+        const volta = document.activeElement;
+        const ajuda = $('em-ajuda');
+        ajuda.addEventListener('close', () => { if (volta && volta.isConnected && volta !== document.body) volta.focus(); else focoNaLista(); }, { once: true });
+        ajuda.showModal();
+    }
+    $('em-abrir-ajuda').addEventListener('click', abrirAjuda);
+    $('em-fechar-ajuda').addEventListener('click', () => $('em-ajuda').close());
+    document.addEventListener('keydown', ev => {
+        if (ev.ctrlKey || ev.metaKey || ev.altKey || estado.bloqueado || ev.defaultPrevented) return;
+        if (emCampo(ev.target) || $('em-ajuda').open) return;
+        if (ev.key === '?') { ev.preventDefault(); abrirAjuda(); return; }
+        if (estado.visao !== 'caixa' || MENUS.some(([, m]) => !$(m).hidden)) return;
+        const acao = { j: () => mover(1), k: () => mover(-1), r: () => marcarPorAtalho('respondido'), e: () => marcarPorAtalho('arquivado'),
+            x: () => {
+                const id = itemFocado() !== null ? itemFocado() : estado.idAberto;
+                if (id !== null && estado.dados.has(id)) selecionar(id, ev.shiftKey, !estado.sel.has(id));
+            } }[ev.key.toLowerCase()];
+        if (!acao || (ev.shiftKey && ev.key.toLowerCase() !== 'x')) return;
+        ev.preventDefault();
+        acao();
+    });
 
     $('em-mais').addEventListener('click', () => listar(true));
     $('em-tentar').addEventListener('click', () => listar(estado.itens > 0 && !!estado.proximo));
     $('em-recarregar').addEventListener('click', () => listar(false));
     $('em-ver-html').addEventListener('click', verHtml);
     $('em-ver-texto').addEventListener('click', mostrarTexto);
+    larguraGuardada();
     mostrarVisao();
 })();

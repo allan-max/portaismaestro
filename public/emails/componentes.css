@@ -188,7 +188,15 @@ mark { background: var(--em-realce); color: inherit; border-radius: 2px; }
   border-radius: var(--em-raio-cartao); background: var(--em-painel-foco); border: 1px solid var(--em-borda); box-shadow: var(--em-sombra);
   animation: em-subir var(--em-lento) var(--em-curva);
 }
+.em-aviso-flutuante .em-botao { min-height: 28px; }
 @keyframes em-subir { from { opacity: 0; transform: translate(-50%, 8px); } }
+
+/* ----- tecla, na ajuda de atalhos ----- */
+kbd {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px;
+  border: 1px solid var(--em-borda-controle); border-radius: 4px; background: var(--em-fundo);
+  color: var(--em-texto); font: 600 var(--em-t-apoio) var(--em-fonte);
+}
 
 /* ----- esqueleto de carregamento ----- */
 .em-esqueleto { display: flex; flex-direction: column; gap: var(--em-e2); }
