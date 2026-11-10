@@ -139,3 +139,10 @@ test('exportar: exceljs só no clique, nunca carregado pela página', () => {
     assert.doesNotMatch(pagina, /exceljs/);
     assert.match(ler('tela.js'), /'\/vendor\/exceljs-4\.4\.0\.min\.js'/);
 });
+
+test('peso: HTML, CSS, JS, ícones e logo da tela abaixo de 250 KB sem compressão (seção 12)', () => {
+    const peso = c => fs.statSync(c).size;
+    const total = peso(path.join(PUBLIC, 'emails.html')) + peso(path.join(PUBLIC, 'img', 'logo-maestro-emails.webp')) +
+        arquivos.reduce((t, a) => t + peso(path.join(PASTA, a)), 0);
+    assert.ok(total < 250000, total + ' bytes');
+});
