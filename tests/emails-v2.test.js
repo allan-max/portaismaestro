@@ -19,7 +19,9 @@ function setup(user = { emails_access: true }, op = {}) {
   const emails = criarEmails({ sessoes,
     io: { to: id => ({ emit: (e, d) => enviados.push({ id, e, d }) }),
       sockets: { adapter: { rooms: new Map([['emails', new Set(['cliente'])]]) } } },
-    obterServico: () => servico, obterSocket: id => (id === 'cliente' ? socket : null), prefsDir: op.prefsDir || pasta() });
+    obterServico: () => servico, obterSocket: id => (id === 'cliente' ? socket : null),
+    // Sem prefsDir, um caminho que nunca é criado: só salvar preferências cria a pasta, e esses testes não salvam.
+    prefsDir: op.prefsDir || path.join(os.tmpdir(), `maestro-prefs-nao-usado-${process.pid}`) });
   emails.conectar(socket);
   const pedir = (acao, params = {}, requestId = 'r1') => handlers.emails_pedir({ requestId, acao, params });
   const trocarUsuario = u => sessoes.set('sessao', JSON.stringify({ expires: Date.now() + 100000, emails_access: true, ...u }));
