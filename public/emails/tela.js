@@ -909,6 +909,7 @@
         if (!r.sucesso) {
             avisar(r.erro || 'Não foi possível carregar os e-mails.');
             $('em-tentar').hidden = false;
+            if (!mais) $('em-exportar').disabled = true;
             // o botão volta, mas o carregamento sozinho espera um clique: sem isso, falha e botão visível viram laço
             if (mais) { estado.parouMais = true; $('em-mais').hidden = !estado.proximo; }
             return;
@@ -944,7 +945,8 @@
         $('em-mais').hidden = !estado.proximo;
         $('em-vazio-lista').hidden = estado.itens > 0;
         const total = Math.max(estado.total, estado.itens);
-        avisar(estado.itens ? (total === 1 ? '1 e-mail' : total.toLocaleString('pt-BR') + ' e-mails') : 'Nenhum e-mail encontrado.');
+        avisar(estado.itens ? (total === 1 ? '1 e-mail' : total.toLocaleString('pt-BR') + ' e-mails') : '0 e-mails');   // o estado vazio, logo abaixo, diz o resto
+        $('em-exportar').disabled = !estado.itens || !!exportacao;
         $('em-ver-resultados').textContent = estado.itens ? 'Ver ' + (total === 1 ? '1 e-mail' : total.toLocaleString('pt-BR') + ' e-mails') : 'Ver e-mails';
     }
     // carregar mais sozinho ao chegar ao fim; o botão continua como reserva
@@ -2047,7 +2049,7 @@
         if (exportacao !== minha) return;
         exportacao = null;
         $('em-exportando').hidden = true;
-        $('em-exportar').disabled = false;
+        $('em-exportar').disabled = !estado.itens;
     }
     async function exportar() {
         if (exportacao) return;
