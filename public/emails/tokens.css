@@ -1,5 +1,5 @@
 /* Central de E-mails: variáveis da tela. Toda cor usada em public/emails/ sai daqui.
-   Um tema novo é trocar este arquivo. Contraste de texto conferido em 4,5:1 sobre o fundo e sobre o painel. */
+   Um tema novo é trocar este arquivo. Contraste de texto conferido em 4,5:1 sobre o fundo, o painel e o painel em foco. */
 :root {
   /* superfícies, em três níveis, separadas por borda de 1 px */
   --em-fundo: #10141b;
@@ -7,7 +7,7 @@
   --em-painel: #1a2230;
   --em-painel-foco: #212b3d;
   --em-borda: #2a3441;
-  --em-borda-controle: #62748a;   /* 3:1 sobre o fundo e sobre o painel */
+  --em-borda-controle: #66788e;   /* 3:1 sobre o fundo, o painel e o painel em foco */
   --em-papel: #ffffff;            /* fundo da versão formatada do e-mail */
 
   /* texto */
@@ -32,20 +32,21 @@
   --em-neutro-fundo: rgba(154, 174, 195, .13);
   --em-brilho-esqueleto: rgba(154, 174, 195, .10);
 
-  /* categorias: cor do texto e do ícone, e a mesma cor a 13 % para o fundo da etiqueta */
-  --em-cat-cotacao: #60a5fa;      --em-cat-cotacao-fundo: rgba(96, 165, 250, .13);
+  /* categorias: cor do texto e do ícone, e a cor de base a 13 % para o fundo da etiqueta (o texto clareia um pouco onde
+     a etiqueta sobre o painel em foco não daria 4,5:1) */
+  --em-cat-cotacao: #65a8fa;      --em-cat-cotacao-fundo: rgba(96, 165, 250, .13);
   --em-cat-pedido: #34d399;       --em-cat-pedido-fundo: rgba(52, 211, 153, .13);
   --em-cat-financeiro: #f4bf68;   --em-cat-financeiro-fundo: rgba(244, 191, 104, .13);
-  --em-cat-cadastro: #a78bfa;     --em-cat-cadastro-fundo: rgba(167, 139, 250, .13);
+  --em-cat-cadastro: #ae94fa;     --em-cat-cadastro-fundo: rgba(167, 139, 250, .13);
   --em-cat-informacao: #22d3ee;   --em-cat-informacao-fundo: rgba(34, 211, 238, .13);
-  --em-cat-coupa: #4fb3bf;        --em-cat-coupa-fundo: rgba(79, 179, 191, .13);
-  --em-cat-interno: #94a3b8;      --em-cat-interno-fundo: rgba(148, 163, 184, .13);
-  --em-cat-enviado: #a1a1aa;      --em-cat-enviado-fundo: rgba(161, 161, 170, .13);
-  --em-cat-login: #8f99fa;        --em-cat-login-fundo: rgba(143, 153, 250, .13);
-  --em-cat-marketing: #f472b6;    --em-cat-marketing-fundo: rgba(244, 114, 182, .13);
-  --em-cat-outros: #9ca3af;       --em-cat-outros-fundo: rgba(156, 163, 175, .13);
+  --em-cat-coupa: #51b4c0;        --em-cat-coupa-fundo: rgba(79, 179, 191, .13);
+  --em-cat-interno: #98a7bb;      --em-cat-interno-fundo: rgba(148, 163, 184, .13);
+  --em-cat-enviado: #a4a4ad;      --em-cat-enviado-fundo: rgba(161, 161, 170, .13);
+  --em-cat-login: #959efa;        --em-cat-login-fundo: rgba(143, 153, 250, .13);
+  --em-cat-marketing: #f579ba;    --em-cat-marketing-fundo: rgba(244, 114, 182, .13);
+  --em-cat-outros: #9fa6b1;       --em-cat-outros-fundo: rgba(156, 163, 175, .13);
   --em-cat-spam: #fb923c;         --em-cat-spam-fundo: rgba(251, 146, 60, .13);
-  --em-cat-phishing: #f87171;     --em-cat-phishing-fundo: rgba(248, 113, 113, .13);
+  --em-cat-phishing: #f97c7c;     --em-cat-phishing-fundo: rgba(248, 113, 113, .13);
   /* não classificado não tem cor: texto discreto e borda tracejada */
 
   /* filtros salvos: as 8 cores de etiqueta, pelo nome que o portal guarda */
