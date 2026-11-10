@@ -467,7 +467,7 @@ a.em-kpi:focus-visible { outline: 2px solid var(--em-destaque); outline-offset: 
   .em-filtros { display: none; }
   .em-folha .em-filtros {
     display: block; position: fixed; z-index: 35; inset: var(--em-topo) 0 0 var(--em-trilho);
-    border-radius: 0; border-width: 1px 0 0; padding-bottom: 0;
+    border-radius: 0; border-width: 1px 0 0; padding-bottom: 0; scroll-padding-bottom: 72px;
   }
   .em-folha .em-form { max-width: 560px; }
   .em-folha .em-so-folha { display: inline-flex; }
@@ -491,8 +491,12 @@ a.em-kpi:focus-visible { outline: 2px solid var(--em-destaque); outline-offset: 
   .em-trilho [data-dica]::after { display: none; }
   .em-principal { padding: calc(var(--em-topo) + var(--em-e3)) var(--em-e3) calc(var(--em-trilho) + var(--em-e3)); }
   .em-detalhe { padding: var(--em-e4); inset: var(--em-topo) 0 var(--em-trilho) 0; }
-  .em-sel { width: 20px; height: 20px; margin-top: 10px; }
-  .em-linha { grid-template-columns: 32px minmax(0, 1fr); }
+  .em-sel { width: 20px; height: 20px; margin: 10px 0 0 10px; }
+  .em-linha { grid-template-columns: 40px minmax(0, 1fr); }
+  .em-abrir-filtros, .em-lote .em-botao { min-height: 40px; }
+  .em-chip-ativo { height: 40px; }
+  .em-copiar { flex: none; width: 40px; height: 40px; }
+  .em-tabela-equiv summary { padding: 11px 0; }
   .em-folha .em-filtros { inset: var(--em-topo) 0 var(--em-trilho) 0; }
   .em-compacta .em-item { grid-template-columns: minmax(0, 1fr) auto; }
   .em-compacta .em-assunto-linha { grid-column: 1 / -1; }
@@ -505,6 +509,11 @@ a.em-kpi:focus-visible { outline: 2px solid var(--em-destaque); outline-offset: 
   .em-meta { grid-template-columns: 80px minmax(0, 1fr); }
   .em-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .em-kpi { padding: var(--em-e3); }
-  .em-visao .em-rolagem .em-tabela { min-width: 640px; }   /* tabela larga rola de lado, sem quebrar palavra por letra */
+  .em-tabela-equiv .em-tabela { min-width: 640px; }   /* a tabela equivalente do gráfico rola de lado (com o teclado também) */
+  /* as outras tabelas viram uma ficha por linha, com o nome da coluna ao lado de cada valor */
+  .em-bloco > .em-rolagem thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .em-bloco > .em-rolagem tr { display: block; padding: var(--em-e2) 0; border-bottom: 1px solid var(--em-borda); }
+  .em-bloco > .em-rolagem td { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: var(--em-e2); padding: 2px 0; border: 0; }
+  .em-bloco > .em-rolagem td::before { content: attr(data-rotulo) / ""; color: var(--em-apoio); }
   .em-legenda-item { min-height: 40px; }
 }

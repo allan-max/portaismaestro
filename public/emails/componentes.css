@@ -57,7 +57,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 /* ----- dica: texto de data-dica, ao passar o mouse ou ao focar pelo teclado ----- */
 [data-dica] { position: relative; }
 [data-dica]::after {
-  content: attr(data-dica); position: absolute; z-index: 60; top: calc(100% + var(--em-e2)); left: 50%;
+  content: attr(data-dica) / ""; position: absolute; z-index: 60; top: calc(100% + var(--em-e2)); left: 50%;
   padding: var(--em-e1) var(--em-e2); border-radius: var(--em-raio-controle);
   background: var(--em-painel-foco); border: 1px solid var(--em-borda); box-shadow: var(--em-sombra);
   color: var(--em-texto); font-size: var(--em-t-apoio); font-weight: 500; line-height: 1.4; white-space: nowrap;
@@ -174,6 +174,7 @@ mark { background: var(--em-realce); color: inherit; border-radius: 2px; }
   position: absolute; z-index: 50; top: calc(100% + var(--em-e2)); right: 0; min-width: 232px; max-width: calc(100vw - var(--em-e6));
   padding: var(--em-e1); border-radius: var(--em-raio-cartao); background: var(--em-painel-foco); border: 1px solid var(--em-borda);
   box-shadow: var(--em-sombra); transform-origin: top right; animation: em-surgir var(--em-medio) var(--em-curva);
+  scroll-margin: var(--em-e4);   /* ao abrir, a rolagem deixa o menu inteiro à vista, mesmo durante a entrada */
 }
 .em-menu-texto { padding: var(--em-e2); color: var(--em-apoio); font-size: var(--em-t-apoio); overflow-wrap: anywhere; }
 .em-menu-texto strong { display: block; color: var(--em-texto); font-size: var(--em-t-corpo); font-weight: 500; }
@@ -230,7 +231,7 @@ tbody tr:last-child td { border-bottom: 0; }
 
 @media (max-width: 767px) {
   :root { --em-alvo: 40px; }
-  .em-segmentado button { min-height: 36px; }
-  .em-chip { min-height: 40px; }
+  .em-segmentado button, .em-chip, .em-link { min-height: 40px; }
+  .em-link { display: inline-flex; align-items: center; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
