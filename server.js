@@ -289,13 +289,29 @@ function obterCaminhoLicitacoesComprasGov() {
 }
 
 // Licitações que o robô ComprasGOV já baixou (Status "baixado"), mais recentes primeiro
-function lerLicitacoesBaixadas() {
+// "17/11/2026 08:00" (horário de Brasília) -> timestamp; null se vier vazio ou em outro formato
+function prazoPropostaEmMs(texto) {
+    const m = /^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?/.exec(String(texto || '').trim());
+    if (!m) return null;
+    const [, dia, mes, ano, hora = '23', minuto = '59'] = m;
+    const ms = Date.parse(`${ano}-${mes}-${dia}T${hora}:${minuto}:00-03:00`);
+    return Number.isNaN(ms) ? null : ms;
+}
+
+// Prazo de proposta já passou? Sem prazo legível a licitação continua aparecendo.
+function licitacaoVencida(l, agora = Date.now()) {
+    const prazo = prazoPropostaEmMs(l && l.PrazoProposta);
+    return prazo !== null && prazo < agora;
+}
+
+function lerLicitacoesBaixadas(agora = Date.now()) {
     const conteudo = fs.readFileSync(obterCaminhoLicitacoesComprasGov(), 'utf-8').replace(/^﻿/, '');
     const json = JSON.parse(conteudo);
     // Formato antigo: array direto. Formato novo (Versao 2): { Versao, Itens: [...] }
     const lista = Array.isArray(json) ? json : (json && Array.isArray(json.Itens) ? json.Itens : []);
     return lista
         .filter(l => l && String(l.Status || '').trim().toLowerCase() === 'baixado')
+        .filter(l => !licitacaoVencida(l, agora))
         .map(l => ({
             numero: String(l.Numero || ''),
             objeto: String(l.Objeto || ''),
