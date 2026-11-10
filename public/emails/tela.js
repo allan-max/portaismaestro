@@ -150,14 +150,11 @@
             enviarFila();
         });
     }
-    // O portal guarda um pedido por ação e por tela e descarta o anterior. Por isso um pedido só sai quando não há,
-    // no portal, pedido da mesma ação de outro grupo que alguém ainda espera; senão aguarda a resposta dele.
+    // o portal guarda um pedido por ação e por tela: um pedido espera a resposta do que está lá, da mesma ação e de outro grupo
     function enviarFila() {
-        for (const p of esperando.values()) {
-            if (p.enviado) continue;
-            let ocupado = false;
-            for (const o of esperando.values()) if (o.enviado && o.acao === p.acao && o.grupo !== p.grupo) ocupado = true;
-            if (ocupado) continue;
+        const todos = [...esperando.values()];
+        for (const p of todos) {
+            if (p.enviado || todos.some(o => o.enviado && o.acao === p.acao && o.grupo !== p.grupo)) continue;
             p.enviado = true;
             socket.emit('emails_pedir', { requestId: p.requestId, acao: p.acao, params: p.params });
         }
