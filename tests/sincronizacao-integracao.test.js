@@ -29,7 +29,9 @@ test('servidor real: botão "Rodar agora" só para admin, vai à fonte certa e v
   const child = spawn(process.env.NODE_DO_SERVIDOR || process.execPath, ['server.js'], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env, HOST: '127.0.0.1', PORT: String(port), ROBO_SECRET: secret, SYNC_NF_TOKEN: tokenNf,
       AUDITORIA_DIR: auditDir, MASTER_SECRET: crypto.randomBytes(32).toString('hex') } });
-  t.after(() => { sockets.forEach(s => s.disconnect()); child.kill(); fs.rmSync(auditDir, { recursive: true, force: true }); });
+  t.after(() => { sockets.forEach(s => s.disconnect()); child.kill();
+    // no Windows o servidor ainda segura a pasta por um instante depois do kill: sem repetir, dá ENOTEMPTY
+    fs.rmSync(auditDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }); });
   await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('Servidor não iniciou.')), 10000);
     child.stdout.on('data', d => { if (String(d).includes('rodando na porta')) { clearTimeout(timer); resolve(); } });

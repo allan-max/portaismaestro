@@ -32,7 +32,8 @@ test('planilha ANMYNA (HTTP) e prints das respostas exigem login', async t => {
     env: { ...process.env, HOST: '127.0.0.1', PORT: String(port), ROBO_SECRET: secret, PRINTS_RESPOSTAS_FILE: arquivoPrints,
       ERROS_RESPOSTAS_FILE: path.join(pasta, 'erros.json'), MASTER_SECRET: crypto.randomBytes(32).toString('hex') },
     stdio: ['ignore', 'pipe', 'pipe'] });
-  t.after(() => { sockets.forEach(s => s.disconnect()); child.kill(); fs.rmSync(pasta, { recursive: true, force: true }); });
+  t.after(() => { sockets.forEach(s => s.disconnect()); child.kill();
+    fs.rmSync(pasta, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }); });   // idem: ENOTEMPTY no Windows
   await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('Servidor não iniciou.')), 10000);
     child.stdout.on('data', d => { if (String(d).includes('rodando na porta')) { clearTimeout(timer); resolve(); } });
