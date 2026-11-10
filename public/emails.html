@@ -100,11 +100,25 @@
     </div>
 
     <section id="em-dash" class="em-visao em-dash" aria-labelledby="em-dash-titulo" hidden>
-      <div class="em-visao-topo">
+      <div class="em-visao-topo em-dash-topo">
         <h2 id="em-dash-titulo">Dashboard</h2>
+        <div id="em-dash-periodo" class="em-segmentado" role="group" aria-label="Período">
+          <button type="button" data-periodo="hoje" aria-pressed="true">Hoje</button>
+          <button type="button" data-periodo="7d" aria-pressed="false">7 dias</button>
+          <button type="button" data-periodo="30d" aria-pressed="false">30 dias</button>
+        </div>
+        <div id="em-dash-escopo" class="em-segmentado" role="group" aria-label="Caixas do dashboard" hidden>
+          <button type="button" data-escopo="minhas" aria-pressed="false">Minhas caixas</button>
+          <button type="button" data-escopo="todas" aria-pressed="false">Todas</button>
+        </div>
         <p id="em-dash-estado" class="em-estado" role="status" aria-live="polite"></p>
       </div>
+      <div id="em-dash-versao" class="em-aviso em-dash-aviso" hidden>
+        <svg class="em-ic em-ic-p" aria-hidden="true"><use href="emails/icones.svg#alerta"></use></svg>
+        <p>O serviço de e-mails está numa versão antiga. O dashboard mostra só os números de antes até ele ser atualizado.</p>
+      </div>
       <div id="em-dash-conteudo"></div>
+      <div id="em-ponto" class="em-ponto-dica" role="tooltip" hidden></div>
     </section>
 
     <section id="em-saude" class="em-visao" aria-labelledby="em-saude-titulo" hidden>
@@ -363,6 +377,7 @@
   <script src="emails/formato.js"></script>
   <script src="emails/filtro.js"></script>
   <script src="emails/acoes.js"></script>
+  <script src="emails/graficos.js"></script>
   <script src="emails/tela.js"></script>
 </body>
 </html>
