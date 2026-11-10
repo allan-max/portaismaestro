@@ -109,3 +109,33 @@ test('tela: nenhum emoji e nenhuma cor fora de tokens.css', () => {
     }
     assert.doesNotMatch(pagina, emoji);
 });
+
+test('animação: só transform e opacity, tempos de tokens.css, e tudo desligado com movimento reduzido', () => {
+    const css = arquivos.filter(a => a.endsWith('.css')).map(ler).join('\n');
+    const quadros = [...css.matchAll(/@keyframes\s+[\w-]+\s*\{((?:[^{}]*\{[^{}]*\})*[^{}]*)\}/g)];
+    assert.ok(quadros.length >= 4);
+    for (const [, corpo] of quadros) {
+        for (const [, prop] of corpo.matchAll(/([a-z-]+)\s*:/g)) assert.ok(['transform', 'opacity'].includes(prop), 'keyframes mexe em ' + prop);
+    }
+    for (const [, valor] of css.matchAll(/(?:^|[;{\s])transition\s*:\s*([^;}]+)/g)) {
+        if (/^none\b/.test(valor.trim())) continue;
+        for (const parte of valor.split(/,(?![^(]*\))/)) {
+            const prop = parte.trim().split(/\s+/)[0];
+            assert.ok(['transform', 'opacity', 'background-color'].includes(prop), 'transição de ' + prop);
+            assert.match(parte, /var\(--em-(rapido|medio|lento)\)/, 'duração fora de tokens.css: ' + parte);
+        }
+    }
+    for (const [, valor] of css.matchAll(/(?:^|[;{\s])animation\s*:\s*([^;}]+)/g)) {
+        if (/^none\b/.test(valor.trim())) continue;
+        assert.match(valor, /var\(--em-[a-z-]+\)/, 'duração fora de tokens.css: ' + valor);
+        assert.doesNotMatch(valor, /\d(ms|s)\b/, 'duração escrita à mão: ' + valor);
+    }
+    assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{ \*, \*::before, \*::after \{ transition: none !important; animation: none !important; \} \}/);
+    // a contagem dos números é JS: também respeita o movimento reduzido
+    assert.match(ler('tela.js'), /matchMedia\('\(prefers-reduced-motion: reduce\)'\)/);
+});
+
+test('exportar: exceljs só no clique, nunca carregado pela página', () => {
+    assert.doesNotMatch(pagina, /exceljs/);
+    assert.match(ler('tela.js'), /'\/vendor\/exceljs-4\.4\.0\.min\.js'/);
+});

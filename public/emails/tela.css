@@ -202,9 +202,9 @@ body { background: var(--em-fundo); min-height: 100vh; }
 
 /* painel de filtros recolhido (tela larga) */
 @media (min-width: 1101px) {
-  .em-sem-filtros { grid-template-columns: minmax(380px, 440px) minmax(0, 1fr); }
-  .em-sem-filtros.em-largura-fixa { grid-template-columns: minmax(380px, 1fr) var(--em-detalhe); }
-  .em-sem-filtros .em-filtros { display: none; }
+  .em-sem-filtros, .em-modo-foco .em-app { grid-template-columns: minmax(380px, 440px) minmax(0, 1fr); }
+  .em-sem-filtros.em-largura-fixa, .em-modo-foco .em-largura-fixa { grid-template-columns: minmax(380px, 1fr) var(--em-detalhe); }
+  .em-sem-filtros .em-filtros, .em-modo-foco .em-filtros { display: none; }
   .em-sem-filtros .em-abrir-filtros { display: inline-flex; }
 }
 
@@ -396,6 +396,56 @@ a.em-kpi:focus-visible { outline: 2px solid var(--em-destaque); outline-offset: 
 .em-situacao { display: inline-flex; align-items: center; gap: var(--em-e1); white-space: nowrap; vertical-align: middle; }
 .em-ok { color: var(--em-ok); }
 
+/* ----- chaves do aviso no menu do usuário ----- */
+.em-chave { justify-content: space-between; }
+.em-chave-linha { display: flex; align-items: center; gap: var(--em-e1); }
+.em-chave-linha .em-link { flex: none; padding: 0 var(--em-e2); font-size: var(--em-t-apoio); }
+.em-chave-trilho { position: relative; flex: none; width: 28px; height: 16px; border-radius: 8px; background: var(--em-borda-controle); }
+.em-chave-trilho::after {
+  content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--em-texto);
+  transition: transform var(--em-rapido) var(--em-curva);
+}
+.em-chave[aria-checked=true] .em-chave-trilho { background: var(--em-destaque); }
+.em-chave[aria-checked=true] .em-chave-trilho::after { transform: translateX(12px); }
+.em-aviso-estado { max-width: 260px; }
+.em-aviso-estado:empty { display: none; }
+
+/* ----- exportar para Excel: progresso enquanto busca as páginas ----- */
+.em-exportando { display: flex; align-items: center; gap: var(--em-e3); padding: 0 var(--em-e1) var(--em-e2); }
+.em-exportar-texto { flex: 0 1 auto; min-width: 0; color: var(--em-apoio); font-size: var(--em-t-apoio); font-variant-numeric: tabular-nums; }
+.em-exportando progress { flex: 1 1 80px; height: 6px; border: 0; border-radius: 3px; background: var(--em-fundo); appearance: none; }
+.em-exportando progress::-webkit-progress-bar { border-radius: 3px; background: var(--em-fundo); }
+.em-exportando progress::-webkit-progress-value { border-radius: 3px; background: var(--em-destaque); }
+.em-exportando .em-link { font-size: var(--em-t-apoio); }
+
+/* ----- modo foco: só a lista e o e-mail aberto (sem trilho e sem filtros) ----- */
+.em-modo-foco .em-trilho, .em-modo-foco .em-abrir-filtros { display: none; }
+.em-modo-foco .em-principal { padding-left: var(--em-e4); }
+.em-icone[aria-pressed=true] { background: var(--em-destaque-fundo); color: var(--em-destaque); }
+
+/* ----- movimento (seção 11): só transform e opacity, tempos de tokens.css; o movimento reduzido desliga tudo ----- */
+@keyframes em-entrar { from { opacity: 0; transform: translateY(4px); } }
+@keyframes em-descer { from { opacity: 0; transform: translateY(-8px); } }
+@keyframes em-da-direita { from { opacity: 0; transform: translateX(16px); } }
+@keyframes em-esmaecer { from { opacity: 0; } }
+@keyframes em-chip-entrar { from { opacity: 0; transform: scale(.92); } }
+@keyframes em-chip-sair { to { opacity: 0; transform: scale(.92); } }
+@keyframes em-crescer-y { from { transform: scaleY(0); } }
+@keyframes em-crescer-x { from { transform: scaleX(0); } }
+/* lista: os primeiros itens entram em escada (o atraso vem do script); o que chegou depois de "Atualizar" desce de cima */
+.em-entrar { animation: em-entrar var(--em-lento) var(--em-curva) backwards; }
+.em-chegou { animation: em-descer var(--em-lento) var(--em-curva) backwards; }
+/* detalhe: desliza da direita ao abrir; trocar de e-mail só esmaece */
+.em-detalhe.em-abrindo { animation: em-da-direita var(--em-lento) var(--em-curva); }
+.em-detalhe.em-trocando { animation: em-esmaecer var(--em-medio) var(--em-curva); }
+/* chips de filtro ativo */
+.em-chip-novo { animation: em-chip-entrar var(--em-medio) var(--em-curva); }
+.em-saindo { animation: em-chip-sair var(--em-rapido) var(--em-curva) forwards; pointer-events: none; }
+/* dashboard, só ao abrir e ao trocar período ou caixas: barras crescem da base e o mapa aparece linha a linha */
+.em-animar .em-colunas .em-serie { transform-box: fill-box; transform-origin: 50% 100%; animation: em-crescer-y var(--em-lento) var(--em-curva) backwards; }
+.em-animar .em-barras .em-serie { transform-box: fill-box; transform-origin: 0 50%; animation: em-crescer-x var(--em-lento) var(--em-curva) backwards; }
+.em-animar .em-calor-linha { animation: em-esmaecer var(--em-medio) var(--em-curva) backwards; }
+
 /* ----- telas menores ----- */
 @media (max-width: 1100px) {
   .em-app, .em-largura-fixa { grid-template-columns: minmax(0, 1fr); height: auto; }
@@ -404,6 +454,7 @@ a.em-kpi:focus-visible { outline: 2px solid var(--em-destaque); outline-offset: 
   .em-lista-area { overflow: visible; }
   /* o e-mail aberto cobre a lista, com "Voltar à lista" no topo */
   .em-detalhe { position: fixed; z-index: 36; inset: var(--em-topo) 0 0 var(--em-trilho); border-radius: 0; border-width: 1px 0 0; overflow: auto; }
+  .em-modo-foco .em-detalhe { left: 0; }
   .em-detalhe-barra { float: none; margin: 0 0 var(--em-e3); }
   .em-graficos { grid-template-columns: minmax(0, 1fr); }
   .em-voltar { display: inline-flex; }
@@ -448,6 +499,9 @@ a.em-kpi:focus-visible { outline: 2px solid var(--em-destaque); outline-offset: 
   .em-compacta .em-data { order: 1; }
   .em-compacta .em-item-rodape { display: none; }
   .em-aviso-flutuante { bottom: calc(var(--em-trilho) + var(--em-e3)); }
+  .em-modo-foco .em-principal { padding-bottom: var(--em-e3); }
+  .em-modo-foco .em-detalhe { bottom: 0; }
+  .em-modo-foco .em-aviso-flutuante { bottom: var(--em-e6); }
   .em-meta { grid-template-columns: 80px minmax(0, 1fr); }
   .em-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .em-kpi { padding: var(--em-e3); }

@@ -71,16 +71,34 @@
         return null;
     }
     const dataHora = F.dataHora, tamanho = F.tamanho;
+    // movimento (seção 11): o CSS zera transição e animação com prefers-reduced-motion; o que é script pergunta aqui
+    const reduzido = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const comMovimento = () => !reduzido.matches;
+    const tempo = nome => parseFloat(getComputedStyle(document.documentElement).getPropertyValue(nome)) || 0;
+    // põe a classe de animação de novo (a mesma animação pode repetir) e tira no fim
+    function animar(e, classe) {
+        if (!comMovimento()) return;
+        e.classList.remove(classe);
+        void e.offsetWidth;   // reinicia a animação
+        e.classList.add(classe);
+        e.addEventListener('animationend', () => e.classList.remove(classe), { once: true });
+    }
     function avisar(texto) { $('em-estado').textContent = texto; }
     // aviso flutuante: confirmação, erro ou alteração com "Desfazer" por 5 s (o prazo para enquanto o foco estiver nele)
-    let avisoTempo = 0, avisoMs = 0;
+    let avisoTempo = 0, avisoMs = 0, avisoVez = 0;
     function esconderAviso() {
         const a = $('em-aviso-flutuante');
         if (a.contains(document.activeElement)) focoNaLista();
-        a.hidden = true;
+        if (a.hidden || !comMovimento()) { a.hidden = true; return; }
+        // sobe ao entrar e desce ao sair; um aviso novo no meio da saída cancela o sumiço
+        const vez = avisoVez;
+        a.classList.add('em-sumindo');
+        a.addEventListener('animationend', () => { if (vez === avisoVez) a.hidden = true; a.classList.remove('em-sumindo'); }, { once: true });
     }
     function avisoFlutuante(texto, aoDesfazer, erro) {
         const a = $('em-aviso-flutuante');
+        avisoVez++;
+        a.classList.remove('em-sumindo');
         const filhos = [icone(erro ? 'alerta' : 'conferir', 'em-ic-p ' + (erro ? 'em-ruim' : 'em-ok')), el('span', texto)];
         if (aoDesfazer) {
             const b = botao('Desfazer', 'em-botao em-secundario em-desfazer');
@@ -121,14 +139,19 @@
 
     const socket = io({ auth: { sessionId: sessao }, transports: ['websocket', 'polling'] });
 
-    function pedir(acao, params) {
+    // `grupo` separa pedidos da mesma ação que não se substituem (a exportação não cancela a lista da tela)
+    function pedir(acao, params, grupo) {
         return new Promise(resolve => {
             const requestId = acao + ':' + (++seq);
+            grupo = grupo || acao;
             // só a resposta mais nova de cada ação interessa; a anterior termina como cancelada
-            for (const [id, p] of esperando) if (p.acao === acao) { esperando.delete(id); p.resolve(CANCELADO); }
-            esperando.set(requestId, { acao, resolve });
+            cancelarPedidos(grupo);
+            esperando.set(requestId, { acao, grupo, resolve });
             socket.emit('emails_pedir', { requestId, acao, params });
         });
+    }
+    function cancelarPedidos(grupo) {
+        for (const [id, p] of esperando) if (p.grupo === grupo) { esperando.delete(id); p.resolve(CANCELADO); }
     }
     socket.on('emails_retorno', r => {
         if (r && r.sucesso && r.acao !== 'preferencias' && r.acao !== 'preferencias_salvar') aoVivo('vivo');
@@ -153,6 +176,7 @@
         if (!estado.iniciado) {
             // as preferências vêm do portal (funcionam com o serviço offline) e dizem quais são "minhas caixas"
             await carregarPreferencias();
+            desenharAvisos();
             estado.iniciado = true;
             mostrarVisao();
         } else if (!estado.itens && estado.visao === 'caixa') listar(false);
@@ -168,12 +192,81 @@
     });
     socket.on('emails_novidade', d => {
         if (d && Number.isSafeInteger(d.atrasados)) mostrarContador(d.atrasados);
-        const n = d && Number.isSafeInteger(d.novos) ? d.novos : 0;
-        if (n <= 0) return;
-        $('em-novidade-texto').textContent = n === 1 ? '1 e-mail novo chegou.' : n + ' e-mails novos chegaram.';
-        $('em-novidade').hidden = false;
-        registrarNovidade(n);
+        const n = d && Number.isSafeInteger(d.novos) && d.novos > 0 ? d.novos : 0;
+        // cotações e pedidos do ciclo: só contagem; serviço antigo não manda e aí não há aviso
+        const aviso = d ? A.textoAviso(d.cotacoes, d.pedidos) : '';
+        if (n) {
+            $('em-novidade-texto').textContent = n === 1 ? '1 e-mail novo chegou.' : n + ' e-mails novos chegaram.';
+            $('em-novidade').hidden = false;
+        }
+        if (n || aviso) registrarNovidade(n, aviso);
+        if (aviso) avisarNovidade(aviso);
     });
+
+    // ----- aviso de cotação e pedido novos: notificação do navegador (só contagem) e som curto, cada um com a sua chave -----
+    const temNotificacao = () => 'Notification' in window;
+    function avisarNovidade(texto) {
+        if (estado.prefs.notificar && temNotificacao() && Notification.permission === 'granted') {
+            try { new Notification('Central de E-mails', { body: texto, tag: 'emails-novidade' }); } catch (e) { /* sem aviso: o sino guarda */ }
+        }
+        if (estado.prefs.som) tocar();
+    }
+    // o navegador só deixa criar ou retomar o áudio dentro de um clique: o clique que liga o som (ou "Testar") prepara
+    let audio = null;
+    function somPronto() {
+        const Contexto = window.AudioContext || window.webkitAudioContext;
+        if (!Contexto) return null;
+        if (!audio) audio = new Contexto();
+        if (audio.state === 'suspended') audio.resume().catch(() => {});
+        return audio;
+    }
+    // dois toques curtos e baixos, gerados na hora (sem arquivo de áudio)
+    function tocar() {
+        const ctx = audio || somPronto();
+        if (!ctx) return;
+        const t = ctx.currentTime, osc = ctx.createOscillator(), vol = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, t);
+        osc.frequency.setValueAtTime(1175, t + 0.09);
+        vol.gain.setValueAtTime(0.0001, t);
+        vol.gain.exponentialRampToValueAtTime(0.12, t + 0.015);
+        vol.gain.exponentialRampToValueAtTime(0.0001, t + 0.26);
+        osc.connect(vol);
+        vol.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.28);
+    }
+    let motivoAviso = '';
+    function desenharAvisos() {
+        const permitido = temNotificacao() && Notification.permission === 'granted';
+        $('em-notificar').setAttribute('aria-checked', String(!!estado.prefs.notificar && permitido));
+        $('em-som').setAttribute('aria-checked', String(!!estado.prefs.som));
+        if (estado.prefs.notificar && !permitido && !motivoAviso) motivoAviso = semPermissao();
+        $('em-aviso-estado').textContent = motivoAviso;
+    }
+    function semPermissao() {
+        if (!temNotificacao() || !window.isSecureContext) return 'Este navegador não mostra avisos nesta página. O sino e o som continuam valendo.';
+        if (Notification.permission === 'denied') return 'O navegador bloqueou os avisos desta página. Para ligar, clique no cadeado ao lado do endereço, permita as notificações e ligue de novo aqui.';
+        return 'O navegador não deu a permissão. Ligue de novo e escolha "Permitir".';
+    }
+    $('em-notificar').addEventListener('click', async () => {
+        let quer = $('em-notificar').getAttribute('aria-checked') !== 'true';
+        motivoAviso = '';
+        if (quer) {
+            // a permissão é pedida só aqui, no clique, nunca ao abrir a tela
+            if (temNotificacao() && Notification.permission === 'default') { try { await Notification.requestPermission(); } catch (e) { /* recusado */ } }
+            if (!temNotificacao() || Notification.permission !== 'granted') { quer = false; motivoAviso = semPermissao(); }
+        }
+        if (quer !== !!estado.prefs.notificar) await salvarPreferencias({ notificar: quer }, 'em-aviso-estado');
+        desenharAvisos();
+    });
+    $('em-som').addEventListener('click', async () => {
+        const quer = !estado.prefs.som;
+        if (quer) somPronto();
+        motivoAviso = '';
+        if (await salvarPreferencias({ som: quer }, 'em-aviso-estado')) { desenharAvisos(); if (quer) tocar(); }
+    });
+    $('em-testar-som').addEventListener('click', () => { somPronto(); tocar(); });
 
     // ----- contadores do trilho -----
     function mostrarContador(n) {
@@ -201,12 +294,12 @@
     // ----- sino: novidades desta sessão -----
     const novidades = [];
     let naoVistas = 0;
-    function registrarNovidade(n) {
-        novidades.unshift({ n, em: new Date() });
+    function registrarNovidade(n, aviso) {
+        novidades.unshift({ n, aviso, em: new Date() });
         if (novidades.length > 10) novidades.length = 10;
         naoVistas += n;
         const c = $('em-sino-num');
-        c.hidden = false;
+        c.hidden = !naoVistas;
         c.textContent = String(naoVistas);
         $('em-sino').setAttribute('aria-label', 'Novidades: ' + naoVistas + (naoVistas === 1 ? ' e-mail novo' : ' e-mails novos'));
         mostrarNovidades();
@@ -217,8 +310,9 @@
         if (!novidades.length) { ul.appendChild(el('li', 'Nenhum e-mail novo desde que a tela foi aberta.', 'em-menu-texto')); return; }
         for (const x of novidades) {
             const li = el('li', null, 'em-menu-texto');
-            li.appendChild(el('strong', x.n === 1 ? '1 e-mail novo' : x.n + ' e-mails novos'));
-            li.appendChild(document.createTextNode('às ' + x.em.toLocaleTimeString('pt-BR', { timeZone: F.FUSO, hour: '2-digit', minute: '2-digit' })));
+            const quando = 'às ' + x.em.toLocaleTimeString('pt-BR', { timeZone: F.FUSO, hour: '2-digit', minute: '2-digit' });
+            li.appendChild(el('strong', x.n ? (x.n === 1 ? '1 e-mail novo' : x.n + ' e-mails novos') : x.aviso));
+            li.appendChild(document.createTextNode(x.n && x.aviso ? x.aviso + ', ' + quando : quando));
             ul.appendChild(li);
         }
     }
@@ -245,7 +339,7 @@
         });
     }
     document.addEventListener('click', ev => { if (!ev.target.closest('.em-ancora')) fecharMenus(); });
-    // Esc fecha uma coisa por vez: menu, folha de filtros, e-mail aberto, seleção. A ajuda (dialog) fecha sozinha.
+    // Esc fecha uma coisa por vez: menu, folha de filtros, e-mail aberto, seleção, modo foco. A ajuda (dialog) fecha sozinha.
     document.addEventListener('keydown', ev => {
         if (ev.key !== 'Escape' || $('em-ajuda').open) return;
         const aberto = MENUS.find(([, m]) => !$(m).hidden);
@@ -254,11 +348,22 @@
         if ($('em-app').classList.contains('em-folha')) { abrirFolha(false); $('em-abrir-filtros').focus(); return; }
         if (emCampo(ev.target) || estado.visao !== 'caixa') return;
         if (estado.idAberto !== null) { ev.preventDefault(); fecharDetalhe(); return; }
-        if (estado.sel.size) { limparSelecao(); focoNaLista(); }
+        if (estado.sel.size) { limparSelecao(); focoNaLista(); return; }
+        if (emFoco()) modoFoco(false);
     });
     mostrarNovidades();
 
-    // ----- densidade    mostrarNovidades();
+    // ----- modo foco: só a lista e o e-mail aberto; f ou o botão liga e desliga, Esc sai. Só na Caixa. -----
+    const emFoco = () => document.body.classList.contains('em-modo-foco');
+    function modoFoco(sim) {
+        document.body.classList.toggle('em-modo-foco', sim);
+        const b = $('em-foco');
+        b.setAttribute('aria-pressed', String(sim));
+        b.setAttribute('aria-label', sim ? 'Sair do modo foco' : 'Modo foco');
+        b.dataset.dica = sim ? 'Sair do modo foco' : 'Modo foco';
+        if (sim) abrirFolha(false);
+    }
+    $('em-foco').addEventListener('click', () => modoFoco(!emFoco()));
 
     // ----- densidade da lista e painel de filtros recolhido: preferências do aparelho -----
     function densidade(valor) {
@@ -347,6 +452,7 @@
         const r = F.rota(location.hash);
         if (r.visao === 'saude' && !admin) r.visao = 'caixa';
         estado.visao = r.visao;
+        if (r.visao !== 'caixa' && emFoco()) modoFoco(false);   // sem trilho não haveria como voltar
         $('em-app').hidden = r.visao !== 'caixa';
         $('em-dash').hidden = r.visao !== 'dashboard';
         $('em-saude').hidden = r.visao !== 'saude';
@@ -495,12 +601,15 @@
         });
         if (document.activeElement !== $('em-busca') && $('em-busca').value.trim() !== f.busca) $('em-busca').value = f.busca;
     }
+    let ativosDesenhados = false;
     function desenharAtivos() {
         const lista = Q.ativos(estado.filtro);
         const caixa = $('em-ativos');
-        caixa.replaceChildren();
+        // o chip que entra aparece com escala; o que sai fica um instante no lugar, sumindo (nunca na primeira vez)
+        const antes = new Map([...caixa.children].filter(x => x.dataset.foco && !x.classList.contains('em-saindo')).map((x, i) => [x.dataset.foco, [x, i]]));
+        const novos = [];
         for (const a of lista) {
-            if (a.fixo) { caixa.appendChild(el('span', a.rotulo, 'em-ativo-nota')); continue; }
+            if (a.fixo) { novos.push(el('span', a.rotulo, 'em-ativo-nota')); continue; }
             const b = botao(null, 'em-chip-ativo');
             b.dataset.acao = 'remover';
             b.dataset.chave = a.chave;
@@ -509,15 +618,30 @@
             b.setAttribute('aria-label', 'Remover o filtro ' + a.rotulo);
             b.appendChild(el('span', a.rotulo, 'em-chip-texto'));
             b.appendChild(icone('fechar', 'em-ic-p'));
-            caixa.appendChild(b);
+            novos.push(b);
         }
         const removiveis = lista.filter(a => !a.fixo && a.chave !== 'sem_ruido').length;
         if (removiveis) {
             const limpar = botao('Limpar tudo', 'em-link');
             limpar.dataset.acao = 'limpar';
             limpar.dataset.foco = 'limpar-tudo';
-            caixa.appendChild(limpar);
+            novos.push(limpar);
         }
+        if (ativosDesenhados && comMovimento()) {
+            const ficam = new Set(novos.map(x => x.dataset.foco).filter(Boolean));
+            for (const x of novos) if (x.dataset.foco && !antes.has(x.dataset.foco)) x.classList.add('em-chip-novo');
+            for (const [foco, [x, i]] of antes) {
+                if (ficam.has(foco)) continue;
+                x.classList.add('em-saindo');
+                x.disabled = true;
+                x.tabIndex = -1;
+                x.setAttribute('aria-hidden', 'true');
+                novos.splice(Math.min(i, novos.length), 0, x);
+                x.addEventListener('animationend', () => x.remove(), { once: true });
+            }
+        }
+        ativosDesenhados = true;
+        caixa.replaceChildren(...novos);
         caixa.hidden = !lista.length || estado.sel.size > 0;
         $('em-num-filtros').hidden = !removiveis;
         $('em-num-filtros').textContent = String(removiveis);
@@ -799,12 +923,20 @@
         }
         const itens = Array.isArray(d.itens) ? d.itens : [];
         const frag = document.createDocumentFragment();
+        const linhas = [];
         for (const e of itens) {
             const dia = Q.grupoDia(e.data);
             if (dia !== estado.ultimoDia) { frag.appendChild(separador(dia)); estado.ultimoDia = dia; }
-            frag.appendChild(itemLista(e));
+            linhas.push(frag.appendChild(itemLista(e)));
         }
         $('em-lista').appendChild(frag);
+        // depois de "Atualizar", só o que chegou desce de cima; numa lista nova, os 12 primeiros entram em escada
+        const antes = estado.idsAntes;
+        estado.idsAntes = null;
+        if (!mais && comMovimento()) {
+            if (antes) for (const li of linhas) { if (!antes.has(Number(li.dataset.id))) li.classList.add('em-chegou'); }
+            else linhas.slice(0, 12).forEach((li, i) => { li.style.animationDelay = i * tempo('--em-passo') + 'ms'; li.classList.add('em-entrar'); });
+        }
         // a seleção fica só com o que está na lista: nada de alterar em lote um e-mail que não se vê
         if (!mais && estado.sel.size) { for (const id of [...estado.sel]) if (!estado.dados.has(id)) estado.sel.delete(id); desenharSelecao(); }
         estado.itens += itens.length;
@@ -988,7 +1120,7 @@
         const W = larguraDe(area), H = 188, esq = 40, base = H - 24, topo = 8;
         const marcas = G.marcas(Math.max(0, ...pilhas.map(p => p.total)));
         const teto = marcas[marcas.length - 1], altura = base - topo;
-        const s = svg('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}` }, 'em-grafico');
+        const s = svg('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}` }, 'em-grafico em-colunas');
         for (const m of marcas) {
             const y = base - G.escala(m, teto, altura) + .5;
             s.appendChild(svg('line', { x1: esq, x2: W, y1: y, y2: y }, m ? 'em-grade' : 'em-grade em-grade-base'));
@@ -1023,7 +1155,7 @@
         const W = larguraDe(area), esq = Math.min(176, Math.round(W * .38)), dir = 48, alt = 30, H = linhas.length * alt;
         const totalDe = l => l.partes.reduce((t, p) => t + p.valor, 0);
         const max = Math.max(1, ...linhas.map(totalDe));
-        const s = svg('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}` }, 'em-grafico');
+        const s = svg('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}` }, 'em-grafico em-barras');
         linhas.forEach((l, i) => {
             const y = i * alt, meio = y + alt / 2;
             const rot = marca(l.href, l.dica);
@@ -1053,11 +1185,13 @@
         G.DIAS.forEach((dia, i) => {
             const y = topo + i * alt;
             s.appendChild(textoSvg(dia.slice(0, 3), { x: 0, y: y + alt / 2 + 3 }, 'em-eixo'));
+            const linha = s.appendChild(svg('g', null, 'em-calor-linha'));   // aparece linha a linha ao abrir
+            linha.style.animationDelay = i * 2 * tempo('--em-passo') + 'ms';
             for (let h = 0; h < 24; h++) {
                 const v = (mapa[i] || [])[h] || 0;
                 const g = marca('', dia + ', ' + String(h).padStart(2, '0') + 'h: ' + G.numero(v) + (v === 1 ? ' e-mail' : ' e-mails'));
                 g.appendChild(svg('rect', { x: esq + h * cel, y, width: Math.max(1, cel - gap), height: alt - gap, rx: 2 }, 'em-calor em-calor-' + G.nivelCalor(v, max)));
-                s.appendChild(g);
+                linha.appendChild(g);
             }
         });
         return s;
@@ -1082,7 +1216,9 @@
             a.appendChild(el('span', o.insuficiente, 'em-kpi-nota'));
             return a;
         }
-        a.appendChild(el('strong', valor, 'em-kpi-valor'));
+        const forte = a.appendChild(el('strong', valor, 'em-kpi-valor'));
+        // número cru para a contagem ao abrir; o texto final é sempre o formatado acima
+        if (typeof o.num === 'number' && Number.isFinite(o.num)) Object.assign(forte.dataset, { num: o.num, casas: o.casas || 0, sufixo: o.sufixo || '' });
         if (o.variacao) {
             const v = el('span', null, 'em-kpi-nota');
             v.append(el('span', o.variacao.texto, 'em-variacao em-' + G.tom(o.variacao.sentido, o.maiorMelhor)), document.createTextNode(' contra o período anterior'));
@@ -1107,21 +1243,21 @@
         const p = d.periodo, ind = d.indicadores, no = { de: p.de, ate: p.ate };
         const pend = (d.pendentes['cotação'] || 0) + (d.pendentes.pedido || 0);
         const agora = grupoIndicadores('Agora', '', [
-            indicador('Pendentes que pedem resposta', G.numero(pend), paraCaixa({ categorias: ['cotação', 'pedido'], estados: ['pendente'] })),
-            indicador('Atrasados, mais de 4 h úteis', G.numero(d.atrasados), paraCaixa({ atrasados: true }), { alerta: d.atrasados > 0 }),
-            indicador('Na fila de revisão', G.numero(d.revisao), paraCaixa({ revisao: true })),
-            indicador('Não classificados', G.numero(d.nao_classificados), paraCaixa({ categorias: [Q.SEM_CLASSIFICACAO] })),
+            indicador('Pendentes que pedem resposta', G.numero(pend), paraCaixa({ categorias: ['cotação', 'pedido'], estados: ['pendente'] }), { num: pend }),
+            indicador('Atrasados, mais de 4 h úteis', G.numero(d.atrasados), paraCaixa({ atrasados: true }), { alerta: d.atrasados > 0, num: d.atrasados }),
+            indicador('Na fila de revisão', G.numero(d.revisao), paraCaixa({ revisao: true }), { num: d.revisao }),
+            indicador('Não classificados', G.numero(d.nao_classificados), paraCaixa({ categorias: [Q.SEM_CLASSIFICACAO] }), { num: d.nao_classificados }),
         ]);
         const pct = ind.pct_no_prazo, tm = ind.tempo_medio;
         const periodo = grupoIndicadores('No período', G.periodoTexto(p) + ', contra ' + G.periodoTexto({ de: p.anterior_de, ate: p.anterior_ate }), [
             indicador('E-mails recebidos', G.numero(ind.recebidos.atual), paraCaixa(no),
-                { variacao: G.variacao(ind.recebidos.atual, ind.recebidos.anterior), maiorMelhor: null, serie: ind.recebidos.serie }),
+                { variacao: G.variacao(ind.recebidos.atual, ind.recebidos.anterior), maiorMelhor: null, serie: ind.recebidos.serie, num: ind.recebidos.atual }),
             indicador('Cotações recebidas', G.numero(ind.cotacoes.atual), paraCaixa(Object.assign({ categorias: ['cotação'] }, no)),
-                { variacao: G.variacao(ind.cotacoes.atual, ind.cotacoes.anterior), maiorMelhor: null, serie: ind.cotacoes.serie }),
+                { variacao: G.variacao(ind.cotacoes.atual, ind.cotacoes.anterior), maiorMelhor: null, serie: ind.cotacoes.serie, num: ind.cotacoes.atual }),
             indicador('Respondidos em até 4 h úteis', G.numero(pct.atual, 1) + '%', paraCaixa(Object.assign({ categorias: ['cotação', 'pedido'] }, no)),
-                { insuficiente: G.suficiente(pct) ? '' : PRECISA_RESPOSTA, variacao: G.variacao(pct.atual, pct.anterior, 'pp'), maiorMelhor: true, serie: pct.serie }),
+                { insuficiente: G.suficiente(pct) ? '' : PRECISA_RESPOSTA, variacao: G.variacao(pct.atual, pct.anterior, 'pp'), maiorMelhor: true, serie: pct.serie, num: pct.atual, casas: 1, sufixo: '%' }),
             indicador('Tempo médio de resposta', G.numero(tm.atual, 1) + ' h úteis', paraCaixa(Object.assign({ categorias: ['cotação', 'pedido'] }, no)),
-                { insuficiente: G.suficiente(tm) ? '' : PRECISA_RESPOSTA, variacao: G.variacao(tm.atual, tm.anterior, 'h'), maiorMelhor: false, serie: tm.serie }),
+                { insuficiente: G.suficiente(tm) ? '' : PRECISA_RESPOSTA, variacao: G.variacao(tm.atual, tm.anterior, 'h'), maiorMelhor: false, serie: tm.serie, num: tm.atual, casas: 1, sufixo: ' h úteis' }),
         ]);
         return [agora, periodo];
     }
@@ -1296,9 +1432,34 @@
         $('em-dash-escopo').hidden = !minhas().length;
         for (const b of $('em-dash-escopo').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.escopo === escopoDash()));
     }
-    function montarDash(ver) {
+    // números contam até o valor (o texto final é o mesmo de sempre); a marca data-contando sai no fim
+    let contaVez = 0;
+    function contarNumeros(alvo) {
+        const nums = [...alvo.querySelectorAll('[data-num]')];
+        if (!nums.length || !comMovimento()) return;
+        const finais = nums.map(s => s.textContent), dur = tempo('--em-lento') || 240, inicio = performance.now();
+        const vez = ++contaVez;
+        alvo.dataset.contando = '1';
+        const passo = agora => {
+            if (vez !== contaVez) return;   // o Dashboard foi redesenhado no meio da contagem
+            const t = Math.min(1, (agora - inicio) / dur);
+            nums.forEach((s, i) => {
+                const casas = Number(s.dataset.casas);
+                s.textContent = t < 1 ? G.numero(G.contagem(Number(s.dataset.num), t, casas), casas) + s.dataset.sufixo : finais[i];
+            });
+            if (t < 1) requestAnimationFrame(passo);
+            else delete alvo.dataset.contando;
+        };
+        requestAnimationFrame(passo);
+    }
+    // animar: só na primeira montagem e na troca de período ou de caixas; nunca na atualização automática, na legenda
+    // nem na troca de largura
+    function montarDash(ver, animar) {
         const d = dash.d, alvo = $('em-dash-conteudo');
         if (!d) return;
+        alvo.classList.toggle('em-animar', !!animar && comMovimento());
+        contaVez++;
+        delete alvo.dataset.contando;
         const v2 = Q.v2(d) && d.periodo && d.indicadores;
         $('em-dash-versao').hidden = !!v2;
         $('em-dash-estado').textContent = 'Atualizado às ' + new Date(d.gerado_em).toLocaleTimeString('pt-BR', { timeZone: F.FUSO, hour: '2-digit', minute: '2-digit' }) +
@@ -1317,6 +1478,7 @@
             depois.forEach(fn => fn());
             alvo.appendChild(tabelaAtrasados(d));
             if (d.saude) alvo.appendChild(tabelaSaude(d));
+            if (animar) contarNumeros(alvo);
         }
         if (ver === 'atrasados' && $('em-atrasados')) { $('em-atrasados').scrollIntoView({ block: 'start' }); $('em-atrasados').focus({ preventScroll: true }); }
     }
@@ -1334,7 +1496,7 @@
         dash.d = r.dados || {};
         dash.em = Date.now();
         contadores(dash.d);
-        montarDash(ver);
+        montarDash(ver, !auto);
     }
     $('em-dash-periodo').addEventListener('click', ev => {
         const b = ev.target.closest('button');
@@ -1512,7 +1674,10 @@
     async function abrir(id) {
         estado.idAberto = id;
         for (const b of $('em-lista').querySelectorAll('.em-item')) b.classList.toggle('em-ativo', Number(b.dataset.id) === id);
+        // abrir desliza da direita; trocar de e-mail com o detalhe já aberto só esmaece
+        const fechado = $('em-detalhe').hidden;
         $('em-detalhe').hidden = false;
+        animar($('em-detalhe'), fechado ? 'em-abrindo' : 'em-trocando');
         $('em-app').classList.add('em-com-detalhe');
         fecharMenus();
         $('em-assunto').textContent = 'Carregando…';
@@ -1847,6 +2012,7 @@
         if (ev.key === '?') { ev.preventDefault(); abrirAjuda(); return; }
         if (estado.visao !== 'caixa' || MENUS.some(([, m]) => !$(m).hidden)) return;
         const acao = { j: () => mover(1), k: () => mover(-1), r: () => marcarPorAtalho('respondido'), e: () => marcarPorAtalho('arquivado'),
+            f: () => modoFoco(!emFoco()),
             x: () => {
                 const id = itemFocado() !== null ? itemFocado() : estado.idAberto;
                 if (id !== null && estado.dados.has(id)) selecionar(id, ev.shiftKey, !estado.sel.has(id));
@@ -1856,9 +2022,102 @@
         acao();
     });
 
+    // ----- exportar para Excel (seção 8): a lista filtrada, até 2.000 linhas, tudo como texto e sem corpo de e-mail -----
+    // o exceljs (quase 1 MB) só carrega no primeiro clique, do próprio portal: a CSP não muda
+    let excel = null, exportacao = null;
+    function carregarExcel() {
+        if (window.ExcelJS) return Promise.resolve(window.ExcelJS);
+        if (!excel) {
+            excel = new Promise((ok, falha) => {
+                const s = document.createElement('script');
+                s.src = '/vendor/exceljs-4.4.0.min.js';
+                s.onload = () => (window.ExcelJS ? ok(window.ExcelJS) : falha(new Error('exceljs')));
+                s.onerror = () => { excel = null; s.remove(); falha(new Error('exceljs')); };
+                document.head.appendChild(s);
+            });
+        }
+        return excel;
+    }
+    const milhar = n => n.toLocaleString('pt-BR');
+    function progresso(texto, feito) {
+        $('em-exportar-texto').textContent = texto;
+        $('em-exportar-barra').value = feito;
+    }
+    function fimExportar(minha) {
+        if (exportacao !== minha) return;
+        exportacao = null;
+        $('em-exportando').hidden = true;
+        $('em-exportar').disabled = false;
+    }
+    async function exportar() {
+        if (exportacao) return;
+        const minha = exportacao = { cancelado: false };
+        const filtro = Q.params(estado.filtro);
+        $('em-exportando').hidden = false;
+        $('em-exportar').disabled = true;
+        progresso('Preparando a exportação…', 0);
+        const carregando = carregarExcel();
+        carregando.catch(() => {});   // a falha é tratada abaixo, quando a planilha for montada
+        try {
+            const linhas = [];
+            let cursor = '', total = 0;
+            do {
+                // grupo próprio: buscar as páginas não cancela a lista que está na tela
+                const r = await pedir('listar', Object.assign({}, filtro, { cursor }), 'exportar');
+                if (minha.cancelado || r.cancelado) return;
+                if (!r.sucesso) { avisoFlutuante(r.erro || 'Não foi possível exportar a lista.', null, true); return; }
+                const d = r.dados || {};
+                if (!cursor && Number.isFinite(d.total)) total = d.total;
+                for (const e of Array.isArray(d.itens) ? d.itens : []) if (linhas.length < A.MAX_EXPORTAR) linhas.push(A.linhaPlanilha(e));
+                cursor = d.proximo || '';
+                total = Math.max(total, linhas.length);
+                const alvo = Math.min(total, A.MAX_EXPORTAR);
+                progresso(total > A.MAX_EXPORTAR ? 'Buscando os primeiros 2.000 de ' + milhar(total) + ' e-mails: ' + milhar(linhas.length)
+                    : 'Buscando e-mails: ' + milhar(linhas.length) + ' de ' + milhar(alvo), alvo ? linhas.length / alvo : 1);
+            } while (cursor && linhas.length < A.MAX_EXPORTAR);
+            if (!linhas.length) { avisoFlutuante('Nenhum e-mail para exportar com esses filtros.'); return; }
+            progresso('Montando a planilha…', 1);
+            const ExcelJS = await carregando;
+            if (minha.cancelado) return;
+            const livro = new ExcelJS.Workbook();
+            const folha = livro.addWorksheet('E-mails', { views: [{ state: 'frozen', ySplit: 1 }] });
+            const larguras = [17, 32, 24, 48, 16, 12, 24, 10, 12, 60];
+            folha.columns = A.COLUNAS_PLANILHA.map((titulo, i) => ({ header: titulo, width: larguras[i], style: { numFmt: '@' } }));
+            folha.getRow(1).font = { bold: true };
+            // cada valor vai como texto (string): o exceljs só grava fórmula quando recebe { formula }, nunca de uma string
+            for (const l of linhas) folha.addRow(l);
+            const blob = new Blob([await livro.xlsx.writeBuffer()], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            if (minha.cancelado) return;
+            const url = URL.createObjectURL(blob);
+            const a = el('a');
+            a.href = url;
+            a.download = 'emails-' + hoje() + '.xlsx';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
+            avisoFlutuante(total > A.MAX_EXPORTAR ? 'Planilha com os primeiros 2.000 de ' + milhar(total) + ' e-mails. Refine o filtro para exportar o resto.'
+                : 'Planilha com ' + (linhas.length === 1 ? '1 e-mail' : milhar(linhas.length) + ' e-mails') + ' baixada.');
+        } catch (erro) {
+            if (!minha.cancelado) avisoFlutuante('Não foi possível montar a planilha. Tente de novo.', null, true);
+        } finally {
+            fimExportar(minha);
+        }
+    }
+    $('em-exportar').addEventListener('click', exportar);
+    $('em-exportar-cancelar').addEventListener('click', () => {
+        const minha = exportacao;
+        if (!minha) return;
+        minha.cancelado = true;
+        cancelarPedidos('exportar');
+        fimExportar(minha);
+        avisoFlutuante('Exportação cancelada.');
+        $('em-exportar').focus();
+    });
+
     $('em-mais').addEventListener('click', () => listar(true));
     $('em-tentar').addEventListener('click', () => listar(estado.itens > 0 && !!estado.proximo));
-    $('em-recarregar').addEventListener('click', () => listar(false));
+    $('em-recarregar').addEventListener('click', () => { estado.idsAntes = new Set(estado.dados.keys()); listar(false); });
     $('em-ver-html').addEventListener('click', verHtml);
     $('em-ver-texto').addEventListener('click', mostrarTexto);
     larguraGuardada();

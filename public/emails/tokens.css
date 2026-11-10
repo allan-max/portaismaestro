@@ -104,6 +104,8 @@
   --em-medio: 180ms;
   --em-lento: 240ms;
   --em-curva: cubic-bezier(.23, 1, .32, 1);
+  --em-pulso: 1.6s;     /* brilho lento do esqueleto de carregamento */
+  --em-passo: 20ms;     /* intervalo da entrada escalonada da lista */
 
   /* véu atrás da janela de atalhos */
   --em-veu: rgba(5, 8, 12, .62);

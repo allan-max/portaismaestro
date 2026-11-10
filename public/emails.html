@@ -57,6 +57,19 @@
               <button type="button" data-densidade="compacta" aria-pressed="false">Compacta</button>
             </div>
           </div>
+          <div class="em-menu-grupo">
+            <p class="em-menu-texto">Aviso de cotação e pedido novos</p>
+            <button type="button" id="em-notificar" class="em-menu-item em-chave" role="switch" aria-checked="false">
+              Aviso do navegador<span class="em-chave-trilho" aria-hidden="true"></span>
+            </button>
+            <div class="em-chave-linha">
+              <button type="button" id="em-som" class="em-menu-item em-chave" role="switch" aria-checked="false">
+                Som do aviso<span class="em-chave-trilho" aria-hidden="true"></span>
+              </button>
+              <button type="button" id="em-testar-som" class="em-link">Testar</button>
+            </div>
+            <p id="em-aviso-estado" class="em-menu-texto em-aviso-estado" role="status"></p>
+          </div>
           <button type="button" id="em-abrir-ajuda" class="em-menu-item">
             <svg class="em-ic em-ic-p" aria-hidden="true"><use href="emails/icones.svg#teclado"></use></svg>Atalhos de teclado
           </button>
@@ -245,6 +258,17 @@
           </button>
           <p id="em-estado" class="em-estado em-lista-estado" role="status" aria-live="polite"></p>
           <button type="button" id="em-tentar" class="em-botao em-secundario" hidden>Tentar de novo</button>
+          <button type="button" id="em-exportar" class="em-icone" aria-label="Exportar a lista para Excel" data-dica="Exportar para Excel" data-dica-lado="fim">
+            <svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#exportar"></use></svg>
+          </button>
+          <button type="button" id="em-foco" class="em-icone" aria-label="Modo foco" aria-pressed="false" data-dica="Modo foco" data-dica-lado="fim">
+            <svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#foco"></use></svg>
+          </button>
+        </div>
+        <div id="em-exportando" class="em-exportando" hidden>
+          <p id="em-exportar-texto" class="em-exportar-texto" role="status"></p>
+          <progress id="em-exportar-barra" max="1" value="0" aria-labelledby="em-exportar-texto"></progress>
+          <button type="button" id="em-exportar-cancelar" class="em-link">Cancelar</button>
         </div>
         <div id="em-ativos" class="em-ativos" role="group" aria-label="Filtros ativos"></div>
         <div id="em-lote" class="em-lote" role="group" aria-label="Ações nos e-mails selecionados" hidden>
@@ -367,7 +391,8 @@
       <dt><kbd>e</kbd></dt><dd>Arquivar</dd>
       <dt><kbd>x</kbd></dt><dd>Selecionar o e-mail; com Shift, o intervalo</dd>
       <dt><kbd>/</kbd></dt><dd>Buscar</dd>
-      <dt><kbd>Esc</kbd></dt><dd>Fechar o menu, o e-mail aberto ou a seleção</dd>
+      <dt><kbd>f</kbd></dt><dd>Modo foco: só a lista e o e-mail aberto</dd>
+      <dt><kbd>Esc</kbd></dt><dd>Fechar o menu, o e-mail aberto, a seleção ou o modo foco</dd>
       <dt><kbd>?</kbd></dt><dd>Esta lista de atalhos</dd>
     </dl>
     <p class="em-dica-texto">Com e-mails selecionados, r e e valem para todos eles. Os atalhos não funcionam enquanto se digita num campo.</p>
