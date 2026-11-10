@@ -519,18 +519,20 @@
         }
 
         const MAX_ITENS_PLANILHA_BASE = 24;
+        // O modelo é o mesmo arquivo do cotafrete (orcamento/modelo/PLANILHA-BASE-v3.xlsx): coluna A = Nº do item
+        // (=ROW()-1, travada), PRODUTO na B, QUANTIDADE na C e as respostas do rodapé na coluna C.
         // Listas suspensas da Planilha Base v3, iguais ao modelo do cotafrete (scripts/validacoes_modelo.py):
         // célula/intervalo, lista na aba LISTAS, avisa em vez de barrar, título e mensagem.
         // Barra o que o robô recusaria; só avisa no que vem do HSE, porque a cópia em LISTAS envelhece.
         const LISTAS_PLANILHA_BASE = [
-            ['B33', 'LISTAS!$A$2:$A$28', true, 'Vendedor', 'Este nome não está na lista. O robô confere no HSE: use o nome exato.'],
-            ['B34', 'LISTAS!$B$2:$B$8', false, 'Forma de pagamento', 'Escolha uma das formas de pagamento da lista.'],
-            ['B35', 'LISTAS!$C$2:$C$23', true, 'Parcelamento', 'Este parcelamento não está na lista. Confira antes de seguir.'],
-            ['B37', 'LISTAS!$E$2:$E$4', false, 'Filial', 'Escolha a filial 1, 2 ou 3 na lista.'],
-            ['B38', 'LISTAS!$H$2:$H$3', false, 'Frete', 'Escolha CIF ou FOB na lista.'],
-            ['M2:M25', 'LISTAS!$D$2:$D$10', false, 'Origem', 'Escolha a origem na lista (0 a 8).'],
-            ['P2:P25', 'LISTAS!$F$2:$F$500', true, 'Grupo', 'Este grupo não está na lista. O produto novo precisa de um grupo do HSE.'],
-            ['Q2:Q25', 'LISTAS!$G$2:$G$1409', true, 'Marca', 'Esta marca não está na lista. O produto novo precisa de uma marca do HSE.']
+            ['C33', 'LISTAS!$A$2:$A$28', true, 'Vendedor', 'Este nome não está na lista. O robô confere no HSE: use o nome exato.'],
+            ['C34', 'LISTAS!$B$2:$B$8', false, 'Forma de pagamento', 'Escolha uma das formas de pagamento da lista.'],
+            ['C35', 'LISTAS!$C$2:$C$23', true, 'Parcelamento', 'Este parcelamento não está na lista. Confira antes de seguir.'],
+            ['C37', 'LISTAS!$E$2:$E$4', false, 'Filial', 'Escolha a filial 1, 2 ou 3 na lista.'],
+            ['C38', 'LISTAS!$H$2:$H$3', false, 'Frete', 'Escolha CIF ou FOB na lista.'],
+            ['N2:N25', 'LISTAS!$D$2:$D$10', false, 'Origem', 'Escolha a origem na lista (0 a 8).'],
+            ['Q2:Q25', 'LISTAS!$F$2:$F$500', true, 'Grupo', 'Este grupo não está na lista. O produto novo precisa de um grupo do HSE.'],
+            ['R2:R25', 'LISTAS!$G$2:$G$1409', true, 'Marca', 'Esta marca não está na lista. O produto novo precisa de uma marca do HSE.']
         ];
 
         async function exportarCotacaoPlanilhaBase(cota) {
@@ -564,15 +566,15 @@
                 // v3: itens nas linhas 2..25 (24 itens); abaixo ficam OBSERVAÇÕES (26) e INFORMAÇÕES ESSENCIAIS (29+)
                 const itens = todosItens.slice(0, MAX_ITENS_PLANILHA_BASE);
 
-                // Linha 2 = item 1, linha 3 = item 2, etc. As fórmulas H–J já vêm no template.
+                // Linha 2 = item 1, linha 3 = item 2, etc. O Nº (coluna A) e as fórmulas I–K já vêm no template.
                 itens.forEach((item, idx) => {
                     const rowNum = 2 + idx;
-                    ws.getCell('A' + rowNum).value = item.produto;
-                    ws.getCell('B' + rowNum).value = item.quantidade;
+                    ws.getCell('B' + rowNum).value = item.produto;
+                    ws.getCell('C' + rowNum).value = item.quantidade;
                 });
 
                 const obs = cota['OBSERVAÇÕES'] || cota['OBSERVACOES'];
-                if (obs) ws.getCell('B26').value = String(obs);
+                if (obs) ws.getCell('C26').value = String(obs);
 
                 // ExcelJS descarta as listas suspensas da v3 (validações x14 que apontam para a aba LISTAS).
                 // Reaplica as mesmas listas do modelo do cotafrete; manter em sincronia com o template.
@@ -1185,10 +1187,10 @@ ${paragraphs.join('\n')}
             // Busca o Prazo de entrega (Dias) nas Informações Essenciais (ex: linha 32 -> B32)
             let prazoGlobal = '';
             for (let r = 26; r <= 45; r++) {
-                const rotulo = String(extrairValorCelulaExcel(ws.getRow(r).getCell(1)) || '').trim().toLowerCase()
+                const rotulo = String(extrairValorCelulaExcel(ws.getRow(r).getCell(colProduto)) || '').trim().toLowerCase()   // rótulo na coluna do PRODUTO (B no modelo com o Nº)
                     .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
                 if (rotulo.includes('prazo')) {
-                    for (let c = 2; c <= 6; c++) {
+                    for (let c = colProduto + 1; c <= colProduto + 5; c++) {
                         const v = extrairValorCelulaExcel(ws.getRow(r).getCell(c));
                         if (v !== null && v !== undefined && String(v).trim() !== '') {
                             const m = String(v).trim().match(/\d+/);
