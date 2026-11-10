@@ -14,7 +14,7 @@
     const SVG = 'http://www.w3.org/2000/svg';
     const PREFS_PADRAO = { minhas_caixas: [], filtros: [], sem_ruido: true, agrupar: false, notificar: false, som: false, equipe: [] };
     const estado = { filtro: Q.novo(), proximo: null, itens: 0, total: 0, aberto: null, contas: [], contagens: null, visao: '',
-        bloqueado: false, iniciado: false, listou: false, carregando: false, seqLista: 0, ultimoDia: '', prefs: PREFS_PADRAO };
+        bloqueado: false, iniciado: false, listou: false, carregando: false, parouMais: false, seqLista: 0, ultimoDia: '', prefs: PREFS_PADRAO };
     const CANCELADO = { sucesso: false, cancelado: true };
     const esperando = new Map();
     let seq = 0;
@@ -732,6 +732,7 @@
             esqueleto();
         }
         estado.carregando = true;
+        estado.parouMais = false;
         $('em-lista').setAttribute('aria-busy', 'true');
         $('em-tentar').hidden = true;
         avisar(mais ? 'Carregando mais e-mails…' : 'Carregando e-mails…');
@@ -745,7 +746,8 @@
         if (!r.sucesso) {
             avisar(r.erro || 'Não foi possível carregar os e-mails.');
             $('em-tentar').hidden = false;
-            if (mais) $('em-mais').hidden = !estado.proximo;
+            // o botão volta, mas o carregamento sozinho espera um clique: sem isso, falha e botão visível viram laço
+            if (mais) { estado.parouMais = true; $('em-mais').hidden = !estado.proximo; }
             return;
         }
         const d = r.dados || {};
@@ -775,7 +777,7 @@
     // carregar mais sozinho ao chegar ao fim; o botão continua como reserva
     if ('IntersectionObserver' in window) {
         new IntersectionObserver(entradas => {
-            if (entradas.some(x => x.isIntersecting) && estado.proximo && !estado.carregando) listar(true);
+            if (entradas.some(x => x.isIntersecting) && estado.proximo && !estado.carregando && !estado.parouMais) listar(true);
         }, { rootMargin: '200px' }).observe($('em-mais'));
     }
     // setas percorrem a lista de e-mail em e-mail
