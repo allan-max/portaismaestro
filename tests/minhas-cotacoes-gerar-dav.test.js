@@ -153,6 +153,10 @@ test('PLANILHA BASE.xlsx e o template embutido sao a v3 (mesmo conteudo)', async
         assert.equal(wb.worksheets[0].getCell('R1').value, 'DESCRIÇÃO NO DAV');
         assert.equal(wb.worksheets[0].getCell('A38').value, 'Frete');
         assert.equal(wb.worksheets[0].getCell('A39').value, 'ITEM 1');
+        // sem Local de entrega: o robô do Cotafrete recusa a planilha que ainda tem o rótulo na linha 30
+        assert.equal(wb.worksheets[0].getCell('A30').value, null);
+        assert.equal(wb.worksheets[0].getRow(30).hidden, true);
+        assert.match(wb.worksheets[0].getCell('A31').value, /^Cliente/);
     }
 });
 
