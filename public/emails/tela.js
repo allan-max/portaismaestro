@@ -146,12 +146,25 @@
             grupo = grupo || acao;
             // só a resposta mais nova de cada ação interessa; a anterior termina como cancelada
             cancelarPedidos(grupo);
-            esperando.set(requestId, { acao, grupo, resolve });
-            socket.emit('emails_pedir', { requestId, acao, params });
+            esperando.set(requestId, { requestId, acao, grupo, params, resolve, enviado: false });
+            enviarFila();
         });
+    }
+    // O portal guarda um pedido por ação e por tela e descarta o anterior. Por isso um pedido só sai quando não há,
+    // no portal, pedido da mesma ação de outro grupo que alguém ainda espera; senão aguarda a resposta dele.
+    function enviarFila() {
+        for (const p of esperando.values()) {
+            if (p.enviado) continue;
+            let ocupado = false;
+            for (const o of esperando.values()) if (o.enviado && o.acao === p.acao && o.grupo !== p.grupo) ocupado = true;
+            if (ocupado) continue;
+            p.enviado = true;
+            socket.emit('emails_pedir', { requestId: p.requestId, acao: p.acao, params: p.params });
+        }
     }
     function cancelarPedidos(grupo) {
         for (const [id, p] of esperando) if (p.grupo === grupo) { esperando.delete(id); p.resolve(CANCELADO); }
+        enviarFila();
     }
     socket.on('emails_retorno', r => {
         if (r && r.sucesso && r.acao !== 'preferencias' && r.acao !== 'preferencias_salvar') aoVivo('vivo');
@@ -162,6 +175,7 @@
             return;
         }
         esperando.delete(r.requestId);
+        enviarFila();
         // nas preferências, SEM_PERMISSAO é "filtro da equipe só para administrador", não falta de acesso à tela
         if (r.codigo === 'SEM_PERMISSAO' && p.acao !== 'preferencias_salvar') {
             telaAcesso('Acesso restrito', 'Você não tem o acesso "E-mails". Peça a um administrador do Maestro.');
