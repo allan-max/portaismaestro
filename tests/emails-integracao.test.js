@@ -88,7 +88,8 @@ test('servidor real: token do serviço, permissão emails_access, offline, respo
     const pedidos = [];
     servico.on('emails_pedido', p => {
       pedidos.push(p);
-      if (p.acao === 'anexo') servico.emit('emails_resposta', { id: p.id, sucesso: true, dados: { nome: 'lista.pdf', conteudo: Buffer.from('%PDF-1.4').toString('base64') } });
+      if (p.acao === 'html') servico.emit('emails_resposta', { id: p.id, sucesso: true, dados: { html: '<p style="color:red">Oi</p><script>x()</script>' } });
+      else if (p.acao === 'anexo') servico.emit('emails_resposta', { id: p.id, sucesso: true, dados: { nome: 'lista.pdf', conteudo: Buffer.from('%PDF-1.4').toString('base64') } });
       else servico.emit('emails_resposta', { id: p.id, sucesso: true, dados: { itens: [{ id: 1, assunto: '<script>alert(1)</script>' }], proximo: null } });
     });
 
@@ -109,6 +110,23 @@ test('servidor real: token do serviço, permissão emails_access, offline, respo
     assert.equal(baixado.headers['content-type'], 'application/octet-stream');
     assert.equal(baixado.headers['x-content-type-options'], 'nosniff');
     assert.equal((await baixar(`http://127.0.0.1:${porta}${anexo.dados.url}`)).status, 404); // uso único
+
+    // versão formatada: documento por endereço de uso único, com CSP própria e fechada
+    r = evento(leitora.socket, 'emails_retorno'); leitora.socket.emit('emails_pedir', { requestId: 'h', acao: 'html', params: { id: 1 } });
+    const html = await r;
+    assert.match(html.dados.url, /^\/emails\/html\/[0-9a-f]{64}$/);
+    const doc = await baixar(`http://127.0.0.1:${porta}${html.dados.url}`);
+    assert.equal(doc.status, 200);
+    assert.equal(doc.headers['content-type'], 'text/html; charset=utf-8');
+    assert.equal(doc.headers['content-security-policy'], "default-src 'none'; style-src 'unsafe-inline'; img-src data:; " +
+      "font-src data:; form-action 'none'; base-uri 'none'; frame-ancestors 'self'; sandbox");
+    assert.equal(doc.headers['x-content-type-options'], 'nosniff');
+    assert.equal(doc.headers['cache-control'], 'no-store');
+    assert.match(doc.corpo.toString(), /<p style="color:red">Oi<\/p>/);
+    const segunda = await baixar(`http://127.0.0.1:${porta}${html.dados.url}`);
+    assert.equal(segunda.status, 404);                                       // uso único
+    assert.match(segunda.headers['content-security-policy'], /^default-src 'none'/);
+    assert.equal((await baixar(`http://127.0.0.1:${porta}/emails/html/${'0'.repeat(64)}`)).status, 404);
 
     // serviço cai: próxima ação recebe FONTE_OFFLINE
     servico.disconnect();

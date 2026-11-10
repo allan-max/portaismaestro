@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { criarEmails, sanearListar } = require('../lib/emails');
+const { criarEmails, sanearListar, CSP_HTML_EMAIL } = require('../lib/emails');
 const { criarPreferencias } = require('../lib/emails-preferencias');
 
 // Sem t.after (não existe no Node 16.20.2 do servidor): cada teste limpa o que criou.
@@ -21,7 +21,8 @@ function setup(user = { emails_access: true }, op = {}) {
       sockets: { adapter: { rooms: new Map([['emails', new Set(['cliente'])]]) } } },
     obterServico: () => servico, obterSocket: id => (id === 'cliente' ? socket : null),
     // Sem prefsDir, um caminho que nunca é criado: só salvar preferências cria a pasta, e esses testes não salvam.
-    prefsDir: op.prefsDir || path.join(os.tmpdir(), `maestro-prefs-nao-usado-${process.pid}`) });
+    prefsDir: op.prefsDir || path.join(os.tmpdir(), `maestro-prefs-nao-usado-${process.pid}`),
+    ...(op.anexoTtlMs ? { anexoTtlMs: op.anexoTtlMs } : {}) });
   emails.conectar(socket);
   const pedir = (acao, params = {}, requestId = 'r1') => handlers.emails_pedir({ requestId, acao, params });
   const trocarUsuario = u => sessoes.set('sessao', JSON.stringify({ expires: Date.now() + 100000, emails_access: true, ...u }));
@@ -186,4 +187,56 @@ test('preferências: arquivo corrompido não derruba e fica guardado; gravação
       e => e.codigo === 'PREFERENCIAS_GRANDES');
     assert.equal(JSON.parse(fs.readFileSync(arquivo, 'utf8')).usuarios['nova@example.test'], undefined);   // nada gravado
   } finally { apagar(dir); }
+});
+
+test('html: vira endereço de uso único com documento fechado; nada de HTML pelo socket', () => {
+  const s = setup();
+  s.pedir('html', { id: 7 });
+  const corpo = '<p style="color:#c00">Olá</p><script>window.__xss=1</script>';
+  s.emails.receber('servico', { id: s.enviados[0].d.id, sucesso: true, dados: { html: corpo } });
+  const r = s.ultima().d;
+  assert.equal(r.sucesso, true);
+  assert.deepEqual(Object.keys(r.dados), ['url']);                      // o HTML do e-mail não volta ao navegador pelo socket
+  assert.match(r.dados.url, /^\/emails\/html\/[0-9a-f]{64}$/);
+  const token = r.dados.url.split('/').pop();
+  assert.equal(s.emails.retirarAnexo(token), null);                     // token de HTML não serve de anexo
+  const doc = s.emails.retirarHtml(token);
+  assert.match(doc, /^<!DOCTYPE html><html><head><meta charset="utf-8">/);
+  assert.ok(doc.includes(corpo));                                       // quem barra o script é a CSP da rota e o sandbox
+  assert.match(doc, /a,area\{pointer-events:none/);
+  assert.equal(s.emails.retirarHtml(token), null);                      // uso único
+  for (const t of ['', '../x', 'A'.repeat(64), token + '0', null, 7]) assert.equal(s.emails.retirarHtml(t), null);
+  // a CSP que a rota usa: sem script, sem rede, só estilo inline e imagens e fontes data:
+  assert.equal(CSP_HTML_EMAIL, "default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; " +
+    "form-action 'none'; base-uri 'none'; frame-ancestors 'self'; sandbox");
+  s.emails.fechar();
+});
+
+test('html: vale 60 s, tamanho máximo, limite em memória e erro do serviço passa adiante', () => {
+  const s = setup();
+  s.pedir('html', { id: 1 });
+  s.emails.receber('servico', { id: s.enviados[0].d.id, sucesso: true, dados: { html: 'x'.repeat(5 * 1024 * 1024 + 1) } });
+  assert.equal(s.ultima().d.codigo, 'HTML_GRANDE');
+  s.pedir('html', { id: 1 });
+  s.emails.receber('servico', { id: s.enviados[1].d.id, sucesso: true, dados: { html: 42 } });
+  assert.equal(s.ultima().d.sucesso, true);                             // não é texto: documento vazio, sem quebrar
+  assert.ok(s.emails.retirarHtml(s.ultima().d.dados.url.split('/').pop()).endsWith('<body></body></html>'));
+  s.pedir('html', { id: 1 });
+  s.emails.receber('servico', { id: s.enviados[2].d.id, sucesso: false, codigo: 'CORPO_OCULTO', erro: 'Oculto' });
+  assert.equal(s.ultima().d.codigo, 'CORPO_OCULTO');
+  const urls = [];
+  for (let i = 0; i < 9; i++) {
+    s.pedir('html', { id: 1 }, 'h' + i);
+    s.emails.receber('servico', { id: s.enviados.at(-1).d.id, sucesso: true, dados: { html: '<p>' + i + '</p>' } });
+    urls.push(s.ultima().d);
+  }
+  assert.equal(urls.filter(d => d.sucesso).length, 8);
+  assert.equal(urls.at(-1).codigo, 'OCUPADO');
+  s.emails.fechar();
+  // depois do prazo o endereço some
+  const curto = setup({ emails_access: true }, { anexoTtlMs: 20 });
+  curto.pedir('html', { id: 1 });
+  curto.emails.receber('servico', { id: curto.enviados[0].d.id, sucesso: true, dados: { html: '<p>a</p>' } });
+  const token = curto.ultima().d.dados.url.split('/').pop();
+  return new Promise(res => setTimeout(() => { assert.equal(curto.emails.retirarHtml(token), null); curto.emails.fechar(); res(); }, 60));
 });
