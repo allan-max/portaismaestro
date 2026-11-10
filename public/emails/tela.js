@@ -7,7 +7,7 @@
     const F = window.EmailsFormato;
     const $ = id => document.getElementById(id);
     const sessao = localStorage.getItem('maestro_session');
-    // só arrumação da tela: o dado de administrador ainda chega a todos e o corte é feito no servidor
+    // só arrumação da tela: o servidor já não manda o dado de administrador (gasto, saúde) a quem não é
     const admin = localStorage.getItem('maestro_admin') === 'true';
     const SVG = 'http://www.w3.org/2000/svg';
     const estado = { filtros: {}, proximo: null, itens: 0, total: 0, aberto: null, contas: [], visao: '', bloqueado: false };
@@ -433,7 +433,7 @@
         const t = d.tempo_medio_resposta;
         kpis.appendChild(kpi('tempo médio de resposta' + (t.n ? ' (' + t.n + ' respostas)' : ''),
             t.horas_uteis == null ? 'sem dados' : t.horas_uteis.toLocaleString('pt-BR') + ' h úteis'));
-        kpis.appendChild(kpi('gasto de IA no mês' + (d.gasto_mes.pausado ? ', classificação pausada' : ''),
+        if (d.gasto_mes) kpis.appendChild(kpi('gasto de IA no mês' + (d.gasto_mes.pausado ? ', classificação pausada' : ''),
             'US$ ' + d.gasto_mes.usd.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' de ' + d.gasto_mes.teto.toLocaleString('pt-BR', { minimumFractionDigits: 2 }), d.gasto_mes.pausado));
         alvo.appendChild(kpis);
         const graficos = el('div', null, 'em-graficos');
@@ -443,7 +443,7 @@
         alvo.appendChild(tabela('Atrasados', ['Recebido', 'Categoria', 'Remetente', 'Assunto', 'Horas úteis'],
             d.lista_atrasados.map(a => [dataHora(a.data), etiquetaCategoria(a.categoria), a.remetente || '', a.assunto || '', F.decimal(a.horas_uteis)]),
             'em-atrasados', 'Nenhuma cotação ou pedido atrasado.'));
-        alvo.appendChild(tabelaSaude(d));
+        if (d.saude) alvo.appendChild(tabelaSaude(d));
         if (ver === 'atrasados') { $('em-atrasados').scrollIntoView({ block: 'start' }); $('em-atrasados').focus({ preventScroll: true }); }
     }
     async function carregarSaude() {
@@ -454,6 +454,7 @@
         alvo.replaceChildren();
         if (!r.sucesso) { $('em-saude-estado').textContent = r.erro || 'Não foi possível carregar a saúde das caixas.'; return; }
         contadores(r.dados);
+        if (!r.dados.saude) { $('em-saude-estado').textContent = 'A saúde das caixas é só para administrador.'; return; }
         $('em-saude-estado').textContent = 'Atualizado em ' + dataHora(r.dados.gerado_em);
         alvo.appendChild(tabelaSaude(r.dados));
     }
