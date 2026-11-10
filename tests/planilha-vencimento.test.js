@@ -44,11 +44,14 @@ test('preserva menu, painel, robôs e coluna NF da versão boa 43b6c21', () => {
         .replace(/        <a id="aba-cotacoes-vendedores"[^\n]*<\/a>\n/, '');
     // Hashes dos blocos originais em 43b6c21:public/planilha_vale.html.
     const blocks = [
-        // be085d4 e seguintes: links de Minhas Cotações e Planilha Anmyna no menu; o resto do bloco segue igual a 43b6c21
-        ['<body>', '    <div id="menu-filtro-periodo"', '9e073e406be38580d7d58db5ddaf4a0eaf840451541c06b84e250ea5b0889e6f'],
-        ['    <div id="modal-sync-nf"', '    <script src=', 'bd4b84956e4f8194c6c8f43c5276dbdb781323bf3720486823cf27fe05d7a639'],
+        // be085d4 e seguintes: links de Minhas Cotações e Planilha Anmyna no menu.
+        // 917312d/aad96f3: botão Voltar do admin (id btn-voltar-planilha + script). O resto do bloco segue igual a 43b6c21
+        ['<body>', '    <div id="menu-filtro-periodo"', '9184c4f4257e6439baa0324b9185cc9b3fde71672482a5fa061da049cdda0ec4'],
+        // 6f0f5b4: o campo do vendedor vira o seletor (div.vend-multi no lugar do input de texto)
+        ['    <div id="modal-sync-nf"', '    <script src=', 'cc523831931eead5a8868d8fd2cc920208c70d39d48f635a55551d40b028549b'],
         // b34566a: manterTipo. 86bfde6: sessionAtual sobe para o início da página. Sincronização, conferência e 61ab1b9 mudam o bloco.
-        ['        const socket = io({ auth: { sessionId', '        window.filteredCotacoes = [];', 'd2abbae59e0149f71a2eb880c1bd48fc20efb9d4023e2122f384ed95de09c4a8'],
+        // 6f0f5b4: seletor de vendedores (ligarSeletorVendedores, lerVendedores, definirVendedores, htmlSeletorVendedores)
+        ['        const socket = io({ auth: { sessionId', '        window.filteredCotacoes = [];', '07ff2707f9bdd4e640f71beb70dc5bb2ce6f775612d90ccdfd0fd73e1723d7a8'],
         ['        window.pageCota = 0;', '    // Add logic for global search', '5867e3e29e2e3a5fd01256be82324722f5388dd05c7d10d5344329b09f1890ff']
     ];
     for (const [start, end, expected] of blocks) {
