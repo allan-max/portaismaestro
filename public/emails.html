@@ -6,94 +6,194 @@
   <!-- CSP própria: o conteúdo dos e-mails é hostil e a sessão fica no localStorage. Nada inline. -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" />
   <meta name="referrer" content="no-referrer" />
+  <meta name="color-scheme" content="dark" />
   <title>E-mails — Maestro</title>
   <link rel="icon" type="image/png" href="favicon-32x32.png" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="dashboard-cotacoes/style.css" />
+  <link rel="stylesheet" href="emails/tokens.css" />
+  <link rel="stylesheet" href="emails/componentes.css" />
   <link rel="stylesheet" href="emails/tela.css" />
 </head>
 <body>
   <a href="#em-lista" class="skip-link">Pular para a lista de e-mails</a>
-  <header class="em-topo">
-    <a class="em-marca" href="index.html?portais=1">MAESTRO</a>
-    <a class="em-voltar" href="index.html?portais=1">Voltar ao portal</a>
+
+  <header id="em-topo" class="em-topo">
+    <a class="em-marca" href="index.html?portais=1" aria-label="Maestro: voltar ao portal">
+      <img src="img/logo-maestro-emails.webp" alt="" width="38" height="28" />
+    </a>
     <h1 class="em-titulo">Central de E-mails</h1>
-    <span id="em-usuario" class="em-usuario"></span>
+    <div id="em-busca-global" class="em-busca-global" role="search">
+      <svg class="em-ic em-ic-p" aria-hidden="true"><use href="emails/icones.svg#buscar"></use></svg>
+      <label for="em-busca" class="em-sr">Buscar e-mails</label>
+      <input id="em-busca" form="em-form" class="em-entrada" type="search" maxlength="200" autocomplete="off" placeholder="Buscar por assunto, remetente ou texto…" />
+    </div>
+    <div class="em-topo-acoes">
+      <button type="button" id="em-abrir-busca" class="em-icone em-so-celular" aria-label="Buscar" aria-expanded="false" aria-controls="em-busca-global">
+        <svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#buscar"></use></svg>
+      </button>
+      <span id="em-ao-vivo" class="em-ao-vivo" data-estado="conectando" role="status">
+        <span class="em-ponto" aria-hidden="true"></span><span id="em-ao-vivo-texto">Conectando</span>
+      </span>
+      <span class="em-ancora">
+        <button type="button" id="em-sino" class="em-icone" aria-label="Novidades" data-dica="Novidades" aria-expanded="false" aria-controls="em-menu-sino">
+          <svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#sino"></use></svg>
+          <span id="em-sino-num" class="em-contador em-contador-destaque em-sino-num" hidden></span>
+        </button>
+        <div id="em-menu-sino" class="em-menu" hidden>
+          <p class="em-secao em-menu-titulo">Novidades desta sessão</p>
+          <ul id="em-novidades" class="em-novidades"></ul>
+        </div>
+      </span>
+      <span class="em-ancora">
+        <button type="button" id="em-usuario-botao" class="em-icone" aria-label="Menu do usuário" data-dica="Usuário" data-dica-lado="fim" aria-expanded="false" aria-controls="em-menu-usuario">
+          <svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#usuario"></use></svg>
+        </button>
+        <div id="em-menu-usuario" class="em-menu" hidden>
+          <p class="em-menu-texto"><strong id="em-usuario"></strong>Conectado ao Maestro</p>
+          <a class="em-menu-item" href="index.html?portais=1">
+            <svg class="em-ic em-ic-p" aria-hidden="true"><use href="emails/icones.svg#voltar"></use></svg>Voltar ao portal
+          </a>
+        </div>
+      </span>
+    </div>
   </header>
 
-  <div id="em-acesso" class="em-acesso" hidden>
-    <h2 id="em-acesso-titulo">Verificando acesso…</h2>
-    <p id="em-acesso-texto"></p>
-    <a class="em-botao" href="index.html">Ir para o login do Maestro</a>
-  </div>
-
-  <nav id="em-abas" class="em-abas" aria-label="Seções da central">
-    <button type="button" id="em-aba-caixa" aria-pressed="true">Caixa unificada</button>
-    <button type="button" id="em-aba-dash" aria-pressed="false">Dashboard <span id="em-contador" class="em-contador" hidden></span></button>
+  <nav id="em-trilho" class="em-trilho" aria-label="Seções da central">
+    <a id="em-ir-caixa" class="em-trilho-item" href="#caixa" data-dica="Caixa" data-dica-lado="direita">
+      <svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#caixa"></use></svg><span class="em-trilho-rotulo">Caixa</span>
+    </a>
+    <a id="em-ir-dash" class="em-trilho-item" href="#dashboard" data-dica="Dashboard" data-dica-lado="direita">
+      <svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#dashboard"></use></svg><span class="em-trilho-rotulo">Dashboard</span>
+    </a>
+    <a id="em-ir-revisao" class="em-trilho-item" href="#caixa?revisao=1" data-dica="Fila de revisão" data-dica-lado="direita">
+      <svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#revisao"></use></svg><span class="em-trilho-rotulo">Revisão</span>
+      <span id="em-cont-revisao" class="em-contador em-trilho-num" hidden></span>
+    </a>
+    <a id="em-ir-atrasados" class="em-trilho-item" href="#dashboard?ver=atrasados" data-dica="Atrasados" data-dica-lado="direita">
+      <svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#relogio"></use></svg><span class="em-trilho-rotulo">Atrasados</span>
+      <span id="em-contador" class="em-contador em-contador-erro em-trilho-num" hidden></span>
+    </a>
+    <a id="em-ir-filtros" class="em-trilho-item" href="#filtros" data-dica="Filtros salvos" data-dica-lado="direita">
+      <svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#filtros-salvos"></use></svg><span class="em-trilho-rotulo">Filtros</span>
+    </a>
+    <a id="em-ir-saude" class="em-trilho-item" href="#saude" data-dica="Saúde das caixas" data-dica-lado="direita" hidden>
+      <svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#saude"></use></svg><span class="em-trilho-rotulo">Saúde</span>
+    </a>
   </nav>
-  <section id="em-dash" class="em-dash" aria-label="Dashboard" hidden>
-    <p id="em-dash-estado" class="em-estado" role="status" aria-live="polite"></p>
-    <div id="em-dash-conteudo"></div>
-  </section>
 
-  <div id="em-app" class="em-app">
-    <aside class="em-filtros" aria-label="Filtros">
-      <form id="em-form" role="search">
-        <label for="em-busca">Buscar</label>
-        <input id="em-busca" type="search" maxlength="200" autocomplete="off" placeholder="Assunto, remetente ou texto" />
-        <label for="em-categoria">Categoria</label>
-        <select id="em-categoria">
-          <option value="">Todas</option>
-          <option>cotação</option><option>pedido</option><option>financeiro/NF</option><option>cadastro</option>
-          <option>informação</option><option>marketing</option><option>spam</option><option>phishing</option>
-          <option>outros</option><option>notificação Coupa</option><option>interno</option><option>enviado</option>
-          <option>código de login</option><option value="(não classificado)">Não classificado</option>
-        </select>
-        <label for="em-status">Status</label>
-        <select id="em-status">
-          <option value="">Todos</option><option>pendente</option><option>respondido</option><option>arquivado</option>
-        </select>
-        <label for="em-conta">Caixa</label>
-        <select id="em-conta"><option value="">Todas</option></select>
-        <label for="em-de">De</label>
-        <input id="em-de" type="date" />
-        <label for="em-ate">Até</label>
-        <input id="em-ate" type="date" />
-        <label class="em-check"><input id="em-revisao" type="checkbox" /> Só fila de revisão</label>
-        <div class="em-acoes">
-          <button type="submit" class="em-botao">Filtrar</button>
-          <button type="button" id="em-limpar" class="em-botao em-secundario">Limpar</button>
+  <main id="em-principal" class="em-principal">
+    <div id="em-acesso" class="em-acesso" hidden>
+      <svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#alerta"></use></svg>
+      <h2 id="em-acesso-titulo">Verificando acesso…</h2>
+      <p id="em-acesso-texto"></p>
+      <a class="em-botao" href="index.html">Ir para o login do Maestro</a>
+    </div>
+
+    <section id="em-dash" class="em-visao em-dash" aria-labelledby="em-dash-titulo" hidden>
+      <div class="em-visao-topo">
+        <h2 id="em-dash-titulo">Dashboard</h2>
+        <p id="em-dash-estado" class="em-estado" role="status" aria-live="polite"></p>
+      </div>
+      <div id="em-dash-conteudo"></div>
+    </section>
+
+    <section id="em-saude" class="em-visao" aria-labelledby="em-saude-titulo" hidden>
+      <div class="em-visao-topo">
+        <h2 id="em-saude-titulo">Saúde das caixas</h2>
+        <p id="em-saude-estado" class="em-estado" role="status" aria-live="polite"></p>
+      </div>
+      <div id="em-saude-conteudo"></div>
+    </section>
+
+    <section id="em-filtros-salvos" class="em-visao" aria-labelledby="em-filtros-titulo" hidden>
+      <div class="em-visao-topo"><h2 id="em-filtros-titulo">Filtros salvos</h2></div>
+      <div class="em-painel em-vazio">
+        <svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#filtros-salvos"></use></svg>
+        <p>Filtros salvos ainda não estão disponíveis. Use os filtros da Caixa.</p>
+        <a class="em-botao em-secundario" href="#caixa">Abrir a Caixa</a>
+      </div>
+    </section>
+
+    <div id="em-app" class="em-app">
+      <aside class="em-filtros em-painel" aria-label="Filtros">
+        <form id="em-form" class="em-form">
+          <p class="em-secao">Filtros</p>
+          <div class="em-campo">
+            <label for="em-categoria">Categoria</label>
+            <select id="em-categoria" class="em-entrada">
+              <option value="">Todas</option>
+              <option>cotação</option><option>pedido</option><option>financeiro/NF</option><option>cadastro</option>
+              <option>informação</option><option>marketing</option><option>spam</option><option>phishing</option>
+              <option>outros</option><option>notificação Coupa</option><option>interno</option><option>enviado</option>
+              <option>código de login</option><option value="(não classificado)">Não classificado</option>
+            </select>
+          </div>
+          <div class="em-campo">
+            <label for="em-status">Status</label>
+            <select id="em-status" class="em-entrada">
+              <option value="">Todos</option><option>pendente</option><option>respondido</option><option>arquivado</option>
+            </select>
+          </div>
+          <div class="em-campo">
+            <label for="em-conta">Caixa</label>
+            <select id="em-conta" class="em-entrada"><option value="">Todas</option></select>
+          </div>
+          <div class="em-datas">
+            <div class="em-campo">
+              <label for="em-de">De</label>
+              <input id="em-de" class="em-entrada" type="date" />
+            </div>
+            <div class="em-campo">
+              <label for="em-ate">Até</label>
+              <input id="em-ate" class="em-entrada" type="date" />
+            </div>
+          </div>
+          <label class="em-chip-rotulo">
+            <input id="em-revisao" class="em-chip-entrada" type="checkbox" />
+            <span class="em-chip"><svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#revisao"></use></svg>Só fila de revisão</span>
+          </label>
+          <div class="em-acoes">
+            <button type="submit" class="em-botao">Filtrar</button>
+            <button type="button" id="em-limpar" class="em-botao em-secundario">Limpar</button>
+          </div>
+        </form>
+      </aside>
+
+      <section class="em-lista-area em-painel" aria-labelledby="em-lista-titulo">
+        <h2 id="em-lista-titulo" class="em-sr">Lista de e-mails</h2>
+        <div id="em-novidade" class="em-novidade" hidden>
+          <span id="em-novidade-texto"></span>
+          <button type="button" id="em-recarregar" class="em-botao">Atualizar</button>
         </div>
-      </form>
-    </aside>
+        <p id="em-estado" class="em-estado em-lista-estado" role="status" aria-live="polite"></p>
+        <ul id="em-lista" class="em-lista" tabindex="-1"></ul>
+        <button type="button" id="em-mais" class="em-botao em-secundario em-mais" hidden>Carregar mais</button>
+      </section>
 
-    <section class="em-lista-area" aria-labelledby="em-lista-titulo">
-      <h2 id="em-lista-titulo" class="em-sr">Lista de e-mails</h2>
-      <div id="em-novidade" class="em-novidade" hidden>
-        <span id="em-novidade-texto"></span>
-        <button type="button" id="em-recarregar" class="em-botao">Atualizar</button>
+      <div id="em-detalhe-vazio" class="em-detalhe-vazio em-painel em-vazio">
+        <svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#caixa"></use></svg>
+        <p>Escolha um e-mail na lista para ler.</p>
       </div>
-      <p id="em-estado" class="em-estado" role="status" aria-live="polite"></p>
-      <ul id="em-lista" class="em-lista" tabindex="-1"></ul>
-      <button type="button" id="em-mais" class="em-botao em-secundario" hidden>Carregar mais</button>
-    </section>
+      <section id="em-detalhe" class="em-detalhe em-painel" aria-labelledby="em-assunto" hidden>
+        <h2 id="em-assunto" tabindex="-1"></h2>
+        <dl id="em-meta" class="em-meta"></dl>
+        <div id="em-avisos" class="em-avisos"></div>
+        <div id="em-controle" class="em-controle"></div>
+        <div id="em-anexos" class="em-anexos"></div>
+        <div class="em-corpo-acoes">
+          <button type="button" id="em-ver-html" class="em-botao em-secundario" hidden>Ver versão formatada (HTML)</button>
+          <button type="button" id="em-ver-texto" class="em-botao em-secundario" hidden>Ver texto puro</button>
+        </div>
+        <pre id="em-corpo" class="em-corpo"></pre>
+        <iframe id="em-html" class="em-html" title="Versão formatada do e-mail, sem scripts e sem imagens externas" sandbox="" referrerpolicy="no-referrer" hidden></iframe>
+      </section>
+    </div>
+  </main>
 
-    <section id="em-detalhe" class="em-detalhe" aria-labelledby="em-assunto" hidden>
-      <h2 id="em-assunto" tabindex="-1"></h2>
-      <dl id="em-meta" class="em-meta"></dl>
-      <div id="em-avisos" class="em-avisos"></div>
-      <div id="em-controle" class="em-controle"></div>
-      <div id="em-anexos" class="em-anexos"></div>
-      <div class="em-corpo-acoes">
-        <button type="button" id="em-ver-html" class="em-botao em-secundario" hidden>Ver versão formatada (HTML)</button>
-        <button type="button" id="em-ver-texto" class="em-botao em-secundario" hidden>Ver texto puro</button>
-      </div>
-      <pre id="em-corpo" class="em-corpo"></pre>
-      <iframe id="em-html" class="em-html" title="Versão formatada do e-mail, sem scripts e sem imagens externas" sandbox="" referrerpolicy="no-referrer" hidden></iframe>
-    </section>
-  </div>
+  <div id="em-aviso-flutuante" class="em-aviso-flutuante" role="status" aria-live="polite" hidden></div>
 
   <script src="/socket.io/socket.io.js"></script>
+  <script src="emails/formato.js"></script>
   <script src="emails/tela.js"></script>
 </body>
 </html>
