@@ -78,8 +78,9 @@
         return Object.keys(x).every(k => (Array.isArray(x[k]) ? mesmaLista(x[k], y[k]) : x[k] === y[k]));
     }
 
-    // filtro -> "#caixa?..." ; as caixas padrão (minhas caixas) ficam fora do endereço, e "todas" fica escrito
-    function paraHash(f, padrao) {
+    // filtro -> "#caixa?..." ; as caixas padrão (minhas caixas) ficam fora do endereço, e "todas" fica escrito.
+    // `semRuido` é a preferência guardada: "ruido" só vai ao endereço quando o filtro é diferente dela.
+    function paraHash(f, padrao, semRuido = true) {
         const n = normalizar(f), minhas = lista(padrao, LISTAS.contas), q = new URLSearchParams();
         for (const [nome, k] of Object.entries(NO_ENDERECO)) {
             if (k === 'contas' && mesmaLista(n.contas, minhas)) continue;
@@ -88,14 +89,15 @@
         if (minhas.length && !n.contas.length) q.append('todas', '1');
         for (const [nome, k] of Object.entries(TEXTO_ENDERECO)) if (n[k]) q.append(nome, n[k]);
         for (const k of OPCOES) if (n[k]) q.append(k, '1');
-        if (!n.sem_ruido) q.append('ruido', '0');
+        if (n.sem_ruido !== (semRuido !== false)) q.append('ruido', n.sem_ruido ? '1' : '0');
         const s = q.toString();
         return '#caixa' + (s ? '?' + s : '');
     }
-    function deHash(hash, padrao) {
+    function deHash(hash, padrao, semRuido = true) {
         const [nome, consulta] = String(hash || '').replace(/^#/, '').split('?');
         const n = novo();
         n.contas = lista(padrao, LISTAS.contas);
+        n.sem_ruido = semRuido !== false;
         if (nome && nome !== 'caixa') return n;
         let q;
         try { q = new URLSearchParams(consulta || ''); } catch (e) { return n; }
@@ -104,7 +106,7 @@
         if (!bruto.contas.length) bruto.contas = q.get('todas') === '1' ? [] : n.contas;
         for (const [nomeQ, k] of Object.entries(TEXTO_ENDERECO)) bruto[k] = q.get(nomeQ) || '';
         for (const k of OPCOES) bruto[k] = q.get(k) === '1';
-        bruto.sem_ruido = q.get('ruido') !== '0';
+        bruto.sem_ruido = q.get('ruido') ? q.get('ruido') !== '0' : n.sem_ruido;
         return normalizar(bruto);
     }
 
