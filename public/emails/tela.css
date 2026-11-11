@@ -488,7 +488,7 @@ a.em-kpi:focus-visible { outline: 2px solid var(--em-destaque); outline-offset: 
   .em-trilho-item { flex: 1 1 0; flex-direction: column; gap: 2px; width: auto; height: 52px; font-size: var(--em-t-secao); }
   .em-trilho-rotulo { position: static; width: auto; height: auto; clip: auto; overflow: visible; }
   .em-trilho-num { top: 2px; right: calc(50% - 22px); }
-  .em-trilho [data-dica]::after { display: none; }
+  [data-dica]::after { display: none; }   /* no toque não há dica, e perto da borda ela faria a tela rolar de lado */
   .em-principal { padding: calc(var(--em-topo) + var(--em-e3)) var(--em-e3) calc(var(--em-trilho) + var(--em-e3)); }
   .em-detalhe { padding: var(--em-e4); inset: var(--em-topo) 0 var(--em-trilho) 0; }
   .em-sel { width: 20px; height: 20px; margin: 10px 0 0 10px; }
