@@ -606,11 +606,18 @@ socket.on("sessao_invalida", () => {
                 localStorage.setItem('maestro_busca_outros', resposta.busca_outros_access); // Minhas Cotações: buscar número de outro vendedor
                 localStorage.setItem('maestro_emails', resposta.emails_access === true); // Central de E-mails (só mostra o atalho; o servidor confere)
                 localStorage.setItem('maestro_vendedor', resposta.vendedor || '');
+                localStorage.setItem('maestro_setor', resposta.setor || '');
+                localStorage.setItem('maestro_nome', resposta.nome || '');
 
                 socket.auth = { sessionId: resposta.sessionId };
                 socket.disconnect().connect();
 
                 socket.emit('sou_frontend', { usuario: emailConta });
+
+                if (resposta.setor === 'financeiro') {
+                    window.location.href = 'financeiro.html';
+                    return;
+                }
 
                 if (resposta.vendedor && resposta.vendedor.trim() !== '') {
                     window.location.href = 'minhas_cotacoes.html';
@@ -634,7 +641,9 @@ socket.on("sessao_invalida", () => {
             const podePortais = localStorage.getItem('maestro_admin') === 'true' || localStorage.getItem('maestro_portais') === 'true' || localStorage.getItem('maestro_dashboard') === 'true';
 
             // Só deixa abrir ?portais=1 se tiver permissão de Portais (ou Estatísticas ou for Admin)
-            if (vendSalvo && !(paramsUrl.get('portais') === '1' && podePortais)) {
+            if (localStorage.getItem('maestro_setor') === 'financeiro' && !(paramsUrl.get('portais') === '1' && podePortais)) {
+                window.location.href = 'financeiro.html';
+            } else if (vendSalvo && !(paramsUrl.get('portais') === '1' && podePortais)) {
                 window.location.href = 'minhas_cotacoes.html';
             } else {
                 alternarTelas('portal');
@@ -662,6 +671,8 @@ socket.on("sessao_invalida", () => {
             localStorage.removeItem('maestro_busca_outros');
             localStorage.removeItem('maestro_emails');
             localStorage.removeItem('maestro_vendedor');
+            localStorage.removeItem('maestro_setor');
+            localStorage.removeItem('maestro_nome');
 
             document.getElementById('log-user').value = '';
             document.getElementById('log-pass').value = '';

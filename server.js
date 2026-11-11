@@ -1069,6 +1069,7 @@ io.on('connection', (socket) => {
                 emails_access: hasEmailsAccess,
                 vendedor: dados.vendedor || '',
                 nome: dados.nome || '',   // nome completo: decide o dono das cotações (lib/dono-cotacao.js)
+                setor: dados.setor || '',
                 expires: expires
             }));
             
@@ -1083,7 +1084,9 @@ io.on('connection', (socket) => {
                 planilha_access: hasPlanilhaAccess,
                 busca_outros_access: hasBuscaOutrosAccess,
                 emails_access: hasEmailsAccess,
-                vendedor: dados.vendedor || ''
+                vendedor: dados.vendedor || '',
+                nome: dados.nome || '',    // nome da conta no topo do Financeiro
+                setor: dados.setor || ''   // 'financeiro' abre financeiro.html
             });
         } else {
             io.to(dados.clientId).emit('resposta_login', dados);

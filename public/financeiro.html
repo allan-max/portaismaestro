@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>MAESTRO | Financeiro</title>
+    <link rel="icon" type="image/png" href="favicon-32x32.png">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    <style>
+        :root { --glass: rgba(15,18,25,.55); --border: rgba(255,255,255,.09); --text: #e8ecf2; --muted: #9aa3b2;
+            --green: #00e676; --red: #ff5252; --blue: #4da8da; }
+        * { box-sizing: border-box; margin: 0; }
+        body { font-family: Inter, sans-serif; color: var(--text); min-height: 100vh;
+            background: linear-gradient(135deg, #0b1930 0%, #1a0f2a 55%, #3b0726 100%); background-attachment: fixed; }
+        header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 40px; }
+        .marca { display: flex; align-items: center; gap: 9px; letter-spacing: 3px; font-weight: 700; color: var(--text); text-decoration: none; }
+        /* mesmo recorte da logo do topo das Minhas Cotações */
+        .marca-logo { display: block; position: relative; width: 44px; height: 38px; overflow: hidden; }
+        .marca-logo img { position: absolute; width: 90px; height: 60px; left: -23px; top: -11px; mix-blend-mode: screen; }
+        .usuario { display: flex; align-items: center; gap: 14px; font-size: 12px; color: var(--muted); }
+        .conexao { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: #34d399; }
+        .conexao .ponto { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+        .conexao.off { color: #f4bf68; }
+        .conta { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text); }
+        .avatar { width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+            background: #2b394c; color: #b9d6f3; font-size: 11px; font-weight: 650; }
+        .sair { width: 36px; height: 36px; border-radius: 6px; background: transparent; border: 0; color: var(--muted); display: inline-flex;
+            align-items: center; justify-content: center; cursor: pointer; }
+        .sair:hover { background: rgba(255,255,255,.08); color: var(--text); }
+        .sair svg { width: 18px; height: 18px; }
+        main { max-width: 980px; margin: 0 auto; padding: 10px 24px 50px; }
+        .titulo { text-align: center; margin: 10px 0 34px; }
+        .titulo h1 { font-size: 30px; font-weight: 300; letter-spacing: 1px; }
+        .titulo h1 b { font-weight: 700; }
+        .titulo p { color: var(--muted); font-size: 13px; margin-top: 8px; }
+        .linha { background: var(--glass); backdrop-filter: blur(14px); border: 1px solid var(--border); border-radius: 18px; padding: 22px 24px; margin-bottom: 18px;
+            display: grid; grid-template-columns: 260px 1fr; gap: 26px; align-items: center; }
+        .drop { position: relative; border: 1.5px dashed rgba(255,255,255,.2); border-radius: 14px; height: 150px; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: .2s; text-align: center; padding: 12px; }
+        .drop:hover, .drop.over { border-color: var(--blue); background: rgba(77,168,218,.08); }
+        .drop .rot { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); }
+        .drop .nome { font-size: 17px; font-weight: 600; }
+        .drop small { font-size: 11px; color: var(--muted); word-break: break-all; }
+        .drop.cheio { border-style: solid; border-color: rgba(0,230,118,.4); background: rgba(0,230,118,.05); }
+        .drop.cheio small { color: var(--green); }
+        .drop .tirar { position: absolute; top: 8px; right: 10px; background: none; border: 0; color: var(--muted); font-size: 18px; cursor: pointer; display: none; }
+        .drop.cheio .tirar { display: block; }
+        .drop .tirar:hover { color: var(--red); }
+        .trilha { display: flex; align-items: flex-start; }
+        .passo { flex: 1; text-align: center; position: relative; font-size: 11px; color: var(--muted); }
+        .passo::before { content: ""; position: absolute; top: 15px; left: -50%; width: 100%; height: 2px; background: rgba(255,255,255,.1); }
+        .passo:first-child::before { display: none; }
+        .passo .bola { position: relative; z-index: 1; width: 32px; height: 32px; margin: 0 auto 9px; border-radius: 50%; border: 2px solid rgba(255,255,255,.15);
+            background: #141824; display: grid; place-items: center; font-size: 13px; font-weight: 600; transition: .3s; }
+        .passo .pasta { display: block; font-size: 10px; opacity: .6; margin-top: 3px; font-family: Consolas, monospace; }
+        .passo.feito { color: var(--text); }
+        .passo.feito .bola { border-color: var(--green); background: var(--green); color: #04210f; }
+        .rodape { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 26px; }
+        .btn { background: linear-gradient(90deg, #373b54, #6d1b3f); color: #fff; border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 15px 48px;
+            font: 600 14px Inter; letter-spacing: 1.5px; text-transform: uppercase; cursor: not-allowed; opacity: .35; }
+        .aviso { font-size: 12px; color: var(--muted); }
+        @media (max-width: 760px) {
+            header { padding: 18px 16px; }
+            .conexao, #nome-conta { display: none; }
+            main { padding: 6px 16px 40px; }
+            .titulo h1 { font-size: 24px; }
+            .linha { grid-template-columns: 1fr; padding: 18px 16px; }
+            .passo { font-size: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a class="marca" href="financeiro.html"><span class="marca-logo"><img src="img/logo-maestro-dashboard.png" alt=""></span><span>MAESTRO</span></a>
+        <div class="usuario">
+            <span class="conexao off" id="conexao"><span class="ponto"></span><span>Conectando…</span></span>
+            <div class="conta" title="Conta logada"><span class="avatar" id="avatar" aria-hidden="true">?</span><span id="nome-conta"></span></div>
+            <button class="sair" onclick="fazerLogout()" title="Sair" aria-label="Sair"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg></button>
+        </div>
+    </header>
+    <main>
+        <div class="titulo">
+            <h1>Lançamento de extrato no <b>HSE</b></h1>
+            <p>Arraste o PDF do extrato e o PDF da fatura do cartão. Cada arquivo mostra em que etapa está.</p>
+        </div>
+
+        <section class="linha">
+            <div class="drop" tabindex="0">
+                <button class="tirar" title="Remover arquivo" type="button">×</button>
+                <span class="rot">Arraste aqui</span><span class="nome">Extrato bancário</span><small>PDF · clique para escolher</small>
+                <input type="file" accept="application/pdf,.pdf" hidden>
+            </div>
+            <div class="trilha"></div>
+        </section>
+        <section class="linha">
+            <div class="drop" tabindex="0">
+                <button class="tirar" title="Remover arquivo" type="button">×</button>
+                <span class="rot">Arraste aqui</span><span class="nome">Fatura do cartão</span><small>PDF · clique para escolher</small>
+                <input type="file" accept="application/pdf,.pdf" hidden>
+            </div>
+            <div class="trilha"></div>
+        </section>
+
+        <div class="rodape">
+            <button class="btn" disabled>Enviar</button>
+            <span class="aviso">O envio para o HSE ainda não está disponível. Por enquanto, a tela só mostra o arquivo escolhido.</span>
+        </div>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script>
+        // Tela do Financeiro: por enquanto só visual. O arquivo fica no navegador e não é enviado a lugar nenhum.
+        const sessionAtual = localStorage.getItem('maestro_session');
+        if (!sessionAtual) window.location.href = 'index.html';
+
+        // conecta só para o servidor conferir a sessão (expirada → volta ao login)
+        const socket = io({ auth: { sessionId: sessionAtual }, transports: ['websocket'], upgrade: false });
+        socket.on('sessao_invalida', () => { localStorage.clear(); window.location.href = 'index.html'; });
+
+        function conexao(ok) {
+            const el = document.getElementById('conexao');
+            el.classList.toggle('off', !ok);
+            el.lastElementChild.textContent = ok ? 'Ao vivo' : 'Reconectando…';
+        }
+        socket.on('connect', () => conexao(true));
+        socket.on('disconnect', () => conexao(false));
+
+        // nome da conta (vem do login); conta antiga sem nome mostra a parte do e-mail antes do @
+        const nomeConta = (localStorage.getItem('maestro_nome') || '').trim() || (localStorage.getItem('maestro_user') || '').split('@')[0];
+        const partes = nomeConta.split(/\s+/).filter(Boolean);
+        document.getElementById('nome-conta').textContent = nomeConta;
+        document.getElementById('avatar').textContent = (partes.length > 1 ? partes[0][0] + partes[partes.length - 1][0] : nomeConta.slice(0, 2)).toUpperCase() || '?';
+
+        function fazerLogout() {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        }
+
+        const PASSOS = [['Anexado', ''], ['Enviado', '\\entrada'], ['Processando', 'HSE'], ['Resultado', '\\concluido · \\erro']];
+
+        function desenharTrilha(trilha, anexado) {
+            trilha.innerHTML = PASSOS.map(([nome, pasta], i) => {
+                const feito = anexado && i === 0;
+                return `<div class="passo${feito ? ' feito' : ''}"><div class="bola">${feito ? '✓' : i + 1}</div>${nome}<span class="pasta">${pasta}</span></div>`;
+            }).join('');
+        }
+
+        document.querySelectorAll('.linha').forEach(linha => {
+            const drop = linha.querySelector('.drop'), input = drop.querySelector('input'), legenda = drop.querySelector('small'), trilha = linha.querySelector('.trilha');
+            desenharTrilha(trilha, false);
+
+            function mostrar(arquivo) {
+                if (!arquivo) return;
+                if (!/\.pdf$/i.test(arquivo.name)) { alert('Escolha um arquivo PDF.'); return; }
+                drop.classList.add('cheio');
+                legenda.textContent = '✓ ' + arquivo.name;
+                desenharTrilha(trilha, true);
+            }
+            function limpar() {
+                drop.classList.remove('cheio');
+                legenda.textContent = 'PDF · clique para escolher';
+                input.value = '';
+                desenharTrilha(trilha, false);
+            }
+
+            drop.addEventListener('click', e => { if (!e.target.closest('.tirar')) input.click(); });
+            drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
+            drop.querySelector('.tirar').addEventListener('click', limpar);
+            input.addEventListener('change', () => mostrar(input.files[0]));
+            drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+            drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+            drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); mostrar(e.dataTransfer.files[0]); });
+        });
+    </script>
+</body>
+</html>
