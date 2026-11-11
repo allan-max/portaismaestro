@@ -19,6 +19,7 @@
         bloqueado: false, iniciado: false, listou: false, carregando: false, parouMais: false, seqLista: 0, ultimoDia: '', prefs: PREFS_PADRAO,
         idAberto: null, sel: new Set(), ancora: null, dados: new Map() };
     const CANCELADO = { sucesso: false, cancelado: true };
+    const ESCRITAS = new Set(['status', 'categoria', 'lote', 'desfazer']);
     const esperando = new Map();
     let seq = 0;
 
@@ -144,8 +145,8 @@
     function pedir(acao, params, grupo) {
         return new Promise(resolve => {
             const requestId = acao + ':' + (++seq);
-            grupo = grupo || acao;
-            // só a resposta mais nova de cada ação interessa; a anterior termina como cancelada
+            // a leitura mais nova cancela a anterior; a escrita já enviada grava mesmo assim: cada uma vai na fila
+            grupo = grupo || (ESCRITAS.has(acao) ? requestId : acao);
             cancelarPedidos(grupo);
             esperando.set(requestId, { requestId, acao, grupo, params, resolve, enviado: false });
             enviarFila();
