@@ -50,9 +50,12 @@
     // backup e disco, como o serviço registrou (o caminho do arquivo de backup não aparece)
     function tabelaManutencao(m) {
         const linhas = [];
-        const b = m && m.backup, dc = m && m.disco, rt = m && m.retencao;
+        const b = m && m.backup, cp = m && m.copia, dc = m && m.disco, rt = m && m.retencao;
         if (b) linhas.push(['Backup', situacao(b.ok === true, 'ok', 'com erro'),
             dataHora(b.em) + (typeof b.tamanho_mb === 'number' ? ', ' + G.numero(b.tamanho_mb, 1) + ' MB' : '') + (b.erro ? ', ' + b.erro : '')]);
+        // cópia do backup para a pasta externa: o serviço manda só datas e o erro, nunca o caminho
+        if (cp) linhas.push(['Cópia externa', situacao(cp.ok === true, 'ok', 'com erro'),
+            (cp.ultima_ok ? 'última cópia boa ' + dataHora(cp.ultima_ok) : 'nenhuma cópia boa ainda') + (cp.erro ? ', ' + cp.erro : '')]);
         if (dc) linhas.push(['Disco', situacao(!dc.alerta, 'espaço suficiente', 'pouco espaço'),
             G.numero(dc.livre_gb, 1) + ' GB livres de ' + G.numero(dc.total_gb, 1) + ' GB']);
         if (rt) linhas.push(['Retenção', situacao(true, rt.aplicado ? 'aplicada' : 'conferida', ''),
