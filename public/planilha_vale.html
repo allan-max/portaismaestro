@@ -392,7 +392,22 @@
         #view-cota.hide-col-3 th:nth-child(4), #view-cota.hide-col-3 td:nth-child(4) { display: none !important; }
         #view-cota.hide-col-4 th:nth-child(5), #view-cota.hide-col-4 td:nth-child(5) { display: none !important; }
         #view-cota.hide-col-5 th:nth-child(6), #view-cota.hide-col-5 td:nth-child(6) { display: none !important; }
-        #view-cota.hide-col-6 th:nth-child(7), #view-cota.hide-col-6 td:nth-child(7) { display: none !important; }
+        #view-cota.hide-col-6 th:nth-child(7), #view-cota.hide-col-6 td:nth-child(7) { display: none !important; }
+        @media (max-width: 900px) {
+            .page-content { padding: 15px 15px 95px 15px; }
+            .toolbar { flex-wrap: wrap; gap: 8px; }
+            .search-box { flex: 1 1 100%; }
+            .total-records { margin-left: 0; }
+            /* a tabela rola dentro do próprio bloco, sem empurrar a página */
+            #view-cota, #view-pedi { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        }
+        /* 📱 Barra superior em telas estreitas: os botões quebram linha em vez de sair da tela */
+        @media (max-width: 700px) {
+            .top-navbar { height: auto; min-height: 60px; flex-wrap: wrap; padding: 8px 12px; gap: 8px; }
+            .top-navbar .menu-icon { margin-right: 4px; }
+            .top-navbar .nav-acoes { margin-left: 0 !important; width: 100%; flex-wrap: wrap; gap: 6px !important; }
+            .top-navbar .tab-btn, .top-navbar .btn-filter { font-size: 0.75rem; padding: 6px 10px; }
+        }
     </style>
 </head>
 
@@ -407,7 +422,7 @@
             <button class="tab-btn" id="tab-pedi" onclick="mudarTabBanco('pedi')"><i class="fa-solid fa-cart-shopping"></i> Pedidos</button>
         </div>
 
-        <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
+        <div class="nav-acoes" style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
             <a id="btn-voltar-planilha" href="minhas_cotacoes.html" class="tab-btn" style="text-decoration: none; color: #94a3b8; border: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px;">
                 <i class="fa-solid fa-arrow-left"></i> Minhas Cotações
             </a>

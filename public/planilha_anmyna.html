@@ -719,6 +719,13 @@
                 width: 100%;
                 justify-content: center;
             }
+        }
+        /* 📱 Barra superior em telas estreitas: os botões quebram linha em vez de sair da tela */
+        @media (max-width: 700px) {
+            .top-navbar { height: auto; min-height: 60px; flex-wrap: wrap; padding: 8px 12px; gap: 8px; }
+            .top-navbar .menu-icon { margin-right: 4px; }
+            .top-navbar .nav-acoes { margin-left: 0 !important; width: 100%; flex-wrap: wrap; gap: 6px !important; }
+            .top-navbar .tab-btn, .top-navbar .btn-filter { font-size: 0.75rem; padding: 6px 10px; }
         }
     </style>
 </head>
@@ -731,7 +738,7 @@
         
         <div class="nav-tabs" id="abas-container"></div>
 
-        <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
+        <div class="nav-acoes" style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
             <a id="btn-voltar-planilha" href="minhas_cotacoes.html" class="tab-btn" style="text-decoration: none; color: #94a3b8; border: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px;">
                 <i class="fa-solid fa-arrow-left"></i> Minhas Cotações
             </a>

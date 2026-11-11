@@ -314,6 +314,11 @@
             .nav-item span { display: none; } 
             .nav-item { padding: 12px; font-size: 16px; border-radius: 50%; }
         }
+        /* 📱 Navbar em telas estreitas: os 8 ícones precisam caber sem cortar o "Voltar" */
+        @media (max-width: 480px) {
+            .floating-navbar { gap: 2px; padding: 5px 6px; max-width: calc(100vw - 16px); }
+            .nav-item { padding: 9px; font-size: 14px; }
+        }
     </style>
 </head>
 <body onload="setupPainelFindes()">

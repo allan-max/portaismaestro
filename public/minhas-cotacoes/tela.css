@@ -273,9 +273,20 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   .pc-det-num h2 { font-size: 24px; }
   .pc-modal-barra { padding-left: 16px; }
   .pc-det-topo, .pc-acoes, .pc-det-sec { padding-left: 16px; padding-right: 16px; }
-  .pc-acoes .pc-resp { margin-left: 0; }
-  .pc-nav .dash-nav-links a:not([aria-current]) { display: none; }
-  .pc-nav .source-pill, .pc-nav .admin-account span:last-child { display: none; }
+  .pc-acoes .pc-resp { margin-left: 0; }  .pc-nav .source-pill, .pc-nav .admin-account span:last-child { display: none; }
+}
+
+/* Barra do topo em telas menores: os links ficam só com ícone (o texto continua para leitores de tela) */
+@media (max-width: 900px) {
+  .pc-nav { gap: 10px; }
+  .pc-nav .dash-nav-links { min-width: 0; gap: 2px; }
+  .pc-nav .dash-nav-links > a, .pc-nav .pc-nav-btn-planilhas { padding: 8px 10px !important; }
+  .pc-nav .dash-nav-links > a > span, .pc-nav .pc-nav-btn-planilhas > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .pc-nav .dash-nav-right { gap: 10px; }
+}
+@media (max-width: 650px) {
+  /* o menu de planilhas abre alinhado à direita do botão para não sair da tela */
+  .pc-nav .pc-menu-planilhas { left: auto !important; right: 0 !important; max-width: calc(100vw - 32px); }
 }
 
 /* quadro de trabalho: números, visão geral recolhível e colunas por prazo que somem quando vazias */
