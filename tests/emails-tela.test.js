@@ -141,7 +141,9 @@ test('exportar: exceljs só no clique, nunca carregado pela página', () => {
 });
 
 test('peso: HTML, CSS, JS, ícones e logo da tela abaixo de 250 KB sem compressão (seção 12)', () => {
-    const peso = c => fs.statSync(c).size;
+    // Mede como o repositório guarda (LF): no Windows o git baixa texto em CRLF, e o mesmo arquivo pesaria mais.
+    const peso = c => c.endsWith('.webp') ? fs.statSync(c).size
+        : Buffer.byteLength(fs.readFileSync(c, 'utf8').replace(/\r\n/g, '\n'));
     const total = peso(path.join(PUBLIC, 'emails.html')) + peso(path.join(PUBLIC, 'img', 'logo-maestro-emails.webp')) +
         arquivos.reduce((t, a) => t + peso(path.join(PASTA, a)), 0);
     assert.ok(total < 250000, total + ' bytes');
