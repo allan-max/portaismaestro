@@ -9,7 +9,7 @@
     const Q = window.EmailsFiltro;
     const A = window.EmailsAcoes;
     const $ = id => document.getElementById(id);
-    // local(): o navegador pode bloquear o armazenamento, e aí a tela pede o login em vez de quebrar
+    // local(): o navegador pode bloquear o armazenamento, e aí a tela explica em vez de quebrar
     const sessao = local('maestro_session');
     // só arrumação da tela: o servidor corta o dado de administrador e recusa filtro da equipe de quem não é
     const admin = local('maestro_admin') === 'true';
@@ -123,6 +123,7 @@
     }
 
     if (!sessao) {
+        try { localStorage; } catch (e) { return telaAcesso('Armazenamento bloqueado', 'O navegador bloqueou o armazenamento deste site. Libere-o para entrar no Maestro.'); }
         telaAcesso('Entre no Maestro', 'Faça login no portal para ver os e-mails.');
         return;
     }
