@@ -22,7 +22,7 @@ const { criarDashboardFontes } = require('./lib/dashboard-fontes');
 const { criarAuditoria } = require('./lib/auditoria');
 const { criarDashboardAuditoria, ipDe } = require('./lib/dashboard-auditoria');
 const { criarSincronizacao } = require('./lib/sincronizacao');
-const { criarEmails } = require('./lib/emails');
+const { criarEmails, CSP_HTML_EMAIL } = require('./lib/emails');
 const donoCotacao = require('./lib/dono-cotacao');
 
 
@@ -2140,6 +2140,14 @@ app.get('/emails/anexo/:token', (req, res) => {
     res.set({ 'Content-Type': 'application/octet-stream', 'X-Content-Type-Options': 'nosniff',
         'Content-Security-Policy': "default-src 'none'; sandbox" });
     res.send(anexo.conteudo);
+});
+
+// Versão formatada de um e-mail: documento entregue uma vez, por token de 60 s, só para iframe sandbox="".
+app.get('/emails/html/:token', (req, res) => {
+    const html = centralEmails.retirarHtml(req.params.token);
+    res.set({ 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': CSP_HTML_EMAIL });
+    if (!html) return res.status(404).type('text/plain; charset=utf-8').send('Versão formatada vencida ou já aberta. Abra de novo na tela de e-mails.');
+    res.type('text/html; charset=utf-8').send(html);
 });
 
 app.get('/health', (req, res) => {

@@ -122,7 +122,7 @@ test('marcação leva o usuário da sessão, nunca o do navegador; status e cate
   s.pedir('status', { id: 3, status: 'apagado' }); assert.equal(s.ultima().d.codigo, 'PARAMETRO_INVALIDO');
   s.pedir('categoria', { id: 3, categoria: 'cotação' });
   assert.equal(s.enviados[1].d.params.usuario, 'ana@example.test');
-  s.pedir('resumo', { qualquer: 1 }); assert.deepEqual(s.enviados[2].d.params, {});
+  s.pedir('resumo', { qualquer: 1, admin: true }); assert.deepEqual(s.enviados[2].d.params, { periodo: 'hoje', contas: [], admin: false });
   const sem = setup({ portais_access: true }); sem.pedir('status', { id: 3, status: 'arquivado' });
   assert.equal(sem.ultima().d.codigo, 'SEM_PERMISSAO'); assert.equal(sem.enviados.length, 0);
   s.emails.fechar(); sem.emails.fechar();

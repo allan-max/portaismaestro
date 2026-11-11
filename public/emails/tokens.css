@@ -1,0 +1,116 @@
+/* Central de E-mails: variáveis da tela. Toda cor usada em public/emails/ sai daqui.
+   Um tema novo é trocar este arquivo. Contraste de texto conferido em 4,5:1 sobre o fundo, o painel e o painel em foco. */
+:root {
+  /* superfícies, em três níveis, separadas por borda de 1 px */
+  --em-fundo: #10141b;
+  --em-nav: #161b22;
+  --em-painel: #1a2230;
+  --em-painel-foco: #212b3d;
+  --em-borda: #2a3441;
+  --em-borda-controle: #66788e;   /* 3:1 sobre o fundo, o painel e o painel em foco */
+  --em-papel: #ffffff;            /* fundo da versão formatada do e-mail */
+
+  /* texto */
+  --em-texto: #f8fafc;
+  --em-apoio: #9aaec3;
+  --em-discreto: #8798ad;
+
+  /* destaque: uma cor só para ação */
+  --em-destaque: #60a5fa;
+  --em-destaque-fundo: rgba(96, 165, 250, .13);
+  --em-sobre-destaque: #10141b;
+
+  /* estados */
+  --em-ok: #34d399;
+  --em-ok-fundo: rgba(52, 211, 153, .13);
+  --em-atencao: #f4bf68;
+  --em-atencao-fundo: rgba(244, 191, 104, .12);
+  --em-atencao-borda: rgba(244, 191, 104, .38);
+  --em-erro: #f87171;
+  --em-erro-fundo: rgba(248, 113, 113, .13);
+  --em-erro-borda: rgba(248, 113, 113, .45);
+  --em-neutro-fundo: rgba(154, 174, 195, .13);
+  --em-brilho-esqueleto: rgba(154, 174, 195, .10);
+
+  /* categorias: cor do texto e do ícone, e a cor de base a 13 % para o fundo da etiqueta (o texto clareia um pouco onde
+     a etiqueta sobre o painel em foco não daria 4,5:1) */
+  --em-cat-cotacao: #65a8fa;      --em-cat-cotacao-fundo: rgba(96, 165, 250, .13);
+  --em-cat-pedido: #34d399;       --em-cat-pedido-fundo: rgba(52, 211, 153, .13);
+  --em-cat-financeiro: #f4bf68;   --em-cat-financeiro-fundo: rgba(244, 191, 104, .13);
+  --em-cat-cadastro: #ae94fa;     --em-cat-cadastro-fundo: rgba(167, 139, 250, .13);
+  --em-cat-informacao: #22d3ee;   --em-cat-informacao-fundo: rgba(34, 211, 238, .13);
+  --em-cat-coupa: #51b4c0;        --em-cat-coupa-fundo: rgba(79, 179, 191, .13);
+  --em-cat-interno: #98a7bb;      --em-cat-interno-fundo: rgba(148, 163, 184, .13);
+  --em-cat-enviado: #a4a4ad;      --em-cat-enviado-fundo: rgba(161, 161, 170, .13);
+  --em-cat-login: #959efa;        --em-cat-login-fundo: rgba(143, 153, 250, .13);
+  --em-cat-marketing: #f579ba;    --em-cat-marketing-fundo: rgba(244, 114, 182, .13);
+  --em-cat-outros: #9fa6b1;       --em-cat-outros-fundo: rgba(156, 163, 175, .13);
+  --em-cat-spam: #fb923c;         --em-cat-spam-fundo: rgba(251, 146, 60, .13);
+  --em-cat-phishing: #f97c7c;     --em-cat-phishing-fundo: rgba(248, 113, 113, .13);
+  /* não classificado não tem cor: texto discreto e borda tracejada */
+
+  /* filtros salvos: as 8 cores de etiqueta, pelo nome que o portal guarda */
+  --em-etq-cinza: #9aaec3;
+  --em-etq-azul: #60a5fa;
+  --em-etq-verde: #34d399;
+  --em-etq-ambar: #f4bf68;
+  --em-etq-violeta: #a78bfa;
+  --em-etq-ciano: #22d3ee;
+  --em-etq-rosa: #f472b6;
+  --em-etq-laranja: #fb923c;
+
+  /* mapa de calor do Dashboard: um tom só (o azul de destaque), do mais fraco ao mais forte */
+  --em-calor-0: #1e2735;
+  --em-calor-1: rgba(96, 165, 250, .16);
+  --em-calor-2: rgba(96, 165, 250, .32);
+  --em-calor-3: rgba(96, 165, 250, .50);
+  --em-calor-4: rgba(96, 165, 250, .70);
+  --em-calor-5: rgba(96, 165, 250, .92);
+
+  /* fundo do termo buscado, realçado na lista */
+  --em-realce: rgba(244, 191, 104, .28);
+
+  /* raios: controle, cartão, painel; pílula só em etiqueta e contador */
+  --em-raio-controle: 6px;
+  --em-raio-cartao: 8px;
+  --em-raio-painel: 10px;
+  --em-raio-pilula: 999px;
+
+  /* espaços na grade de 4 px */
+  --em-e1: 4px;
+  --em-e2: 8px;
+  --em-e3: 12px;
+  --em-e4: 16px;
+  --em-e5: 20px;
+  --em-e6: 24px;
+  --em-e8: 32px;
+
+  /* medidas da casca */
+  --em-topo: 52px;
+  --em-trilho: 56px;
+  --em-alvo: 32px;                /* lado do botão de ícone; 40 px no celular */
+
+  /* tipografia */
+  --em-fonte: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --em-t-corpo: 13px;
+  --em-t-apoio: 12px;
+  --em-t-secao: 11px;
+  --em-t-titulo: 15px;
+  --em-t-assunto: 18px;
+  --em-t-numero: 26px;
+  --em-espaco-secao: .06em;
+
+  /* animação: curta, curva de saída, só transform e opacity */
+  --em-rapido: 120ms;
+  --em-medio: 180ms;
+  --em-lento: 240ms;
+  --em-curva: cubic-bezier(.23, 1, .32, 1);
+  --em-pulso: 1.6s;     /* brilho lento do esqueleto de carregamento */
+  --em-passo: 20ms;     /* intervalo da entrada escalonada da lista */
+
+  /* véu atrás da janela de atalhos */
+  --em-veu: rgba(5, 8, 12, .62);
+
+  /* sombra só em elemento flutuante: curta e escura */
+  --em-sombra: 0 4px 12px rgba(0, 0, 0, .45);
+}
