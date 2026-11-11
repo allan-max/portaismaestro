@@ -46,7 +46,8 @@ test('preserva menu, painel, robôs e coluna NF da versão boa 43b6c21', () => {
     const blocks = [
         // be085d4 e seguintes: links de Minhas Cotações e Planilha Anmyna no menu.
         // 917312d/aad96f3: botão Voltar do admin (id btn-voltar-planilha + script). O resto do bloco segue igual a 43b6c21
-        ['<body>', '    <div id="menu-filtro-periodo"', '9184c4f4257e6439baa0324b9185cc9b3fde71672482a5fa061da049cdda0ec4'],
+        // fix(responsivo): class="nav-acoes" no grupo de botões do topo, para quebrar linha no celular
+        ['<body>', '    <div id="menu-filtro-periodo"', '3b49b66698fe7a09b3621c98eaf9d3614eaec9584cce9565e13f78c60abfa5a5'],
         // 6f0f5b4: o campo do vendedor vira o seletor (div.vend-multi no lugar do input de texto)
         ['    <div id="modal-sync-nf"', '    <script src=', 'cc523831931eead5a8868d8fd2cc920208c70d39d48f635a55551d40b028549b'],
         // b34566a: manterTipo. 86bfde6: sessionAtual sobe para o início da página. Sincronização, conferência e 61ab1b9 mudam o bloco.
