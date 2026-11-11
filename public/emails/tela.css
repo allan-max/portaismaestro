@@ -103,8 +103,9 @@ body { background: var(--em-fundo); min-height: 100vh; }
 .em-so-folha { display: none; }
 
 .em-lista-area { display: flex; flex-direction: column; padding: 0 var(--em-e2) var(--em-e2); }
-.em-lista-topo { display: flex; align-items: center; gap: var(--em-e2); min-height: 44px; padding: var(--em-e2) var(--em-e1) var(--em-e1); }
+.em-lista-topo { display: flex; flex-wrap: wrap; align-items: center; gap: var(--em-e2); min-height: 44px; padding: var(--em-e2) var(--em-e1) var(--em-e1); }
 .em-lista-estado { flex: 1 1 auto; min-height: 0; }
+.em-lista-topo .em-icone { flex: none; }
 .em-abrir-filtros { display: none; min-height: 28px; padding: 0 var(--em-e2); }
 .em-abrir-filtros .em-contador { min-width: 16px; height: 16px; padding: 0 4px; }
 .em-ativos { display: flex; flex-wrap: wrap; align-items: center; gap: var(--em-e1); padding: 0 var(--em-e1) var(--em-e2); }
