@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MAESTRO | ArcelorMittal - Robô de Cotações</title>
+    <title>MAESTRO | ArcelorMittal - Robô de Licitações</title>
     <link rel="icon" type="image/png" href="favicon.ico">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
@@ -13,7 +13,22 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: 'Manrope', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        /* Títulos e números em Sora (o resto dos portais usa Inter) */
+        h2, h3, .kpi-num, .status-text-val {
+            font-family: 'Sora', 'Manrope', sans-serif;
+        }
+
+        :root {
+            --laranja: #f4511e;
+            --laranja-escuro: #e03e0c;
+            --tinta: #0f172a;
+            --cinza: #64748b;
+            --borda: #eef1f5;
+            --verde: #16a34a;
+            --sombra-card: 0 6px 24px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
         }
 
         /* TRAVAMENTO TOTAL DE SCROLLBAR (100% ONE-PAGE VIEWPORT) */
@@ -22,7 +37,7 @@
             height: 100vh;
             max-height: 100vh;
             background-color: #f8fafc;
-            color: #0f172a;
+            color: var(--tinta);
             overflow: hidden;
         }
 
@@ -40,16 +55,14 @@
            PAINEL LATERAL ESQUERDO: FOTOGRAFIA SIDERÚRGICA & CURVA ORGÂNICA
            ========================================================= */
         .left-pane {
-            flex: 0 0 44%;
-            min-width: 440px;
-            max-width: 640px;
+            flex: 0 0 36%;
+            min-width: 400px;
+            /* limita pela altura: a arte tem fragmentos de UI a partir de ~78% da largura */
+            max-width: 76vh;
             height: 100vh;
             background: #f8fafc;
             position: relative;
             overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
             z-index: 1;
         }
 
@@ -62,7 +75,6 @@
             object-fit: cover;
             object-position: left center;
             pointer-events: none;
-            z-index: 1;
         }
 
         /* =========================================================
@@ -70,11 +82,11 @@
            ========================================================= */
         .floating-navbar {
             position: fixed;
-            top: 14px;
+            top: 16px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 100;
-            background: rgba(15, 23, 42, 0.92);
+            background: rgba(15, 23, 42, 0.94);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.12);
@@ -89,20 +101,19 @@
         .nav-item {
             display: flex;
             align-items: center;
-            gap: 6px;
-            padding: 6px 13px;
+            gap: 7px;
+            padding: 8px 15px;
             border-radius: 40px;
-            font-size: 0.72rem;
-            font-weight: 700;
-            color: #cbd5e1;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #e2e8f0;
             text-decoration: none;
-            letter-spacing: 0.4px;
             transition: all 0.2s ease;
             white-space: nowrap;
         }
 
         .nav-item i {
-            font-size: 0.78rem;
+            font-size: 0.82rem;
         }
 
         .nav-item:hover {
@@ -111,26 +122,27 @@
         }
 
         .nav-item.active.nav-arcelormittal {
-            background: #ea580c;
+            background: var(--laranja);
             color: #ffffff;
-            box-shadow: 0 2px 10px rgba(234, 88, 12, 0.45);
+            box-shadow: 0 2px 10px rgba(244, 81, 30, 0.45);
         }
 
         .nav-item.nav-voltar {
-            color: #f87171;
-            padding-left: 10px;
+            color: #ff7a59;
+            padding-left: 12px;
         }
 
         .nav-item.nav-voltar:hover {
-            color: #fca5a5;
+            color: #ffa58f;
             background: rgba(239, 68, 68, 0.15);
         }
 
         /* =========================================================
-           LADO DIREITO: OPERAÇÃO TOTALMENTE COMPACTA (SEM SCROLL)
+           LADO DIREITO: PAINEL DE OPERAÇÃO (SEM SCROLL)
            ========================================================= */
         .right-pane {
             flex: 1;
+            min-width: 0;
             height: 100vh;
             max-height: 100vh;
             background: #f8fafc;
@@ -138,17 +150,16 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding: clamp(35px, 5vh, 48px) clamp(20px, 3vw, 36px) clamp(10px, 1.8vh, 18px);
+            padding: clamp(64px, 9vh, 90px) clamp(16px, 1.6vw, 28px) clamp(14px, 3vh, 36px) clamp(12px, 1.4vw, 24px);
             position: relative;
             overflow: hidden;
             z-index: 1;
         }
 
-        /* Barra de Ações Superior (Apenas Idioma) */
         .top-header-bar {
             position: absolute;
-            top: clamp(10px, 2vh, 18px);
-            right: clamp(16px, 2.5vw, 36px);
+            top: clamp(14px, 3vh, 28px);
+            right: clamp(16px, 2.2vw, 40px);
             display: flex;
             align-items: center;
             height: 28px;
@@ -158,8 +169,8 @@
         .lang-selector {
             display: inline-flex;
             align-items: center;
-            gap: 7px;
-            font-size: 0.8rem;
+            gap: 8px;
+            font-size: 0.86rem;
             font-weight: 500;
             color: #1e293b;
             cursor: pointer;
@@ -168,100 +179,98 @@
         }
 
         .lang-selector:hover {
-            color: #ea580c;
-        }
-
-        .lang-selector i:first-child {
-            font-size: 0.85rem;
+            color: var(--laranja);
         }
 
         .lang-selector i:last-child {
             font-size: 0.65rem;
-            color: #64748b;
+            color: #475569;
+            margin-left: 4px;
         }
 
-        /* Container central dos cards ajustado ao viewport */
-        .cards-container {
+        .dash {
             width: 100%;
-            max-width: 800px;
+            max-width: 1220px;
+            /* reduz todo o conteúdo do painel (textos, ícones, espaçamentos) em 18% */
+            zoom: 0.82;
             display: flex;
             flex-direction: column;
-            gap: clamp(8px, 1.2vh, 12px);
+            gap: clamp(12px, 2.4vh, 24px);
+            min-height: 0;
         }
 
-        /* Estilo base de Card compacto */
         .card {
             background: #ffffff;
-            border-radius: 12px;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
-            padding: clamp(12px, 1.6vh, 16px) clamp(18px, 2vw, 24px);
-            transition: box-shadow 0.2s ease, border-color 0.2s ease;
+            border-radius: 14px;
+            border: 1px solid var(--borda);
+            box-shadow: var(--sombra-card);
         }
 
-        .card:hover {
-            border-color: #cbd5e1;
-            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+        /* --- LINHA 1: CONTROLE DO ROBÔ + AÇÕES --- */
+        .row-top {
+            display: flex;
+            align-items: center;
+            gap: clamp(14px, 2vw, 36px);
         }
 
-        /* --- CARD 1: CONTROLE DO ROBÔ --- */
         .card-controle {
+            flex: 1;
+            min-width: 0;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            padding: clamp(12px, 1.6vh, 16px) clamp(18px, 2vw, 24px);
-            gap: 16px;
+            gap: clamp(14px, 1.6vw, 26px);
+            padding: clamp(12px, 2vh, 20px) clamp(16px, 1.8vw, 30px);
         }
 
-        .controle-left {
+        .play-halo {
+            flex-shrink: 0;
+            width: clamp(74px, 6.6vw, 110px);
+            height: clamp(74px, 6.6vw, 110px);
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(244, 81, 30, 0.16) 0%, rgba(244, 81, 30, 0.07) 55%, rgba(244, 81, 30, 0) 72%);
             display: flex;
             align-items: center;
-            gap: 16px;
-            flex: 1;
+            justify-content: center;
         }
 
         .controle-play-circle {
-            width: 48px;
-            height: 48px;
+            width: 76%;
+            height: 76%;
             border-radius: 50%;
             border: none;
-            background: #ea580c;
-            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            background: linear-gradient(145deg, #ff6a2b 0%, var(--laranja-escuro) 100%);
             color: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.08rem;
-            flex-shrink: 0;
-            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.4);
+            font-size: clamp(1.2rem, 1.7vw, 1.9rem);
+            box-shadow: 0 8px 20px rgba(244, 81, 30, 0.4);
             cursor: pointer;
             transition: all 0.25s ease;
             outline: none;
         }
 
         .controle-play-circle:hover {
-            transform: scale(1.08);
-            box-shadow: 0 6px 18px rgba(234, 88, 12, 0.55);
-            background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+            transform: scale(1.06);
+            box-shadow: 0 10px 24px rgba(244, 81, 30, 0.55);
         }
 
         .controle-play-circle:active {
             transform: scale(0.96);
         }
 
-        .controle-play-circle.ativo {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            box-shadow: 0 4px 14px rgba(220, 38, 38, 0.45);
+        .controle-play-circle:focus-visible {
+            outline: 3px solid rgba(244, 81, 30, 0.35);
+            outline-offset: 3px;
         }
 
-        .controle-play-circle.ativo:hover {
-            transform: scale(1.08);
-            background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+        .controle-play-circle.ativo {
+            background: linear-gradient(145deg, #ef4444 0%, #dc2626 100%);
+            box-shadow: 0 8px 20px rgba(220, 38, 38, 0.45);
         }
 
         .controle-play-circle i {
-            margin-left: 2px;
-            transition: transform 0.2s ease;
+            margin-left: 4px;
         }
 
         .controle-play-circle.ativo i {
@@ -270,324 +279,487 @@
 
         .controle-divider-orange {
             width: 1.5px;
-            height: 44px;
-            background: #f97316;
-            opacity: 0.45;
+            align-self: stretch;
+            margin: 6px 0;
+            background: var(--laranja);
+            opacity: 0.55;
             border-radius: 2px;
             flex-shrink: 0;
         }
 
+        /* texto encostado à direita do card, ao lado do botão de play */
         .controle-info {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            flex: 1;
+            min-width: 0;
+            margin-left: auto;
+            text-align: right;
         }
 
         .controle-info h2 {
-            font-size: 1.14rem;
+            font-size: clamp(1.1rem, 1.3vw, 1.4rem);
             font-weight: 700;
-            color: #0f172a;
-            letter-spacing: -0.2px;
-            margin-bottom: 2px;
-        }
-
-        .controle-info p {
-            font-size: 0.78rem;
-            color: #64748b;
-            line-height: 1.35;
+            letter-spacing: -0.3px;
             margin-bottom: 6px;
         }
 
-        .controle-hint-badge {
+        .controle-info p {
+            font-size: clamp(0.8rem, 0.9vw, 0.98rem);
+            color: #475569;
+            line-height: 1.4;
+            margin-bottom: 8px;
+            max-width: 330px;
+        }
+
+        .controle-hint {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            font-size: 0.74rem;
-            font-weight: 600;
-            color: #ea580c;
-            background: #fff7ed;
-            border: 1px solid #ffedd5;
-            padding: 2px 9px;
-            border-radius: 12px;
-            transition: all 0.2s ease;
+            gap: 8px;
+            font-size: clamp(0.78rem, 0.86vw, 0.94rem);
+            font-weight: 500;
+            color: var(--laranja);
+        }
+
+        .controle-hint.rodando {
+            color: var(--verde);
         }
 
         .controle-right {
-            padding-left: clamp(10px, 1.5vw, 18px);
-            min-width: 140px;
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
+            flex-shrink: 0;
+            min-width: clamp(120px, 9vw, 160px);
+            padding-right: clamp(0px, 0.6vw, 10px);
         }
 
         .status-header {
             display: flex;
             align-items: center;
-            gap: 7px;
-            font-size: 0.76rem;
+            gap: 9px;
+            font-size: 0.88rem;
             font-weight: 500;
-            color: #64748b;
+            color: #334155;
+            margin-bottom: 4px;
         }
 
         .status-dot-lg {
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            background: #22c55e;
+            background: var(--verde);
             display: inline-block;
-            transition: all 0.3s ease;
-            box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
         }
 
         .status-dot-lg.running {
-            background: #22c55e;
             box-shadow: 0 0 10px rgba(34, 197, 94, 0.9);
             animation: pulse-green 1.5s infinite;
         }
 
         @keyframes pulse-green {
             0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.2); opacity: 0.8; }
+            50% { transform: scale(1.25); opacity: 0.75; }
+        }
+
+        .status-line {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            color: var(--verde);
         }
 
         .status-text-val {
-            font-size: 1.02rem;
+            font-size: clamp(1.25rem, 1.6vw, 1.75rem);
             font-weight: 800;
-            color: #15803d;
-            letter-spacing: -0.2px;
+            letter-spacing: -0.5px;
+            line-height: 1.1;
         }
 
-        /* --- CARD 2: COTAÇÕES PARA IMPRIMIR --- */
-        .card-imprimir .card-header-bar {
+        .signal-bars {
+            display: inline-flex;
+            align-items: flex-end;
+            gap: 3px;
+            height: 24px;
+            padding-bottom: 3px;
+        }
+
+        .signal-bars span {
+            width: 4px;
+            border-radius: 1px;
+            background: currentColor;
+        }
+
+        .signal-bars span:nth-child(1) { height: 30%; }
+        .signal-bars span:nth-child(2) { height: 52%; }
+        .signal-bars span:nth-child(3) { height: 76%; }
+        .signal-bars span:nth-child(4) { height: 100%; }
+
+        .acoes {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: clamp(8px, 1.2vh, 12px);
+            gap: 16px;
+            flex-shrink: 0;
         }
 
-        .card-header-title {
-            display: flex;
-            align-items: center;
-            gap: 9px;
-        }
-
-        .card-header-title i.orange-icon {
-            font-size: 1.1rem;
-            color: #ea580c;
-        }
-
-        .card-header-title h2 {
-            font-size: 1.08rem;
-            font-weight: 700;
-            color: #0f172a;
-            letter-spacing: -0.2px;
-        }
-
-        .btn-atualizar {
-            background: transparent;
-            border: none;
-            color: #ea580c;
-            font-size: 0.82rem;
+        .btn-acao {
+            height: 50px;
+            padding: 0 16px;
+            border-radius: 14px;
+            background: #ffffff;
             font-weight: 600;
             display: inline-flex;
             align-items: center;
-            gap: 5px;
+            gap: 10px;
             cursor: pointer;
-            padding: 3px 7px;
-            border-radius: 5px;
-            transition: all 0.15s ease;
+            white-space: nowrap;
+            transition: all 0.18s ease;
         }
 
-        .btn-atualizar:hover {
-            background: rgba(234, 88, 12, 0.08);
+        .btn-acao:active {
+            transform: translateY(1px);
+        }
+
+        .btn-imprimir {
+            border: 1.5px solid #1e293b;
+            color: var(--tinta);
+            font-size: 0.72rem;
+        }
+
+        .btn-imprimir i:first-child {
+            font-size: 1.25rem;
+        }
+
+        .btn-imprimir i:last-child {
+            font-size: 0.6rem;
+            margin-left: 4px;
+        }
+
+        .btn-imprimir:hover {
+            background: var(--tinta);
+            color: #ffffff;
+        }
+
+        .btn-atualizar {
+            border: 1.5px solid var(--laranja);
+            color: var(--laranja);
+            font-size: 0.78rem;
         }
 
         .btn-atualizar i {
-            font-size: 0.88rem;
-            transition: transform 0.4s ease;
+            font-size: 1.2rem;
+            transition: transform 0.6s ease;
+        }
+
+        .btn-atualizar:hover {
+            background: #fff4ef;
         }
 
         .btn-atualizar.girando i {
             transform: rotate(360deg);
         }
 
-        /* Caixa Elegante de Cotações para Imprimir */
-        .box-imprimir-wrapper {
-            border: 1px solid #fed7aa;
-            border-radius: 10px;
-            padding: clamp(12px, 1.6vh, 18px) clamp(16px, 2vw, 24px);
+        /* --- LINHA 2: KPIs --- */
+        .row-kpis {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: clamp(12px, 1.3vw, 24px);
+        }
+
+        .kpi {
+            position: relative;
+            overflow: hidden;
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 20px;
-            box-shadow: 0 3px 12px rgba(234, 88, 12, 0.05);
-            background: linear-gradient(135deg, #ffffff 0%, #fffbf7 100%);
+            align-items: flex-start;
+            gap: clamp(12px, 1.3vw, 22px);
+            padding: clamp(14px, 2.6vh, 24px) clamp(14px, 1.4vw, 24px);
+            min-height: clamp(104px, 16.5vh, 142px);
         }
 
-        .box-imprimir-left {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            flex: 1;
-        }
-
-        .kpi-num-box {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-        }
-
-        .kpi-num {
-            font-size: clamp(2rem, 3.2vw, 2.7rem);
-            font-weight: 900;
-            line-height: 1;
-            color: #ea580c;
-            letter-spacing: -1px;
-        }
-
-        .kpi-label-group {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .kpi-title {
-            font-size: 0.98rem;
-            font-weight: 700;
-            color: #0f172a;
-            letter-spacing: -0.2px;
-        }
-
-        .kpi-sub {
-            font-size: 0.74rem;
-            font-weight: 500;
-            color: #64748b;
-        }
-
-        .imprimir-desc {
-            font-size: 0.78rem;
-            color: #475569;
-            line-height: 1.4;
-            margin: 0;
-            max-width: 480px;
-        }
-
-        .box-imprimir-right {
+        .kpi-icon {
+            flex-shrink: 0;
+            width: clamp(46px, 3.7vw, 68px);
+            height: clamp(46px, 3.7vw, 68px);
+            border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-shrink: 0;
+            font-size: clamp(1.3rem, 1.8vw, 2rem);
         }
 
-        .btn-imprimir-grande {
-            background: #ea580c;
-            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
-            color: #ffffff;
-            border: none;
-            border-radius: 8px;
-            padding: clamp(11px, 1.5vh, 14px) clamp(20px, 2.2vw, 28px);
-            font-size: 0.88rem;
+        .kpi-laranja .kpi-icon { background: #ffeadc; color: var(--laranja); box-shadow: 0 6px 14px rgba(244, 81, 30, 0.14); }
+        .kpi-azul .kpi-icon    { background: #dbeafe; color: #2563eb; box-shadow: 0 6px 14px rgba(37, 99, 235, 0.14); }
+        .kpi-verde .kpi-icon   { background: #dcfce7; color: var(--verde); box-shadow: 0 6px 14px rgba(22, 163, 74, 0.14); }
+
+        .kpi-body {
+            position: relative;
+            z-index: 1;
+        }
+
+        .kpi-num {
+            font-size: clamp(1.7rem, 2.2vw, 2.4rem);
             font-weight: 700;
-            letter-spacing: 0.2px;
-            cursor: pointer;
+            letter-spacing: -1px;
+            line-height: 1.05;
+        }
+
+        .kpi-label {
+            font-size: clamp(0.82rem, 0.95vw, 1.02rem);
+            color: #475569;
+            margin-top: 6px;
+        }
+
+        .kpi-trend {
             display: inline-flex;
             align-items: center;
-            gap: 9px;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);
-            white-space: nowrap;
+            gap: 6px;
+            margin-top: clamp(8px, 1.6vh, 14px);
+            font-size: 0.86rem;
+            font-weight: 600;
+            color: var(--verde);
         }
 
-        .btn-imprimir-grande:hover {
-            background: #c2410c;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 18px rgba(234, 88, 12, 0.45);
+        .kpi-trend i {
+            font-size: 0.72rem;
         }
 
-        .btn-imprimir-grande:active {
-            transform: translateY(0);
+        .kpi-spark {
+            position: absolute;
+            right: 0;
+            bottom: 0;
+            width: 34%;
+            height: 78%;
+            pointer-events: none;
         }
 
-        .btn-imprimir-grande i {
-            font-size: 1.05rem;
+        /* --- LINHA 3: ÚLTIMAS EXTRAÇÕES + ROBÔ --- */
+        .row-bottom {
+            display: grid;
+            grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr);
+            gap: clamp(12px, 1.3vw, 24px);
+            min-height: 0;
         }
 
-        /* --- CARD 3: LOG DE ATIVIDADES --- */
-        .card-log .card-header-bar {
+        .card-log {
+            padding: clamp(12px, 2vh, 18px) clamp(14px, 1.4vw, 22px) clamp(10px, 1.6vh, 16px);
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .card-header-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: clamp(6px, 1vh, 9px);
+            margin-bottom: clamp(8px, 1.6vh, 14px);
         }
 
-        .card-log .card-header-title {
+        .card-header-title {
             display: flex;
             align-items: center;
-            gap: 9px;
+            gap: 12px;
         }
 
-        .card-log .card-header-title i.orange-icon {
-            font-size: 1.05rem;
-            color: #ea580c;
+        .card-header-title i {
+            font-size: 1.15rem;
+            color: var(--laranja);
         }
 
-        .status-online-pill {
-            display: flex;
+        .card-header-title h2 {
+            font-size: clamp(1.05rem, 1.2vw, 1.3rem);
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        .btn-ver-todas {
+            background: transparent;
+            border: none;
+            color: var(--laranja);
+            font-size: 0.95rem;
+            font-weight: 500;
+            display: inline-flex;
             align-items: center;
-            gap: 6px;
-            font-size: 0.76rem;
-            font-weight: 600;
-            color: #16a34a;
+            gap: 10px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
         }
 
-        .status-online-pill .dot-green {
+        .btn-ver-todas:hover {
+            background: #fff4ef;
+        }
+
+        .log-scroll {
+            min-height: 0;
+            /* cabeçalho + ~4 linhas; entradas mais antigas rolam dentro do card */
+            max-height: 232px;
+            overflow-y: auto;
+        }
+
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: clamp(0.82rem, 0.92vw, 1rem);
+        }
+
+        .log-table thead th {
+            position: sticky;
+            top: 0;
+            background: #f5f6f8;
+            text-align: left;
+            font-weight: 500;
+            color: #1e293b;
+            padding: clamp(6px, 1.1vh, 10px) 14px;
+        }
+
+        .log-table thead th:first-child { border-radius: 6px 0 0 6px; }
+        .log-table thead th:last-child  { border-radius: 0 6px 6px 0; }
+
+        .log-table tbody td {
+            padding: clamp(6px, 1.15vh, 10px) 14px;
+            border-bottom: 1px solid #edf0f4;
+        }
+
+        .log-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .log-table .col-hora {
+            width: 22%;
+            color: #334155;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+
+        .log-table .col-desc {
+            font-weight: 500;
+        }
+
+        .log-table .col-status {
+            width: 130px;
+        }
+
+
+        .pill-ok {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            background: #dcfce7;
+            color: #15803d;
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 3px 12px 3px 10px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+
+        .pill-ok::before {
+            content: '';
             width: 7px;
             height: 7px;
             border-radius: 50%;
-            background: #22c55e;
-            box-shadow: 0 0 6px rgba(34, 197, 94, 0.7);
+            background: var(--verde);
         }
 
-        .log-wrapper {
+        .card-robo {
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #fde3d3;
+            background: linear-gradient(135deg, #fff1e7 0%, #ffe9db 55%, #ffe1cf 100%);
             display: flex;
-            align-items: stretch;
-            gap: 12px;
-            margin-top: 1px;
+            align-items: center;
+            gap: clamp(8px, 1vw, 18px);
+            padding: clamp(14px, 2vh, 22px) clamp(14px, 1.3vw, 22px);
         }
 
-        .log-orange-stripe {
-            width: 3px;
-            background: #ea580c;
-            border-radius: 2px;
+        .robo-swoosh {
+            position: absolute;
+            inset: auto 0 0 0;
+            width: 100%;
+            height: 55%;
+            pointer-events: none;
+        }
+
+        .robo-dot {
+            position: absolute;
+            top: 22px;
+            right: 22px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+        }
+
+        .robo-dot::after {
+            content: '';
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #94a3b8;
+            transition: background 0.3s ease;
+        }
+
+        .card-robo.operando .robo-dot::after {
+            background: var(--verde);
+        }
+
+        .robo-svg {
+            position: relative;
             flex-shrink: 0;
+            width: clamp(84px, 8.5vw, 150px);
+            height: auto;
+            filter: drop-shadow(0 10px 14px rgba(244, 81, 30, 0.18));
         }
 
-        .log-entries {
-            display: flex;
-            flex-direction: column;
-            gap: clamp(2px, 0.4vh, 4px);
-            font-size: 0.76rem;
-            flex: 1;
+        .card-robo.operando .robo-svg {
+            animation: flutuar 2.6s ease-in-out infinite;
         }
 
-        .log-row {
-            display: flex;
-            gap: 12px;
-            align-items: baseline;
+        @keyframes flutuar {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
         }
 
-        .log-time {
-            font-family: 'Roboto Mono', monospace;
-            font-size: 0.74rem;
-            color: #ea580c;
-            font-weight: 600;
-            min-width: 58px;
+        .robo-texto {
+            position: relative;
+            min-width: 0;
         }
 
-        .log-msg {
-            color: #0f172a;
-            font-weight: 450;
+        .robo-texto h3 {
+            font-size: clamp(1.1rem, 1.45vw, 1.6rem);
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            line-height: 1.15;
+            margin-bottom: 12px;
+        }
+
+        .robo-texto p {
+            font-size: clamp(0.8rem, 0.88vw, 0.95rem);
+            color: #475569;
+            line-height: 1.5;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .status-dot-lg.running,
+            .card-robo.operando .robo-svg {
+                animation: none;
+            }
+        }
+
+        /* Telas médias: botões de ação descem para baixo do card de controle */
+        @media (max-width: 1500px) {
+            .row-top {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+            .acoes {
+                justify-content: flex-end;
+            }
+            .btn-acao {
+                height: 40px;
+            }
+            .kpi-spark {
+                opacity: 0.55;
+            }
         }
 
         /* Responsividade */
@@ -607,9 +779,8 @@
                 flex: none;
                 width: 100%;
                 max-width: 100%;
-                min-width: auto;
+                min-width: 0;
                 height: 380px;
-                max-height: none;
             }
             .right-pane {
                 height: auto;
@@ -617,13 +788,20 @@
                 padding: 24px 16px 36px;
                 overflow: visible;
             }
-            .box-imprimir-wrapper {
-                flex-direction: column;
-                align-items: flex-start;
+            .top-header-bar {
+                position: static;
+                align-self: flex-end;
+                margin-bottom: 12px;
             }
-            .btn-imprimir-grande {
-                width: 100%;
-                justify-content: center;
+            .row-kpis,
+            .row-bottom {
+                grid-template-columns: 1fr;
+            }
+            .card-controle {
+                flex-wrap: wrap;
+            }
+            .acoes {
+                flex-wrap: wrap;
             }
             .floating-navbar {
                 width: 92%;
@@ -649,16 +827,15 @@
     </nav>
 
     <div class="page-container">
-        
+
         <!-- LADO ESQUERDO: PAINEL INDUSTRIAL ARCELORMITTAL COM ONDAS E CURVA ORGÂNICA -->
         <aside class="left-pane" aria-label="Painel Informativo ArcelorMittal">
             <img src="img/arcelormittal-panel.png" alt="ArcelorMittal Robô de Licitações" class="left-panel-img">
         </aside>
 
-        <!-- LADO DIREITO: OPERAÇÃO COMPACTA (100% SINGLE-SCREEN VIEWPORT) -->
+        <!-- LADO DIREITO: PAINEL DE OPERAÇÃO -->
         <main class="right-pane">
-            
-            <!-- Barra Superior (Apenas Idioma) -->
+
             <div class="top-header-bar">
                 <div class="lang-selector" title="Selecionar Idioma">
                     <i class="fa-solid fa-globe"></i>
@@ -667,104 +844,164 @@
                 </div>
             </div>
 
-            <div class="cards-container">
-                
-                <!-- CARD 1: CONTROLE DO ROBÔ (LIGAR PELO CÍRCULO PLAY) -->
-                <section class="card card-controle">
-                    <div class="controle-left">
-                        <button class="controle-play-circle" id="btn-play-circle" onclick="alternarRobo()" title="Clique para Iniciar ou Pausar o Robô">
-                            <i class="fa-solid fa-play" id="btn-icon"></i>
-                        </button>
-                        <div class="controle-divider-orange"></div>
+            <div class="dash">
+
+                <!-- LINHA 1: CONTROLE DO ROBÔ + AÇÕES -->
+                <div class="row-top">
+                    <section class="card card-controle">
                         <div class="controle-info">
-                            <h2>Controle do Robô</h2>
-                            <p>Clique no botão de play ao lado para iniciar ou pausar<br>a busca e extração de cotações no ArcelorMittal.</p>
-                            <span class="controle-hint-badge" id="btn-texto">
-                                <i class="fa-solid fa-power-off"></i> Clique no botão circular para ligar
+                            <p>Clique no botão para iniciar ou pausar a busca e extração de licitações.</p>
+                            <span class="controle-hint" id="btn-texto">
+                                <i class="fa-regular fa-clock"></i> Clique no botão para iniciar
                             </span>
                         </div>
-                    </div>
-                    <div class="controle-divider-orange"></div>
-                    <div class="controle-right">
-                        <div class="status-header">
-                            <span class="status-dot-lg" id="status-dot"></span>
-                            <span>Status</span>
-                        </div>
-                        <div class="status-text-val" id="status-texto">Aguardando...</div>
-                    </div>
-                </section>
+                    </section>
 
-                <!-- CARD 2: COTAÇÕES PARA IMPRIMIR -->
-                <section class="card card-imprimir">
-                    <div class="card-header-bar">
-                        <div class="card-header-title">
-                            <i class="fa-solid fa-file-invoice orange-icon"></i>
-                            <h2>Cotações para Imprimir</h2>
+                    <div class="acoes">
+                        <div class="play-halo">
+                            <button class="controle-play-circle" id="btn-play-circle" onclick="alternarRobo()" title="Clique para Iniciar ou Pausar o Robô" aria-label="Iniciar ou pausar o robô">
+                                <i class="fa-solid fa-play" id="btn-icon"></i>
+                            </button>
                         </div>
-                        <button class="btn-atualizar" id="btn-atualizar" onclick="atualizarCotacoes()" title="Atualizar contagem">
-                            <i class="fa-solid fa-rotate-right"></i>
+                        <button class="btn-acao btn-atualizar" id="btn-atualizar" onclick="atualizarCotacoes()" title="Atualizar contagem">
+                            <i class="fa-solid fa-rotate"></i>
                             <span>Atualizar</span>
                         </button>
                     </div>
+                </div>
 
-                    <div class="box-imprimir-wrapper">
-                        <div class="box-imprimir-left">
-                            <div class="kpi-num-box">
-                                <span class="kpi-num" id="kpi-cotacoes-num">128</span>
-                                <div class="kpi-label-group">
-                                    <span class="kpi-title">Cotações extraídas</span>
-                                    <span class="kpi-sub">Total acumulado nesta execução</span>
-                                </div>
+                <!-- LINHA 2: KPIs -->
+                <div class="row-kpis">
+                    <section class="card kpi kpi-laranja">
+                        <div class="kpi-icon"><i class="fa-regular fa-file-lines"></i></div>
+                        <div class="kpi-body">
+                            <div class="kpi-num" id="kpi-cotacoes-num">128</div>
+                            <div class="kpi-label">Cotações Extraídas</div>
+                            <div class="kpi-trend"><i class="fa-solid fa-arrow-up"></i> +12%</div>
+                        </div>
+                        <svg class="kpi-spark" viewBox="0 0 120 100" preserveAspectRatio="none" aria-hidden="true">
+                            <defs>
+                                <linearGradient id="grad-laranja" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0" stop-color="#f4511e" stop-opacity="0.30"/>
+                                    <stop offset="1" stop-color="#f4511e" stop-opacity="0"/>
+                                </linearGradient>
+                            </defs>
+                            <path d="M0,96 L14,74 L26,62 L38,54 L50,40 L60,44 L70,30 L80,34 L90,20 L100,12 L110,6 L120,16 L120,100 L0,100 Z" fill="url(#grad-laranja)"/>
+                            <path d="M0,96 L14,74 L26,62 L38,54 L50,40 L60,44 L70,30 L80,34 L90,20 L100,12 L110,6 L120,16" fill="none" stroke="#f4511e" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+                        </svg>
+                    </section>
+
+                    <section class="card kpi kpi-azul">
+                        <div class="kpi-icon"><i class="fa-regular fa-envelope"></i></div>
+                        <div class="kpi-body">
+                            <div class="kpi-num" id="kpi-licitacoes-num">42</div>
+                            <div class="kpi-label">E-mails enviados Hoje</div>
+                            <div class="kpi-trend"><i class="fa-solid fa-arrow-up"></i> +8%</div>
+                        </div>
+                        <svg class="kpi-spark" viewBox="0 0 120 100" preserveAspectRatio="none" aria-hidden="true">
+                            <defs>
+                                <linearGradient id="grad-azul" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0" stop-color="#3b82f6" stop-opacity="0.30"/>
+                                    <stop offset="1" stop-color="#3b82f6" stop-opacity="0"/>
+                                </linearGradient>
+                            </defs>
+                            <path d="M0,98 L12,80 L24,62 L34,50 L44,54 L56,36 L66,28 L76,34 L86,22 L96,10 L108,16 L120,6 L120,100 L0,100 Z" fill="url(#grad-azul)"/>
+                            <path d="M0,98 L12,80 L24,62 L34,50 L44,54 L56,36 L66,28 L76,34 L86,22 L96,10 L108,16 L120,6" fill="none" stroke="#3b82f6" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+                        </svg>
+                    </section>
+
+                    <section class="card kpi kpi-verde">
+                        <div class="kpi-icon"><i class="fa-solid fa-circle-check"></i></div>
+                        <div class="kpi-body">
+                            <div class="kpi-num" id="kpi-sucesso-num">96%</div>
+                            <div class="kpi-label">Taxa de Sucesso</div>
+                            <div class="kpi-trend"><i class="fa-solid fa-arrow-up"></i> +2%</div>
+                        </div>
+                        <svg class="kpi-spark" viewBox="0 0 120 100" preserveAspectRatio="none" aria-hidden="true">
+                            <defs>
+                                <linearGradient id="grad-verde" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0" stop-color="#22c55e" stop-opacity="0.30"/>
+                                    <stop offset="1" stop-color="#22c55e" stop-opacity="0"/>
+                                </linearGradient>
+                            </defs>
+                            <path d="M0,98 L12,78 L22,64 L32,56 L42,46 L52,40 L62,30 L72,34 L82,24 L92,28 L104,12 L112,16 L120,2 L120,100 L0,100 Z" fill="url(#grad-verde)"/>
+                            <path d="M0,98 L12,78 L22,64 L32,56 L42,46 L52,40 L62,30 L72,34 L82,24 L92,28 L104,12 L112,16 L120,2" fill="none" stroke="#22c55e" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+                        </svg>
+                    </section>
+                </div>
+
+                <!-- LINHA 3: LOG + ROBÔ -->
+                <div class="row-bottom">
+                    <section class="card card-log">
+                        <div class="card-header-bar">
+                            <div class="card-header-title">
+                                <i class="fa-solid fa-rectangle-list"></i>
+                                <h2>Log</h2>
                             </div>
-                            <p class="imprimir-desc">
-                                As cotações mineradas foram organizadas e consolidadas pelo robô. Clique no botão ao lado para emitir a folha de cotações para a equipe comercial.
-                            </p>
                         </div>
 
-                        <div class="box-imprimir-right">
-                            <button class="btn-imprimir-grande" onclick="imprimirCotacoes()">
-                                <i class="fa-solid fa-print"></i>
-                                <span>Imprimir Cotações</span>
-                            </button>
+                        <div class="log-scroll">
+                            <table class="log-table" id="log-table">
+                                <thead>
+                                    <tr>
+                                        <th>Horário</th>
+                                        <th>Descrição</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="log-entries">
+                                    <tr>
+                                        <td class="col-hora">09:12:18</td>
+                                        <td class="col-desc">Robô iniciado com sucesso!</td>                                    </tr>
+                                    <tr>
+                                        <td class="col-hora">09:12:15</td>
+                                        <td class="col-desc">Conectado ao portal ArcelorMittal...</td>                                    </tr>
+                                    <tr>
+                                        <td class="col-hora">09:12:13</td>
+                                        <td class="col-desc">Extraindo cotações...</td>                                    </tr>
+                                    <tr>
+                                        <td class="col-hora">09:12:10</td>
+                                        <td class="col-desc">128 cotações extraídas.</td>                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
-                    </div>
-                </section>
+                    </section>
 
-                <!-- CARD 3: LOG DE ATIVIDADES -->
-                <section class="card card-log">
-                    <div class="card-header-bar">
-                        <div class="card-header-title">
-                            <i class="fa-regular fa-file-lines orange-icon"></i>
-                            <h2>Log de Atividades</h2>
-                        </div>
-                        <div class="status-online-pill">
-                            <span class="dot-green"></span>
-                            <span>Online</span>
-                        </div>
-                    </div>
+                    <section class="card card-robo" id="card-robo">
+                        <svg class="robo-swoosh" viewBox="0 0 300 120" preserveAspectRatio="none" aria-hidden="true">
+                            <path d="M150,120 C220,112 270,90 300,58 L300,120 Z" fill="#f4511e"/>
+                            <path d="M90,120 C180,116 250,96 300,66 L300,74 C250,104 190,118 120,120 Z" fill="#ff8a5c" opacity="0.7"/>
+                        </svg>
+                        <span class="robo-dot" aria-hidden="true"></span>
 
-                    <div class="log-wrapper">
-                        <div class="log-orange-stripe"></div>
-                        <div class="log-entries" id="log-entries">
-                            <div class="log-row">
-                                <span class="log-time">09:12:10</span>
-                                <span class="log-msg">Robô iniciado com sucesso!</span>
-                            </div>
-                            <div class="log-row">
-                                <span class="log-time">09:12:15</span>
-                                <span class="log-msg">Conectado ao portal ArcelorMittal.</span>
-                            </div>
-                            <div class="log-row">
-                                <span class="log-time">09:12:18</span>
-                                <span class="log-msg">Extraindo cotações...</span>
-                            </div>
-                            <div class="log-row">
-                                <span class="log-time">09:12:25</span>
-                                <span class="log-msg">128 cotações extraídas.</span>
-                            </div>
+                        <svg class="robo-svg" viewBox="0 0 140 160" aria-hidden="true">
+                            <defs>
+                                <linearGradient id="robo-corpo" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0" stop-color="#ffffff"/>
+                                    <stop offset="1" stop-color="#e8ebf0"/>
+                                </linearGradient>
+                            </defs>
+                            <!-- antena -->
+                            <rect x="68" y="14" width="4" height="18" rx="2" fill="#cbd5e1"/>
+                            <circle cx="70" cy="11" r="7" fill="#f4511e"/>
+                            <!-- orelhas -->
+                            <rect x="8" y="58" width="14" height="30" rx="7" fill="#f4511e"/>
+                            <rect x="118" y="58" width="14" height="30" rx="7" fill="#f4511e"/>
+                            <!-- corpo -->
+                            <path d="M38,112 C38,104 52,100 70,100 C88,100 102,104 102,112 L108,150 C108,156 92,160 70,160 C48,160 32,156 32,150 Z" fill="url(#robo-corpo)"/>
+                            <!-- cabeça -->
+                            <rect x="16" y="30" width="108" height="84" rx="38" fill="url(#robo-corpo)"/>
+                            <!-- visor -->
+                            <rect x="30" y="52" width="80" height="42" rx="21" fill="#141a2e"/>
+                            <circle cx="52" cy="73" r="7.5" fill="#ffffff"/>
+                            <circle cx="88" cy="73" r="7.5" fill="#ffffff"/>
+                        </svg>
+
+                        <div class="robo-texto">
+                            <h3 id="robo-titulo">Robô em espera</h3>
+                            <p id="robo-sub">Clique no play para buscar novas oportunidades.</p>
                         </div>
-                    </div>
-                </section>
+                    </section>
+                </div>
 
             </div>
         </main>
@@ -773,31 +1010,35 @@
 
     <script>
         let roboLigado = false;
-        let totalCotacoes = 128;
 
         function alternarRobo() {
             roboLigado = !roboLigado;
             const btnPlay = document.getElementById('btn-play-circle');
             const btnIcon = document.getElementById('btn-icon');
             const btnTexto = document.getElementById('btn-texto');
-            const dot = document.getElementById('status-dot');
-            const statusTexto = document.getElementById('status-texto');
+            const cardRobo = document.getElementById('card-robo');
+            const roboTitulo = document.getElementById('robo-titulo');
+            const roboSub = document.getElementById('robo-sub');
 
             if (roboLigado) {
                 btnPlay.classList.add('ativo');
                 btnIcon.className = 'fa-solid fa-stop';
-                btnTexto.innerHTML = '<i class="fa-solid fa-circle-play" style="color: #22c55e;"></i> Robô em execução • Clique para parar';
-                dot.classList.add('running');
-                statusTexto.textContent = 'Extraindo...';
+                btnTexto.classList.add('rodando');
+                btnTexto.innerHTML = '<i class="fa-solid fa-circle-play"></i> Robô em execução • Clique para parar';
+                cardRobo.classList.add('operando');
+                roboTitulo.textContent = 'Robô em operação';
+                roboSub.textContent = 'Buscando novas oportunidades para você.';
                 adicionarLog('Robô iniciado pelo operador.');
                 adicionarLog('Conectado ao portal ArcelorMittal.');
                 adicionarLog('Extraindo novas cotações...');
             } else {
                 btnPlay.classList.remove('ativo');
                 btnIcon.className = 'fa-solid fa-play';
-                btnTexto.innerHTML = '<i class="fa-solid fa-power-off"></i> Clique no botão circular para ligar';
-                dot.classList.remove('running');
-                statusTexto.textContent = 'Aguardando...';
+                btnTexto.classList.remove('rodando');
+                btnTexto.innerHTML = '<i class="fa-regular fa-clock"></i> Clique no botão para iniciar';
+                cardRobo.classList.remove('operando');
+                roboTitulo.textContent = 'Robô em espera';
+                roboSub.textContent = 'Clique no play para buscar novas oportunidades.';
                 adicionarLog('Robô pausado pelo operador.');
             }
         }
@@ -811,11 +1052,7 @@
             }, 600);
         }
 
-        function imprimirCotacoes() {
-            adicionarLog('Iniciando emissão para impressão de ' + totalCotacoes + ' cotações...');
-            window.print();
-        }
-
+        // Entradas novas entram no topo (mais recente primeiro).
         function adicionarLog(msg) {
             const container = document.getElementById('log-entries');
             if (!container) return;
@@ -823,10 +1060,15 @@
             const timeStr = String(agora.getHours()).padStart(2, '0') + ':' +
                             String(agora.getMinutes()).padStart(2, '0') + ':' +
                             String(agora.getSeconds()).padStart(2, '0');
-            const row = document.createElement('div');
-            row.className = 'log-row';
-            row.innerHTML = `<span class="log-time">${timeStr}</span><span class="log-msg">${msg}</span>`;
-            container.appendChild(row);
+            const row = document.createElement('tr');
+            const hora = document.createElement('td');
+            hora.className = 'col-hora';
+            hora.textContent = timeStr;
+            const desc = document.createElement('td');
+            desc.className = 'col-desc';
+            desc.textContent = msg;
+            row.append(hora, desc);
+            container.prepend(row);
         }
 
         function irPara(url) {

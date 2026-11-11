@@ -1030,7 +1030,7 @@
         function renderizarLicitacoes(lista) {
             document.getElementById('contador-licitacoes').textContent = `(${lista.length})`;
             if (!lista.length) {
-                mostrarMensagemTabela('Nenhuma licitação baixada até o momento.');
+                mostrarMensagemTabela('Nenhuma licitação com proposta em aberto no momento.');
                 return;
             }
             document.getElementById('tbody-licitacoes').innerHTML = lista.map(l => {

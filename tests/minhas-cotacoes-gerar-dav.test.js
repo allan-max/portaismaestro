@@ -149,14 +149,18 @@ test('PLANILHA BASE.xlsx e o template embutido sao a v3 (mesmo conteudo)', async
         const wb = new ExcelJS.Workbook();
         await wb.xlsx.load(buf);
         assert.equal(wb.worksheets[0].name, 'ORÇAMENTO');
-        assert.equal(wb.worksheets[0].getCell('K1').value, 'CÓDIGO HSE');
-        assert.equal(wb.worksheets[0].getCell('R1').value, 'DESCRIÇÃO NO DAV');
-        assert.equal(wb.worksheets[0].getCell('A38').value, 'Frete');
-        assert.equal(wb.worksheets[0].getCell('A39').value, 'ITEM 1');
+        assert.equal(wb.worksheets[0].getCell('L1').value, 'CÓDIGO HSE');
+        assert.equal(wb.worksheets[0].getCell('S1').value, 'DESCRIÇÃO NO DAV');
+        assert.equal(wb.worksheets[0].getCell('B38').value, 'Frete');
+        assert.equal(wb.worksheets[0].getCell('B39').value, 'ITEM 1');
+        // sem Local de entrega: o robô do Cotafrete recusa a planilha que ainda tem o rótulo na linha 30
+        assert.equal(wb.worksheets[0].getCell('B30').value, null);
+        assert.equal(wb.worksheets[0].getRow(30).hidden, true);
+        assert.match(wb.worksheets[0].getCell('B31').value, /^Cliente/);
     }
 });
 
-test('exportar cotacao de 2 itens: v3 com itens em A2:A3, K1, A33 e aba LISTAS; validacoes de B33 registradas', async () => {
+test('exportar cotacao de 2 itens: v3 com Nº na A, itens em B2:B3, L1, B33 e aba LISTAS; validacoes de C33 registradas', async () => {
     const { context, downloads, alerts } = setupMinhasCotacoesEnv();
     await context.exportarCotacaoPlanilhaBase({
         'COTAÇÃO': '5551',
@@ -167,18 +171,22 @@ test('exportar cotacao de 2 itens: v3 com itens em A2:A3, K1, A33 e aba LISTAS; 
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(downloads[0].buffer);
     const ws = wb.getWorksheet('ORÇAMENTO');
-    assert.equal(ws.getCell('K1').value, 'CÓDIGO HSE');
-    assert.equal(ws.getCell('A33').value, 'VENDEDOR');
-    assert.equal(ws.getCell('A2').value, 'Parafuso M12');
-    assert.equal(ws.getCell('A3').value, 'Porca M12');
-    assert.equal(ws.getCell('B3').value, 2);
-    assert.equal(ws.getCell('B26').value, 'entregar cedo');
-    assert.ok(ws.getCell('H2').value.formula, 'H mantem formula v3');
-    assert.equal(ws.getCell('I26').value.formula, 'SUM(I2:I25)');
-    for (const c of ['K2', 'L2', 'Q2', 'B30', 'B33', 'B37']) assert.equal(ws.getCell(c).value, null, c + ' nao e escrita');
+    // mesmo modelo do cotafrete: coluna A = Nº do item (=ROW()-1), PRODUTO na B
+    assert.equal(ws.getCell('A1').value, 'Nº');
+    assert.equal(ws.getCell('A2').value.formula, 'ROW()-1');
+    assert.equal(ws.getCell('B1').value, 'PRODUTO');
+    assert.equal(ws.getCell('L1').value, 'CÓDIGO HSE');
+    assert.equal(ws.getCell('B33').value, 'VENDEDOR');
+    assert.equal(ws.getCell('B2').value, 'Parafuso M12');
+    assert.equal(ws.getCell('B3').value, 'Porca M12');
+    assert.equal(ws.getCell('C3').value, 2);
+    assert.equal(ws.getCell('C26').value, 'entregar cedo');
+    assert.ok(ws.getCell('I2').value.formula, 'H mantem formula v3');
+    assert.equal(ws.getCell('J26').value.formula, 'SUM(J2:J25)');
+    for (const c of ['L2', 'M2', 'R2', 'C30', 'C33', 'C37']) assert.equal(ws.getCell(c).value, null, c + ' nao e escrita');
     assert.ok(wb.getWorksheet('LISTAS'), 'aba LISTAS existe');
     // ExcelJS 4.4 descarta as validacoes x14 da v3: a exportacao reaplica as listas
-    assert.equal(ws.getCell('B33').dataValidation?.type, 'list', 'B33 com lista suspensa no arquivo exportado');
+    assert.equal(ws.getCell('C33').dataValidation?.type, 'list', 'B33 com lista suspensa no arquivo exportado');
     assert.ok(!alerts.some(a => a.includes('listas de seleção')));
 });
 
@@ -189,8 +197,8 @@ test('exportar mais de 24 itens: so 24 vao e a tela avisa, sem sobrescrever as l
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(downloads[0].buffer);
     const ws = wb.getWorksheet('ORÇAMENTO');
-    assert.equal(ws.getCell('A25').value, 'Peca 24');
-    assert.equal(ws.getCell('A26').value, 'OBSERVAÇÕES:');
-    assert.equal(ws.getCell('A29').value, 'INFORMAÇÕES ESSENCIAIS');
+    assert.equal(ws.getCell('B25').value, 'Peca 24');
+    assert.equal(ws.getCell('B26').value, 'OBSERVAÇÕES:');
+    assert.equal(ws.getCell('B29').value, 'INFORMAÇÕES ESSENCIAIS');
     assert.ok(alerts.some(a => /24 itens/.test(a) && /30/.test(a)));
 });

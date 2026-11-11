@@ -450,7 +450,7 @@ test('extrairQuantidadeNumero trata corretamente inteiros, decimais e unidades',
     assert.equal(fn(undefined), 1);
 });
 
-test('exportarCotacaoPlanilhaBase preenche produto em A2, quantidade em B2 e preserva fórmulas e abas', async () => {
+test('exportarCotacaoPlanilhaBase preenche produto em B2, quantidade em C2 e preserva fórmulas e abas', async () => {
     const env = setupMinhasCotacoesEnv();
     const { context, downloads } = env;
 
@@ -477,21 +477,21 @@ test('exportarCotacaoPlanilhaBase preenche produto em A2, quantidade em B2 e pre
     assert.ok(ws, 'Aba ORÇAMENTO deve existir');
 
     // Valida preenchimento dos campos requeridos
-    assert.equal(ws.getCell('A2').value, 'CORREIA EM V B-52 DENTADA INDUSTRIAL');
-    assert.equal(ws.getCell('B2').value, 6);
+    assert.equal(ws.getCell('B2').value, 'CORREIA EM V B-52 DENTADA INDUSTRIAL');
+    assert.equal(ws.getCell('C2').value, 6);
 
     // Valida fórmulas intactas na linha 2 e totais
-    assert.equal(ws.getCell('H2').value?.formula, 'SUM(C2*B2+(D2+E2+F2))');
-    assert.equal(ws.getCell('I2').value?.formula, 'SUM((C2*B2)+D2+E2+F2)*G2%+H2');
-    assert.equal(ws.getCell('J2').value?.formula, 'SUM(I2/B2)');
-    assert.equal(ws.getCell('I26').value?.formula, 'SUM(I2:I25)');
+    assert.equal(ws.getCell('I2').value?.formula, 'SUM(D2*C2+(E2+F2+G2))');
+    assert.equal(ws.getCell('J2').value?.formula, 'SUM((D2*C2)+E2+F2+G2)*H2%+I2');
+    assert.equal(ws.getCell('K2').value?.formula, 'SUM(J2/C2)');
+    assert.equal(ws.getCell('J26').value?.formula, 'SUM(J2:J25)');
 
     // Listas suspensas iguais ao modelo do cotafrete (vendedor, pagamento, parcelamento, filial, frete, origem, grupo, marca)
     const listas = {
-        B33: 'LISTAS!$A$2:$A$28', B34: 'LISTAS!$B$2:$B$8', B35: 'LISTAS!$C$2:$C$23',
-        B37: 'LISTAS!$E$2:$E$4', B38: 'LISTAS!$H$2:$H$3',
-        M2: 'LISTAS!$D$2:$D$10', M25: 'LISTAS!$D$2:$D$10',
-        P2: 'LISTAS!$F$2:$F$500', Q25: 'LISTAS!$G$2:$G$1409'
+        C33: 'LISTAS!$A$2:$A$28', C34: 'LISTAS!$B$2:$B$8', C35: 'LISTAS!$C$2:$C$23',
+        C37: 'LISTAS!$E$2:$E$4', C38: 'LISTAS!$H$2:$H$3',
+        N2: 'LISTAS!$D$2:$D$10', N25: 'LISTAS!$D$2:$D$10',
+        Q2: 'LISTAS!$F$2:$F$500', R25: 'LISTAS!$G$2:$G$1409'
     };
     for (const [ref, intervalo] of Object.entries(listas)) {
         const dv = ws.getCell(ref).dataValidation;
@@ -500,20 +500,20 @@ test('exportarCotacaoPlanilhaBase preenche produto em A2, quantidade em B2 e pre
     }
 
     // A lista barra o que o robô recusaria e só avisa no que vem do HSE (cotafrete: scripts/validacoes_modelo.py)
-    for (const ref of ['B34', 'B37', 'B38', 'M2']) {
+    for (const ref of ['C34', 'C37', 'C38', 'N2']) {
         const dv = ws.getCell(ref).dataValidation;
         assert.equal(dv.showErrorMessage, true, `${ref} deve barrar valor fora da lista`);
         assert.ok(dv.error, `${ref} deve explicar o erro`);
         assert.notEqual(dv.errorStyle, 'warning', `${ref} deve barrar, não avisar`);
     }
-    for (const ref of ['B33', 'B35', 'P2', 'Q25']) {
+    for (const ref of ['C33', 'C35', 'Q2', 'R25']) {
         const dv = ws.getCell(ref).dataValidation;
         assert.equal(dv.showErrorMessage, true, `${ref} deve avisar`);
         assert.equal(dv.errorStyle, 'warning', `${ref} deve avisar sem barrar`);
     }
 
     // Número e tamanho do modelo chegam ao arquivo exportado
-    const regras = { B2: 'decimal', C25: 'decimal', G2: 'decimal', L2: 'custom', N2: 'decimal', R2: 'textLength', B26: 'textLength', B32: 'whole' };
+    const regras = { C2: 'decimal', D25: 'decimal', H2: 'decimal', M2: 'custom', O2: 'decimal', S2: 'textLength', C26: 'textLength', C32: 'whole' };
     for (const [ref, tipo] of Object.entries(regras)) {
         const dv = ws.getCell(ref).dataValidation;
         assert.equal(dv?.type, tipo, `${ref} deve manter a validação ${tipo}`);
@@ -581,24 +581,24 @@ test('exportarCotacaoPlanilhaBase exporta múltiplos itens para linhas sucessiva
     const ws = wb.getWorksheet('ORÇAMENTO');
 
     // Linha 2 (Item 1)
-    assert.equal(ws.getCell('A2').value, 'Impressora Zebra ZD230 USB + Ethernet');
-    assert.equal(ws.getCell('B2').value, 1);
-    assert.equal(ws.getCell('H2').value?.formula, 'SUM(C2*B2+(D2+E2+F2))');
+    assert.equal(ws.getCell('B2').value, 'Impressora Zebra ZD230 USB + Ethernet');
+    assert.equal(ws.getCell('C2').value, 1);
+    assert.equal(ws.getCell('I2').value?.formula, 'SUM(D2*C2+(E2+F2+G2))');
 
     // Linha 3 (Item 2)
-    assert.equal(ws.getCell('A3').value, 'Leitor código barras Zebra DS2208 Kit com suporte');
-    assert.equal(ws.getCell('B3').value, 2);
+    assert.equal(ws.getCell('B3').value, 'Leitor código barras Zebra DS2208 Kit com suporte');
+    assert.equal(ws.getCell('C3').value, 2);
 
     // Linha 4 (Item 3)
-    assert.equal(ws.getCell('A4').value, 'Etiqueta de Poliéster Industrial Rolo 50 x 25 mm (cerca de 3.000 etiquetas) Poliéster Prata Patrimonial');
-    assert.equal(ws.getCell('B4').value, 1);
+    assert.equal(ws.getCell('B4').value, 'Etiqueta de Poliéster Industrial Rolo 50 x 25 mm (cerca de 3.000 etiquetas) Poliéster Prata Patrimonial');
+    assert.equal(ws.getCell('C4').value, 1);
 
     // Linha 5 (Item 4)
-    assert.equal(ws.getCell('A5').value, 'Ribon Resina Ribon 110 mm x 300 m');
-    assert.equal(ws.getCell('B5').value, 1);
+    assert.equal(ws.getCell('B5').value, 'Ribon Resina Ribon 110 mm x 300 m');
+    assert.equal(ws.getCell('C5').value, 1);
 
     // Fórmulas da soma total e abas
-    assert.equal(ws.getCell('I26').value?.formula, 'SUM(I2:I25)');
+    assert.equal(ws.getCell('J26').value?.formula, 'SUM(J2:J25)');
     assert.deepEqual(wb.worksheets.map(w => w.name), ['ORÇAMENTO', 'COTAÇÃO', 'FRETE', 'LISTAS']);
 });
 
@@ -811,8 +811,8 @@ test('parseItensCotacao, Word e Planilha Base não confundem código de modelo/m
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(downloads[0].buffer);
     const ws = wb.getWorksheet('ORÇAMENTO');
-    assert.equal(ws.getCell('B2').value, 10, 'Célula B2 (QTD) na Planilha Base deve ser 10 e não 13091680');
-    assert.ok(String(ws.getCell('A2').value).includes('13091680 || MOUSE'), 'Célula A2 deve conter o produto completo');
+    assert.equal(ws.getCell('C2').value, 10, 'Célula C2 (QTD) na Planilha Base deve ser 10 e não 13091680');
+    assert.ok(String(ws.getCell('B2').value).includes('13091680 || MOUSE'), 'Célula B2 deve conter o produto completo');
 });
 
 test('parseItensCotacao, Word e Planilha Base associam quantidades empilhadas linha a linha (ex: 05 und.\\n10 und.) na ordem de cada item', async () => {
@@ -848,10 +848,10 @@ test('parseItensCotacao, Word e Planilha Base associam quantidades empilhadas li
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(downloads[0].buffer);
     const ws = wb.getWorksheet('ORÇAMENTO');
-    assert.equal(ws.getCell('A2').value, 'Trilho Gancheira de 1M em inox para cortina pvc frigorífica');
-    assert.equal(ws.getCell('B2').value, 5, 'Item 1 na Planilha Base (B2) deve ter quantidade 5');
-    assert.equal(ws.getCell('A3').value, 'Cortina Frigorífica PVC Transparente 200mm');
-    assert.equal(ws.getCell('B3').value, 10, 'Item 2 na Planilha Base (B3) deve ter quantidade 10');
+    assert.equal(ws.getCell('B2').value, 'Trilho Gancheira de 1M em inox para cortina pvc frigorífica');
+    assert.equal(ws.getCell('C2').value, 5, 'Item 1 na Planilha Base (C2) deve ter quantidade 5');
+    assert.equal(ws.getCell('B3').value, 'Cortina Frigorífica PVC Transparente 200mm');
+    assert.equal(ws.getCell('C3').value, 10, 'Item 2 na Planilha Base (C3) deve ter quantidade 10');
 
     // Caso adicional: múltiplos itens com "(Item 1)" + código de modelo + quantidades empilhadas "(Item 1) 1 UN\n(Item 2) 4 UN"
     const cotacaoMultiComModelo = {
@@ -946,21 +946,21 @@ test('tela: clicar em Responder exibe os 3 campos de arraste (Planilha Base, DAV
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(templateBuf);
     const ws = wb.getWorksheet('ORÇAMENTO');
-    ws.getCell('A2').value = 'BOMBA CENTRÍFUGA';
-    ws.getCell('B2').value = 2;
-    ws.getCell('C2').value = 1000; // Custo 1000, margem padrão 45% => 1450,00
-    ws.getCell('L2').value = '84137090';
-    ws.getCell('M2').value = 'SP';
-    ws.getCell('N2').value = 12;
+    ws.getCell('B2').value = 'BOMBA CENTRÍFUGA';
+    ws.getCell('C2').value = 2;
+    ws.getCell('D2').value = 1000; // Custo 1000, margem padrão 45% => 1450,00
+    ws.getCell('M2').value = '84137090';
+    ws.getCell('N2').value = 'SP';
+    ws.getCell('O2').value = 12;
 
-    ws.getCell('A3').value = 'SELO MECÂNICO';
-    ws.getCell('B3').value = 5;
-    ws.getCell('C3').value = 200; // Custo 200, margem padrão 45% => 290,00
-    ws.getCell('L3').value = '84842000';
-    ws.getCell('M3').value = 'MG';
-    ws.getCell('N3').value = 18;
+    ws.getCell('B3').value = 'SELO MECÂNICO';
+    ws.getCell('C3').value = 5;
+    ws.getCell('D3').value = 200; // Custo 200, margem padrão 45% => 290,00
+    ws.getCell('M3').value = '84842000';
+    ws.getCell('N3').value = 'MG';
+    ws.getCell('O3').value = 18;
 
-    ws.getCell('B32').value = 15; // Prazo de entrega (Dias)
+    ws.getCell('C32').value = 15; // Prazo de entrega (Dias)
     const bufferPreenchido = await wb.xlsx.writeBuffer();
 
     await Tela.receberArquivosResposta(Tela.id(cCoupa), 'planilha', [{
