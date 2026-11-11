@@ -18,7 +18,7 @@
     const PREFS_PADRAO = { minhas_caixas: [], filtros: [], sem_ruido: true, agrupar: false, notificar: false, som: false, equipe: [] };
     const estado = { filtro: Q.novo(), proximo: null, itens: 0, total: 0, aberto: null, contas: [], contagens: null, visao: '',
         bloqueado: false, iniciado: false, listou: false, carregando: false, parouMais: false, seqLista: 0, ultimoDia: '', prefs: PREFS_PADRAO,
-        idAberto: null, sel: new Set(), ancora: null, dados: new Map() };
+        idAberto: null, sel: new Set(), ancora: null, dados: new Map(), retomar: null, caiu: false };
     const CANCELADO = { sucesso: false, cancelado: true };
     const ESCRITAS = new Set(['status', 'categoria', 'lote', 'desfazer']);
     const esperando = new Map();
@@ -86,35 +86,37 @@
         e.addEventListener('animationend', () => e.classList.remove(classe), { once: true });
     }
     function avisar(texto) { $('em-estado').textContent = texto; }
-    // aviso flutuante; com "Desfazer", 5 s (o prazo para com o foco nele)
-    let avisoTempo = 0, avisoMs = 0, avisoVez = 0;
-    function esconderAviso() {
-        const a = $('em-aviso-flutuante');
+    // avisos flutuantes: pilha de até 3, cada um com o seu prazo e o seu "Desfazer" (5 s; sem ele, 4 s).
+    // O quarto tira o mais velho. O prazo de todos para enquanto o foco está na pilha.
+    const pilha = $('em-aviso-flutuante'), prazos = new Map();
+    const prazo = a => { clearTimeout(prazos.get(a)); prazos.set(a, setTimeout(() => esconderAviso(a), a.querySelector('.em-desfazer') ? 5000 : 4000)); };
+    function esconderAviso(a) {
+        clearTimeout(prazos.get(a));
+        if (!prazos.delete(a)) return;   // já saiu
         if (a.contains(document.activeElement)) focoNaLista();
-        if (a.hidden || !comMovimento()) { a.hidden = true; return; }
-        // sobe ao entrar e desce ao sair; um aviso novo no meio da saída cancela o sumiço
-        const vez = avisoVez;
-        a.classList.add('em-sumindo');
-        a.addEventListener('animationend', () => { if (vez === avisoVez) a.hidden = true; a.classList.remove('em-sumindo'); }, { once: true });
+        const fim = () => { a.remove(); pilha.hidden = !pilha.childElementCount; };
+        if (!comMovimento()) return fim();
+        a.classList.add('em-sumindo');   // sobe ao entrar e desce ao sair
+        a.addEventListener('animationend', fim, { once: true });
     }
+    // `erro`: true é falha (ícone de alerta); 'neutro' é só informação (sem ícone); senão, deu certo
     function avisoFlutuante(texto, aoDesfazer, erro) {
-        const a = $('em-aviso-flutuante');
-        avisoVez++;
-        a.classList.remove('em-sumindo');
-        const filhos = [icone(erro ? 'alerta' : 'conferir', 'em-ic-p ' + (erro ? 'em-ruim' : 'em-ok')), el('span', texto)];
+        const a = el('div', null, 'em-aviso-item');
+        if (erro !== 'neutro') a.appendChild(icone(erro ? 'alerta' : 'conferir', 'em-ic-p ' + (erro ? 'em-ruim' : 'em-ok')));
+        a.appendChild(el('span', texto));
         if (aoDesfazer) {
             const b = botao('Desfazer', 'em-botao em-secundario em-desfazer');
-            b.addEventListener('click', () => { clearTimeout(avisoTempo); esconderAviso(); aoDesfazer(); });
-            filhos.push(b);
+            b.addEventListener('click', () => { esconderAviso(a); aoDesfazer(); });
+            a.appendChild(b);
         }
-        a.replaceChildren(...filhos);
-        a.hidden = false;
-        avisoMs = aoDesfazer ? 5000 : 4000;
-        clearTimeout(avisoTempo);
-        avisoTempo = setTimeout(esconderAviso, avisoMs);
+        pilha.appendChild(a);
+        pilha.hidden = false;
+        prazo(a);
+        const vivos = [...prazos.keys()];
+        if (vivos.length > 3) esconderAviso(vivos[0]);
     }
-    $('em-aviso-flutuante').addEventListener('focusin', () => clearTimeout(avisoTempo));
-    $('em-aviso-flutuante').addEventListener('focusout', () => { clearTimeout(avisoTempo); avisoTempo = setTimeout(esconderAviso, avisoMs); });
+    pilha.addEventListener('focusin', () => prazos.forEach(clearTimeout));
+    pilha.addEventListener('focusout', () => prazos.forEach((_t, a) => prazo(a)));
     function telaAcesso(titulo, texto) {
         estado.bloqueado = true;
         for (const id of ['em-app', 'em-dash', 'em-saude', 'em-filtros-salvos', 'em-trilho', 'em-busca-global', 'em-abrir-busca', 'em-sino']) $(id).hidden = true;
@@ -193,11 +195,15 @@
             desenharAvisos();
             estado.iniciado = true;
             mostrarVisao();
-        } else if (!estado.itens && estado.visao === 'caixa') listar(false);
+        } else if (estado.retomar !== null) listar(estado.retomar);   // a conexão caiu com a lista carregando: pede de novo
+        else if (!estado.itens && estado.visao === 'caixa') listar(false);
+        else if (estado.caiu && estado.listou && !estado.carregando) avisar(contagem());   // tira o "Conexão perdida"
+        estado.caiu = false;
         if (estado.visao === 'caixa' || estado.visao === 'filtros') atualizarContadores();
     });
-    socket.on('connect_error', () => { aoVivo('reconectando'); avisar('Sem conexão com o Maestro. Tentando de novo…'); });
+    socket.on('connect_error', () => { estado.caiu = true; aoVivo('reconectando'); avisar('Sem conexão com o Maestro. Tentando de novo…'); });
     socket.on('disconnect', () => {
+        estado.caiu = true;
         // o servidor descarta os pedidos deste socket; quem espera recebe "cancelado" e libera a tela
         for (const p of esperando.values()) p.resolve(CANCELADO);
         esperando.clear();
@@ -433,7 +439,14 @@
         clearTimeout(esperaBusca);
         const busca = $('em-busca').value.trim();
         if (estado.visao === 'caixa' && busca === estado.filtro.busca) return;
-        filtrar(Object.assign({}, estado.filtro, { busca }), estado.visao === 'caixa');
+        const ir = () => filtrar(Object.assign({}, estado.filtro, { busca }), estado.visao === 'caixa');
+        // no celular o e-mail aberto cobre a lista: fecha antes (sem tirar o foco do campo) e espera o histórico voltar
+        if (estreito.matches && estado.idAberto !== null) {
+            const voltar = noHistorico();
+            fecharDetalhe(false);
+            if (voltar) { window.addEventListener('popstate', ir, { once: true }); return; }
+        }
+        ir();
     }
     $('em-busca').addEventListener('input', () => {
         clearTimeout(esperaBusca);
@@ -463,6 +476,9 @@
     // ----- visões pelo endereço: #caixa (com o filtro), #dashboard, #saude, #filtros -----
     const ITENS_TRILHO = { caixa: 'em-ir-caixa', dashboard: 'em-ir-dash', revisao: 'em-ir-revisao', atrasados: 'em-ir-atrasados', filtros: 'em-ir-filtros', saude: 'em-ir-saude' };
     const minhas = () => estado.prefs.minhas_caixas || [];
+    // minhas caixas e "Sem ruído" guardados são o padrão: ficam fora do endereço
+    const paraHash = f => Q.paraHash(f, minhas(), estado.prefs.sem_ruido);
+    const deHash = h => Q.deHash(h, minhas(), estado.prefs.sem_ruido);
     function mostrarVisao() {
         if (estado.bloqueado) return;
         const r = F.rota(location.hash);
@@ -475,7 +491,7 @@
         $('em-filtros-salvos').hidden = r.visao !== 'filtros';
         let item = r.ver || r.visao;
         if (r.visao === 'caixa') {
-            const f = Q.deHash(location.hash, minhas());
+            const f = deHash(location.hash);
             item = f.atrasados ? 'atrasados' : f.revisao ? 'revisao' : 'caixa';
             if (estado.iniciado && (!estado.listou || !Q.igual(f, estado.filtro))) {
                 estado.filtro = f;
@@ -500,7 +516,7 @@
 
     // o filtro vai para o endereço, e o endereço manda listar
     function filtrar(f, substituir) {
-        const hash = Q.paraHash(f, minhas());
+        const hash = paraHash(f);
         if (estado.visao === 'caixa' && location.hash === hash) {
             if (!Q.igual(f, estado.filtro)) { estado.filtro = Q.normalizar(f); listar(false); desenharFiltros(); }
             return;
@@ -508,7 +524,7 @@
         if (substituir) { history.replaceState(null, '', hash); mostrarVisao(); }
         else location.hash = hash;
     }
-    const padrao = () => Q.deHash('#caixa', minhas());
+    const padrao = () => deHash('#caixa');
 
     // ----- preferências (no portal) -----
     async function carregarPreferencias() {
@@ -667,7 +683,13 @@
         switch (b.dataset.acao) {
         case 'contas': case 'categorias': case 'estados': return filtrar(Q.alternar(f, b.dataset.acao, v));
         case 'opcao': return filtrar(Object.assign({}, f, { [v]: !f[v] }));
-        case 'sem-ruido': return filtrar(Object.assign({}, f, { sem_ruido: !f.sem_ruido }));
+        case 'sem-ruido': {
+            // a escolha vira a preferência: a próxima abertura da Caixa já vem assim
+            const sem_ruido = !f.sem_ruido;
+            estado.prefs = Object.assign({}, estado.prefs, { sem_ruido });
+            salvarPreferencias({ sem_ruido }, 'em-salvar-estado');
+            return filtrar(Object.assign({}, f, { sem_ruido }));
+        }
         case 'escopo': return filtrar(Object.assign({}, f, { contas: v === 'minhas' ? minhas() : [] }));
         case 'periodo': {
             const p = Q.periodo(v, hoje());
@@ -704,7 +726,7 @@
     $('em-definir-minhas').addEventListener('click', async () => {
         const contas = estado.filtro.contas;
         if (!(await salvarPreferencias({ minhas_caixas: contas }, 'em-salvar-estado'))) return;
-        history.replaceState(null, '', Q.paraHash(estado.filtro, minhas()));
+        history.replaceState(null, '', paraHash(estado.filtro));
         $('em-salvar-estado').textContent = contas.length ? 'Minhas caixas: ' + contas.map(F.nomeCaixa).join(', ') + '.' : 'Minhas caixas esquecidas.';
         desenharFiltros();
     });
@@ -821,8 +843,13 @@
         }
     }
 
+    const contagem = () => {
+        const total = Math.max(estado.total, estado.itens);
+        return estado.itens ? (total === 1 ? '1 e-mail' : total.toLocaleString('pt-BR') + ' e-mails') : '0 e-mails';
+    };
     async function listar(mais) {
         const meu = ++estado.seqLista;
+        estado.retomar = null;
         if (!mais) {
             estado.proximo = null; estado.itens = 0; estado.ultimoDia = ''; estado.listou = true; estado.dados.clear();
             $('em-lista').replaceChildren(); $('em-novidade').hidden = true; $('em-vazio-lista').hidden = true;
@@ -836,10 +863,11 @@
         $('em-mais').hidden = true;
         const r = await pedir('listar', Object.assign(Q.params(estado.filtro), { cursor: mais ? estado.proximo : '' }));
         if (meu !== estado.seqLista) return;   // outro pedido da lista já tomou o lugar deste
+        // a conexão caiu no meio: a lista segue carregando e o connect pede de novo
+        if (r.cancelado) { estado.retomar = !!mais; return; }
         estado.carregando = false;
         $('em-lista').setAttribute('aria-busy', 'false');
         $('em-lista').querySelectorAll('.em-esqueleto-item').forEach(x => x.remove());
-        if (r.cancelado) return;
         if (!r.sucesso) {
             avisar(r.erro || 'Não foi possível carregar os e-mails.');
             $('em-tentar').hidden = false;
@@ -879,7 +907,7 @@
         $('em-mais').hidden = !estado.proximo;
         $('em-vazio-lista').hidden = estado.itens > 0;
         const total = Math.max(estado.total, estado.itens);
-        avisar(estado.itens ? (total === 1 ? '1 e-mail' : total.toLocaleString('pt-BR') + ' e-mails') : '0 e-mails');   // o estado vazio diz o resto
+        avisar(contagem());   // o estado vazio diz o resto
         $('em-exportar').disabled = !estado.itens || !$('em-exportando').hidden;   // exportação em andamento
         $('em-ver-resultados').textContent = estado.itens ? 'Ver ' + (total === 1 ? '1 e-mail' : total.toLocaleString('pt-BR') + ' e-mails') : 'Ver e-mails';
     }
@@ -1021,11 +1049,18 @@
     }
 
     // ----- detalhe -----
+    // no celular o e-mail aberto ganha uma entrada no histórico: o voltar do aparelho fecha o e-mail, sem mexer no filtro
+    const noHistorico = () => !!(history.state && history.state.detalhe);
+    window.addEventListener('popstate', () => { if (estado.idAberto !== null && !noHistorico()) fecharDetalhe(); });
+    // o que fica escondido quando o e-mail não abre (vazio, só confundiria)
+    const soComDados = () => [document.querySelector('.em-cabeca'), $('em-copiar-assunto'), $('em-historico').parentElement];
     async function abrir(id) {
         estado.idAberto = id;
         for (const b of $('em-lista').querySelectorAll('.em-item')) b.classList.toggle('em-ativo', Number(b.dataset.id) === id);
         // abrir desliza da direita; trocar de e-mail com o detalhe já aberto só esmaece
         const fechado = $('em-detalhe').hidden;
+        if (fechado && estreito.matches && !noHistorico()) history.pushState({ detalhe: true }, '', location.href);
+        for (const x of soComDados()) x.hidden = false;
         $('em-detalhe').hidden = false;
         animar($('em-detalhe'), fechado ? 'em-abrindo' : 'em-trocando');
         $('em-app').classList.add('em-com-detalhe');
@@ -1039,7 +1074,15 @@
         $('em-assunto').focus({ preventScroll: true });
         const r = await pedir('detalhe', { id });
         if (r.cancelado || estado.idAberto !== id) return;
-        if (!r.sucesso) { $('em-assunto').textContent = r.erro || 'Não foi possível abrir o e-mail.'; return; }
+        if (!r.sucesso) {
+            // estado de erro do detalhe: título fixo, o motivo num aviso e "Tentar de novo"
+            $('em-assunto').textContent = 'Não foi possível abrir o e-mail.';
+            for (const x of soComDados()) x.hidden = true;
+            const tentar = botao('Tentar de novo', 'em-botao em-secundario');
+            tentar.addEventListener('click', () => abrir(id));
+            $('em-avisos').append(aviso(r.erro || 'Confira a conexão e tente de novo.', true), tentar);
+            return;
+        }
         mostrarDetalhe(r.dados);
         atualizarItem(id, doDetalhe(r.dados));
     }
@@ -1050,7 +1093,9 @@
         mostrarDetalhe(r.dados);
         atualizarItem(id, doDetalhe(r.dados));
     }
-    function fecharDetalhe() {
+    // `focar` false: quem fechou cuida do foco (a busca do celular mantém o foco no campo)
+    function fecharDetalhe(focar) {
+        if (noHistorico()) history.back();   // tira a entrada do e-mail aberto; o popstate encontra o detalhe já fechado
         const id = estado.idAberto;
         estado.aberto = null; estado.idAberto = null;
         mostrarTexto();
@@ -1058,6 +1103,7 @@
         $('em-detalhe').hidden = true;
         $('em-app').classList.remove('em-com-detalhe');
         for (const b of $('em-lista').querySelectorAll('.em-item.em-ativo')) b.classList.remove('em-ativo');
+        if (focar === false) return;
         const item = id !== null && linha(id);
         if (item) item.querySelector('.em-item').focus();
         else $('em-lista').focus();
@@ -1363,6 +1409,8 @@
         if (estado.visao !== 'caixa' || MENUS.some(([, m]) => !$(m).hidden)) return;
         const acao = { j: () => mover(1), k: () => mover(-1), r: () => marcarPorAtalho('respondido'), e: () => marcarPorAtalho('arquivado'),
             f: () => modoFoco(!emFoco()),
+            // z: o "Desfazer" do aviso mais novo que ainda tem um
+            z: () => { const b = [...pilha.querySelectorAll('.em-aviso-item:not(.em-sumindo) .em-desfazer')].pop(); if (b) b.click(); },
             x: () => {
                 const id = itemFocado() !== null ? itemFocado() : estado.idAberto;
                 if (id !== null && estado.dados.has(id)) selecionar(id, ev.shiftKey, !estado.sel.has(id));
@@ -1375,7 +1423,7 @@
     // ----- partes carregadas na primeira vez que abrem: <script src> do próprio portal, como o exceljs (a CSP não muda) -----
     // Cada arquivo lê de EmailsTela os utilitários da casca e registra em `partes` a sua entrada.
     const T = window.EmailsTela = { $, el, botao, icone, etiqueta, etiquetaCategoria, SVG, estado, admin, minhas, hoje, pedir, cancelarPedidos,
-        contadores, comMovimento, tempo, manterFoco, avisoFlutuante, salvarPreferencias, filtrar, opcoesCor, partes: {} };
+        contadores, comMovimento, tempo, manterFoco, avisoFlutuante, salvarPreferencias, filtrar, paraHash, opcoesCor, partes: {} };
     // os arquivos de cada parte, na ordem: graficos.js antes de quem usa G; saude.js tem as tabelas que o Dashboard usa
     const PARTES = { dashboard: ['graficos', 'saude', 'dashboard'], saude: ['graficos', 'saude'], filtros: ['gestao-filtros'], exportar: ['exportar'] };
     const baixados = {};
@@ -1397,7 +1445,8 @@
     }
     // enquanto o arquivo vem, a visão diz "Carregando…"; se não vier, erro e "Tentar de novo"
     const LUGAR = { dashboard: ['em-dash-estado', 'em-dash-conteudo'], saude: ['em-saude-estado', 'em-saude-conteudo'], filtros: ['em-gestao-estado', 'em-gestao'] };
-    async function abrirVisao(nome, ver) {
+    // `doBotao`: veio de "Tentar de novo", que some quando a visão abre; o foco vai ao título da visão
+    async function abrirVisao(nome, ver, doBotao) {
         if (!T.partes[nome]) {
             const [estadoId, conteudoId] = LUGAR[nome];
             $(estadoId).textContent = 'Carregando…';
@@ -1406,7 +1455,7 @@
             } catch (erro) {
                 if (estado.visao !== nome) return;
                 const tentar = botao('Tentar de novo', 'em-botao em-secundario');
-                tentar.addEventListener('click', () => { if (estado.visao === nome) abrirVisao(nome, ver); });
+                tentar.addEventListener('click', () => { if (estado.visao === nome) abrirVisao(nome, ver, true); });
                 $(conteudoId).replaceChildren(tentar);
                 $(estadoId).textContent = 'Não foi possível carregar esta visão. Confira a conexão e tente de novo.';
                 return;
@@ -1416,6 +1465,11 @@
             if (estado.visao !== nome) return;   // saiu da visão enquanto o arquivo vinha
         }
         T.partes[nome](ver);
+        if (doBotao) {
+            const titulo = $(LUGAR[nome][0]).closest('.em-visao').querySelector('h2');
+            titulo.tabIndex = -1;
+            titulo.focus();
+        }
     }
     // exportação: o primeiro clique baixa exportar.js (e ele, depois, o exceljs)
     $('em-exportar').addEventListener('click', () => {

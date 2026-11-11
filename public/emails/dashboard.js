@@ -2,19 +2,19 @@
 (function () {
     'use strict';
     const T = window.EmailsTela;
-    const { $, el, botao, etiquetaCategoria, SVG, estado, minhas, pedir, contadores, comMovimento, tempo, manterFoco, tabela, tabelaSimples, situacao, tabelaSaude } = T;
+    const { $, el, botao, etiquetaCategoria, SVG, estado, minhas, paraHash, pedir, contadores, comMovimento, tempo, manterFoco, tabela, tabelaSimples, situacao, tabelaSaude } = T;
     const F = window.EmailsFormato, Q = window.EmailsFiltro, G = window.EmailsGraficos;
     const dataHora = F.dataHora;
 
     // ----- dashboard (seção 7): cada número leva à Caixa filtrada -----
-    const dash = { periodo: 'hoje', escopo: '', ocultas: new Set(), d: null, em: 0 };
+    const dash = { periodo: 'hoje', escopo: '', ocultas: new Set(), d: null, em: 0, vez: 0 };
     const escopoDash = () => (minhas().length ? dash.escopo || 'minhas' : 'todas');
     const contasDash = () => (escopoDash() === 'minhas' ? minhas() : []);
     // endereço da Caixa com o filtro do clique; sem categoria, "sem ruído" desliga (a lista conta o mesmo que o painel)
     function paraCaixa(campos) {
         const f = Object.assign(Q.novo(), { contas: contasDash() }, campos);
         if (!f.categorias.length) f.sem_ruido = false;
-        return Q.paraHash(f, minhas());
+        return paraHash(f);
     }
     function svg(tag, atributos, classe) {
         const e = document.createElementNS(SVG, tag);
@@ -463,14 +463,21 @@
     }
     // numa atualização, o que está na tela fica esmaecido até a resposta
     async function carregarDash(ver, auto) {
+        const meu = ++dash.vez;
         desenharControlesDash();
-        if (!auto) $('em-dash-estado').textContent = 'Carregando o dashboard…';
+        if (!auto) {
+            $('em-dash-estado').setAttribute('aria-live', 'polite');
+            $('em-dash-estado').textContent = 'Carregando o dashboard…';
+        }
         $('em-dash-conteudo').classList.add('em-recarregando');
         const params = { periodo: dash.periodo };
         if (contasDash().length) params.contas = contasDash();
         const r = await pedir('resumo', params);
+        // cancelado por um pedido mais novo: ele tira o esmaecido; pela queda da conexão: tira aqui
+        if (meu === dash.vez) $('em-dash-conteudo').classList.remove('em-recarregando');
         if (r.cancelado) return;
-        $('em-dash-conteudo').classList.remove('em-recarregando');
+        // a atualização automática que deu certo só troca a hora: o leitor de tela não ouve isso a cada 2 minutos
+        if (auto) $('em-dash-estado').setAttribute('aria-live', r.sucesso ? 'off' : 'polite');
         if (!r.sucesso) { $('em-dash-estado').textContent = r.erro || 'Não foi possível carregar o dashboard.'; return; }
         dash.d = r.dados || {};
         dash.em = Date.now();

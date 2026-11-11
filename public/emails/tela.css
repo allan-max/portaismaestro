@@ -139,6 +139,8 @@ body { background: var(--em-fundo); min-height: 100vh; }
 .em-lote-num { margin-right: var(--em-e1); font-weight: 600; }
 /* separador de dia: fica preso no topo da lista ao rolar */
 .em-dia { position: sticky; top: 0; z-index: 2; padding: var(--em-e3) var(--em-e3) var(--em-e1); background: var(--em-painel); }
+/* o item focado por j/k para abaixo do separador de dia preso (32,5 px medidos) */
+.em-item { scroll-margin-top: 34px; }
 .em-item {
   width: 100%; text-align: left; display: flex; flex-direction: column; gap: 2px;
   padding: var(--em-e2) var(--em-e3) var(--em-e2) 9px; border-radius: var(--em-raio-controle);
@@ -463,6 +465,7 @@ a.em-kpi:focus-visible { outline: 2px solid var(--em-destaque); outline-offset: 
   .em-sel { opacity: 1; }
   .em-detalhe-vazio { display: none; }
   .em-dia { top: var(--em-topo); }
+  .em-item { scroll-margin-top: calc(var(--em-topo) + 34px); }
   /* filtros como folha sobre a lista, aberta pelo botão "Filtros" */
   .em-abrir-filtros { display: inline-flex; }
   .em-filtros { display: none; }

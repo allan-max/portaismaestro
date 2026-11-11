@@ -47,7 +47,9 @@
             do {
                 // grupo próprio: buscar as páginas não cancela a lista que está na tela
                 const r = await pedir('listar', Object.assign({}, filtro, { cursor }), 'exportar');
-                if (minha.cancelado || r.cancelado) return;
+                if (minha.cancelado) return;
+                // sem o botão Cancelar, só a queda da conexão cancela: avisa em vez de sumir calada
+                if (r.cancelado) { avisoFlutuante('A conexão caiu e a exportação parou. Tente de novo.', null, true); return; }
                 if (!r.sucesso) { avisoFlutuante(r.erro || 'Não foi possível exportar a lista.', null, true); return; }
                 const d = r.dados || {};
                 if (!cursor && Number.isFinite(d.total)) total = d.total;
@@ -93,7 +95,7 @@
         minha.cancelado = true;
         cancelarPedidos('exportar');
         fimExportar(minha);
-        avisoFlutuante('Exportação cancelada.');
+        avisoFlutuante('Exportação cancelada.', null, 'neutro');
         $('em-exportar').focus();
     });
     T.partes.exportar = exportar;
