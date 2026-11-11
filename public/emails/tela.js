@@ -1050,8 +1050,10 @@
 
     // ----- detalhe -----
     // no celular o e-mail aberto ganha uma entrada no histórico: o voltar do aparelho fecha o e-mail, sem mexer no filtro
+    // (trocar o filtro muda location.hash, que também dispara popstate: só fecha quem saiu da entrada do e-mail)
     const noHistorico = () => !!(history.state && history.state.detalhe);
-    window.addEventListener('popstate', () => { if (estado.idAberto !== null && !noHistorico()) fecharDetalhe(); });
+    let comEntrada = false;
+    window.addEventListener('popstate', () => { if (comEntrada && !noHistorico()) fecharDetalhe(); });
     // o que fica escondido quando o e-mail não abre (vazio, só confundiria)
     const soComDados = () => [document.querySelector('.em-cabeca'), $('em-copiar-assunto'), $('em-historico').parentElement];
     async function abrir(id) {
@@ -1059,7 +1061,7 @@
         for (const b of $('em-lista').querySelectorAll('.em-item')) b.classList.toggle('em-ativo', Number(b.dataset.id) === id);
         // abrir desliza da direita; trocar de e-mail com o detalhe já aberto só esmaece
         const fechado = $('em-detalhe').hidden;
-        if (fechado && estreito.matches && !noHistorico()) history.pushState({ detalhe: true }, '', location.href);
+        if (fechado && estreito.matches && !noHistorico()) { history.pushState({ detalhe: true }, '', location.href); comEntrada = true; }
         for (const x of soComDados()) x.hidden = false;
         $('em-detalhe').hidden = false;
         animar($('em-detalhe'), fechado ? 'em-abrindo' : 'em-trocando');
@@ -1096,6 +1098,7 @@
     // `focar` false: quem fechou cuida do foco (a busca do celular mantém o foco no campo)
     function fecharDetalhe(focar) {
         if (noHistorico()) history.back();   // tira a entrada do e-mail aberto; o popstate encontra o detalhe já fechado
+        comEntrada = false;
         const id = estado.idAberto;
         estado.aberto = null; estado.idAberto = null;
         mostrarTexto();
