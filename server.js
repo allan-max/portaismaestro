@@ -520,10 +520,17 @@ const dashboardCotacoes = criarDashboardCotacoes({
     sessoes: cofreSessoes, io, obterRobo: () => bot_socket_id,
     obterSocket: id => io.sockets.sockets.get(id)
 });
+// Nome do cadastro para "Visto por" e comentários da Central de E-mails (o serviço guarda só o login). Relido a cada minuto.
+let cadastroNomes = { em: 0, db: {} };
+function nomeDoCadastro(email) {
+    if (Date.now() - cadastroNomes.em > 60000) cadastroNomes = { em: Date.now(), db: lerBancoUsuariosLocal() || {} };
+    const u = cadastroNomes.db[email];
+    return u && typeof u.nome === 'string' ? u.nome : '';
+}
 // Central de E-mails: o portal só valida a sessão (admin ou emails_access) e repassa ao serviço.
 const centralEmails = criarEmails({
     sessoes: cofreSessoes, io, obterServico: () => emails_socket_id,
-    obterSocket: id => io.sockets.sockets.get(id)
+    obterSocket: id => io.sockets.sockets.get(id), nomeDe: nomeDoCadastro
 });
 // Faixa "Saúde dos serviços": quando cada serviço conectou e mandou a última mensagem (sem batimento extra).
 const conexoes = {

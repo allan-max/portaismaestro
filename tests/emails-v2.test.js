@@ -22,7 +22,7 @@ function setup(user = { emails_access: true }, op = {}) {
     obterServico: () => servico, obterSocket: id => (id === 'cliente' ? socket : null),
     // Sem prefsDir, um caminho que nunca é criado: só salvar preferências cria a pasta, e esses testes não salvam.
     prefsDir: op.prefsDir || path.join(os.tmpdir(), `maestro-prefs-nao-usado-${process.pid}`),
-    ...(op.anexoTtlMs ? { anexoTtlMs: op.anexoTtlMs } : {}) });
+    ...(op.anexoTtlMs ? { anexoTtlMs: op.anexoTtlMs } : {}), ...(op.nomeDe ? { nomeDe: op.nomeDe } : {}) });
   emails.conectar(socket);
   const pedir = (acao, params = {}, requestId = 'r1') => handlers.emails_pedir({ requestId, acao, params });
   const trocarUsuario = u => sessoes.set('sessao', JSON.stringify({ expires: Date.now() + 100000, emails_access: true, ...u }));
@@ -93,6 +93,71 @@ test('lote e desfazer: usuário da sessão, 1 a 100 itens, item inválido recusa
   s.emails.fechar();
   const sem = setup({ portais_access: true }); sem.pedir('lote', { itens: [{ id: 1, status: 'arquivado' }] });
   assert.equal(sem.ultima().d.codigo, 'SEM_PERMISSAO'); assert.equal(sem.enviados.length, 0); sem.emails.fechar();
+});
+
+test('detalhe e comentários: usuário da sessão; o que o navegador manda como usuário é descartado', () => {
+  const s = setup();
+  s.pedir('detalhe', { id: 7, usuario: 'forjado@example.test' });
+  assert.deepEqual(s.enviados[0].d.params, { id: 7, usuario: 'Ana@Example.test' });
+  s.pedir('comentar', { email_id: 7, texto: 'Liguei.\nVolto amanhã.', usuario: 'forjado@example.test', em: 'ontem' });
+  assert.deepEqual(s.enviados[1].d.params, { email_id: 7, texto: 'Liguei.\nVolto amanhã.', usuario: 'Ana@Example.test' });
+  s.pedir('apagar_comentario', { id: 3, usuario: 'forjado@example.test' });
+  assert.deepEqual(s.enviados[2].d.params, { id: 3, usuario: 'Ana@Example.test' });
+  s.pedir('comentar', { email_id: 7, texto: 'x'.repeat(2000) });
+  assert.equal(s.enviados.length, 4);
+  const ruins = [{ email_id: 7, texto: '' }, { email_id: 7, texto: '  \n ' }, { email_id: 7, texto: 'x'.repeat(2001) },
+    { email_id: 7, texto: ['oi'] }, { email_id: 7 }, { email_id: '7', texto: 'oi' }, { texto: 'oi' }];
+  for (const p of ruins) {
+    s.pedir('comentar', p); assert.equal(s.ultima().d.codigo, 'PARAMETRO_INVALIDO', JSON.stringify(p).slice(0, 60));
+  }
+  s.pedir('apagar_comentario', { id: 'tudo' }); assert.equal(s.ultima().d.codigo, 'PARAMETRO_INVALIDO');
+  assert.equal(s.enviados.length, 4);
+  s.emails.fechar();
+});
+
+test('aberturas: só administrador, barrada no portal antes do serviço; admin vem da sessão', () => {
+  for (const user of [{ emails_access: true }, { emails_access: true, admin: 'true' }]) {
+    const v = setup(user);
+    v.pedir('aberturas', { admin: true });
+    assert.equal(v.ultima().d.codigo, 'SO_ADMIN'); assert.equal(v.enviados.length, 0);
+    v.emails.fechar();
+  }
+  const a = setup({ admin: true });
+  a.pedir('aberturas', { quem: 'joao@example.test', de: '2026-11-01', ate: 'ontem', email: 'x'.repeat(300), pagina: 2,
+    admin: false, usuario: 'forjado@example.test' });
+  assert.deepEqual(a.enviados[0].d.params, { quem: 'joao@example.test', de: '2026-11-01', ate: '', email: 'x'.repeat(120),
+    pagina: 2, admin: true });
+  a.pedir('aberturas', { pagina: -1 }); assert.equal(a.enviados[1].d.params.pagina, 1);
+  a.emails.fechar();
+});
+
+test('listar: nao_aberto só passa se for true', () => {
+  const s = setup();
+  s.pedir('listar', { nao_aberto: 'true' }); assert.equal(s.enviados[0].d.params.nao_aberto, false);
+  s.pedir('listar', { nao_aberto: true }); assert.equal(s.enviados[1].d.params.nao_aberto, true);
+  s.emails.fechar();
+});
+
+test('nomes: o portal troca login por nome do cadastro em vistos, comentários e aberturas; sem nome, fica o login', () => {
+  const nomes = { 'ana@example.test': 'Ana Souza', 'bia@example.test': '  ' };
+  const s = setup({ admin: true }, { nomeDe: email => nomes[email] });
+  const devolver = (acao, dados) => {
+    s.pedir(acao, acao === 'aberturas' ? {} : { id: 1, status: 'arquivado' });
+    s.emails.receber('servico', { id: s.enviados.at(-1).d.id, sucesso: true, dados });
+    return s.ultima().d.dados;
+  };
+  const d = devolver('detalhe', { id: 1, vistos: [{ usuario: 'ana@example.test', em: 'x' }, { usuario: 'joao@example.test', em: 'y' }],
+    comentarios: [{ id: 5, usuario: 'bia@example.test', texto: 'oi' }, null] });
+  assert.deepEqual(d.vistos.map(v => v.nome), ['Ana Souza', 'joao@example.test']);
+  assert.equal(d.vistos[0].usuario, 'ana@example.test');   // o login fica: a tela filtra por ele
+  assert.deepEqual(d.comentarios, [{ id: 5, usuario: 'bia@example.test', texto: 'oi', nome: 'bia@example.test' }, null]);
+  const st = devolver('status', { id: 1, comentarios: [{ usuario: 'ana@example.test' }] });
+  assert.equal(st.comentarios[0].nome, 'Ana Souza');
+  const ab = devolver('aberturas', { itens: [{ usuario: 'ana@example.test' }], usuarios: [{ usuario: 'joao@example.test' }] });
+  assert.equal(ab.itens[0].nome, 'Ana Souza'); assert.equal(ab.usuarios[0].nome, 'joao@example.test');
+  const antigo = devolver('detalhe', { id: 1 });   // serviço antigo: sem vistos nem comentários, nada é inventado
+  assert.deepEqual(antigo, { id: 1 });
+  s.emails.fechar();
 });
 
 test('novidade repassa cotacoes e pedidos só quando são inteiros', () => {
