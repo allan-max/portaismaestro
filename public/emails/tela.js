@@ -1334,8 +1334,9 @@
         if (typeof url === 'string' && /^\/emails\/anexo\/[0-9a-f]{64}$/.test(url)) window.location.assign(url);
     }
 
-    // pré-visualização: imagem e PDF abrem no detalhe por um endereço de uso único com CSP fechada e sandbox na resposta.
-    // O PDF vai num iframe sem o atributo sandbox: com ele o visualizador do navegador não abre (o isolamento vem da CSP).
+    // pré-visualização: endereço de uso único com CSP fechada e sandbox na resposta. A imagem abre no detalhe num <img>.
+    // O PDF abre numa aba nova, sem ligação com esta página (noopener, noreferrer): o visualizador do Chromium ignora o
+    // sandbox da resposta e põe um documento com a origem do portal, que num iframe aqui dentro ficaria ao alcance da página.
     function fecharPrevia() {
         const lugar = $('em-previa');
         lugar.replaceChildren();
@@ -1356,21 +1357,26 @@
         const fechar = botao('Fechar', 'em-botao em-secundario');
         fechar.addEventListener('click', () => { fecharPrevia(); if (b.isConnected) b.focus(); });
         topo.append(el('span', nome, 'em-anexo-nome'), fechar);
-        let midia;
-        if (r.dados.tipo === 'application/pdf') {
-            midia = el('iframe');
-            midia.title = 'Pré-visualização de ' + nome;
-            midia.referrerPolicy = 'no-referrer';
-        } else {
-            midia = el('img');
-            midia.alt = nome;
-        }
-        midia.src = url;
         const lugar = $('em-previa');
-        lugar.replaceChildren(topo, midia);
+        let foco = lugar;
+        if (r.dados.tipo === 'application/pdf') {
+            const abrir = el('a', 'Abrir PDF em nova aba', 'em-botao');
+            abrir.href = url;
+            abrir.target = '_blank';
+            abrir.rel = 'noopener noreferrer';
+            // o endereço só abre uma vez: depois do clique a região fecha e o foco volta ao "Ver"
+            abrir.addEventListener('click', () => setTimeout(() => { fecharPrevia(); if (b.isConnected) b.focus(); }, 0));
+            lugar.replaceChildren(topo, el('p', 'O PDF abre numa aba nova do navegador. O endereço vale por 1 minuto e abre uma vez.'), abrir);
+            foco = abrir;
+        } else {
+            const img = el('img');
+            img.alt = nome;
+            img.src = url;
+            lugar.replaceChildren(topo, img);
+        }
         lugar.hidden = false;
         lugar.setAttribute('aria-label', 'Pré-visualização de ' + nome);
-        lugar.focus();
+        foco.focus();
     }
 
     // versão formatada: o portal entrega o documento por um endereço de uso único, com CSP própria e fechada

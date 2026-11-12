@@ -283,7 +283,7 @@ body { background: var(--em-fundo); min-height: 100vh; }
 .em-previa { margin-bottom: var(--em-e4); }
 .em-previa-topo { display: flex; justify-content: space-between; align-items: center; gap: var(--em-e3); margin-bottom: var(--em-e2); }
 .em-previa img { display: block; max-width: 100%; height: auto; background: var(--em-papel); border-radius: var(--em-raio-cartao); }
-.em-previa iframe { display: block; width: 100%; height: 70vh; border: 1px solid var(--em-borda); border-radius: var(--em-raio-cartao); }
+.em-previa p { margin-bottom: var(--em-e2); color: var(--em-apoio); }
 .em-corpo-acoes { display: flex; gap: var(--em-e2); margin-bottom: var(--em-e3); }
 .em-corpo { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.6; margin: 0; }
 .em-html { width: 100%; min-height: 60vh; border: 1px solid var(--em-borda); border-radius: var(--em-raio-cartao); background: var(--em-papel); }
