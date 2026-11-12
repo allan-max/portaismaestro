@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { criarEmails, sanearListar, CSP_HTML_EMAIL } = require('../lib/emails');
+const { criarEmails, sanearListar, CSP_HTML_EMAIL, CSP_PREVIA, tipoPrevia } = require('../lib/emails');
 const { criarPreferencias } = require('../lib/emails-preferencias');
 
 // Sem t.after (não existe no Node 16.20.2 do servidor): cada teste limpa o que criou.
@@ -175,12 +175,19 @@ test('preferências: tratadas no portal, com o serviço offline, pela chave do u
     const s = setup({ emails_access: true }, { servico: null, prefsDir: dir });
     s.pedir('preferencias');
     assert.deepEqual(s.ultima().d, { sucesso: true, requestId: 'r1', acao: 'preferencias',
-      dados: { minhas_caixas: [], filtros: [], sem_ruido: true, agrupar: false, notificar: false, som: false, equipe: [] } });
+      dados: { minhas_caixas: [], filtros: [], sem_ruido: true, agrupar: false, notificar: false, som: false, ver_texto: false,
+        equipe: [] } });
     s.pedir('preferencias_salvar', { email: 'outra@example.test', usuario: 'outra@example.test', minhas_caixas: ['vendas@example.test'],
       sem_ruido: false, som: 'sim', desconhecida: 1 });
     assert.equal(s.ultima().d.sucesso, true);
     assert.deepEqual(s.ultima().d.dados.minhas_caixas, ['vendas@example.test']);
     assert.equal(s.ultima().d.dados.som, false); assert.equal(s.ultima().d.dados.desconhecida, undefined);
+    // "Ver como texto" lembrado: só booleano verdadeiro liga
+    s.pedir('preferencias_salvar', { ver_texto: true });
+    assert.equal(s.ultima().d.dados.ver_texto, true);
+    assert.deepEqual(s.ultima().d.dados.minhas_caixas, ['vendas@example.test']);   // grava só a chave que veio
+    s.pedir('preferencias_salvar', { ver_texto: 'sim' });
+    assert.equal(s.ultima().d.dados.ver_texto, false);
     const arquivo = JSON.parse(fs.readFileSync(path.join(dir, 'emails-preferencias.json'), 'utf8'));
     assert.deepEqual(Object.keys(arquivo.usuarios), ['ana@example.test']);   // minúsculas, da sessão
     assert.equal(s.enviados.length, 0);
@@ -234,7 +241,7 @@ test('preferências: arquivo corrompido não derruba e fica guardado; gravação
     assert.equal(fs.readFileSync(path.join(dir, copias[0]), 'utf8'), '{"usuarios": {"ana@example.test": ');
     fs.writeFileSync(arquivo, JSON.stringify({ usuarios: { 'ana@example.test': { filtros: 'x', som: 'sim', minhas_caixas: [1, 'a'] } }, equipe: {} }));
     assert.deepEqual(prefs.obter('ana@example.test'), { minhas_caixas: ['a'], filtros: [], sem_ruido: true, agrupar: false,
-      notificar: false, som: false, equipe: [] });
+      notificar: false, som: false, ver_texto: false, equipe: [] });
     prefs.salvar('ana@example.test', false, { notificar: true });
     assert.deepEqual(fs.readdirSync(dir).filter(n => n.endsWith('.tmp')), []);
     assert.equal(JSON.parse(fs.readFileSync(arquivo, 'utf8')).usuarios['ana@example.test'].notificar, true);
@@ -304,4 +311,63 @@ test('html: vale 60 s, tamanho máximo, limite em memória e erro do serviço pa
   curto.emails.receber('servico', { id: curto.enviados[0].d.id, sucesso: true, dados: { html: '<p>a</p>' } });
   const token = curto.ultima().d.dados.url.split('/').pop();
   return new Promise(res => setTimeout(() => { assert.equal(curto.emails.retirarHtml(token), null); curto.emails.fechar(); res(); }, 60));
+});
+
+// ---------- pré-visualização de anexo (seção 7.4) ----------
+const PDF = Buffer.from('%PDF-1.4\n1 0 obj\n<< >>\nendobj\n%%EOF\n');
+const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(20)]);
+
+function pedirVer(s, conteudo, nome = 'proposta.pdf', ver = true) {
+  s.pedir('anexo', { id: 3, anexo: 9, ver }, 'v' + s.enviados.length);
+  const pedido = s.enviados.at(-1).d;
+  s.emails.receber('servico', { id: pedido.id, sucesso: true,
+    dados: { nome, tipo: 'application/octet-stream', conteudo: Buffer.from(conteudo).toString('base64') } });
+  return { pedido, r: s.ultima().d };
+}
+
+test('pré-visualização: PDF e imagem por endereço próprio, de uso único, com o tipo pelos primeiros bytes', () => {
+  const s = setup();
+  const { pedido, r } = pedirVer(s, PDF);
+  assert.deepEqual(pedido.params, { id: 3, anexo: 9 });                 // `ver` não vai ao serviço
+  assert.equal(r.sucesso, true);
+  assert.match(r.dados.url, /^\/emails\/ver\/[0-9a-f]{64}$/);
+  assert.equal(r.dados.tipo, 'application/pdf');
+  const token = r.dados.url.split('/').pop();
+  assert.equal(s.emails.retirarAnexo(token), null);                     // não é o token do download
+  assert.equal(s.emails.retirarHtml(token), null);
+  const v = s.emails.retirarVista(token);
+  assert.deepEqual([v.nome, v.tipo, v.conteudo.equals(PDF)], ['proposta.pdf', 'application/pdf', true]);
+  assert.equal(s.emails.retirarVista(token), null);                     // uso único
+  for (const t of ['', '../x', 'A'.repeat(64), null]) assert.equal(s.emails.retirarVista(t), null);
+  const img = pedirVer(s, PNG, 'foto.png').r;
+  assert.equal(img.dados.tipo, 'image/png');
+  // sem `ver`, o mesmo anexo continua indo para o download
+  const baixar = pedirVer(s, PDF, 'proposta.pdf', false).r;
+  assert.match(baixar.dados.url, /^\/emails\/anexo\/[0-9a-f]{64}$/);
+  assert.equal(CSP_PREVIA, "default-src 'none'; frame-ancestors 'self'; sandbox");
+  s.emails.fechar();
+});
+
+test('pré-visualização: recusa o que não é PDF ou imagem pelos bytes e o que passa de 10 MB', () => {
+  const s = setup();
+  for (const conteudo of ['<html><script>x()</script></html>', '<svg xmlns="http://www.w3.org/2000/svg"/>', 'PK\u0003\u0004planilha']) {
+    const { r } = pedirVer(s, conteudo, 'disfarçado.pdf');
+    assert.equal(r.sucesso, false); assert.equal(r.codigo, 'SEM_PREVIA');
+  }
+  const grande = Buffer.concat([PDF, Buffer.alloc(10 * 1024 * 1024)]);
+  assert.equal(pedirVer(s, grande).r.codigo, 'SEM_PREVIA');
+  s.emails.fechar();
+  const curto = setup({ emails_access: true }, { anexoTtlMs: 20 });
+  const token = pedirVer(curto, PDF).r.dados.url.split('/').pop();
+  return new Promise(res => setTimeout(() => { assert.equal(curto.emails.retirarVista(token), null); curto.emails.fechar(); res(); }, 60));
+});
+
+test('tipoPrevia: só os primeiros bytes contam', () => {
+  assert.equal(tipoPrevia(PDF), 'application/pdf');
+  assert.equal(tipoPrevia(PNG), 'image/png');
+  assert.equal(tipoPrevia(Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0])), 'image/jpeg');
+  assert.equal(tipoPrevia(Buffer.from('GIF89a......')), 'image/gif');
+  assert.equal(tipoPrevia(Buffer.from('RIFF\u0000\u0000\u0000\u0000WEBPVP8 ')), 'image/webp');
+  for (const x of [' %PDF-1.4', '<svg/>', '', 'GIF8']) assert.equal(tipoPrevia(Buffer.from(x)), null);
+  assert.equal(tipoPrevia('%PDF-1.4'), null);
 });

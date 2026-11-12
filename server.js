@@ -22,7 +22,7 @@ const { criarDashboardFontes } = require('./lib/dashboard-fontes');
 const { criarAuditoria } = require('./lib/auditoria');
 const { criarDashboardAuditoria, ipDe } = require('./lib/dashboard-auditoria');
 const { criarSincronizacao } = require('./lib/sincronizacao');
-const { criarEmails, CSP_HTML_EMAIL } = require('./lib/emails');
+const { criarEmails, CSP_HTML_EMAIL, CSP_PREVIA } = require('./lib/emails');
 const donoCotacao = require('./lib/dono-cotacao');
 
 
@@ -2158,6 +2158,17 @@ app.get('/emails/html/:token', (req, res) => {
     res.set({ 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': CSP_HTML_EMAIL });
     if (!html) return res.status(404).type('text/plain; charset=utf-8').send('Versão formatada vencida ou já aberta. Abra de novo na tela de e-mails.');
     res.type('text/html; charset=utf-8').send(html);
+});
+
+// Pré-visualização de anexo (PDF e imagem): entregue uma vez, por token de 60 s; o tipo foi conferido pelos primeiros bytes.
+app.get('/emails/ver/:token', (req, res) => {
+    const vista = centralEmails.retirarVista(req.params.token);
+    res.set('Cache-Control', 'no-store');
+    if (!vista) return res.status(404).type('text/plain; charset=utf-8').send('Pré-visualização vencida ou já aberta. Clique em Ver de novo na tela de e-mails.');
+    res.attachment(vista.nome);   // nome codificado pelo express; aqui para abrir no navegador, não baixar
+    res.set({ 'Content-Disposition': res.get('Content-Disposition').replace(/^attachment/, 'inline'), 'Content-Type': vista.tipo,
+        'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': CSP_PREVIA });
+    res.send(vista.conteudo);
 });
 
 app.get('/health', (req, res) => {

@@ -15,7 +15,7 @@
     // só arrumação da tela: o servidor corta o dado de administrador e recusa filtro da equipe de quem não é
     const admin = local('maestro_admin') === 'true';
     const SVG = 'http://www.w3.org/2000/svg';
-    const PREFS_PADRAO = { minhas_caixas: [], filtros: [], sem_ruido: true, agrupar: false, notificar: false, som: false, equipe: [] };
+    const PREFS_PADRAO = { minhas_caixas: [], filtros: [], sem_ruido: true, agrupar: false, notificar: false, som: false, ver_texto: false, equipe: [] };
     const estado = { filtro: Q.novo(), proximo: null, itens: 0, total: 0, aberto: null, contas: [], contagens: null, visao: '',
         bloqueado: false, iniciado: false, listou: false, carregando: false, parouMais: false, seqLista: 0, ultimoDia: '', prefs: PREFS_PADRAO,
         idAberto: null, sel: new Set(), ancora: null, dados: new Map(), retomar: null, caiu: false };
@@ -1004,7 +1004,7 @@
     }
     // o que o detalhe traz e o item da lista mostra
     const doDetalhe = e => ({ status: e.status, categoria: e.categoria, revisao: !!e.revisao, confianca: e.confianca,
-        horas_uteis: typeof e.horas_uteis === 'number' ? e.horas_uteis : null });
+        horas_uteis: typeof e.horas_uteis === 'number' ? e.horas_uteis : null, ...(Array.isArray(e.vistos) && e.vistos.length ? { aberto: true } : {}) });
     const auditoriaDe = d => (d && Array.isArray(d.auditoria) ? d.auditoria.filter(Number.isSafeInteger) : []);
     const ROTULO_STATUS = { pendente: 'pendente', respondido: 'respondido', arquivado: 'arquivado' };
 
@@ -1093,7 +1093,7 @@
         $('em-controle').hidden = true; $('em-ia').hidden = true; $('em-outros').hidden = true;
         $('em-vistos').hidden = true; $('em-conversa').hidden = true;
         estado.aberto = null;
-        mostrarTexto();
+        mostrarTexto(); fecharPrevia();
         $('em-assunto').focus({ preventScroll: true });
         const r = await pedir('detalhe', { id });
         if (r.cancelado || estado.idAberto !== id) return;
@@ -1122,7 +1122,7 @@
         comEntrada = false;
         const id = estado.idAberto;
         estado.aberto = null; estado.idAberto = null;
-        mostrarTexto();
+        mostrarTexto(); fecharPrevia();
         fecharMenus();
         $('em-detalhe').hidden = true;
         $('em-app').classList.remove('em-com-detalhe');
@@ -1226,7 +1226,17 @@
             b.disabled = !!a.bloqueado;
             if (a.bloqueado) b.title = a.motivo_bloqueio || 'Anexo bloqueado';
             b.addEventListener('click', () => baixar(e.id, a.id, b, rotulo));
-            li.appendChild(b);
+            const botoes = el('span', null, 'em-anexo-botoes');
+            // PDF e imagem até 10 MB ganham "Ver"; o portal confere o tipo pelos primeiros bytes
+            if (!a.bloqueado && /^(application\/pdf|image\/(png|jpeg|gif|webp))$/.test(a.tipo || '') && (a.tamanho || 0) <= 10 * 1024 * 1024) {
+                const v = botao(null, 'em-botao em-secundario');
+                v.append(icone('olho', 'em-ic-p'), el('span', 'Ver'));
+                v.setAttribute('aria-label', 'Ver ' + (a.nome || 'anexo sem nome'));
+                v.addEventListener('click', () => verAnexo(e, a, v));
+                botoes.appendChild(v);
+            }
+            botoes.appendChild(b);
+            li.appendChild(botoes);
             ul.appendChild(li);
         }
         anexos.appendChild(ul);
@@ -1261,7 +1271,8 @@
         const trocou = !estado.aberto || estado.aberto.id !== e.id;
         estado.aberto = e;
         estado.idAberto = e.id;
-        if (trocou) mostrarTexto();
+        // com HTML, a versão formatada é o padrão; "Ver como texto" fica lembrado na preferência
+        if (trocou) { fecharPrevia(); if (e.tem_html && !e.corpo_oculto && !estado.prefs.ver_texto) verHtml(); else mostrarTexto(); }
         const nome = e.remetente_nome || '';
         $('em-avatar').textContent = A.iniciais(nome, e.remetente);
         $('em-rem-nome').textContent = nome || e.remetente || '(sem remetente)';
@@ -1321,6 +1332,45 @@
         if (!r.sucesso) { avisoFlutuante(r.erro || 'Não foi possível baixar o anexo.', null, true); return; }
         const url = r.dados && r.dados.url;
         if (typeof url === 'string' && /^\/emails\/anexo\/[0-9a-f]{64}$/.test(url)) window.location.assign(url);
+    }
+
+    // pré-visualização: imagem e PDF abrem no detalhe por um endereço de uso único com CSP fechada e sandbox na resposta.
+    // O PDF vai num iframe sem o atributo sandbox: com ele o visualizador do navegador não abre (o isolamento vem da CSP).
+    function fecharPrevia() {
+        const lugar = $('em-previa');
+        lugar.replaceChildren();
+        lugar.hidden = true;
+    }
+    async function verAnexo(e, a, b) {
+        b.disabled = true;
+        const r = await pedir('anexo', { id: e.id, anexo: a.id, ver: true });
+        b.disabled = false;
+        if (r.cancelado || estado.aberto !== e) return;
+        const url = r.sucesso && r.dados && r.dados.url;
+        if (typeof url !== 'string' || !/^\/emails\/ver\/[0-9a-f]{64}$/.test(url)) {
+            avisoFlutuante(r.erro || 'Não foi possível abrir o anexo.', null, true);
+            return;
+        }
+        const nome = a.nome || 'anexo sem nome';
+        const topo = el('div', null, 'em-previa-topo');
+        const fechar = botao('Fechar', 'em-botao em-secundario');
+        fechar.addEventListener('click', () => { fecharPrevia(); if (b.isConnected) b.focus(); });
+        topo.append(el('span', nome, 'em-anexo-nome'), fechar);
+        let midia;
+        if (r.dados.tipo === 'application/pdf') {
+            midia = el('iframe');
+            midia.title = 'Pré-visualização de ' + nome;
+            midia.referrerPolicy = 'no-referrer';
+        } else {
+            midia = el('img');
+            midia.alt = nome;
+        }
+        midia.src = url;
+        const lugar = $('em-previa');
+        lugar.replaceChildren(topo, midia);
+        lugar.hidden = false;
+        lugar.setAttribute('aria-label', 'Pré-visualização de ' + nome);
+        lugar.focus();
     }
 
     // versão formatada: o portal entrega o documento por um endereço de uso único, com CSP própria e fechada
@@ -1521,8 +1571,14 @@
     $('em-mais').addEventListener('click', () => listar(true));
     $('em-tentar').addEventListener('click', () => listar(estado.itens > 0 && !!estado.proximo));
     $('em-recarregar').addEventListener('click', () => { estado.idsAntes = new Set(estado.dados.keys()); listar(false); });
-    $('em-ver-html').addEventListener('click', verHtml);
-    $('em-ver-texto').addEventListener('click', mostrarTexto);
+    // a escolha fica para os próximos e-mails; falha ao gravar só perde a lembrança, não a troca
+    function lembrarTexto(sim) {
+        if (!!estado.prefs.ver_texto === sim) return;
+        estado.prefs.ver_texto = sim;
+        pedir('preferencias_salvar', { ver_texto: sim });
+    }
+    $('em-ver-html').addEventListener('click', () => { verHtml(); lembrarTexto(false); });
+    $('em-ver-texto').addEventListener('click', () => { mostrarTexto(); lembrarTexto(true); });
     larguraGuardada();
     mostrarVisao();
 })();
