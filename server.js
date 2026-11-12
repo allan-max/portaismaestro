@@ -123,6 +123,7 @@ let estado_global = { status: 'desligado', portal_atual: null, fila_pendente: []
 let estado_me = { status: 'desligado' };
 let estado_ariba = { status: 'desligado' };
 let estado_comprasgov = { status: 'desligado' };
+let estado_arcelormittal = { status: 'desligado' };
 let estado_findes = { status: 'desligado' };
 let estado_findes_antigo = { status: 'desligado' };
 let fila_respostas = [];
@@ -557,7 +558,7 @@ const emailsPendentes = new Map();      // clientId -> e-mail digitado no login/
 const pedidosPendentes = new Set();
 const auditPorCliente = new Map();      // `${tipo}:${clientId}` -> id do registro, para respostas sem audit_id
 // comando_direto: portais e campos que as telas (coupa, vale, me, ariba, findes) mandam
-const PORTAIS_COMANDO = new Set(['coupa', 'vale', 'me', 'ariba', 'findes', 'comprasgov']);
+const PORTAIS_COMANDO = new Set(['coupa', 'vale', 'me', 'ariba', 'findes', 'comprasgov', 'arcelormittal']);
 const CAMPOS_COMANDO = ['modo', 'portal', 'evento', 'versao', 'empresas', 'prioridades'];
 const MODOS_AUDITADOS = new Set(['ligar_robo', 'desligar_robo', 'forcar_troca', 'solicitar_parada', 'parar_extracao', 'extrair', 'verificar', 'mover_anexos_findes', 'iniciar_findes', 'parar_findes', 'ligar_robo_antigo', 'desligar_robo_antigo']);
 let syncNfAuditId = null;
@@ -868,6 +869,18 @@ io.on('connection', (socket) => {
         socket.emit('sincronizar_estado_comprasgov', estado_comprasgov);
         if (bot_socket_id) io.to(bot_socket_id).emit('pedir_estado_comprasgov');
     });
+    // === ARCELORMITTAL ===
+    socket.on('sincronizar_estado_arcelormittal', (dados) => {
+        if (!doRobo() || !dados || typeof dados !== 'object') return;
+        estado_arcelormittal = { status: String(dados.status || 'desligado') };
+        io.to('frontend').emit('sincronizar_estado_arcelormittal', estado_arcelormittal);
+    });
+    socket.on('relatar_progresso_arcelormittal', (dados) => { if (doRobo()) io.to('frontend').emit('relatar_progresso_arcelormittal', dados); });
+    socket.on('pedir_estado_arcelormittal', () => {
+        if (!socket.autenticado) return;
+        socket.emit('sincronizar_estado_arcelormittal', estado_arcelormittal);
+        if (bot_socket_id) io.to(bot_socket_id).emit('pedir_estado_arcelormittal');
+    });
     socket.on('solicitar_licitacoes_comprasgov', () => {
         if (!socket.autenticado) return socket.emit('sessao_invalida');
         if (!podeOperarRobos()) {
@@ -966,6 +979,7 @@ io.on('connection', (socket) => {
         socket.emit('sincronizar_estado_findes', estado_findes);
         socket.emit('sincronizar_estado_findes_antigo', estado_findes_antigo);
         socket.emit('sincronizar_estado_comprasgov', estado_comprasgov);
+        socket.emit('sincronizar_estado_arcelormittal', estado_arcelormittal);
     });
 
     socket.on('solicitar_impressao', (dados = {}) => {
@@ -1020,6 +1034,14 @@ io.on('connection', (socket) => {
             }
             if (dados.modo === 'ligar_robo') estado_comprasgov = { status: 'iniciando' };
             io.to('frontend').emit('sincronizar_estado_comprasgov', estado_comprasgov);
+        }
+
+        if (dados.portal === 'arcelormittal') {
+            if (!bot_socket_id) {
+                return socket.emit('relatar_progresso_arcelormittal', { mensagem: '❌ Gerenciador não está conectado ao servidor.' });
+            }
+            if (dados.modo === 'ligar_robo') estado_arcelormittal = { status: 'iniciando' };
+            io.to('frontend').emit('sincronizar_estado_arcelormittal', estado_arcelormittal);
         }
 
         if (bot_socket_id) io.to(bot_socket_id).emit('comando_para_robo', dados);

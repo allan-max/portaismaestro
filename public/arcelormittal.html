@@ -8,6 +8,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+
     <style>
         * {
             margin: 0;
@@ -259,6 +261,12 @@
             transform: scale(0.96);
         }
 
+        .controle-play-circle:disabled {
+            opacity: 0.6;
+            cursor: wait;
+            transform: none;
+        }
+
         .controle-play-circle:focus-visible {
             outline: 3px solid rgba(244, 81, 30, 0.35);
             outline-offset: 3px;
@@ -392,6 +400,7 @@
         .acoes {
             display: flex;
             align-items: center;
+            margin-left: auto;
             gap: 16px;
             flex-shrink: 0;
         }
@@ -456,7 +465,7 @@
         /* --- LINHA 2: KPIs --- */
         .row-kpis {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: clamp(12px, 1.3vw, 24px);
         }
 
@@ -529,7 +538,9 @@
         /* --- LINHA 3: ÚLTIMAS EXTRAÇÕES + ROBÔ --- */
         .row-bottom {
             display: grid;
-            grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr);
+            /* card do robô pequeno, à direita, logo abaixo do play */
+            grid-template-columns: minmax(0, 440px);
+            justify-content: end;
             gap: clamp(12px, 1.3vw, 24px);
             min-height: 0;
         }
@@ -846,126 +857,23 @@
 
             <div class="dash">
 
-                <!-- LINHA 1: CONTROLE DO ROBÔ + AÇÕES -->
+                <!-- LINHA 1: PLAY + ATUALIZAR -->
                 <div class="row-top">
-                    <section class="card card-controle">
-                        <div class="controle-info">
-                            <p>Clique no botão para iniciar ou pausar a busca e extração de licitações.</p>
-                            <span class="controle-hint" id="btn-texto">
-                                <i class="fa-regular fa-clock"></i> Clique no botão para iniciar
-                            </span>
-                        </div>
-                    </section>
-
                     <div class="acoes">
                         <div class="play-halo">
                             <button class="controle-play-circle" id="btn-play-circle" onclick="alternarRobo()" title="Clique para Iniciar ou Pausar o Robô" aria-label="Iniciar ou pausar o robô">
                                 <i class="fa-solid fa-play" id="btn-icon"></i>
                             </button>
                         </div>
-                        <button class="btn-acao btn-atualizar" id="btn-atualizar" onclick="atualizarCotacoes()" title="Atualizar contagem">
+                        <button class="btn-acao btn-atualizar" id="btn-atualizar" onclick="atualizarCotacoes()" title="Atualizar status do robô">
                             <i class="fa-solid fa-rotate"></i>
                             <span>Atualizar</span>
                         </button>
                     </div>
                 </div>
 
-                <!-- LINHA 2: KPIs -->
-                <div class="row-kpis">
-                    <section class="card kpi kpi-laranja">
-                        <div class="kpi-icon"><i class="fa-regular fa-file-lines"></i></div>
-                        <div class="kpi-body">
-                            <div class="kpi-num" id="kpi-cotacoes-num">128</div>
-                            <div class="kpi-label">Cotações Extraídas</div>
-                            <div class="kpi-trend"><i class="fa-solid fa-arrow-up"></i> +12%</div>
-                        </div>
-                        <svg class="kpi-spark" viewBox="0 0 120 100" preserveAspectRatio="none" aria-hidden="true">
-                            <defs>
-                                <linearGradient id="grad-laranja" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0" stop-color="#f4511e" stop-opacity="0.30"/>
-                                    <stop offset="1" stop-color="#f4511e" stop-opacity="0"/>
-                                </linearGradient>
-                            </defs>
-                            <path d="M0,96 L14,74 L26,62 L38,54 L50,40 L60,44 L70,30 L80,34 L90,20 L100,12 L110,6 L120,16 L120,100 L0,100 Z" fill="url(#grad-laranja)"/>
-                            <path d="M0,96 L14,74 L26,62 L38,54 L50,40 L60,44 L70,30 L80,34 L90,20 L100,12 L110,6 L120,16" fill="none" stroke="#f4511e" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
-                        </svg>
-                    </section>
-
-                    <section class="card kpi kpi-azul">
-                        <div class="kpi-icon"><i class="fa-regular fa-envelope"></i></div>
-                        <div class="kpi-body">
-                            <div class="kpi-num" id="kpi-licitacoes-num">42</div>
-                            <div class="kpi-label">E-mails enviados Hoje</div>
-                            <div class="kpi-trend"><i class="fa-solid fa-arrow-up"></i> +8%</div>
-                        </div>
-                        <svg class="kpi-spark" viewBox="0 0 120 100" preserveAspectRatio="none" aria-hidden="true">
-                            <defs>
-                                <linearGradient id="grad-azul" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0" stop-color="#3b82f6" stop-opacity="0.30"/>
-                                    <stop offset="1" stop-color="#3b82f6" stop-opacity="0"/>
-                                </linearGradient>
-                            </defs>
-                            <path d="M0,98 L12,80 L24,62 L34,50 L44,54 L56,36 L66,28 L76,34 L86,22 L96,10 L108,16 L120,6 L120,100 L0,100 Z" fill="url(#grad-azul)"/>
-                            <path d="M0,98 L12,80 L24,62 L34,50 L44,54 L56,36 L66,28 L76,34 L86,22 L96,10 L108,16 L120,6" fill="none" stroke="#3b82f6" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
-                        </svg>
-                    </section>
-
-                    <section class="card kpi kpi-verde">
-                        <div class="kpi-icon"><i class="fa-solid fa-circle-check"></i></div>
-                        <div class="kpi-body">
-                            <div class="kpi-num" id="kpi-sucesso-num">96%</div>
-                            <div class="kpi-label">Taxa de Sucesso</div>
-                            <div class="kpi-trend"><i class="fa-solid fa-arrow-up"></i> +2%</div>
-                        </div>
-                        <svg class="kpi-spark" viewBox="0 0 120 100" preserveAspectRatio="none" aria-hidden="true">
-                            <defs>
-                                <linearGradient id="grad-verde" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0" stop-color="#22c55e" stop-opacity="0.30"/>
-                                    <stop offset="1" stop-color="#22c55e" stop-opacity="0"/>
-                                </linearGradient>
-                            </defs>
-                            <path d="M0,98 L12,78 L22,64 L32,56 L42,46 L52,40 L62,30 L72,34 L82,24 L92,28 L104,12 L112,16 L120,2 L120,100 L0,100 Z" fill="url(#grad-verde)"/>
-                            <path d="M0,98 L12,78 L22,64 L32,56 L42,46 L52,40 L62,30 L72,34 L82,24 L92,28 L104,12 L112,16 L120,2" fill="none" stroke="#22c55e" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
-                        </svg>
-                    </section>
-                </div>
-
-                <!-- LINHA 3: LOG + ROBÔ -->
+                <!-- LINHA 2: STATUS DO ROBÔ -->
                 <div class="row-bottom">
-                    <section class="card card-log">
-                        <div class="card-header-bar">
-                            <div class="card-header-title">
-                                <i class="fa-solid fa-rectangle-list"></i>
-                                <h2>Log</h2>
-                            </div>
-                        </div>
-
-                        <div class="log-scroll">
-                            <table class="log-table" id="log-table">
-                                <thead>
-                                    <tr>
-                                        <th>Horário</th>
-                                        <th>Descrição</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="log-entries">
-                                    <tr>
-                                        <td class="col-hora">09:12:18</td>
-                                        <td class="col-desc">Robô iniciado com sucesso!</td>                                    </tr>
-                                    <tr>
-                                        <td class="col-hora">09:12:15</td>
-                                        <td class="col-desc">Conectado ao portal ArcelorMittal...</td>                                    </tr>
-                                    <tr>
-                                        <td class="col-hora">09:12:13</td>
-                                        <td class="col-desc">Extraindo cotações...</td>                                    </tr>
-                                    <tr>
-                                        <td class="col-hora">09:12:10</td>
-                                        <td class="col-desc">128 cotações extraídas.</td>                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
-
                     <section class="card card-robo" id="card-robo">
                         <svg class="robo-swoosh" viewBox="0 0 300 120" preserveAspectRatio="none" aria-hidden="true">
                             <path d="M150,120 C220,112 270,90 300,58 L300,120 Z" fill="#f4511e"/>
@@ -1009,66 +917,82 @@
     </div>
 
     <script>
-        let roboLigado = false;
+        const socket = io({
+            auth: { sessionId: localStorage.getItem('maestro_session') },
+            transports: ['websocket'],
+            upgrade: false
+        });
 
-        function alternarRobo() {
-            roboLigado = !roboLigado;
-            const btnPlay = document.getElementById('btn-play-circle');
-            const btnIcon = document.getElementById('btn-icon');
-            const btnTexto = document.getElementById('btn-texto');
-            const cardRobo = document.getElementById('card-robo');
-            const roboTitulo = document.getElementById('robo-titulo');
-            const roboSub = document.getElementById('robo-sub');
+        // desligado | iniciando | ligado (vem do gerenciador, que checa o "dotnet run" do ArcelorMittal)
+        let estadoRobo = 'desligado';
 
-            if (roboLigado) {
-                btnPlay.classList.add('ativo');
-                btnIcon.className = 'fa-solid fa-stop';
-                btnTexto.classList.add('rodando');
-                btnTexto.innerHTML = '<i class="fa-solid fa-circle-play"></i> Robô em execução • Clique para parar';
-                cardRobo.classList.add('operando');
-                roboTitulo.textContent = 'Robô em operação';
-                roboSub.textContent = 'Buscando novas oportunidades para você.';
-                adicionarLog('Robô iniciado pelo operador.');
-                adicionarLog('Conectado ao portal ArcelorMittal.');
-                adicionarLog('Extraindo novas cotações...');
-            } else {
-                btnPlay.classList.remove('ativo');
-                btnIcon.className = 'fa-solid fa-play';
-                btnTexto.classList.remove('rodando');
-                btnTexto.innerHTML = '<i class="fa-regular fa-clock"></i> Clique no botão para iniciar';
-                cardRobo.classList.remove('operando');
-                roboTitulo.textContent = 'Robô em espera';
-                roboSub.textContent = 'Clique no play para buscar novas oportunidades.';
-                adicionarLog('Robô pausado pelo operador.');
-            }
+        const SUB_PADRAO = {
+            desligado: 'Clique no play para buscar novas oportunidades.',
+            iniciando: 'Abrindo o robô no servidor...',
+            ligado: 'Buscando novas oportunidades para você.'
+        };
+
+        socket.on('connect', () => {
+            socket.emit('sou_frontend', { usuario: localStorage.getItem('maestro_user') || 'Usuário' });
+            socket.emit('pedir_estado_arcelormittal');
+        });
+
+        socket.on('disconnect', () => mostrarMensagem('Conexão com o servidor perdida. Reconectando...'));
+
+        socket.on('sessao_invalida', () => {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        });
+
+        socket.on('sincronizar_estado_arcelormittal', (dados) => {
+            document.getElementById('btn-atualizar').classList.remove('girando');
+            aplicarEstado((dados && dados.status) || 'desligado');
+        });
+
+        // Sem tela de log: a última mensagem do gerenciador aparece no card do robô
+        socket.on('relatar_progresso_arcelormittal', (dados) => {
+            if (dados && dados.mensagem) mostrarMensagem(dados.mensagem);
+        });
+
+        function mostrarMensagem(msg) {
+            document.getElementById('robo-sub').textContent = msg;
         }
 
+        function aplicarEstado(status) {
+            const mudou = status !== estadoRobo;
+            estadoRobo = status;
+            const ativo = status === 'ligado' || status === 'iniciando';
+            const btnPlay = document.getElementById('btn-play-circle');
+
+            btnPlay.disabled = false;
+            btnPlay.classList.toggle('ativo', ativo);
+            btnPlay.title = ativo ? 'Desligar o Robô' : 'Ligar o Robô';
+            btnPlay.setAttribute('aria-label', btnPlay.title);
+            document.getElementById('btn-icon').className = ativo ? 'fa-solid fa-stop' : 'fa-solid fa-play';
+
+            document.getElementById('card-robo').classList.toggle('operando', status === 'ligado');
+            document.getElementById('robo-titulo').textContent =
+                status === 'ligado' ? 'Robô em operação' : status === 'iniciando' ? 'Robô iniciando' : 'Robô em espera';
+            if (mudou) mostrarMensagem(SUB_PADRAO[status] || SUB_PADRAO.desligado);
+        }
+
+        function alternarRobo() {
+            const ligar = !(estadoRobo === 'ligado' || estadoRobo === 'iniciando');
+            if (!ligar && !confirm('Deseja realmente desligar o robô ArcelorMittal?')) return;
+            const btnPlay = document.getElementById('btn-play-circle');
+            btnPlay.disabled = true;
+            socket.emit('comando_direto', { modo: ligar ? 'ligar_robo' : 'desligar_robo', portal: 'arcelormittal' });
+            mostrarMensagem(ligar ? 'Pedido para ligar o robô enviado ao gerenciador.' : 'Pedido para desligar o robô enviado ao gerenciador.');
+            // Sem resposta do gerenciador em 15 s, libera o botão de novo
+            setTimeout(() => { btnPlay.disabled = false; }, 15000);
+        }
+
+        // Atualizar: pergunta de novo ao gerenciador se o robô está rodando
         function atualizarCotacoes() {
             const btn = document.getElementById('btn-atualizar');
             btn.classList.add('girando');
-            setTimeout(() => {
-                btn.classList.remove('girando');
-                adicionarLog('Contagem de cotações sincronizada com o banco.');
-            }, 600);
-        }
-
-        // Entradas novas entram no topo (mais recente primeiro).
-        function adicionarLog(msg) {
-            const container = document.getElementById('log-entries');
-            if (!container) return;
-            const agora = new Date();
-            const timeStr = String(agora.getHours()).padStart(2, '0') + ':' +
-                            String(agora.getMinutes()).padStart(2, '0') + ':' +
-                            String(agora.getSeconds()).padStart(2, '0');
-            const row = document.createElement('tr');
-            const hora = document.createElement('td');
-            hora.className = 'col-hora';
-            hora.textContent = timeStr;
-            const desc = document.createElement('td');
-            desc.className = 'col-desc';
-            desc.textContent = msg;
-            row.append(hora, desc);
-            container.prepend(row);
+            socket.emit('pedir_estado_arcelormittal');
+            setTimeout(() => btn.classList.remove('girando'), 600);
         }
 
         function irPara(url) {
