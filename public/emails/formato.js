@@ -10,11 +10,11 @@
     ]);
     // as que o serviço aceita em correção manual (classificador.CATEGORIAS)
     const CORRIGIVEIS = ['cotação', 'pedido', 'financeiro/NF', 'cadastro', 'informação', 'marketing', 'spam', 'outros'];
-    const VISOES = ['caixa', 'dashboard', 'saude', 'filtros'];
+    const VISOES = ['caixa', 'dashboard', 'saude', 'filtros', 'aberturas'];
 
     function categoria(nome) {
         if (nome === 'phishing') nome = 'spam';   // serviço antigo: phishing deixou de ser categoria e aparece como spam
-        const id =typeof nome === 'string' ? CATEGORIAS.get(nome) : undefined;
+        const id = typeof nome === 'string' ? CATEGORIAS.get(nome) : undefined;
         if (!id) return { id: 'indefinida', nome: 'não classificado', classe: 'em-cat-indefinida', icone: 'cat-indefinida' };
         return { id, nome, classe: 'em-cat-' + id, icone: 'cat-' + id };
     }
