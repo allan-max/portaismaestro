@@ -8,7 +8,7 @@ const HOJE = '2026-11-10';   // terça-feira
 test('filtro novo: Sem ruído ligado e nada mais', () => {
     const f = Q.novo();
     assert.deepEqual(f, { categorias: [], contas: [], estados: [], de: '', ate: '', busca: '', remetente: '',
-        revisao: false, anexo: false, atrasados: false, sem_ruido: true });
+        revisao: false, anexo: false, atrasados: false, nao_aberto: false, sem_ruido: true });
     assert.equal(Q.semRuidoAtivo(f), true);
     assert.deepEqual(Q.RUIDO, RUIDO);
     assert.ok(!Q.CATEGORIAS.includes('phishing'));
@@ -19,7 +19,7 @@ test('params: listas novas, parâmetros antigos vazios e Sem ruído como excluir
         estados: ['pendente'], de: '2026-11-01', ate: HOJE, busca: ' cabos ', anexo: true });
     assert.deepEqual(Q.params(f), { categoria: '', conta: '', status: '', categorias: ['cotação', 'pedido'],
         contas: ['a@x.test', 'b@x.test'], estados: ['pendente'], excluir: RUIDO, de: '2026-11-01', ate: HOJE,
-        busca: 'cabos', remetente: '', revisao: false, anexo: true, atrasados: false });
+        busca: 'cabos', remetente: '', revisao: false, anexo: true, atrasados: false, nao_aberto: false });
     assert.deepEqual(Q.params(Object.assign(Q.novo(), { sem_ruido: false })).excluir, []);
 });
 
@@ -116,7 +116,7 @@ test('alternar e remover devolvem filtro novo, sem mexer no de antes', () => {
 test('filtros prontos são dados e mantêm as caixas escolhidas', () => {
     const nomes = Q.PRONTOS.map(p => p.nome);
     assert.deepEqual(nomes, ['Cotações pendentes', 'Atrasados', 'Pedidos pendentes', 'Hoje', 'Fila de revisão', 'Com anexo',
-        'Financeiro/NF', 'Coupa', 'Spam', 'Não classificados', 'Sem ruído']);
+        'Financeiro/NF', 'Coupa', 'Spam', 'Ninguém abriu', 'Não classificados', 'Sem ruído']);
     const atual = Object.assign(Q.novo(), { contas: ['a@x.test'], busca: 'antiga' });
     const cot = Q.pronto('cotacoes', atual, HOJE);
     assert.deepEqual(cot, Object.assign(Q.novo(), { contas: ['a@x.test'], categorias: ['cotação'], estados: ['pendente'] }));
@@ -129,6 +129,14 @@ test('filtros prontos são dados e mantêm as caixas escolhidas', () => {
     assert.equal(Q.prontoAtivo(Q.novo(), HOJE), 'sem-ruido');
     assert.equal(Q.prontoAtivo(atual, HOJE), '');
     assert.equal(Q.pronto('nao-existe', atual, HOJE), null);
+    // "Ninguém abriu": vai ao listar como nao_aberto, ao endereço e volta, e vira chip
+    const ninguem = Q.pronto('nao-aberto', atual, HOJE);
+    assert.equal(Q.params(ninguem).nao_aberto, true);
+    assert.equal(Q.paraHash(ninguem, ['a@x.test']), '#caixa?nao_aberto=1');
+    assert.ok(Q.igual(Q.deHash('#caixa?nao_aberto=1', ['a@x.test']), ninguem));
+    assert.equal(Q.prontoAtivo(ninguem, HOJE), 'nao-aberto');
+    assert.ok(Q.ativos(ninguem).some(c => c.chave === 'nao_aberto' && c.rotulo === 'Ninguém abriu'));
+    assert.equal(Q.deParams({ nao_aberto: true }).nao_aberto, true);
 });
 
 test('atalhos de período em dias de Brasília', () => {

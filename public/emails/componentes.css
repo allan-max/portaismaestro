@@ -4,7 +4,7 @@
 :root { font-family: var(--em-fonte); color: var(--em-texto); background: var(--em-fundo); font-synthesis: none; }
 * { box-sizing: border-box; }
 body { margin: 0; font-size: var(--em-t-corpo); line-height: 1.5; }
-button, input, select { font: inherit; }
+button, input, select, textarea { font: inherit; }
 button, a, input, select { -webkit-tap-highlight-color: transparent; }
 button, a { touch-action: manipulation; }
 button, select { cursor: pointer; }
@@ -17,7 +17,7 @@ h2 { font-size: var(--em-t-titulo); font-weight: 600; }
 h3 { font-size: var(--em-t-corpo); font-weight: 600; }
 input::placeholder { color: var(--em-discreto); opacity: 1; }
 [hidden] { display: none !important; }
-button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
   outline: 2px solid var(--em-destaque); outline-offset: 2px;
 }
 .skip-link { position: fixed; top: -80px; left: var(--em-e5); z-index: 100; background: var(--em-texto); color: var(--em-fundo); padding: var(--em-e3); border-radius: var(--em-raio-controle); }

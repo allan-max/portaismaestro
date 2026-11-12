@@ -83,6 +83,43 @@ test('histórico: a migração de phishing tem frase própria e o autor é o sis
     assert.deepEqual(h.map(x => [x.texto, x.quem]), [['Recebido', ''], ['Categoria phishing removida: passou a spam', 'sistema']]);
 });
 
+test('histórico: "Classificado como" usa o nome de F.categoria (phishing de serviço antigo aparece como spam)', () => {
+    const linha = cat => A.historico({ data: '2026-11-10T10:00:00Z', classificado_em: '2026-11-10T10:01:00Z', categoria: cat })[1].texto;
+    assert.equal(linha('phishing'), 'Classificado como spam');
+    assert.equal(linha('financeiro/NF'), 'Classificado como financeiro/NF');
+    const apagado = A.historico({ data: '2026-11-10T10:00:00Z', historico: [
+        { usuario: 'ana@x.test', acao: 'apagar_comentario', antes: null, depois: null, em: '2026-11-10T11:00:00Z' }] });
+    assert.deepEqual([apagado[1].texto, apagado[1].quem], ['Comentário apagado', 'ana@x.test']);
+});
+
+test('hora curta: só a hora no mesmo dia de Brasília; dia e hora em outro dia', () => {
+    assert.equal(A.horaCurta('2026-11-10T13:42:00Z', AGORA), '10:42');
+    assert.equal(A.horaCurta('2026-11-10T02:00:00Z', AGORA), '09/11 23:00');   // ainda era dia 9 em Brasília
+    assert.equal(A.horaCurta('ruim', AGORA), '');
+});
+
+test('visto por: nome (senão login) e hora, na ordem que o serviço manda; vazio quando não há ou não veio', () => {
+    const vistos = [{ usuario: 'ana@x.test', nome: 'Ana', em: '2026-11-10T13:42:00Z' },
+        { usuario: 'joao@x.test', em: '2026-11-10T14:05:00Z' }, null, { usuario: 7 }];
+    assert.equal(A.vistoPor(vistos, AGORA), 'Visto por: Ana (10:42), joao@x.test (11:05).');
+    assert.equal(A.vistoPor([], AGORA), '');
+    assert.equal(A.vistoPor(undefined, AGORA), '');
+});
+
+test('comentário: autor pelo nome e o apagado sem texto, com quem apagou e quando', () => {
+    const c = { id: 1, usuario: 'ana@x.test', nome: 'Ana', texto: null, em: '2026-11-10T13:00:00Z', apagado_em: '2026-11-10T14:05:00Z' };
+    assert.equal(A.autor(c), 'Ana');
+    assert.equal(A.autor({ usuario: 'joao@x.test' }), 'joao@x.test');
+    assert.equal(A.comentarioApagado(c, AGORA), 'Comentário apagado por Ana, 11:05');
+});
+
+test('planilha de aberturas: data, nome, login, assunto e remetente, tudo texto', () => {
+    assert.deepEqual(A.COLUNAS_ABERTURAS, ['Quando', 'Nome', 'Usuário', 'Assunto', 'Remetente']);
+    const l = A.linhaAbertura({ em: '2026-11-10T13:42:00Z', usuario: 'ana@x.test', nome: 'Ana', assunto: '=1+1', remetente: 'b@c.test' });
+    assert.deepEqual(l, [F.dataHora('2026-11-10T13:42:00Z'), 'Ana', 'ana@x.test', '=1+1', 'b@c.test']);
+    for (const v of A.linhaAbertura({})) assert.equal(typeof v, 'string');
+});
+
 test('desfeito: frase com quantos voltaram e quantos o serviço recusou', () => {
     assert.equal(A.desfeito(1, 0), 'Alteração desfeita.');
     assert.equal(A.desfeito(3, 0), '3 alterações desfeitas.');

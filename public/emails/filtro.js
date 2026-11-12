@@ -13,7 +13,7 @@
     const CORES = ['cinza', 'azul', 'verde', 'ambar', 'violeta', 'ciano', 'rosa', 'laranja'];
     const LISTAS = { categorias: [20, 40], contas: [50, 120], estados: [3, 20] };   // [itens, tamanho de cada]
     const TEXTOS = { busca: 200, remetente: 120 };
-    const OPCOES = ['revisao', 'anexo', 'atrasados'];
+    const OPCOES = ['revisao', 'anexo', 'atrasados', 'nao_aberto'];
     const DIA = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
     // nome no endereço -> chave do filtro
     const NO_ENDERECO = { cat: 'categorias', caixa: 'contas', status: 'estados' };
@@ -21,7 +21,7 @@
 
     function novo() {
         return { categorias: [], contas: [], estados: [], de: '', ate: '', busca: '', remetente: '',
-            revisao: false, anexo: false, atrasados: false, sem_ruido: true };
+            revisao: false, anexo: false, atrasados: false, nao_aberto: false, sem_ruido: true };
     }
     const texto = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
     function lista(v, [itens, max]) {
@@ -54,7 +54,7 @@
         const n = normalizar(f);
         return { categoria: '', conta: '', status: '', categorias: n.categorias, contas: n.contas, estados: n.estados,
             excluir: semRuidoAtivo(n) ? RUIDO.slice() : [], de: n.de, ate: n.ate, busca: n.busca, remetente: n.remetente,
-            revisao: n.revisao, anexo: n.anexo, atrasados: n.atrasados };
+            revisao: n.revisao, anexo: n.anexo, atrasados: n.atrasados, nao_aberto: n.nao_aberto };
     }
     // filtro salvo (objeto do `listar`) -> filtro da tela
     function deParams(p) {
@@ -66,7 +66,7 @@
             contas: Array.isArray(o.contas) && o.contas.length ? o.contas : um(o.conta),
             estados: Array.isArray(o.estados) && o.estados.length ? o.estados : um(o.status),
             de: o.de, ate: o.ate, busca: o.busca, remetente: o.remetente,
-            revisao: o.revisao, anexo: o.anexo, atrasados: o.atrasados,
+            revisao: o.revisao, anexo: o.anexo, atrasados: o.atrasados, nao_aberto: o.nao_aberto,
             sem_ruido: RUIDO.every(c => excluir.includes(c)),
         });
     }
@@ -148,6 +148,8 @@
         { id: 'financeiro', nome: 'Financeiro/NF', filtro: () => ({ categorias: ['financeiro/NF'] }) },
         { id: 'coupa', nome: 'Coupa', filtro: () => ({ categorias: ['notificação Coupa'] }) },
         { id: 'spam', nome: 'Spam', filtro: () => ({ categorias: ['spam'] }) },
+        // só e-mails recebidos depois que o registro de aberturas começou (o serviço corta)
+        { id: 'nao-aberto', nome: 'Ninguém abriu', filtro: () => ({ nao_aberto: true }) },
         { id: 'nao-classificados', nome: 'Não classificados', filtro: () => ({ categorias: [SEM_CLASSIFICACAO] }) },
         { id: 'sem-ruido', nome: 'Sem ruído', filtro: () => ({}) },
     ];
@@ -175,6 +177,7 @@
         if (n.revisao) chip('revisao', '', 'Fila de revisão');
         if (n.anexo) chip('anexo', '', 'Com anexo');
         if (n.atrasados) chip('atrasados', '', 'Atrasados');
+        if (n.nao_aberto) chip('nao_aberto', '', 'Ninguém abriu');
         if (semRuidoAtivo(n)) chip('sem_ruido', '', 'Sem ruído');
         if (ruidoDesligadoPeloFiltro(n)) saida.push({ chave: 'sem_ruido', valor: '', rotulo: 'Sem ruído desligado por este filtro', fixo: true });
         return saida;

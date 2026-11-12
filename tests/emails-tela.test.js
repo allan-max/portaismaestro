@@ -168,6 +168,9 @@ test('partes sob demanda: existem, não estão na página e nenhum arquivo da pa
     // a ordem importa: graficos.js antes de quem usa G, saude.js (tabelas) antes do Dashboard
     assert.deepEqual(partes.dashboard, ['graficos', 'saude', 'dashboard']);
     assert.deepEqual(partes.saude, ['graficos', 'saude']);
+    // Aberturas usa as tabelas de saude.js e a planilha de exportar.js; comentários são uma parte só, fora da Caixa
+    assert.deepEqual(partes.aberturas, ['saude', 'exportar', 'aberturas']);
+    assert.deepEqual(partes.comentarios, ['comentarios']);
 });
 
 test('peso: abrir a Caixa até 250 KB e a tela inteira até 300 KB, sem compressão (seção 11)', () => {

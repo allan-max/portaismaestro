@@ -20,7 +20,7 @@
         bloqueado: false, iniciado: false, listou: false, carregando: false, parouMais: false, seqLista: 0, ultimoDia: '', prefs: PREFS_PADRAO,
         idAberto: null, sel: new Set(), ancora: null, dados: new Map(), retomar: null, caiu: false };
     const CANCELADO = { sucesso: false, cancelado: true };
-    const ESCRITAS = new Set(['status', 'categoria', 'lote', 'desfazer']);
+    const ESCRITAS = new Set(['status', 'categoria', 'lote', 'desfazer', 'comentar', 'apagar_comentario']);
     const esperando = new Map();
     let seq = 0;
 
@@ -119,7 +119,7 @@
     pilha.addEventListener('focusout', () => prazos.forEach((_t, a) => prazo(a)));
     function telaAcesso(titulo, texto) {
         estado.bloqueado = true;
-        for (const id of ['em-app', 'em-dash', 'em-saude', 'em-filtros-salvos', 'em-trilho', 'em-busca-global', 'em-abrir-busca', 'em-sino']) $(id).hidden = true;
+        for (const id of ['em-app', 'em-dash', 'em-saude', 'em-aberturas', 'em-filtros-salvos', 'em-trilho', 'em-busca-global', 'em-abrir-busca', 'em-sino']) $(id).hidden = true;
         $('em-lista').replaceChildren();   // nem o esqueleto de carregamento fica na página
         $('em-acesso').hidden = false;
         $('em-acesso-titulo').textContent = titulo;
@@ -133,6 +133,7 @@
     }
     $('em-usuario').textContent = local('maestro_user') || '';
     $('em-ir-saude').hidden = !admin;
+    $('em-ir-aberturas').hidden = !admin;
 
     // ----- indicador "ao vivo" -----
     const AO_VIVO = { vivo: 'Ao vivo', conectando: 'Conectando', reconectando: 'Reconectando', offline: 'Serviço offline' };
@@ -198,6 +199,8 @@
         } else if (estado.retomar !== null) listar(estado.retomar);   // a conexão caiu com a lista carregando: pede de novo
         else if (!estado.itens && estado.visao === 'caixa') listar(false);
         else if (estado.caiu && estado.listou && !estado.carregando) avisar(contagem());   // tira o "Conexão perdida"
+        // o e-mail aberto durante a queda ficou em "Carregando…": pede de novo
+        if (estado.caiu && estado.idAberto !== null && !estado.aberto) abrir(estado.idAberto);
         estado.caiu = false;
         if (estado.visao === 'caixa' || estado.visao === 'filtros') atualizarContadores();
     });
@@ -474,7 +477,8 @@
     });
 
     // ----- visões pelo endereço: #caixa (com o filtro), #dashboard, #saude, #filtros -----
-    const ITENS_TRILHO = { caixa: 'em-ir-caixa', dashboard: 'em-ir-dash', revisao: 'em-ir-revisao', atrasados: 'em-ir-atrasados', filtros: 'em-ir-filtros', saude: 'em-ir-saude' };
+    const ITENS_TRILHO = { caixa: 'em-ir-caixa', dashboard: 'em-ir-dash', revisao: 'em-ir-revisao', atrasados: 'em-ir-atrasados', filtros: 'em-ir-filtros', saude: 'em-ir-saude',
+        aberturas: 'em-ir-aberturas' };
     const minhas = () => estado.prefs.minhas_caixas || [];
     // minhas caixas e "Sem ruído" guardados são o padrão: ficam fora do endereço
     const paraHash = f => Q.paraHash(f, minhas(), estado.prefs.sem_ruido);
@@ -482,12 +486,13 @@
     function mostrarVisao() {
         if (estado.bloqueado) return;
         const r = F.rota(location.hash);
-        if (r.visao === 'saude' && !admin) r.visao = 'caixa';
+        if ((r.visao === 'saude' || r.visao === 'aberturas') && !admin) r.visao = 'caixa';
         estado.visao = r.visao;
         if (r.visao !== 'caixa' && emFoco()) modoFoco(false);   // sem trilho não haveria como voltar
         $('em-app').hidden = r.visao !== 'caixa';
         $('em-dash').hidden = r.visao !== 'dashboard';
         $('em-saude').hidden = r.visao !== 'saude';
+        $('em-aberturas').hidden = r.visao !== 'aberturas';
         $('em-filtros-salvos').hidden = r.visao !== 'filtros';
         let item = r.ver || r.visao;
         if (r.visao === 'caixa') {
@@ -821,6 +826,20 @@
             a.appendChild(el('span', e.anexos === 1 ? '1 anexo' : e.anexos + ' anexos'));
             rodape.appendChild(a);
         }
+        // cotação e pedido pendentes que ninguém abriu; `aberto` null (antes do registro) ou ausente (serviço antigo) não marca
+        if (e.aberto === false && st === 'pendente' && ['cotação', 'pedido'].includes(e.categoria)) {
+            const m = el('span', null, 'em-item-anexos em-nao-aberto');
+            m.appendChild(icone('olho', 'em-ic-p'));
+            m.appendChild(el('span', 'ninguém abriu'));
+            rodape.appendChild(m);
+        }
+        if (Number.isSafeInteger(e.comentarios) && e.comentarios > 0) {
+            const c = el('span', null, 'em-item-anexos');
+            c.appendChild(icone('comentario', 'em-ic-p'));
+            c.appendChild(el('span', String(e.comentarios), 'em-num'));
+            c.appendChild(el('span', e.comentarios === 1 ? ' comentário' : ' comentários', 'em-sr'));
+            rodape.appendChild(c);
+        }
         rodape.appendChild(el('span', (e.caixas || []).map(F.nomeCaixa).join(', '), 'em-caixas'));
         b.appendChild(rodape);
         b.addEventListener('click', () => abrir(e.id));
@@ -1069,9 +1088,10 @@
         $('em-app').classList.add('em-com-detalhe');
         fecharMenus();
         $('em-assunto').textContent = 'Carregando…';
-        for (const x of ['em-meta', 'em-avisos', 'em-anexos', 'em-historico', 'em-do-remetente']) $(x).replaceChildren();
+        for (const x of ['em-meta', 'em-avisos', 'em-anexos', 'em-historico', 'em-do-remetente', 'em-comentarios']) $(x).replaceChildren();
         for (const x of ['em-avatar', 'em-rem-nome', 'em-rem-email', 'em-quando', 'em-status-atual', 'em-corpo']) $(x).textContent = '';
         $('em-controle').hidden = true; $('em-ia').hidden = true; $('em-outros').hidden = true;
+        $('em-vistos').hidden = true; $('em-conversa').hidden = true;
         estado.aberto = null;
         mostrarTexto();
         $('em-assunto').focus({ preventScroll: true });
@@ -1266,6 +1286,17 @@
         else $('em-ver-html').hidden = !e.tem_html || e.corpo_oculto;
         linhaDoTempo(e);
         doRemetente(e);
+        // quem abriu e comentários: o serviço antigo não manda, e aí nada aparece (nem "Visto por" vazio)
+        const vistos = Array.isArray(e.vistos);
+        $('em-vistos').hidden = !vistos;
+        $('em-vistos').textContent = vistos ? [A.vistoPor(e.vistos), 'Aberturas são registradas.'].filter(Boolean).join(' ') : '';
+        $('em-conversa').hidden = !Array.isArray(e.comentarios);
+        if (Array.isArray(e.comentarios)) {
+            // a parte de comentários carrega na primeira vez que um e-mail abre
+            parte('comentarios').then(mostrar => { if (estado.aberto === e) mostrar(e); }, () => {
+                if (estado.aberto === e) $('em-comentarios').replaceChildren(el('p', 'Não foi possível carregar os comentários. Abra o e-mail de novo.', 'em-estado'));
+            });
+        }
     }
 
     async function copiar(texto, oQue) {
@@ -1426,9 +1457,11 @@
     // ----- partes carregadas na primeira vez que abrem: <script src> do próprio portal, como o exceljs (a CSP não muda) -----
     // Cada arquivo lê de EmailsTela os utilitários da casca e registra em `partes` a sua entrada.
     const T = window.EmailsTela = { $, el, botao, icone, etiqueta, etiquetaCategoria, SVG, estado, admin, minhas, hoje, pedir, cancelarPedidos,
-        contadores, comMovimento, tempo, manterFoco, avisoFlutuante, salvarPreferencias, filtrar, paraHash, opcoesCor, partes: {} };
-    // os arquivos de cada parte, na ordem: graficos.js antes de quem usa G; saude.js tem as tabelas que o Dashboard usa
-    const PARTES = { dashboard: ['graficos', 'saude', 'dashboard'], saude: ['graficos', 'saude'], filtros: ['gestao-filtros'], exportar: ['exportar'] };
+        contadores, comMovimento, tempo, manterFoco, avisoFlutuante, salvarPreferencias, filtrar, paraHash, opcoesCor, atualizarItem, partes: {} };
+    // os arquivos de cada parte, na ordem: graficos.js antes de quem usa G; saude.js tem as tabelas que o Dashboard e Aberturas usam;
+    // exportar.js monta a planilha de Aberturas
+    const PARTES = { dashboard: ['graficos', 'saude', 'dashboard'], saude: ['graficos', 'saude'], filtros: ['gestao-filtros'], exportar: ['exportar'],
+        aberturas: ['saude', 'exportar', 'aberturas'], comentarios: ['comentarios'] };
     const baixados = {};
     function arquivo(nome) {
         if (!baixados[nome]) {
@@ -1447,7 +1480,8 @@
         return T.partes[nome];
     }
     // enquanto o arquivo vem, a visão diz "Carregando…"; se não vier, erro e "Tentar de novo"
-    const LUGAR = { dashboard: ['em-dash-estado', 'em-dash-conteudo'], saude: ['em-saude-estado', 'em-saude-conteudo'], filtros: ['em-gestao-estado', 'em-gestao'] };
+    const LUGAR = { dashboard: ['em-dash-estado', 'em-dash-conteudo'], saude: ['em-saude-estado', 'em-saude-conteudo'], filtros: ['em-gestao-estado', 'em-gestao'],
+        aberturas: ['em-aberturas-estado', 'em-aberturas-conteudo'] };
     // `doBotao`: veio de "Tentar de novo", que some quando a visão abre; o foco vai ao título da visão
     async function abrirVisao(nome, ver, doBotao) {
         if (!T.partes[nome]) {

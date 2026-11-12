@@ -22,6 +22,28 @@
         return excel;
     }
     const milhar = n => n.toLocaleString('pt-BR');
+    // planilha com todo valor como texto (o exceljs só grava fórmula de { formula }); `parar()` true desiste no meio.
+    // Devolve true quando baixou. Serve à lista e às Aberturas.
+    async function baixarPlanilha(arquivo, aba, colunas, larguras, linhas, parar) {
+        const ExcelJS = await carregarExcel();
+        if (parar()) return false;
+        const livro = new ExcelJS.Workbook();
+        const folha = livro.addWorksheet(aba, { views: [{ state: 'frozen', ySplit: 1 }] });
+        folha.columns = colunas.map((titulo, i) => ({ header: titulo, width: larguras[i], style: { numFmt: '@' } }));
+        folha.getRow(1).font = { bold: true };
+        for (const l of linhas) folha.addRow(l);
+        const blob = new Blob([await livro.xlsx.writeBuffer()], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        if (parar()) return false;
+        const url = URL.createObjectURL(blob);
+        const a = el('a');
+        a.href = url;
+        a.download = arquivo + '-' + hoje() + '.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+        return true;
+    }
     function progresso(texto, feito) {
         $('em-exportar-texto').textContent = texto;
         $('em-exportar-barra').value = feito;
@@ -62,25 +84,8 @@
             } while (cursor && linhas.length < A.MAX_EXPORTAR);
             if (!linhas.length) { avisoFlutuante('Nenhum e-mail para exportar com esses filtros.'); return; }
             progresso('Montando a planilha…', 1);
-            const ExcelJS = await carregando;
-            if (minha.cancelado) return;
-            const livro = new ExcelJS.Workbook();
-            const folha = livro.addWorksheet('E-mails', { views: [{ state: 'frozen', ySplit: 1 }] });
-            const larguras = [17, 32, 24, 48, 16, 12, 24, 10, 12, 60];
-            folha.columns = A.COLUNAS_PLANILHA.map((titulo, i) => ({ header: titulo, width: larguras[i], style: { numFmt: '@' } }));
-            folha.getRow(1).font = { bold: true };
-            // valor como string: o exceljs só grava fórmula de { formula }
-            for (const l of linhas) folha.addRow(l);
-            const blob = new Blob([await livro.xlsx.writeBuffer()], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-            if (minha.cancelado) return;
-            const url = URL.createObjectURL(blob);
-            const a = el('a');
-            a.href = url;
-            a.download = 'emails-' + hoje() + '.xlsx';
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            setTimeout(() => URL.revokeObjectURL(url), 10000);
+            if (!await baixarPlanilha('emails', 'E-mails', A.COLUNAS_PLANILHA, [17, 32, 24, 48, 16, 12, 24, 10, 12, 60], linhas,
+                () => minha.cancelado)) return;
             avisoFlutuante(total > A.MAX_EXPORTAR ? 'Planilha com os primeiros 2.000 de ' + milhar(total) + ' e-mails. Refine o filtro para exportar o resto.'
                 : 'Planilha com ' + (linhas.length === 1 ? '1 e-mail' : milhar(linhas.length) + ' e-mails') + ' baixada.');
         } catch (erro) {
@@ -99,4 +104,5 @@
         $('em-exportar').focus();
     });
     T.partes.exportar = exportar;
+    T.baixarPlanilha = baixarPlanilha;
 })();

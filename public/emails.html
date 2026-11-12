@@ -102,6 +102,9 @@
     <a id="em-ir-saude" class="em-trilho-item" href="#saude" data-dica="Saúde das caixas" data-dica-lado="direita" hidden>
       <svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#saude"></use></svg><span class="em-trilho-rotulo">Saúde</span>
     </a>
+    <a id="em-ir-aberturas" class="em-trilho-item" href="#aberturas" data-dica="Aberturas" data-dica-lado="direita" hidden>
+      <svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#olho"></use></svg><span class="em-trilho-rotulo">Aberturas</span>
+    </a>
   </nav>
 
   <main id="em-principal" class="em-principal">
@@ -140,6 +143,14 @@
         <p id="em-saude-estado" class="em-estado" role="status" aria-live="polite"></p>
       </div>
       <div id="em-saude-conteudo"></div>
+    </section>
+
+    <section id="em-aberturas" class="em-visao" aria-labelledby="em-aberturas-titulo" hidden>
+      <div class="em-visao-topo">
+        <h2 id="em-aberturas-titulo">Aberturas</h2>
+        <p id="em-aberturas-estado" class="em-estado" role="status" aria-live="polite"></p>
+      </div>
+      <div id="em-aberturas-conteudo"></div>
     </section>
 
     <section id="em-filtros-salvos" class="em-visao" aria-labelledby="em-filtros-titulo" hidden>
@@ -362,8 +373,13 @@
         </div>
         <pre id="em-corpo" class="em-corpo"></pre>
         <iframe id="em-html" class="em-html" title="Versão formatada do e-mail, sem scripts e sem imagens externas" sandbox="" referrerpolicy="no-referrer" hidden></iframe>
+        <section id="em-conversa" class="em-bloco-detalhe" aria-labelledby="em-coment-titulo" hidden>
+          <h3 id="em-coment-titulo" class="em-secao">Comentários</h3>
+          <div id="em-comentarios"></div>
+        </section>
         <section class="em-bloco-detalhe" aria-labelledby="em-hist-titulo">
           <h3 id="em-hist-titulo" class="em-secao">Histórico</h3>
+          <p id="em-vistos" class="em-vistos" hidden></p>
           <ol id="em-historico" class="em-historico"></ol>
         </section>
         <section id="em-outros" class="em-bloco-detalhe" aria-labelledby="em-outros-titulo">

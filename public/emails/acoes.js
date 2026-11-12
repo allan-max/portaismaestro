@@ -61,13 +61,14 @@
         categoria: h => 'Categoria: ' + valor(h.antes) + ' para ' + valor(h.depois),
         desfazer: h => 'Desfeito: ' + valor(h.antes) + ' voltou a ' + valor(h.depois),
         phishing_removido: () => 'Categoria phishing removida: passou a spam',
+        apagar_comentario: () => 'Comentário apagado',
     };
     // linha do tempo: recebimento e classificação vêm de campos do e-mail; o resto é a auditoria, mais antiga primeiro
     function historico(e) {
         const linhas = [{ em: e.data, texto: 'Recebido', quem: '' }];
         if (e.classificado_em) {
             const cat = e.categoria_original || e.categoria;
-            linhas.push({ em: e.classificado_em, texto: cat ? 'Classificado como ' + cat : 'Classificado', quem: 'IA' });
+            linhas.push({ em: e.classificado_em, texto: cat ? 'Classificado como ' + F.categoria(cat).nome : 'Classificado', quem: 'IA' });
         }
         for (const h of Array.isArray(e.historico) ? e.historico : []) {
             if (!h || typeof h !== 'object') continue;
@@ -108,8 +109,27 @@
             typeof e.horas_uteis === 'number' && Number.isFinite(e.horas_uteis) ? F.decimal(e.horas_uteis) : '', texto(e.resumo)];
     }
 
-    const api = { MAX_LOTE, MAX_EXPORTAR, COLUNAS_PLANILHA, iniciais, relativa, porExtenso, intervalo, partes, largura, historico, desfeito,
-        percentual, textoAviso, linhaPlanilha };
+    // ----- quem abriu e comentários (seções 5 e 6) -----
+    // "10:42" no mesmo dia de Brasília; "09/11 23:00" em outro dia
+    function horaCurta(iso, agora) {
+        const d = data(iso);
+        if (!d) return '';
+        const dia = x => x.toLocaleDateString('pt-BR', { timeZone: F.FUSO, day: '2-digit', month: '2-digit' });
+        const h = d.toLocaleTimeString('pt-BR', { timeZone: F.FUSO, hour: '2-digit', minute: '2-digit' });
+        return dia(d) === dia(agora || new Date()) ? h : dia(d) + ' ' + h;
+    }
+    // o portal põe `nome` (do cadastro); sem ele, o login
+    const autor = x => texto(x && x.nome) || texto(x && x.usuario);
+    function vistoPor(vistos, agora) {
+        const nomes = (Array.isArray(vistos) ? vistos : []).filter(v => v && autor(v)).map(v => autor(v) + ' (' + horaCurta(v.em, agora) + ')');
+        return nomes.length ? 'Visto por: ' + nomes.join(', ') + '.' : '';
+    }
+    const comentarioApagado = (c, agora) => 'Comentário apagado por ' + autor(c) + ', ' + horaCurta(c.apagado_em, agora);
+    const COLUNAS_ABERTURAS = ['Quando', 'Nome', 'Usuário', 'Assunto', 'Remetente'];
+    const linhaAbertura = a => [a.em ? F.dataHora(a.em) : '', autor(a), texto(a.usuario), texto(a.assunto), texto(a.remetente)];
+
+    const api = { MAX_LOTE, MAX_EXPORTAR, COLUNAS_PLANILHA, COLUNAS_ABERTURAS, iniciais, relativa, porExtenso, intervalo, partes, largura,
+        historico, desfeito, percentual, textoAviso, linhaPlanilha, linhaAbertura, horaCurta, autor, vistoPor, comentarioApagado };
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
     else root.EmailsAcoes = api;
 })(typeof window !== 'undefined' ? window : globalThis);

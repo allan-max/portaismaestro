@@ -293,6 +293,23 @@ body { background: var(--em-fundo); min-height: 100vh; }
 .em-hist:last-child::before { background: var(--em-destaque); }
 .em-hist-texto { overflow-wrap: anywhere; }
 .em-hist-sub { color: var(--em-discreto); font-size: var(--em-t-apoio); overflow-wrap: anywhere; }
+/* quem abriu e comentários (rodada 2, seções 5 e 6) */
+.em-vistos { margin-bottom: var(--em-e3); color: var(--em-apoio); font-size: var(--em-t-apoio); overflow-wrap: anywhere; }
+.em-coments { list-style: none; margin: 0 0 var(--em-e3); padding: 0; }
+.em-coment { padding: var(--em-e2) 0; border-bottom: 1px solid var(--em-borda); }
+.em-coment-topo { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--em-e2); }
+.em-coment-apagar { margin-left: auto; font-size: var(--em-t-apoio); }
+.em-coment-texto { white-space: pre-wrap; overflow-wrap: anywhere; }
+.em-coment-apagado { color: var(--em-discreto); font-size: var(--em-t-apoio); }
+.em-coment-form { display: flex; flex-direction: column; gap: var(--em-e1); }
+.em-coment-form label { color: var(--em-apoio); font-size: var(--em-t-apoio); }
+.em-coment-campo { min-height: 72px; padding: var(--em-e2); line-height: 1.5; resize: vertical; }
+.em-coment-rodape { display: flex; align-items: center; justify-content: flex-end; gap: var(--em-e3); }
+.em-ab-filtros { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--em-e3); margin-bottom: var(--em-e4); }
+.em-ab-filtros .em-campo { flex: 1 1 180px; max-width: 280px; }
+@media (max-width: 767px) { .em-ab-filtros .em-campo { max-width: none; } }
+.em-ab-acoes { display: flex; gap: var(--em-e2); }
+.em-ab-paginas { display: flex; align-items: center; gap: var(--em-e3); }
 .em-do-remetente { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .em-outro {
   display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; padding: var(--em-e2) var(--em-e3);
