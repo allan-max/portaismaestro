@@ -314,6 +314,34 @@ body { background: var(--em-fundo); min-height: 100vh; }
 @media (max-width: 767px) { .em-ab-filtros .em-campo { max-width: none; } }
 .em-ab-acoes { display: flex; gap: var(--em-e2); }
 .em-ab-paginas { display: flex; align-items: center; gap: var(--em-e3); }
+/* Padrões (seção 8.4): o padrão em foco ganha borda e os botões de rótulo */
+.em-pd-topo { display: flex; flex-wrap: wrap; align-items: center; gap: var(--em-e3); margin-bottom: var(--em-e4); }
+.em-pd-pct { color: var(--em-apoio); }
+.em-pd-topo .em-segmentado { flex-wrap: wrap; max-width: 100%; }
+.em-pd-topo .em-segmentado button { white-space: nowrap; }
+.em-pd-lista { list-style: none; margin: 0 0 var(--em-e4); padding: 0; display: grid; gap: var(--em-e2); }
+.em-pd-item { padding: var(--em-e3) var(--em-e4); background: var(--em-painel); border: 1px solid var(--em-borda); border-radius: var(--em-raio-cartao); min-width: 0; }
+.em-pd-item:focus-within { border-color: var(--em-destaque); background: var(--em-painel-foco); }
+.em-pd-item[aria-busy=true] .em-pd-estado { color: var(--em-discreto); }
+.em-pd-linha { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--em-e1) var(--em-e3); }
+.em-pd-nome { min-width: 0; overflow-wrap: anywhere; }
+.em-pd-qtd, .em-pd-origem, .em-pd-legenda { color: var(--em-apoio); font-size: var(--em-t-apoio); }
+.em-pd-estado { margin-left: auto; font-size: var(--em-t-apoio); color: var(--em-apoio); }
+.em-pd-feito { color: var(--em-ok); font-weight: 600; }
+.em-pd-origem { overflow-wrap: anywhere; margin: 2px 0 var(--em-e2); }
+.em-pd-barra { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--em-fundo); }
+.em-pd-barra span { width: var(--em-largura); background: var(--em-cat); }
+.em-pd-legenda { margin: var(--em-e1) 0; }
+.em-pd-exemplos { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.em-pd-exemplos li { display: flex; align-items: center; gap: var(--em-e2); min-width: 0; }
+.em-pd-exemplos .em-link { display: flex; gap: var(--em-e2); min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.em-pd-botoes { display: flex; flex-wrap: wrap; gap: var(--em-e1); margin-top: var(--em-e3); }
+.em-pd-botoes kbd { margin-right: var(--em-e1); }
+.em-pd-regra { display: grid; gap: var(--em-e1); justify-items: start; }
+.em-pd-liga { display: inline-flex; align-items: center; gap: var(--em-e2); }
+.em-pd-previa { padding: var(--em-e4); }
+.em-pd-corpo { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow: auto; }
+.em-ajuda-sub { margin: var(--em-e3) 0 var(--em-e2); font-size: var(--em-t-secao); }
 .em-do-remetente { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .em-outro {
   display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; padding: var(--em-e2) var(--em-e3);
@@ -330,7 +358,7 @@ body { background: var(--em-fundo); min-height: 100vh; }
 }
 .em-ajuda::backdrop { background: var(--em-veu); }
 .em-ajuda-topo { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--em-e3); }
-.em-atalhos { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: var(--em-e2) var(--em-e3); align-items: center; margin: 0 0 var(--em-e3); }
+.em-atalhos { display: grid; grid-template-columns: minmax(64px, max-content) minmax(0, 1fr); gap: var(--em-e2) var(--em-e3); align-items: center; margin: 0 0 var(--em-e3); }
 .em-atalhos dd { margin: 0; color: var(--em-apoio); }
 
 /* ----- dashboard e saúde das caixas ----- */
@@ -513,6 +541,7 @@ a.em-kpi:focus-visible { outline: 2px solid var(--em-destaque); outline-offset: 
   .em-trilho-item { flex: 1 1 0; flex-direction: column; gap: 2px; width: auto; height: 52px; font-size: var(--em-t-secao); }
   .em-trilho-rotulo { position: static; width: auto; height: auto; clip: auto; overflow: visible; }
   .em-trilho-num { top: 2px; right: calc(50% - 22px); }
+  #em-ir-padroes { display: none; }   /* oito itens não cabem com 40 px; rotular padrões é trabalho de computador (#padroes abre) */
   [data-dica]::after { display: none; }   /* no toque não há dica, e perto da borda ela faria a tela rolar de lado */
   .em-principal { padding: calc(var(--em-topo) + var(--em-e3)) var(--em-e3) calc(var(--em-trilho) + var(--em-e3)); }
   .em-detalhe { padding: var(--em-e4); inset: var(--em-topo) 0 var(--em-trilho) 0; }

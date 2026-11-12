@@ -20,7 +20,7 @@
         bloqueado: false, iniciado: false, listou: false, carregando: false, parouMais: false, seqLista: 0, ultimoDia: '', prefs: PREFS_PADRAO,
         idAberto: null, sel: new Set(), ancora: null, dados: new Map(), retomar: null, caiu: false };
     const CANCELADO = { sucesso: false, cancelado: true };
-    const ESCRITAS = new Set(['status', 'categoria', 'lote', 'desfazer', 'comentar', 'apagar_comentario']);
+    const ESCRITAS = new Set(['status', 'categoria', 'lote', 'desfazer', 'comentar', 'apagar_comentario', 'rotular_padrao']);
     const esperando = new Map();
     let seq = 0;
 
@@ -119,7 +119,7 @@
     pilha.addEventListener('focusout', () => prazos.forEach((_t, a) => prazo(a)));
     function telaAcesso(titulo, texto) {
         estado.bloqueado = true;
-        for (const id of ['em-app', 'em-dash', 'em-saude', 'em-aberturas', 'em-filtros-salvos', 'em-trilho', 'em-busca-global', 'em-abrir-busca', 'em-sino']) $(id).hidden = true;
+        for (const id of ['em-app', 'em-dash', 'em-saude', 'em-aberturas', 'em-padroes', 'em-filtros-salvos', 'em-trilho', 'em-busca-global', 'em-abrir-busca', 'em-sino']) $(id).hidden = true;
         $('em-lista').replaceChildren();   // nem o esqueleto de carregamento fica na página
         $('em-acesso').hidden = false;
         $('em-acesso-titulo').textContent = titulo;
@@ -134,6 +134,7 @@
     $('em-usuario').textContent = local('maestro_user') || '';
     $('em-ir-saude').hidden = !admin;
     $('em-ir-aberturas').hidden = !admin;
+    $('em-ir-padroes').hidden = !admin;
 
     // ----- indicador "ao vivo" -----
     const AO_VIVO = { vivo: 'Ao vivo', conectando: 'Conectando', reconectando: 'Reconectando', offline: 'Serviço offline' };
@@ -478,7 +479,7 @@
 
     // ----- visões pelo endereço: #caixa (com o filtro), #dashboard, #saude, #filtros -----
     const ITENS_TRILHO = { caixa: 'em-ir-caixa', dashboard: 'em-ir-dash', revisao: 'em-ir-revisao', atrasados: 'em-ir-atrasados', filtros: 'em-ir-filtros', saude: 'em-ir-saude',
-        aberturas: 'em-ir-aberturas' };
+        aberturas: 'em-ir-aberturas', padroes: 'em-ir-padroes' };
     const minhas = () => estado.prefs.minhas_caixas || [];
     // minhas caixas e "Sem ruído" guardados são o padrão: ficam fora do endereço
     const paraHash = f => Q.paraHash(f, minhas(), estado.prefs.sem_ruido);
@@ -486,13 +487,14 @@
     function mostrarVisao() {
         if (estado.bloqueado) return;
         const r = F.rota(location.hash);
-        if ((r.visao === 'saude' || r.visao === 'aberturas') && !admin) r.visao = 'caixa';
+        if (['saude', 'aberturas', 'padroes'].includes(r.visao) && !admin) r.visao = 'caixa';
         estado.visao = r.visao;
         if (r.visao !== 'caixa' && emFoco()) modoFoco(false);   // sem trilho não haveria como voltar
         $('em-app').hidden = r.visao !== 'caixa';
         $('em-dash').hidden = r.visao !== 'dashboard';
         $('em-saude').hidden = r.visao !== 'saude';
         $('em-aberturas').hidden = r.visao !== 'aberturas';
+        $('em-padroes').hidden = r.visao !== 'padroes';
         $('em-filtros-salvos').hidden = r.visao !== 'filtros';
         let item = r.ver || r.visao;
         if (r.visao === 'caixa') {
@@ -1519,7 +1521,7 @@
     // os arquivos de cada parte, na ordem: graficos.js antes de quem usa G; saude.js tem as tabelas que o Dashboard e Aberturas usam;
     // exportar.js monta a planilha de Aberturas
     const PARTES = { dashboard: ['graficos', 'saude', 'dashboard'], saude: ['graficos', 'saude'], filtros: ['gestao-filtros'], exportar: ['exportar'],
-        aberturas: ['saude', 'exportar', 'aberturas'], comentarios: ['comentarios'] };
+        aberturas: ['saude', 'exportar', 'aberturas'], comentarios: ['comentarios'], padroes: ['padroes'] };
     const baixados = {};
     function arquivo(nome) {
         if (!baixados[nome]) {
@@ -1539,7 +1541,7 @@
     }
     // enquanto o arquivo vem, a visão diz "Carregando…"; se não vier, erro e "Tentar de novo"
     const LUGAR = { dashboard: ['em-dash-estado', 'em-dash-conteudo'], saude: ['em-saude-estado', 'em-saude-conteudo'], filtros: ['em-gestao-estado', 'em-gestao'],
-        aberturas: ['em-aberturas-estado', 'em-aberturas-conteudo'] };
+        aberturas: ['em-aberturas-estado', 'em-aberturas-conteudo'], padroes: ['em-padroes-estado', 'em-padroes-conteudo'] };
     // `doBotao`: veio de "Tentar de novo", que some quando a visão abre; o foco vai ao título da visão
     async function abrirVisao(nome, ver, doBotao) {
         if (!T.partes[nome]) {

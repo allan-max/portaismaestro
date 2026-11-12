@@ -10,7 +10,7 @@
     ]);
     // as que o serviço aceita em correção manual (classificador.CATEGORIAS)
     const CORRIGIVEIS = ['cotação', 'pedido', 'financeiro/NF', 'cadastro', 'informação', 'marketing', 'spam', 'outros'];
-    const VISOES = ['caixa', 'dashboard', 'saude', 'filtros', 'aberturas'];
+    const VISOES = ['caixa', 'dashboard', 'saude', 'filtros', 'aberturas', 'padroes'];
 
     function categoria(nome) {
         if (nome === 'phishing') nome = 'spam';   // serviço antigo: phishing deixou de ser categoria e aparece como spam

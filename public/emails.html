@@ -105,6 +105,9 @@
     <a id="em-ir-aberturas" class="em-trilho-item" href="#aberturas" data-dica="Aberturas" data-dica-lado="direita" hidden>
       <svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#olho"></use></svg><span class="em-trilho-rotulo">Aberturas</span>
     </a>
+    <a id="em-ir-padroes" class="em-trilho-item" href="#padroes" data-dica="Padrões" data-dica-lado="direita" hidden>
+      <svg class="em-ic" aria-hidden="true"><use href="emails/icones.svg#padrao"></use></svg><span class="em-trilho-rotulo">Padrões</span>
+    </a>
   </nav>
 
   <main id="em-principal" class="em-principal">
@@ -151,6 +154,14 @@
         <p id="em-aberturas-estado" class="em-estado" role="status" aria-live="polite"></p>
       </div>
       <div id="em-aberturas-conteudo"></div>
+    </section>
+
+    <section id="em-padroes" class="em-visao" aria-labelledby="em-padroes-titulo" hidden>
+      <div class="em-visao-topo">
+        <h2 id="em-padroes-titulo">Padrões</h2>
+        <p id="em-padroes-estado" class="em-estado" role="status" aria-live="polite"></p>
+      </div>
+      <div id="em-padroes-conteudo"></div>
     </section>
 
     <section id="em-filtros-salvos" class="em-visao" aria-labelledby="em-filtros-titulo" hidden>
@@ -412,6 +423,14 @@
       <dt><kbd>f</kbd></dt><dd>Modo foco: só a lista e o e-mail aberto</dd>
       <dt><kbd>Esc</kbd></dt><dd>Fechar o menu, o e-mail aberto, a seleção ou o modo foco</dd>
       <dt><kbd>?</kbd></dt><dd>Esta lista de atalhos</dd>
+    </dl>
+    <h3 class="em-ajuda-sub">Na visão Padrões (administrador)</h3>
+    <dl class="em-atalhos">
+      <dt><kbd>1</kbd> a <kbd>8</kbd></dt><dd>Rotular com a categoria, na ordem dos botões</dd>
+      <dt><kbd>m</kbd></dt><dd>Marcar como misturado: a IA decide um a um</dd>
+      <dt><kbd>Espaço</kbd></dt><dd>Pular o padrão</dd>
+      <dt><kbd>j</kbd> e <kbd>k</kbd></dt><dd>Próximo e anterior</dd>
+      <dt><kbd>z</kbd></dt><dd>Desfazer o último rótulo</dd>
     </dl>
     <p class="em-dica-texto">Com e-mails selecionados, r e e valem para todos eles. Os atalhos não funcionam enquanto se digita num campo.</p>
   </dialog>

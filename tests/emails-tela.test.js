@@ -171,12 +171,13 @@ test('partes sob demanda: existem, não estão na página e nenhum arquivo da pa
     // Aberturas usa as tabelas de saude.js e a planilha de exportar.js; comentários são uma parte só, fora da Caixa
     assert.deepEqual(partes.aberturas, ['saude', 'exportar', 'aberturas']);
     assert.deepEqual(partes.comentarios, ['comentarios']);
+    assert.deepEqual(partes.padroes, ['padroes']);   // Padrões: só administrador, fora da Caixa
 });
 
-test('peso: abrir a Caixa até 250 KB e a tela inteira até 300 KB, sem compressão (seção 11)', () => {
+test('peso: abrir a Caixa até 250 KB e a tela inteira até 330 KB, sem compressão (seção 11; teto da etapa B, decisão 51)', () => {
     const inicial = peso(path.join(PUBLIC, 'emails.html')) + naPagina.reduce((t, a) => t + peso(path.join(PUBLIC, a)), 0);
     const total = peso(path.join(PUBLIC, 'emails.html')) + peso(path.join(PUBLIC, 'img', 'logo-maestro-emails.webp')) +
         arquivos.reduce((t, a) => t + peso(path.join(PASTA, a)), 0);
     assert.ok(inicial <= 250000, 'abrir a Caixa: ' + inicial + ' bytes');
-    assert.ok(total <= 300000, 'tela inteira: ' + total + ' bytes');
+    assert.ok(total <= 330000, 'tela inteira: ' + total + ' bytes');
 });
