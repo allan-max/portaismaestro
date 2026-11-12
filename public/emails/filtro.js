@@ -5,11 +5,11 @@
     'use strict';
     const F = typeof module !== 'undefined' && module.exports ? require('./formato.js') : root.EmailsFormato;
     const SEM_CLASSIFICACAO = '(não classificado)';
-    // "Sem ruído" esconde estas; phishing continua visível de propósito
+    // "Sem ruído" esconde estas
     const RUIDO = ['marketing', 'spam', 'notificação Coupa', 'código de login'];
     const ESTADOS = ['pendente', 'respondido', 'arquivado'];
     const CATEGORIAS = ['cotação', 'pedido', 'financeiro/NF', 'cadastro', 'informação', 'notificação Coupa', 'interno',
-        'enviado', 'código de login', 'marketing', 'outros', 'spam', 'phishing', SEM_CLASSIFICACAO];
+        'enviado', 'código de login', 'marketing', 'outros', 'spam', SEM_CLASSIFICACAO];
     const CORES = ['cinza', 'azul', 'verde', 'ambar', 'violeta', 'ciano', 'rosa', 'laranja'];
     const LISTAS = { categorias: [20, 40], contas: [50, 120], estados: [3, 20] };   // [itens, tamanho de cada]
     const TEXTOS = { busca: 200, remetente: 120 };
@@ -147,7 +147,7 @@
         { id: 'anexo', nome: 'Com anexo', filtro: () => ({ anexo: true }) },
         { id: 'financeiro', nome: 'Financeiro/NF', filtro: () => ({ categorias: ['financeiro/NF'] }) },
         { id: 'coupa', nome: 'Coupa', filtro: () => ({ categorias: ['notificação Coupa'] }) },
-        { id: 'ameacas', nome: 'Ameaças', filtro: () => ({ categorias: ['phishing', 'spam'] }) },
+        { id: 'spam', nome: 'Spam', filtro: () => ({ categorias: ['spam'] }) },
         { id: 'nao-classificados', nome: 'Não classificados', filtro: () => ({ categorias: [SEM_CLASSIFICACAO] }) },
         { id: 'sem-ruido', nome: 'Sem ruído', filtro: () => ({}) },
     ];

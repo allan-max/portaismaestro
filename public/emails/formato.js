@@ -6,14 +6,15 @@
     const CATEGORIAS = new Map([
         ['cotação', 'cotacao'], ['pedido', 'pedido'], ['financeiro/NF', 'financeiro'], ['cadastro', 'cadastro'],
         ['informação', 'informacao'], ['notificação Coupa', 'coupa'], ['interno', 'interno'], ['enviado', 'enviado'],
-        ['código de login', 'login'], ['marketing', 'marketing'], ['outros', 'outros'], ['spam', 'spam'], ['phishing', 'phishing'],
+        ['código de login', 'login'], ['marketing', 'marketing'], ['outros', 'outros'], ['spam', 'spam'],
     ]);
     // as que o serviço aceita em correção manual (classificador.CATEGORIAS)
-    const CORRIGIVEIS = ['cotação', 'pedido', 'financeiro/NF', 'cadastro', 'informação', 'marketing', 'spam', 'phishing', 'outros'];
+    const CORRIGIVEIS = ['cotação', 'pedido', 'financeiro/NF', 'cadastro', 'informação', 'marketing', 'spam', 'outros'];
     const VISOES = ['caixa', 'dashboard', 'saude', 'filtros'];
 
     function categoria(nome) {
-        const id = typeof nome === 'string' ? CATEGORIAS.get(nome) : undefined;
+        if (nome === 'phishing') nome = 'spam';   // serviço antigo: phishing deixou de ser categoria e aparece como spam
+        const id =typeof nome === 'string' ? CATEGORIAS.get(nome) : undefined;
         if (!id) return { id: 'indefinida', nome: 'não classificado', classe: 'em-cat-indefinida', icone: 'cat-indefinida' };
         return { id, nome, classe: 'em-cat-' + id, icone: 'cat-' + id };
     }

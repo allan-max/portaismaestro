@@ -77,6 +77,12 @@ test('histórico: recebido, classificado e cada alteração manual, com quem e q
     assert.deepEqual(A.historico({ data: e.data, classificado_em: e.data, categoria: null }).map(x => x.texto), ['Recebido', 'Classificado']);
 });
 
+test('histórico: a migração de phishing tem frase própria e o autor é o sistema', () => {
+    const h = A.historico({ data: '2026-11-10T10:00:00Z', classificado_em: null, historico: [
+        { usuario: 'sistema', acao: 'phishing_removido', antes: 'phishing', depois: 'spam', em: '2026-11-12T03:00:00Z' }] });
+    assert.deepEqual(h.map(x => [x.texto, x.quem]), [['Recebido', ''], ['Categoria phishing removida: passou a spam', 'sistema']]);
+});
+
 test('desfeito: frase com quantos voltaram e quantos o serviço recusou', () => {
     assert.equal(A.desfeito(1, 0), 'Alteração desfeita.');
     assert.equal(A.desfeito(3, 0), '3 alterações desfeitas.');

@@ -332,18 +332,17 @@
         }
         return g;
     }
-    function painelAmeacas(d, largo) {
-        const f = figura('Ameaças por dia', 'Phishing e spam recebidos no período.', largo ? 'em-largo' : '');
-        const am = Array.isArray(d.ameacas) ? d.ameacas : [];
-        const vol = am.map(a => ({ dia: a.dia, por_categoria: { phishing: a.phishing, spam: a.spam } }));
-        if (!vol.some(v => v.por_categoria.phishing > 0 || v.por_categoria.spam > 0)) { f.appendChild(el('p', 'Nenhuma ameaça no período.', 'em-estado')); return f; }
-        const series = [{ chave: 'phishing', categorias: ['phishing'] }, { chave: 'spam', categorias: ['spam'] }];
-        f.appendChild(legenda('ame:', series, nomeSerie, classeSerie));
+    // a chave do serviço continua `ameacas`; serviço antigo ainda separa phishing, que a tela mostra como spam
+    function painelSpam(d, largo) {
+        const f = figura('Spam por dia', 'Spam recebido no período, inclusive tentativa de golpe.', largo ? 'em-largo' : '');
+        const vol = (Array.isArray(d.ameacas) ? d.ameacas : []).map(a => ({ dia: a.dia, por_categoria: { spam: (+a.spam || 0) + (+a.phishing || 0) } }));
+        if (!vol.some(v => v.por_categoria.spam > 0)) { f.appendChild(el('p', 'Nenhum spam no período.', 'em-estado')); return f; }
+        const series = [{ chave: 'spam', categorias: ['spam'] }];
         const area = el('div', null, 'em-grafico-area');
         f.appendChild(area);
-        f.depois = () => area.appendChild(colunasOuBarras(area, G.empilhar(vol, series, ocultasDe('ame:')), nomeSerie, classeSerie,
-            (dia, ch) => paraCaixa({ categorias: [ch], de: dia, ate: dia })));
-        f.appendChild(tabelaEquivalente(['Dia', 'Phishing', 'Spam'], am.map(a => [G.diaCurto(a.dia), G.numero(a.phishing), G.numero(a.spam)])));
+        f.depois = () => area.appendChild(colunasOuBarras(area, G.empilhar(vol, series, new Set()), nomeSerie, classeSerie,
+            dia => paraCaixa({ categorias: ['spam'], de: dia, ate: dia })));
+        f.appendChild(tabelaEquivalente(['Dia', 'Spam'], vol.map(v => [G.diaCurto(v.dia), G.numero(v.por_categoria.spam)])));
         return f;
     }
     function numeroPainel(rotulo, valor, href, nota) {
@@ -450,7 +449,7 @@
             indicadores(d).forEach(g => alvo.appendChild(g));
             const depois = [];
             const grade = el('div', null, 'em-graficos');
-            grade.append(painelVolume(d, depois), painelFunil(d), painelIa(d), painelMapa(d), painelClientes(d), painelCaixas(d), painelAmeacas(d, !d.gasto));
+            grade.append(painelVolume(d, depois), painelFunil(d), painelIa(d), painelMapa(d), painelClientes(d), painelCaixas(d), painelSpam(d, !d.gasto));
             if (d.gasto) grade.appendChild(painelGasto(d));
             alvo.appendChild(grade);
             for (const f of grade.children) if (f.depois) depois.push(f.depois);

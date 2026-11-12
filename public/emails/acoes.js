@@ -60,6 +60,7 @@
         status: h => 'Status: ' + valor(h.antes) + ' para ' + valor(h.depois),
         categoria: h => 'Categoria: ' + valor(h.antes) + ' para ' + valor(h.depois),
         desfazer: h => 'Desfeito: ' + valor(h.antes) + ' voltou a ' + valor(h.depois),
+        phishing_removido: () => 'Categoria phishing removida: passou a spam',
     };
     // linha do tempo: recebimento e classificação vêm de campos do e-mail; o resto é a auditoria, mais antiga primeiro
     function historico(e) {

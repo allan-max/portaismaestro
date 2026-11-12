@@ -46,7 +46,6 @@
   --em-cat-marketing: #f579ba;    --em-cat-marketing-fundo: rgba(244, 114, 182, .13);
   --em-cat-outros: #9fa6b1;       --em-cat-outros-fundo: rgba(156, 163, 175, .13);
   --em-cat-spam: #fb923c;         --em-cat-spam-fundo: rgba(251, 146, 60, .13);
-  --em-cat-phishing: #f97c7c;     --em-cat-phishing-fundo: rgba(248, 113, 113, .13);
   /* não classificado não tem cor: texto discreto e borda tracejada */
 
   /* filtros salvos: as 8 cores de etiqueta, pelo nome que o portal guarda */

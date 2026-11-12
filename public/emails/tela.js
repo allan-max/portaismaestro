@@ -1255,8 +1255,7 @@
         meta('Caixas', (e.ocorrencias || []).map(o => F.nomeCaixa(o.conta) + ' / ' + o.pasta + (o.removida_em ? ' (removido)' : '')).join('; '));
         meta('Autenticação', `SPF ${e.spf || 'ausente'}, DKIM ${e.dkim || 'ausente'}`);
         const avisos = $('em-avisos');
-        if (e.categoria === 'phishing') avisos.appendChild(aviso('Possível golpe (phishing): não abra links, não responda e não baixe anexos. Avise o responsável pela segurança.', true));
-        else if (e.categoria === 'spam') avisos.appendChild(aviso('Classificado como spam: não abra links e não responda. Anexos bloqueados.', true));
+        if (F.categoria(e.categoria).id === 'spam') avisos.appendChild(aviso('Classificado como spam: não abra links e não responda. Anexos bloqueados.', true));
         if (e.removido) avisos.appendChild(aviso('Este e-mail foi apagado ou movido em todas as caixas. A central guarda a cópia.'));
         controles(e);
         cartaoIa(e);

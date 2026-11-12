@@ -11,7 +11,7 @@ test('filtro novo: Sem ruído ligado e nada mais', () => {
         revisao: false, anexo: false, atrasados: false, sem_ruido: true });
     assert.equal(Q.semRuidoAtivo(f), true);
     assert.deepEqual(Q.RUIDO, RUIDO);
-    assert.ok(!Q.RUIDO.includes('phishing'));
+    assert.ok(!Q.CATEGORIAS.includes('phishing'));
 });
 
 test('params: listas novas, parâmetros antigos vazios e Sem ruído como excluir', () => {
@@ -28,7 +28,7 @@ test('Sem ruído desliga sozinho quando o filtro pede uma categoria escondida', 
     assert.equal(Q.semRuidoAtivo(coupa), false);
     assert.equal(Q.ruidoDesligadoPeloFiltro(coupa), true);
     assert.deepEqual(Q.params(coupa).excluir, []);
-    const cot = Object.assign(Q.novo(), { categorias: ['cotação', 'phishing'] });   // phishing não é ruído
+    const cot = Object.assign(Q.novo(), { categorias: ['cotação', 'pedido'] });   // nenhuma das duas é ruído
     assert.equal(Q.semRuidoAtivo(cot), true);
     assert.equal(Q.ruidoDesligadoPeloFiltro(cot), false);
     const desligado = Object.assign(Q.novo(), { sem_ruido: false, categorias: ['spam'] });
@@ -116,13 +116,13 @@ test('alternar e remover devolvem filtro novo, sem mexer no de antes', () => {
 test('filtros prontos são dados e mantêm as caixas escolhidas', () => {
     const nomes = Q.PRONTOS.map(p => p.nome);
     assert.deepEqual(nomes, ['Cotações pendentes', 'Atrasados', 'Pedidos pendentes', 'Hoje', 'Fila de revisão', 'Com anexo',
-        'Financeiro/NF', 'Coupa', 'Ameaças', 'Não classificados', 'Sem ruído']);
+        'Financeiro/NF', 'Coupa', 'Spam', 'Não classificados', 'Sem ruído']);
     const atual = Object.assign(Q.novo(), { contas: ['a@x.test'], busca: 'antiga' });
     const cot = Q.pronto('cotacoes', atual, HOJE);
     assert.deepEqual(cot, Object.assign(Q.novo(), { contas: ['a@x.test'], categorias: ['cotação'], estados: ['pendente'] }));
     assert.deepEqual(Q.pronto('hoje', atual, HOJE).de, HOJE);
-    assert.deepEqual(Q.pronto('ameacas', atual, HOJE).categorias, ['phishing', 'spam']);
-    assert.equal(Q.semRuidoAtivo(Q.pronto('ameacas', atual, HOJE)), false);   // spam é ruído: desliga sozinho
+    assert.deepEqual(Q.pronto('spam', atual, HOJE).categorias, ['spam']);
+    assert.equal(Q.semRuidoAtivo(Q.pronto('spam', atual, HOJE)), false);   // spam é ruído: desliga sozinho
     assert.equal(Q.semRuidoAtivo(Q.pronto('coupa', atual, HOJE)), false);
     assert.deepEqual(Q.pronto('nao-classificados', atual, HOJE).categorias, ['(não classificado)']);
     assert.equal(Q.prontoAtivo(cot, HOJE), 'cotacoes');

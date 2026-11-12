@@ -110,7 +110,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .em-cat-marketing { --em-cat: var(--em-cat-marketing); --em-cat-fundo: var(--em-cat-marketing-fundo); }
 .em-cat-outros { --em-cat: var(--em-cat-outros); --em-cat-fundo: var(--em-cat-outros-fundo); }
 .em-cat-spam { --em-cat: var(--em-cat-spam); --em-cat-fundo: var(--em-cat-spam-fundo); }
-.em-cat-phishing { --em-cat: var(--em-cat-phishing); --em-cat-fundo: var(--em-cat-phishing-fundo); }
 .em-cat-indefinida { --em-cat: var(--em-borda-controle); --em-cat-fundo: transparent; }
 
 /* ----- chip de filtro: botão com aria-pressed, ligado ou desligado ----- */

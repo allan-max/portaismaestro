@@ -28,9 +28,9 @@ test('rota: fila de revisão só na Caixa e atrasados só no Dashboard', () => {
     assert.equal(F.rota('#dashboard?ver=outra').ver, '');
 });
 
-test('categoria: as 13 do serviço têm classe e ícone próprios', () => {
+test('categoria: as 12 do serviço têm classe e ícone próprios', () => {
     const nomes = ['cotação', 'pedido', 'financeiro/NF', 'cadastro', 'informação', 'notificação Coupa', 'interno',
-        'enviado', 'código de login', 'marketing', 'outros', 'spam', 'phishing'];
+        'enviado', 'código de login', 'marketing', 'outros', 'spam'];
     const ids = new Set();
     for (const nome of nomes) {
         const c = F.categoria(nome);
@@ -40,7 +40,12 @@ test('categoria: as 13 do serviço têm classe e ícone próprios', () => {
         assert.match(c.id, /^[a-z]+$/);
         ids.add(c.id);
     }
-    assert.equal(ids.size, 13);
+    assert.equal(ids.size, 12);
+});
+
+test('categoria: phishing vindo do serviço antigo aparece como spam, sem cor nem ícone próprios', () => {
+    assert.deepEqual(F.categoria('phishing'), F.categoria('spam'));
+    assert.ok(!/phishing/.test(ler('tokens.css') + ler('componentes.css') + ler('icones.svg')));
 });
 
 test('categoria: vazia, desconhecida ou nome de propriedade vira "não classificado"', () => {
@@ -49,8 +54,8 @@ test('categoria: vazia, desconhecida ou nome de propriedade vira "não classific
     }
 });
 
-test('categorias de correção manual são as 9 do serviço', () => {
-    assert.deepEqual(F.CORRIGIVEIS, ['cotação', 'pedido', 'financeiro/NF', 'cadastro', 'informação', 'marketing', 'spam', 'phishing', 'outros']);
+test('categorias de correção manual são as 8 do serviço', () => {
+    assert.deepEqual(F.CORRIGIVEIS, ['cotação', 'pedido', 'financeiro/NF', 'cadastro', 'informação', 'marketing', 'spam', 'outros']);
     for (const c of F.CORRIGIVEIS) assert.notEqual(F.categoria(c).id, 'indefinida');
 });
 
@@ -62,7 +67,7 @@ test('todo ícone que o código pede existe em icones.svg', () => {
         for (const m of ler(nome).matchAll(/icone\('([a-z-]+)'/g)) pedidos.add(m[1]);
     }
     for (const n of ['cotacao', 'pedido', 'financeiro', 'cadastro', 'informacao', 'coupa', 'interno', 'enviado', 'login',
-        'marketing', 'outros', 'spam', 'phishing', 'indefinida']) pedidos.add('cat-' + n);
+        'marketing', 'outros', 'spam', 'indefinida']) pedidos.add('cat-' + n);
     assert.ok(pedidos.size > 20);
     for (const p of pedidos) assert.ok(simbolos.has(p), 'falta o símbolo ' + p);
 });
