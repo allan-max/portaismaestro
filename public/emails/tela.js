@@ -1365,7 +1365,9 @@
             abrir.target = '_blank';
             abrir.rel = 'noopener noreferrer';
             // o endereço só abre uma vez: depois do clique a região fecha e o foco volta ao "Ver"
-            abrir.addEventListener('click', () => setTimeout(() => { fecharPrevia(); if (b.isConnected) b.focus(); }, 0));
+            const depois = () => setTimeout(() => { fecharPrevia(); if (b.isConnected) b.focus(); }, 0);
+            abrir.addEventListener('click', depois);
+            abrir.addEventListener('auxclick', depois);   // botão do meio não dispara click
             lugar.replaceChildren(topo, el('p', 'O PDF abre numa aba nova do navegador. O endereço vale por 1 minuto e abre uma vez.'), abrir);
             foco = abrir;
         } else {

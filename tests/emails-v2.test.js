@@ -22,7 +22,8 @@ function setup(user = { emails_access: true }, op = {}) {
     obterServico: () => servico, obterSocket: id => (id === 'cliente' ? socket : null),
     // Sem prefsDir, um caminho que nunca é criado: só salvar preferências cria a pasta, e esses testes não salvam.
     prefsDir: op.prefsDir || path.join(os.tmpdir(), `maestro-prefs-nao-usado-${process.pid}`),
-    ...(op.anexoTtlMs ? { anexoTtlMs: op.anexoTtlMs } : {}), ...(op.nomeDe ? { nomeDe: op.nomeDe } : {}) });
+    ...(op.anexoTtlMs ? { anexoTtlMs: op.anexoTtlMs } : {}), ...(op.nomeDe ? { nomeDe: op.nomeDe } : {}),
+    ...(op.timeoutMs ? { timeoutMs: op.timeoutMs } : {}) });
   emails.conectar(socket);
   const pedir = (acao, params = {}, requestId = 'r1') => handlers.emails_pedir({ requestId, acao, params });
   const trocarUsuario = u => sessoes.set('sessao', JSON.stringify({ expires: Date.now() + 100000, emails_access: true, ...u }));
@@ -344,7 +345,18 @@ test('pré-visualização: PDF e imagem por endereço próprio, de uso único, c
   // sem `ver`, o mesmo anexo continua indo para o download
   const baixar = pedirVer(s, PDF, 'proposta.pdf', false).r;
   assert.match(baixar.dados.url, /^\/emails\/anexo\/[0-9a-f]{64}$/);
-  assert.equal(CSP_PREVIA, "default-src 'none'; frame-ancestors 'self'; sandbox");
+  assert.equal(CSP_PREVIA, "default-src 'none'; frame-ancestors 'none'; sandbox");
+  s.emails.fechar();
+});
+
+test('html e anexo têm o triplo do tempo dos outros pedidos (o serviço pode ir à caixa buscar imagens)', async () => {
+  const s = setup({ emails_access: true }, { timeoutMs: 30 });
+  const esgotou = acao => s.mensagens.some(m => m.d.acao === acao && m.d.codigo === 'TEMPO_ESGOTADO');
+  s.pedir('detalhe', { id: 1 }, 'a'); s.pedir('html', { id: 1 }, 'b'); s.pedir('anexo', { id: 1, anexo: 2 }, 'c');
+  await new Promise(res => setTimeout(res, 60));
+  assert.deepEqual([esgotou('detalhe'), esgotou('html'), esgotou('anexo')], [true, false, false]);
+  await new Promise(res => setTimeout(res, 60));
+  assert.deepEqual([esgotou('html'), esgotou('anexo')], [true, true]);
   s.emails.fechar();
 });
 
