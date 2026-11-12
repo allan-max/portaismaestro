@@ -137,14 +137,38 @@ test('animação: só transform e opacity, tempos de tokens.css, e tudo desligad
 
 test('exportar: exceljs só no clique, nunca carregado pela página', () => {
     assert.doesNotMatch(pagina, /exceljs/);
-    assert.match(ler('tela.js'), /'\/vendor\/exceljs-4\.4\.0\.min\.js'/);
+    assert.match(ler('exportar.js'), /'\/vendor\/exceljs-4\.4\.0\.min\.js'/);
 });
 
-test('peso: HTML, CSS, JS, ícones e logo da tela abaixo de 250 KB sem compressão (seção 12)', () => {
-    // Mede como o repositório guarda (LF): no Windows o git baixa texto em CRLF, e o mesmo arquivo pesaria mais.
-    const peso = c => c.endsWith('.webp') ? fs.statSync(c).size
-        : Buffer.byteLength(fs.readFileSync(c, 'utf8').replace(/\r\n/g, '\n'));
+// Arquivos da tela: os que emails.html referencia (abrir a Caixa) e os que tela.js carrega sob demanda (PARTES).
+// Mede como o repositório guarda (LF): no Windows o git baixa texto em CRLF, e o mesmo arquivo pesaria mais.
+const peso = c => c.endsWith('.webp') ? fs.statSync(c).size
+    : Buffer.byteLength(fs.readFileSync(c, 'utf8').replace(/\r\n/g, '\n'));
+const naPagina = [...new Set([...pagina.matchAll(/(?:href|src)="((?:emails|img)\/[^"#?]+)/g)].map(m => m[1]))];
+function lerPartes() {
+    const m = ler('tela.js').match(/const PARTES = (\{[^}]*\});/);
+    assert.ok(m, 'tela.js sem PARTES');
+    return JSON.parse(m[1].replace(/'/g, '"').replace(/(\w+):/g, '"$1":'));
+}
+
+test('partes sob demanda: existem, não estão na página e nenhum arquivo da pasta fica de fora', () => {
+    const partes = lerPartes();
+    const sobDemanda = [...new Set(Object.values(partes).flat())].map(n => 'emails/' + n + '.js');
+    assert.ok(naPagina.includes('emails/tela.js') && naPagina.includes('emails/icones.svg') && naPagina.includes('img/logo-maestro-emails.webp'));
+    for (const a of sobDemanda) {
+        assert.ok(fs.existsSync(path.join(PUBLIC, a)), 'falta ' + a);
+        assert.ok(!naPagina.includes(a), a + ' não pode carregar com a página');
+    }
+    for (const a of arquivos) assert.ok(naPagina.includes('emails/' + a) || sobDemanda.includes('emails/' + a), a + ' não é carregado por ninguém');
+    // a ordem importa: graficos.js antes de quem usa G, saude.js (tabelas) antes do Dashboard
+    assert.deepEqual(partes.dashboard, ['graficos', 'saude', 'dashboard']);
+    assert.deepEqual(partes.saude, ['graficos', 'saude']);
+});
+
+test('peso: abrir a Caixa até 250 KB e a tela inteira até 300 KB, sem compressão (seção 11)', () => {
+    const inicial = peso(path.join(PUBLIC, 'emails.html')) + naPagina.reduce((t, a) => t + peso(path.join(PUBLIC, a)), 0);
     const total = peso(path.join(PUBLIC, 'emails.html')) + peso(path.join(PUBLIC, 'img', 'logo-maestro-emails.webp')) +
         arquivos.reduce((t, a) => t + peso(path.join(PASTA, a)), 0);
-    assert.ok(total < 250000, total + ' bytes');
+    assert.ok(inicial <= 250000, 'abrir a Caixa: ' + inicial + ' bytes');
+    assert.ok(total <= 300000, 'tela inteira: ' + total + ' bytes');
 });

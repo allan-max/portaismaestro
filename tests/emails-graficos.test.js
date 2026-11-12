@@ -126,7 +126,8 @@ test('dados insuficientes: só mostra número com suficiente verdadeiro e valor'
 test('mini-gráfico: caminho que pula o dia sem dado e some com menos de dois pontos', () => {
     assert.equal(G.linhaMini([1, 3], 100, 20), 'M0 20L100 0');
     assert.equal(G.linhaMini([2, 2, 2], 100, 20), 'M0 10L50 10L100 10');
-    assert.equal(G.linhaMini([0, null, 4, 2], 90, 20), 'M0 20M60 0L90 10');
+    // dia sem valor não parte a linha em pedaços: ela liga os dias que têm valor
+    assert.equal(G.linhaMini([0, null, 4, 2], 90, 20), 'M0 20L60 0L90 10');
     assert.equal(G.linhaMini([5], 100, 20), '');
     assert.equal(G.linhaMini([null, 5, null], 100, 20), '');
     assert.equal(G.linhaMini(null, 100, 20), '');

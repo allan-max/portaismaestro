@@ -184,16 +184,21 @@ mark { background: var(--em-realce); color: inherit; border-radius: 2px; }
 @keyframes em-surgir { from { opacity: 0; transform: scale(.97); } }
 
 /* ----- aviso flutuante: base do "desfazer" ----- */
+/* pilha de até 3: o mais novo embaixo */
 .em-aviso-flutuante {
   position: fixed; z-index: 70; left: 50%; bottom: var(--em-e6); transform: translateX(-50%);
-  display: flex; align-items: center; gap: var(--em-e3); max-width: calc(100vw - var(--em-e6)); padding: var(--em-e2) var(--em-e2) var(--em-e2) var(--em-e4);
+  display: flex; flex-direction: column; align-items: center; gap: var(--em-e2);
+  width: max-content; max-width: calc(100vw - var(--em-e6));   /* sem isso, left: 50% encolhe o aviso para metade da tela */
+}
+.em-aviso-item {
+  display: flex; align-items: center; gap: var(--em-e3); max-width: 100%; padding: var(--em-e2) var(--em-e2) var(--em-e2) var(--em-e4);
   border-radius: var(--em-raio-cartao); background: var(--em-painel-foco); border: 1px solid var(--em-borda); box-shadow: var(--em-sombra);
   animation: em-subir var(--em-lento) var(--em-curva);
 }
-.em-aviso-flutuante .em-botao { min-height: 28px; }
-@keyframes em-subir { from { opacity: 0; transform: translate(-50%, 8px); } }
-.em-aviso-flutuante.em-sumindo { animation: em-sumir var(--em-medio) var(--em-curva) forwards; pointer-events: none; }
-@keyframes em-sumir { to { opacity: 0; transform: translate(-50%, 8px); } }
+.em-aviso-item .em-botao { min-height: 28px; }
+@keyframes em-subir { from { opacity: 0; transform: translateY(8px); } }
+.em-aviso-item.em-sumindo { animation: em-sumir var(--em-medio) var(--em-curva) forwards; pointer-events: none; }
+@keyframes em-sumir { to { opacity: 0; transform: translateY(8px); } }
 
 /* ----- tecla, na ajuda de atalhos ----- */
 kbd {

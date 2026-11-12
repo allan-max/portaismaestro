@@ -60,6 +60,19 @@ test('endereço: minhas caixas são o padrão; "todas" fica escrito', () => {
     assert.deepEqual(Q.deHash('#caixa?caixa=c%40x.test', minhas).contas, ['c@x.test']);
 });
 
+test('endereço: "Sem ruído" segue a preferência guardada; o endereço só diz quando é diferente dela', () => {
+    const desligado = Object.assign(Q.novo(), { sem_ruido: false });
+    assert.equal(Q.deHash('#caixa', [], false).sem_ruido, false);
+    assert.equal(Q.deHash('#dashboard', [], false).sem_ruido, false);
+    assert.equal(Q.paraHash(desligado, [], false), '#caixa');
+    assert.equal(Q.paraHash(Q.novo(), [], false), '#caixa?ruido=1');
+    assert.equal(Q.deHash('#caixa?ruido=1', [], false).sem_ruido, true);
+    assert.equal(Q.deHash('#caixa?ruido=0', [], true).sem_ruido, false);
+    // sem a preferência, vale o padrão de antes (ligado), e os endereços antigos continuam iguais
+    assert.equal(Q.paraHash(desligado), '#caixa?ruido=0');
+    assert.equal(Q.deHash('#caixa').sem_ruido, true);
+});
+
 test('endereço hostil: limites, status que não existe, data inválida e chave estranha são descartados', () => {
     const muitas = Array.from({ length: 80 }, (_, i) => 'caixa=c' + i).join('&');
     const f = Q.deHash('#caixa?' + muitas + '&status=apagado&status=pendente&de=2026-13-99&ate=ontem&revisao=true' +

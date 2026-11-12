@@ -93,13 +93,12 @@
         if (nums.length < 2) return '';
         const min = Math.min(...nums), max = Math.max(...nums);
         const r = v => String(Math.round(v * 10) / 10);
-        let d = '', solto = true;
+        let d = '';
         s.forEach((v, i) => {
-            if (typeof v !== 'number' || !Number.isFinite(v)) { solto = true; return; }
+            if (typeof v !== 'number' || !Number.isFinite(v)) return;   // dia sem valor: a linha segue até o próximo
             const x = s.length > 1 ? i * largura / (s.length - 1) : 0;
             const y = max === min ? altura / 2 : altura - (v - min) / (max - min) * altura;
-            d += (solto ? 'M' : 'L') + r(x) + ' ' + r(y);
-            solto = false;
+            d += (d ? 'L' : 'M') + r(x) + ' ' + r(y);
         });
         return d;
     }
