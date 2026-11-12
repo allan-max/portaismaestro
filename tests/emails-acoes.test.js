@@ -92,6 +92,17 @@ test('histórico: "Classificado como" usa o nome de F.categoria (phishing de ser
     assert.deepEqual([apagado[1].texto, apagado[1].quem], ['Comentário apagado', 'ana@x.test']);
 });
 
+test('histórico: rótulo de padrão e o desfazer dele têm frase própria; "Classificado como" fica com a categoria da IA', () => {
+    const base = { data: '2026-11-10T10:00:00Z', classificado_em: '2026-11-10T10:01:00Z', categoria: 'pedido', modelo: 'padrão' };
+    const h = A.historico({ ...base, historico: [
+        { usuario: 'ana@x.test', acao: 'rotular_padrao', antes: 'informação', depois: 'pedido', em: '2026-11-11T10:00:00Z' },
+        { usuario: 'bia@x.test', acao: 'desfazer_rotulo', antes: 'pedido', depois: 'informação', em: '2026-11-11T11:00:00Z' }] });
+    assert.deepEqual(h.map(x => [x.texto, x.quem]), [['Recebido', ''], ['Classificado como informação', 'IA'],
+        ['Padrão rotulado: informação para pedido', 'ana@x.test'], ['Rótulo de padrão desfeito: pedido voltou a informação', 'bia@x.test']]);
+    // e-mail novo que a regra de padrão classificou, sem passar pela IA
+    assert.deepEqual(A.historico(base).map(x => [x.texto, x.quem]), [['Recebido', ''], ['Classificado como pedido pela regra de padrão', '']]);
+});
+
 test('hora curta: só a hora no mesmo dia de Brasília; dia e hora em outro dia', () => {
     assert.equal(A.horaCurta('2026-11-10T13:42:00Z', AGORA), '10:42');
     assert.equal(A.horaCurta('2026-11-10T02:00:00Z', AGORA), '09/11 23:00');   // ainda era dia 9 em Brasília

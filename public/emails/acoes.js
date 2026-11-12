@@ -62,15 +62,22 @@
         desfazer: h => 'Desfeito: ' + valor(h.antes) + ' voltou a ' + valor(h.depois),
         phishing_removido: () => 'Categoria phishing removida: passou a spam',
         apagar_comentario: () => 'Comentário apagado',
+        rotular_padrao: h => 'Padrão rotulado: ' + valor(h.antes) + ' para ' + valor(h.depois),
+        desfazer_rotulo: h => 'Rótulo de padrão desfeito: ' + valor(h.antes) + ' voltou a ' + valor(h.depois),
     };
     // linha do tempo: recebimento e classificação vêm de campos do e-mail; o resto é a auditoria, mais antiga primeiro
     function historico(e) {
         const linhas = [{ em: e.data, texto: 'Recebido', quem: '' }];
+        const hist = Array.isArray(e.historico) ? e.historico : [];
         if (e.classificado_em) {
-            const cat = e.categoria_original || e.categoria;
-            linhas.push({ em: e.classificado_em, texto: cat ? 'Classificado como ' + F.categoria(cat).nome : 'Classificado', quem: 'IA' });
+            // o primeiro rótulo de padrão guarda a categoria que a IA tinha dado
+            const rotulo = hist.find(h => h && h.acao === 'rotular_padrao');
+            const cat = e.categoria_original || (rotulo ? rotulo.antes : e.categoria);
+            const pelaRegra = e.modelo === 'padrão' && !rotulo;
+            linhas.push({ em: e.classificado_em, quem: pelaRegra ? '' : 'IA',
+                texto: (cat ? 'Classificado como ' + F.categoria(cat).nome : 'Classificado') + (pelaRegra ? ' pela regra de padrão' : '') });
         }
-        for (const h of Array.isArray(e.historico) ? e.historico : []) {
+        for (const h of hist) {
             if (!h || typeof h !== 'object') continue;
             const frase = Object.prototype.hasOwnProperty.call(FRASES, h.acao) ? FRASES[h.acao](h)
                 : valor(h.acao) + ': ' + valor(h.antes) + ' para ' + valor(h.depois);

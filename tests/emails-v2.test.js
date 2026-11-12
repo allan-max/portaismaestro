@@ -132,6 +132,39 @@ test('aberturas: só administrador, barrada no portal antes do serviço; admin v
   a.emails.fechar();
 });
 
+test('padrões: só administrador, barrados no portal; usuário e admin vêm da sessão', () => {
+  for (const user of [{ emails_access: true }, { emails_access: true, admin: 'true' }]) {
+    const v = setup(user);
+    v.pedir('padroes', { admin: true });
+    assert.equal(v.ultima().d.codigo, 'SO_ADMIN');
+    v.pedir('rotular_padrao', { admin: true, chave: '@a.example b #', estado: 'pulado' }, 'r2');
+    assert.equal(v.ultima().d.codigo, 'SO_ADMIN'); assert.equal(v.enviados.length, 0);
+    v.emails.fechar();
+  }
+  const a = setup({ admin: true });
+  a.pedir('padroes', { estado: 'rotulado', pagina: 3, admin: false });
+  assert.deepEqual(a.enviados[0].d.params, { estado: 'rotulado', pagina: 3, admin: true });
+  a.pedir('padroes', { estado: 'apagado', pagina: 'x' });
+  assert.deepEqual(a.enviados[1].d.params, { estado: '', pagina: 1, admin: true });
+  const enviado = p => { a.pedir('rotular_padrao', p, 'r' + a.enviados.length); return a.enviados.at(-1).d.params; };
+  assert.deepEqual(enviado({ chave: '@a.example b #', estado: 'rotulado', categoria: 'cotação', usuario: 'forjado@example.test' }),
+    { chave: '@a.example b #', estado: 'rotulado', categoria: 'cotação', usuario: 'Ana@Example.test', admin: true });
+  assert.deepEqual(enviado({ chave: '@a.example b #', estado: 'misturado', categoria: 'cotação' }),
+    { chave: '@a.example b #', estado: 'misturado', usuario: 'Ana@Example.test', admin: true });
+  assert.deepEqual(enviado({ chave: '@a.example b #', ativo: false, estado: 'pulado' }),
+    { chave: '@a.example b #', ativo: false, usuario: 'Ana@Example.test', admin: true });
+  assert.deepEqual(enviado({ desfazer: 42, chave: 'x' }), { desfazer: 42, usuario: 'Ana@Example.test', admin: true });
+  const antes = a.enviados.length;
+  for (const p of [{ chave: '', estado: 'pulado' }, { chave: 'x'.repeat(401), estado: 'pulado' }, { chave: 7, estado: 'pulado' },
+    { chave: 'a', estado: 'apagado' }, { chave: 'a', estado: 'rotulado' }, { chave: 'a', ativo: 'false' }, { desfazer: -1 },
+    { desfazer: '3' }]) {
+    a.pedir('rotular_padrao', p, 'x');
+    assert.equal(a.ultima().d.codigo, 'PARAMETRO_INVALIDO', JSON.stringify(p));
+  }
+  assert.equal(a.enviados.length, antes);
+  a.emails.fechar();
+});
+
 test('listar: nao_aberto só passa se for true', () => {
   const s = setup();
   s.pedir('listar', { nao_aberto: 'true' }); assert.equal(s.enviados[0].d.params.nao_aberto, false);
