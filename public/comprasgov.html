@@ -617,11 +617,6 @@
             box-shadow: 0 0 8px rgba(245, 158, 11, 0.8);
         }
 
-        .log-entries {
-            max-height: clamp(70px, 14vh, 160px);
-            overflow-y: auto;
-        }
-
         .btn-abrir-licitacao {
             background: #eff6ff;
             border: 1px solid #bfdbfe;
@@ -646,51 +641,6 @@
 
         .btn-abrir-licitacao i {
             font-size: 0.7rem;
-        }
-
-        /* --- CARD 3: LOG DE ATIVIDADES --- */
-        .status-online-pill {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.76rem;
-            font-weight: 600;
-            color: #16a34a;
-        }
-
-        .status-online-pill .dot-green {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: #22c55e;
-            box-shadow: 0 0 6px rgba(34, 197, 94, 0.7);
-        }
-
-        .log-entries {
-            display: flex;
-            flex-direction: column;
-            gap: clamp(2px, 0.4vh, 4px);
-            margin-top: 1px;
-            font-size: 0.76rem;
-        }
-
-        .log-row {
-            display: flex;
-            gap: 12px;
-            align-items: baseline;
-        }
-
-        .log-time {
-            font-family: 'Roboto Mono', monospace;
-            font-size: 0.72rem;
-            color: #475569;
-            font-weight: 500;
-            min-width: 54px;
-        }
-
-        .log-msg {
-            color: #0f172a;
-            font-weight: 450;
         }
 
         /* Responsividade */
@@ -904,23 +854,6 @@
                         </table>
                     </div>
                 </section>
-
-                <!-- CARD 3: LOG DE ATIVIDADES -->
-                <section class="card card-log">
-                    <div class="card-header-bar">
-                        <div class="card-header-title">
-                            <i class="fa-regular fa-file-lines"></i>
-                            <h2>Log de Atividades</h2>
-                        </div>
-                        <div class="status-online-pill">
-                            <span class="dot-green"></span>
-                            <span>Online</span>
-                        </div>
-                    </div>
-
-                    <div class="log-entries" id="log-entries"></div>
-                </section>
-
             </div>
         </main>
 
@@ -942,8 +875,6 @@
             atualizarLicitacoes();
         });
 
-        socket.on('disconnect', () => adicionarLog('Conexão com o servidor perdida. Reconectando...'));
-
         socket.on('sessao_invalida', () => {
             localStorage.clear();
             window.location.href = 'index.html';
@@ -953,15 +884,16 @@
             aplicarEstado((dados && dados.status) || 'desligado');
         });
 
+        // Sem o card de log: só os erros do gerenciador (❌) aparecem, num aviso
         socket.on('relatar_progresso_comprasgov', (dados) => {
-            if (dados && dados.mensagem) adicionarLog(dados.mensagem);
+            const msg = dados && dados.mensagem;
+            if (msg && msg.startsWith('❌')) alert(msg);
         });
 
         socket.on('retorno_licitacoes_comprasgov', (dados) => {
             document.getElementById('btn-atualizar').classList.remove('girando');
             if (!dados || !dados.sucesso) {
                 mostrarMensagemTabela((dados && dados.erro) || 'Erro ao carregar licitações.');
-                adicionarLog('Erro ao carregar licitações: ' + ((dados && dados.erro) || 'desconhecido'));
                 return;
             }
             renderizarLicitacoes(dados.licitacoes || []);
@@ -998,7 +930,6 @@
             if (!ligar && !confirm('Deseja realmente desligar o robô ComprasGOV?')) return;
             document.getElementById('btn-toggle-robo').disabled = true;
             socket.emit('comando_direto', { modo: ligar ? 'ligar_robo' : 'desligar_robo', portal: 'comprasgov' });
-            adicionarLog(ligar ? 'Pedido para ligar o robô enviado ao gerenciador.' : 'Pedido para desligar o robô enviado ao gerenciador.');
             // Sem resposta do gerenciador em 15 s, libera o botão de novo
             setTimeout(() => { document.getElementById('btn-toggle-robo').disabled = false; }, 15000);
         }
@@ -1046,21 +977,6 @@
                     <td class="td-acao">${botao}</td>
                 </tr>`;
             }).join('');
-        }
-
-        function adicionarLog(msg) {
-            const container = document.getElementById('log-entries');
-            if (!container) return;
-            const agora = new Date();
-            const timeStr = String(agora.getHours()).padStart(2, '0') + ':' +
-                            String(agora.getMinutes()).padStart(2, '0') + ':' +
-                            String(agora.getSeconds()).padStart(2, '0');
-            const row = document.createElement('div');
-            row.className = 'log-row';
-            row.innerHTML = `<span class="log-time">${timeStr}</span><span class="log-msg">${escaparHtml(msg)}</span>`;
-            container.appendChild(row);
-            while (container.children.length > 50) container.removeChild(container.firstChild);
-            container.scrollTop = container.scrollHeight;
         }
 
         function irPara(url) {
