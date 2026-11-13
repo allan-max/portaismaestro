@@ -15,3 +15,8 @@ test('coupa.html acompanha o estado extraindo_pedidos e a conclusão Listagem de
     assert.match(html, /estado\.status === 'extraindo_pedidos'/);
     assert.match(html, /dados\.evento === 'Listagem de Pedidos'/);
 });
+
+test('coupa.html mostra aviso quando o robô recusa o comando (ex.: modo resposta)', () => {
+    // gerenciador manda tarefa_concluida { evento: 'Comando extrair_pedidos', sucesso: false, erro } e o servidor volta a tela para ocioso
+    assert.match(html, /String\(dados\.evento \|\| ''\)\.startsWith\('Comando '\) && !dados\.sucesso\) \{\s*mostrarModal\('Comando recusado', dados\.erro/);
+});

@@ -1057,6 +1057,11 @@ function solicitarParada(btnElement) {
         // LIMPEZA DA TAREFA CONCLUÍDA (Bug da duplicação resolvido)
         // =================================================================
         socket.on('tarefa_concluida', function(dados) {
+            // Robô recusou o comando (ex.: modo resposta): sem o aviso o botão só piscava e parecia não fazer nada
+            if (dados.portal === MEU_PORTAL && String(dados.evento || '').startsWith('Comando ') && !dados.sucesso) {
+                mostrarModal('Comando recusado', dados.erro || 'O robô recusou o comando.', 'alerta');
+                return;
+            }
             if (dados.evento === 'Listagem de Pedidos') {
                 const n = Number(dados.total) || 0;
                 let msg = dados.semente && n === 0 ? 'Primeira execução: histórico de pedidos registrado, sem e-mail. Da próxima vez só os novos serão avisados.'
