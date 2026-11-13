@@ -131,6 +131,14 @@
             }
         });
 
+        // DAV pelo Cotafrete: gerando / erro / pronto (server.js, lib/dav-respostas.js)
+        socket.on('status_dav_atualizado', (dados) => {
+            if (!dados || !dados.evento) return;
+            if (window.Tela && typeof window.Tela.receberStatusDav === 'function') {
+                window.Tela.receberStatusDav(dados.evento, dados.status || null);
+            }
+        });
+
         socket.on('relatar_progresso', (dados) => {
             if (!dados || !dados.mensagem || !window.Tela || typeof window.Tela.toast !== 'function') return;
             const msg = String(dados.mensagem).replace(/<[^>]+>/g, '').trim();
@@ -260,6 +268,9 @@
             if (res.erros_robo && typeof res.erros_robo === 'object') {
                 errosRobo = { ...errosRobo, ...res.erros_robo };
                 window.errosRobo = errosRobo;
+            }
+            if (res.dav_robo && typeof res.dav_robo === 'object') {
+                window.davRobo = { ...(window.davRobo || {}), ...res.dav_robo };
             }
             if (window.Tela) window.Tela.receber(todasCotacoes, portaisRobo, printsRobo, errosRobo);
         });
@@ -1339,6 +1350,8 @@ ${paragraphs.join('\n')}
                 formData.append('datasheet_item_indices', JSON.stringify(indicesDsItem));
             }
             davs.forEach(f => formData.append('dav', f));
+            // Sem DAV anexado, a Planilha Base vai junto e o Cotafrete gera o DAV (server.js: gerar_dav)
+            if (!davs.length && dados && dados.planilha) formData.append('planilha', dados.planilha);
 
             const resp = await fetch('/api/responder', { method: 'POST', body: formData });
             const json = await resp.json().catch(() => ({}));

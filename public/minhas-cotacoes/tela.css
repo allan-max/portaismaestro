@@ -654,3 +654,38 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     color: #fca5a5;
     font-weight: 650;
 }
+
+/* DAV gerado pelo Cotafrete (gerando / erro / pronto) */
+.b-dav-card {
+    display: inline-flex;
+    margin: 6px 0 0 6px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.25;
+    border: 1px solid rgba(96, 165, 250, 0.45);
+    background: rgba(59, 130, 246, 0.14);
+    color: #bfdbfe;
+}
+.b-dav-card.erro { border-color: rgba(239, 68, 68, 0.42); background: rgba(239, 68, 68, 0.14); color: #fca5a5; }
+.b-dav-card.pronto { border-color: rgba(34, 197, 94, 0.42); background: rgba(34, 197, 94, 0.14); color: #bbf7d0; }
+.pc-dav-status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+    margin: 0 0 12px 0;
+    padding: 8px 11px;
+    border-radius: 7px;
+    font-size: 12px;
+    line-height: 1.4;
+    border: 1px solid rgba(96, 165, 250, 0.45);
+    background: rgba(59, 130, 246, 0.12);
+    color: #dbeafe;
+    overflow-wrap: anywhere;
+}
+.pc-dav-status.erro { border-color: rgba(239, 68, 68, 0.45); background: rgba(239, 68, 68, 0.12); color: #fecaca; }
+.pc-dav-status.pronto { border-color: rgba(34, 197, 94, 0.45); background: rgba(34, 197, 94, 0.12); color: #dcfce7; }
+.pc-dav-lista { flex-basis: 100%; }
+.pc-dav-lista ul { margin: 2px 0 0 18px; padding: 0; }

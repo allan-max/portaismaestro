@@ -28,6 +28,7 @@ const atividadeUsuarios = criarAtividade({ arquivo: path.join(__dirname, 'portal
 setInterval(() => atividadeUsuarios.gravar(), 15 * 1000).unref();
 const { criarEmails, CSP_HTML_EMAIL } = require('./lib/emails');
 const donoCotacao = require('./lib/dono-cotacao');
+const { criarDavRespostas, mesclarNcms } = require('./lib/dav-respostas');
 
 
 // 🛡️ AIRBAG ANTI-CRASH (Impede o servidor de morrer por erros invisíveis)
@@ -254,6 +255,11 @@ function limparErroEvento(eventoId) {
     }
 }
 
+// DAV gerado pelo Cotafrete a partir da Planilha Base (lib/dav-respostas.js)
+const davRespostas = criarDavRespostas({
+    caminho: process.env.DAV_RESPOSTAS_FILE || path.join(__dirname, 'dados', 'dav_respostas.json'), io
+});
+
 function obterErrosParaCotacoes(cotacoes) {
     const mapa = {};
     if (!Array.isArray(cotacoes)) return mapa;
@@ -473,7 +479,8 @@ function entregarBuscaOutroVendedor(dados) {
         portais_robo: soDessas(dados.portais_robo),
         onde_encontrar: soDessas(dados.onde_encontrar),
         prints_robo: obterPrintsParaCotacoes(cotacoes),
-        erros_robo: obterErrosParaCotacoes(cotacoes)
+        erros_robo: obterErrosParaCotacoes(cotacoes),
+        dav_robo: davRespostas.paraCotacoes(cotacoes)
     });
 }
 
@@ -633,7 +640,8 @@ const EVENTOS_DO_ROBO = new Set([
     'retorno_registro_vendedor_cotacao', 'status_registro_vendedor_cotacao', 'resposta_registro_pedido_manual',
     'retorno_registro_cotacao_manual', 'atualizar_fila_extracao', 'progresso_fila_extracao',
     'captcha_resolvido_do_robo', 'prints_resposta_evento', 'relatar_progresso_findes_antigo', 'findes_textos_gerados',
-    'baixar_pdf_findes', 'sincronizar_estado_findes', 'sincronizar_estado_findes_antigo'
+    'baixar_pdf_findes', 'sincronizar_estado_findes', 'sincronizar_estado_findes_antigo',
+    'status_dav', 'dav_pronto'
 ]);
 
 function notificar_todos(mensagem = null) {
@@ -971,6 +979,43 @@ io.on('connection', (socket) => {
             }
             io.to('frontend').emit('tarefa_concluida', dados);
         }
+    });
+
+    // DAV pelo Cotafrete (gerenciador/ponte_dav.py). Só o robô chega aqui (EVENTOS_DO_ROBO).
+    socket.on('status_dav', (dados) => {
+        const evento = String((dados && dados.evento) || '').trim();
+        if (!EVENTO_VALIDO.test(evento)) return;
+        if (dados.estado === 'pronto') return;   // quem trata o pronto é o dav_pronto (vem com o PDF)
+        davRespostas.salvarStatus(evento, dados);
+        if (dados.estado === 'erro') {
+            // A resposta não vai ao robô: o vendedor corrige a planilha (ou confere o HSE) e reenvia.
+            davRespostas.retirar(evento);
+            salvarErroEvento(evento, 'DAV: ' + String(dados.mensagem || 'o Cotafrete não gerou o DAV.'));
+        }
+    });
+
+    socket.on('dav_pronto', (dados) => {
+        const evento = String((dados && dados.evento) || '').trim();
+        if (!EVENTO_VALIDO.test(evento)) return;
+        const esperando = davRespostas.retirar(evento);
+        if (!esperando) {
+            davRespostas.salvarStatus(evento, {
+                estado: 'erro', numero: dados.numero, avisos: dados.avisos,
+                mensagem: `DAV ${dados.numero || ''} pronto, mas a resposta se perdeu (o portal reiniciou). ` +
+                    'Envie a resposta de novo: o mesmo DAV é usado, não gera outro.'
+            });
+            return;
+        }
+        const davs = (Array.isArray(dados.davs) ? dados.davs : []).slice(0, 5)
+            .filter(d => d && typeof d.name === 'string' && typeof d.data === 'string')
+            .map(d => ({ name: path.basename(d.name).slice(0, 120), data: d.data }));
+        const { ncms, origens } = mesclarNcms(esperando.payload.ncms, dados.itens);
+        const payload = { ...esperando.payload, davs, ncms, ncms_origem: origens, dav_numero: dados.numero || null };
+        davRespostas.salvarStatus(evento, {
+            estado: 'pronto', numero: dados.numero, avisos: dados.avisos,
+            mensagem: `DAV ${dados.numero || ''} pronto. Resposta na fila do robô.`
+        });
+        colocarNaFilaDeRespostas(evento, payload, esperando.audit_id);
     });
 
     socket.on('sou_frontend', (dados) => {
@@ -1516,6 +1561,7 @@ io.on('connection', (socket) => {
         if (dados && Array.isArray(dados.cotacoes)) {
             dados.prints_robo = { ...(dados.prints_robo || {}), ...obterPrintsParaCotacoes(dados.cotacoes) };
             dados.erros_robo = { ...(dados.erros_robo || {}), ...obterErrosParaCotacoes(dados.cotacoes) };
+            dados.dav_robo = davRespostas.paraCotacoes(dados.cotacoes);
         }
         if (dados.clientId) {
             const reqInfo = (typeof pedidosPlanilhaPorCliente !== 'undefined' && pedidosPlanilhaPorCliente.get(dados.clientId)) ||
@@ -1985,8 +2031,31 @@ const PORTAIS_RESPOSTA = new Set(['coupa', 'vale']);
 const uploadResposta = upload.fields([
     { name: 'datasheet', maxCount: 30 },
     { name: 'dav', maxCount: 30 },
-    { name: 'datasheet_item', maxCount: 200 }   // datasheet por linha: vários itens, vários arquivos
+    { name: 'datasheet_item', maxCount: 200 },  // datasheet por linha: vários itens, vários arquivos
+    { name: 'planilha', maxCount: 1 }           // Planilha Base: sem DAV anexado, o Cotafrete gera o DAV
 ]);
+
+// Coloca (ou troca) a resposta na fila do robô e acorda o gestor se ele estiver parado.
+function colocarNaFilaDeRespostas(evento, payload, audit_id) {
+    const idxExistente = fila_respostas.findIndex(e => e.id === evento);
+    if (idxExistente >= 0) {
+        fila_respostas[idxExistente] = { id: evento, payload: payload, audit_id: audit_id };
+    } else {
+        fila_respostas.push({ id: evento, payload: payload, audit_id: audit_id });
+    }
+    // Fila visual para aparecer no site
+    if (!estado_global.fila_pendente) estado_global.fila_pendente = [];
+    if (!estado_global.fila_pendente.includes(evento)) {
+        estado_global.fila_pendente.push(evento);
+    }
+    // Se o robô estiver parado (ocioso), acorda-o para começar a fila.
+    // Se já estiver a trabalhar, apenas avisa na tela que entrou na espera.
+    if (estado_global.status !== 'respondendo' || fila_respostas.length === 1 || idxExistente === 0) {
+        processarProximoDaFila();
+    } else {
+        notificar_todos(`📥 Evento ${evento} entrou na fila de espera.`);
+    }
+}
 function listaDoFormulario(texto) {
     const lista = JSON.parse(texto || '[]');
     if (!Array.isArray(lista) || lista.length > 500) throw new Error('lista inválida');
@@ -2033,6 +2102,10 @@ app.post('/api/responder', (req, res, next) => uploadResposta(req, res, err => {
 
         const datasheets = processarArquivos(req.files && req.files['datasheet']);
         const davs = processarArquivos(req.files && req.files['dav']);
+        const planilhaBase = processarArquivos(req.files && req.files['planilha'])[0] || null;
+        if (planilhaBase && !/\.xlsx$/i.test(planilhaBase.name)) {
+            return res.status(400).json({ error: "Para gerar o DAV, a Planilha Base precisa ser .xlsx." });
+        }
         const datasheetsItemFlat = processarArquivos(req.files && req.files['datasheet_item']);
         const totalItensBase = Math.max(precos.length, prazos.length);
         const datasheets_por_item = Array.from({ length: totalItensBase }, () => []);
@@ -2070,33 +2143,32 @@ app.post('/api/responder', (req, res, next) => uploadResposta(req, res, err => {
             area: 'portal', acao: 'responder_evento', portal: portal_origem, alvo: evento,
             detalhes: { qtd_itens: precos.length, tem_datasheet: datasheets.length > 0 || datasheetsItemFlat.length > 0, tem_dav: davs.length > 0, datasheet_por_linha: datasheetPorLinha }
         });
-        const idxExistente = fila_respostas.findIndex(e => e.id === evento);
-        if (idxExistente >= 0) {
-            fila_respostas[idxExistente] = { id: evento, payload: payload, audit_id: reg && reg.id };
-        } else {
-            fila_respostas.push({ id: evento, payload: payload, audit_id: reg && reg.id });
-        }
-
         // Quando o utilizador envia a resposta novamente para o evento, limpa o alerta de erro anterior
         limparErroEvento(evento);
-        
-        // 3. Adiciona à fila visual para aparecer no site
-        if (!estado_global.fila_pendente) estado_global.fila_pendente = [];
-        if (!estado_global.fila_pendente.includes(evento)) {
-            estado_global.fila_pendente.push(evento);
+
+        // Planilha Base sem DAV anexado: o DAV sai do Cotafrete (gerenciador/ponte_dav.py).
+        // A resposta espera aqui, FORA da fila do robô, e só entra nela com o DAV pronto (dav_pronto).
+        if (planilhaBase && davs.length === 0) {
+            if (!bot_socket_id) {
+                return res.status(503).json({ error: "Gerenciador desconectado: não dá para gerar o DAV agora." });
+            }
+            // Reenvio com o DAV ainda gerando: troca a resposta guardada; a ponte que já roda segue (mesmo DAV).
+            fila_respostas = fila_respostas.filter(e => e.id !== evento);
+            if (estado_global.fila_pendente) estado_global.fila_pendente = estado_global.fila_pendente.filter(e => e !== evento);
+            davRespostas.aguardar(evento, { payload, audit_id: reg && reg.id });
+            davRespostas.salvarStatus(evento, { estado: 'gerando', mensagem: 'Pedindo o DAV ao Cotafrete...' });
+            io.to(bot_socket_id).emit('gerar_dav', {
+                evento, portal: portal_origem, vendedor: payload.vendedor, planilha: planilhaBase
+            });
+            notificar_todos(`🧾 Evento ${evento}: gerando o DAV no Cotafrete...`);
+            return res.json({ sucesso: true, gerando_dav: true, mensagem: "Gerando o DAV no Cotafrete." });
         }
+        davRespostas.retirar(evento);      // DAV anexado à mão: esquece um DAV que estava gerando
+        davRespostas.limparStatus(evento);
 
         // 4. Responde ao site IMEDIATAMENTE dizendo que deu certo (libera a interface do utilizador)
         res.json({ sucesso: true, mensagem: "Evento adicionado à fila." });
-
-        // 5. O GESTOR DE FILA ENTRA EM AÇÃO:
-        // Se o robô estiver parado (ocioso), acorda-o para começar a fila.
-        // Se já estiver a trabalhar, apenas avisa na tela que entrou na espera.
-        if (estado_global.status !== 'respondendo' || fila_respostas.length === 1 || idxExistente === 0) {
-            processarProximoDaFila();
-        } else {
-            notificar_todos(`📥 Evento ${evento} entrou na fila de espera.`);
-        }
+        colocarNaFilaDeRespostas(evento, payload, reg && reg.id);
 
     } catch (error) {
         console.error("Erro no /api/responder:", error);

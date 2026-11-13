@@ -219,6 +219,7 @@
         if (!estado.respostas[k]) {
             estado.respostas[k] = {
                 planilhaNome: '',
+                planilhaArquivo: null,   // sem DAV anexado, vai ao Cotafrete para gerar o DAV
                 planilhaErro: '',
                 carregandoPlanilha: false,
                 davs: [],
@@ -525,7 +526,7 @@
             <div class="pc-resp-painel-topo">
                 <div>
                     <h3>Responder no portal <span class="tag">${esc(portal.toUpperCase())}</span></h3>
-                    <p>Arraste a Planilha Base, o DAV e o Datasheet nos campos abaixo.</p>
+                    <p>Arraste a Planilha Base e o Datasheet nos campos abaixo. Sem DAV anexado, o Cotafrete gera o DAV pela Planilha Base.</p>
                 </div>
                 <button type="button" class="button text small" data-acao="fechar-resp-portal" data-id="${k}">Fechar</button>
             </div>
@@ -545,7 +546,7 @@
                         <input type="file" id="input-resp-dav" data-resp-file="dav" data-id="${k}" accept=".pdf" multiple hidden>
                         <span class="pc-drop-icone">${icone('upload')}</span>
                         <strong>Arraste o DAV</strong>
-                        <small>ou clique para selecionar (.pdf)</small>
+                        <small>${d.davs.length ? 'ou clique para selecionar (.pdf)' : 'opcional: vazio, o Cotafrete gera (.pdf)'}</small>
                     </label>
                     ${listaArq(d.davs, 'dav')}
                 </div>
@@ -624,6 +625,51 @@
         redesenhar();
     }
 
+    // ---------- DAV gerado pelo Cotafrete (server.js: status_dav_atualizado / dav_robo) ----------
+    function davDe(c) {
+        if (!c) return null;
+        const mapa = (typeof window !== 'undefined' && window.davRobo && typeof window.davRobo === 'object') ? window.davRobo : {};
+        const bruto = String(c['COTAÇÃO'] ?? '').trim();
+        const limpo = numero(c).num;
+        const digitos = (bruto.match(/\d+/) || limpo.match(/\d+/) || [])[0] || '';
+        return mapa[bruto] || mapa[limpo] || (digitos ? mapa[digitos] : null) || null;
+    }
+
+    const TITULO_DAV = { gerando: 'Gerando DAV…', erro: 'Erro no DAV', pronto: 'DAV pronto' };
+
+    function tituloDav(s) {
+        if (s.estado === 'pronto' && s.numero) return `DAV ${s.numero} pronto`;
+        return TITULO_DAV[s.estado] || 'DAV';
+    }
+
+    function bannerDav(c) {
+        const s = davDe(c);
+        if (!s || !TITULO_DAV[s.estado]) return '';
+        const lista = (titulo, itens) => (Array.isArray(itens) && itens.length)
+            ? `<div class="pc-dav-lista"><b>${titulo}</b><ul>${itens.map(t => `<li>${esc(t)}</li>`).join('')}</ul></div>` : '';
+        // a ponte monta a mensagem juntando os motivos: com a lista na tela, não repete o mesmo texto
+        const repetida = s.estado === 'erro' && Array.isArray(s.erros) && s.erros.length && s.mensagem === s.erros.join(' · ');
+        return `<div class="pc-dav-status ${esc(s.estado)}" id="status-dav-evento" role="${s.estado === 'erro' ? 'alert' : 'status'}" aria-live="polite">
+            <strong class="pc-dav-titulo">${esc(tituloDav(s))}</strong>
+            ${s.mensagem && !repetida ? `<span class="pc-dav-msg">${esc(s.mensagem)}</span>` : ''}
+            ${s.estado === 'erro' ? lista('Motivos', s.erros) : ''}
+            ${lista('Avisos', s.avisos)}
+        </div>`;
+    }
+
+    function receberStatusDav(eventoId, status) {
+        const chave = String(eventoId || '').replace(/^Evento\s+/i, '').trim();
+        if (!chave || typeof window === 'undefined') return;
+        if (!window.davRobo || typeof window.davRobo !== 'object') window.davRobo = {};
+        const limpo = chave.replace(/\D+/g, '');
+        for (const k of [chave, limpo]) {
+            if (!k) continue;
+            if (status) window.davRobo[k] = status;
+            else delete window.davRobo[k];
+        }
+        redesenhar();
+    }
+
     function secaoPrintsEvento(c) {
         const prints = printsDe(c);
         if (!prints.length) return '';
@@ -687,6 +733,7 @@
                 ${botaoResposta(c)}
             </div>
             ${bannerErroResposta(c)}
+            ${bannerDav(c)}
             ${painelResponderPortal(c, portal)}
             ${secaoPrintsEvento(c)}
             <section class="pc-det-sec">
@@ -986,6 +1033,10 @@
                 <span class="b-erro-txt">${esc(erroMsg)}</span>
             </div>`
             : '';
+        const dav = davDe(c);
+        const blocoDavCard = dav && TITULO_DAV[dav.estado]
+            ? `<div class="b-dav-card ${esc(dav.estado)}" id="dav-card-${k}">${esc(tituloDav(dav))}</div>`
+            : '';
         const prints = printsDe(c);
         const blocoPrintsCard = prints.length
             ? `<div class="b-prints-card" id="prints-card-${k}" aria-label="Prints dos itens respondidos">
@@ -1012,6 +1063,7 @@
             </div>
             ${origem ? `<div class="b-origem">${esc(origem)}</div>` : (c.ORIGEM_PLANILHA === 'anmyna' ? `<div class="b-origem" style="color: #a78bfa; font-weight: 600;">ANMYNA${c.PORTAL ? ` · ${esc(c.PORTAL)}` : ''}</div>` : '')}
             ${blocoErroCard}
+            ${blocoDavCard}
             <div class="b-prazo"><span class="pc-prazo ${resp ? '' : p.cls}">${icone(resp ? 'ok' : 'relogio')}<b>${resp ? 'Respondida' : p.txt}</b>${!resp && p.d === 0 ? ` · ${esc(p.sub)}` : ''}</span>
                 ${resp ? '' : `<div class="pc-urg ${p.cls}"><i style="--w:${Math.round(p.urg * 100)}%"></i></div>`}</div>
             <div class="b-nome">${esc(its[0].nome)}</div>
@@ -1282,6 +1334,7 @@
         if (tipo === 'planilha') {
             const arq = arquivos[0];
             d.planilhaNome = arq.name || 'planilha_base.xlsx';
+            d.planilhaArquivo = null;   // só vale depois de ler: a grade e o DAV saem da MESMA planilha
             d.planilhaErro = '';
             d.carregandoPlanilha = true;
             redesenhar();
@@ -1291,6 +1344,7 @@
                 }
                 const lido = await lerPlanilhaBaseResposta(arq, c);
                 d.itens = Array.isArray(lido && lido.itens) ? lido.itens : [];
+                d.planilhaArquivo = arq;
                 d.carregandoPlanilha = false;
                 d.enviado = false;
                 redesenhar();
@@ -1340,11 +1394,13 @@
                     ? d.datasheetsPorItem[idx]
                     : []
             );
-            await enviarRespostaCotacaoPortal({
+            const retorno = await enviarRespostaCotacaoPortal({
                 portal,
                 evento: num,
                 itens: d.itens,
                 davs: d.davs,
+                // sem DAV anexado, a Planilha Base vai junto e o Cotafrete gera o DAV
+                planilha: (!d.davs.length && /\.xlsx$/i.test(d.planilhaNome)) ? d.planilhaArquivo : null,
                 datasheets: d.datasheetPorLinha ? [] : d.datasheets,
                 datasheetPorLinha: Boolean(d.datasheetPorLinha),
                 datasheetsPorItem,
@@ -1355,8 +1411,14 @@
             // Se a pessoa enviar a resposta de novo para esse evento, o alerta de erro some imediatamente
             limparErroResposta(num);
             if (c['COTAÇÃO']) limparErroResposta(c['COTAÇÃO']);
-            redesenhar();
-            toast(`Cotação <b>${esc(num)}</b> enviada para a fila de resposta do robô!`);
+            if (retorno && retorno.gerando_dav) {
+                receberStatusDav(num, { estado: 'gerando', mensagem: 'Pedindo o DAV ao Cotafrete...' });
+                toast(`Cotação <b>${esc(num)}</b>: gerando o DAV no Cotafrete. A resposta vai para a fila do robô quando o DAV ficar pronto.`);
+            } else {
+                receberStatusDav(num, null);
+                redesenhar();
+                toast(`Cotação <b>${esc(num)}</b> enviada para a fila de resposta do robô!`);
+            }
         } catch (err) {
             d.enviando = false;
             redesenhar();
@@ -1388,6 +1450,7 @@
         'limpar-planilha-resp': (el, c) => {
             const d = dadosResposta(c);
             d.planilhaNome = '';
+            d.planilhaArquivo = null;
             d.planilhaErro = '';
             d.itens = [];
             redesenhar();
@@ -1566,5 +1629,5 @@
     if (topo) topo.innerHTML = nav();
     redesenhar();
 
-    window.Tela = { estado, filtradas, contagem, itens, numero, portalRobo, printsDe, erroDe, formatarErroCurto, bannerErroResposta, receberErroResposta, limparErroResposta, abrirVisualizadorPrint, fecharVisualizadorPrint, abrirPrintEmNovaAba, dadosResposta, alternarDatasheetPorLinha, receberArquivosResposta, enviarRespostaDoModal, receberPrintsEvento, receberCaptcha, fecharCaptcha, painelCaptchaGlobal, cartao, detalhe, dias, alvoExportacao, exportarLista, receber, receberOutros, falhou, conexao, toast, abrir, id };
+    window.Tela = { estado, davDe, bannerDav, receberStatusDav, filtradas, contagem, itens, numero, portalRobo, printsDe, erroDe, formatarErroCurto, bannerErroResposta, receberErroResposta, limparErroResposta, abrirVisualizadorPrint, fecharVisualizadorPrint, abrirPrintEmNovaAba, dadosResposta, alternarDatasheetPorLinha, receberArquivosResposta, enviarRespostaDoModal, receberPrintsEvento, receberCaptcha, fecharCaptcha, painelCaptchaGlobal, cartao, detalhe, dias, alvoExportacao, exportarLista, receber, receberOutros, falhou, conexao, toast, abrir, id };
 })();

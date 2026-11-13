@@ -1190,6 +1190,47 @@ test('Salva o erro minimalista em vermelho no evento e oculta o alerta quando o 
     assert.ok(!htmlModalSemErro.includes('pc-alerta-erro-evento'), 'O alerta de erro deve sumir do modal após reenviar a resposta');
 });
 
+test('DAV pelo Cotafrete: sem DAV anexado a Planilha Base vai junto e a tela mostra gerando, erro e pronto', async () => {
+    const { context, handlers } = setupMinhasCotacoesEnv();
+    const Tela = context.window.Tela;
+    handlers.retorno_planilha_json({
+        sucesso: true,
+        portais_robo: { '800778': 'coupa' },
+        dav_robo: { '800778': { estado: 'erro', mensagem: 'Item 1: código inativo', erros: ['Item 1: código inativo'], avisos: [] } },
+        cotacoes: [{ 'COTAÇÃO': '800778', 'VENCIMENTO': dataRel(1), 'LOCALIDADE': 'VALE S.A.', 'ITEM': '(Item 1) VÁLVULA', 'QUANTIDADE': '(Item 1) 3 UN' }]
+    });
+    const cota = Tela.estado.lista[0];
+    Tela.estado.aberta = Tela.id(cota);
+
+    // estado que veio do servidor ao abrir a tela
+    assert.ok(Tela.cartao(cota, 0).includes('Erro no DAV'));
+    assert.ok(Tela.detalhe(cota).includes('pc-dav-status erro') && Tela.detalhe(cota).includes('Item 1: código inativo'));
+
+    // envio sem DAV: a planilha .xlsx vai junto e a tela passa a "gerando"
+    let enviado = null;
+    context.enviarRespostaCotacaoPortal = async (payload) => { enviado = payload; return { sucesso: true, gerando_dav: true }; };
+    const d = Tela.dadosResposta(cota);
+    d.planilhaNome = 'base.xlsx';
+    d.planilhaArquivo = { name: 'base.xlsx' };
+    d.itens = [{ n: 1, produto: 'VÁLVULA', quantidade: 3, preco: '150,00', prazo: '10', ncm: '', origem: '0', icms: '18' }];
+    await Tela.enviarRespostaDoModal(cota);
+    assert.deepEqual(enviado.planilha, { name: 'base.xlsx' });
+    assert.equal(Tela.davDe(cota).estado, 'gerando');
+    assert.ok(Tela.cartao(cota, 0).includes('Gerando DAV'));
+
+    // evento do servidor: pronto, com número e avisos
+    handlers.status_dav_atualizado({ evento: '800778', status: { estado: 'pronto', numero: '16700', mensagem: 'DAV 16700 pronto.', avisos: ['Item 1: confira o preço'], erros: [] } });
+    const html = Tela.detalhe(cota);
+    assert.ok(html.includes('DAV 16700 pronto') && html.includes('Item 1: confira o preço'));
+
+    // com DAV anexado à mão, a planilha não vai e o aviso some
+    d.davs = [{ name: 'manual.pdf' }];
+    context.enviarRespostaCotacaoPortal = async (payload) => { enviado = payload; return { sucesso: true }; };
+    await Tela.enviarRespostaDoModal(cota);
+    assert.equal(enviado.planilha, null);
+    assert.equal(Tela.davDe(cota), null);
+});
+
 test('Word padrão Coupa inclui ONDE ENCONTRAR? enviado pelo robô, com links externos válidos e sem duplicidade', async () => {
     for (const useJSZip of [true, false]) {
         const { context, handlers } = setupMinhasCotacoesEnv({ useJSZip });

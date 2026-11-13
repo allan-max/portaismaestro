@@ -29,6 +29,7 @@ test('separacao de planilhas: planilha_vale.html nao recebe dados da Anmyna', ()
         bot_socket_id: botId,
         obterPrintsParaCotacoes: () => ({}),
         obterErrosParaCotacoes: () => ({}),
+        davRespostas: { paraCotacoes: () => ({}) },
         dashboardCotacoes: { receber: () => false },
         obterCotacoesAnmynaFormatadas: (filtro) => {
             return filtro === 'GUSTAVO' ? cotacoesAnmynaMock : (filtro ? [] : cotacoesAnmynaMock);
