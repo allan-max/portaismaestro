@@ -383,7 +383,8 @@
                     <div class="grid-botoes">
                         <button id="btn-extrair" class="btn-base" onclick="executarTarefa('extrair')"><i class="fa-solid fa-download"></i> Extrair</button>
                         <button id="btn-verificar" class="btn-base" onclick="executarTarefa('verificar')"><i class="fa-solid fa-check-double"></i> Verificar</button>
-                        
+                        <button id="btn-pedidos" class="btn-base" style="grid-column: span 2;" onclick="executarTarefa('extrair_pedidos')"><i class="fa-solid fa-file-invoice"></i> Pedidos Novos</button>
+
                         <button id="btn-abrir-res" class="btn-base" style="grid-column: span 2; background: rgba(59, 130, 246, 0.15); border-color: #3b82f6; color: #60a5fa;" onclick="mostrarFormResposta()"><i class="fa-solid fa-bolt"></i> Responder Eventos</button>
                     </div>
 
@@ -541,7 +542,9 @@
             const btnExtrair = document.getElementById('btn-extrair');
             const btnVerificar = document.getElementById('btn-verificar');
             const btnAbrirRes = document.getElementById('btn-abrir-res');
-            
+            const btnPedidos = document.getElementById('btn-pedidos');
+            btnPedidos.className = 'btn-base'; btnPedidos.innerHTML = '<i class="fa-solid fa-file-invoice"></i> Pedidos Novos'; btnPedidos.disabled = false; btnPedidos.onclick = function() { executarTarefa('extrair_pedidos'); };
+
             // 👇 APLICA A MEMÓRIA DO BOTÃO EXTRAIR 👇
             if (localStorage.getItem('coupa_extracting') === 'true') {
                 btnExtrair.className = 'btn-base btn-stop'; 
@@ -637,23 +640,29 @@
                     dot.classList.add("running");
                     txtStatus.innerHTML = '<i class="fa-solid fa-gear fa-spin"></i> A EXTRAIR DADOS...';
                     btnExtrair.className = 'btn-base btn-stop'; btnExtrair.innerHTML = '<i class="fa-solid fa-hand"></i> PARAR EXTRAÇÃO'; btnExtrair.onclick = function() { solicitarParada(this); };
-                    btnVerificar.disabled = true; btnAbrirRes.disabled = true; 
+                    btnVerificar.disabled = true; btnAbrirRes.disabled = true; btnPedidos.disabled = true;
                     document.getElementById('area-resposta').style.display = 'none';
                 } else if (estado.status === 'verificando' || estado.status === 'verificar') {
                     dot.classList.add("running");
                     txtStatus.innerHTML = '<i class="fa-solid fa-gear fa-spin"></i> A VERIFICAR DADOS...';
                     btnVerificar.className = 'btn-base btn-stop'; btnVerificar.innerHTML = '<i class="fa-solid fa-hand"></i> PARAR VERIFICAÇÃO'; btnVerificar.onclick = function() { solicitarParada(this); };
-                    btnExtrair.disabled = true; btnAbrirRes.disabled = true; 
+                    btnExtrair.disabled = true; btnAbrirRes.disabled = true; btnPedidos.disabled = true;
+                    document.getElementById('area-resposta').style.display = 'none';
+                } else if (estado.status === 'extraindo_pedidos') {
+                    dot.classList.add("running");
+                    txtStatus.innerHTML = '<i class="fa-solid fa-gear fa-spin"></i> A PROCURAR PEDIDOS NOVOS...';
+                    btnPedidos.className = 'btn-base btn-stop'; btnPedidos.innerHTML = '<i class="fa-solid fa-hand"></i> PARAR PEDIDOS'; btnPedidos.onclick = function() { solicitarParada(this); };
+                    btnExtrair.disabled = true; btnVerificar.disabled = true; btnAbrirRes.disabled = true;
                     document.getElementById('area-resposta').style.display = 'none';
                 } else if (estado.status === 'respondendo' || estado.status === 'ocupado') {
                     dot.classList.add("running");
                     txtStatus.innerHTML = '<i class="fa-solid fa-database fa-spin"></i> ROBÔ OCUPADO (FILA)';
-                    btnExtrair.disabled = true; btnVerificar.disabled = true; btnAbrirRes.disabled = true; 
+                    btnExtrair.disabled = true; btnVerificar.disabled = true; btnAbrirRes.disabled = true; btnPedidos.disabled = true;
                 } else if (estado.status === 'respondendo' || estado.status === 'ocupado') {
                     dot.classList.add("running");
                     txtStatus.innerHTML = '<i class="fa-solid fa-database fa-spin"></i> ROBÔ OCUPADO (FILA)';
-                    btnExtrair.disabled = true; btnVerificar.disabled = true; btnAbrirRes.disabled = true; 
-                
+                    btnExtrair.disabled = true; btnVerificar.disabled = true; btnAbrirRes.disabled = true;
+
                 // 👇 ADICIONE ESTE BLOCO INTEIRO AQUI 👇
                 } else if (estado.status === 'parando') {
                     dot.classList.add("running");
@@ -661,7 +670,7 @@
                     btnExtrair.className = 'btn-base'; 
                     btnExtrair.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> AGUARDE...'; 
                     btnExtrair.disabled = true;
-                    btnVerificar.disabled = true; btnAbrirRes.disabled = true; 
+                    btnVerificar.disabled = true; btnAbrirRes.disabled = true; btnPedidos.disabled = true;
                 }
                 // 👆 -------------------------------- 👆
             }
@@ -742,8 +751,12 @@
                         btnExtrair.onclick = function() { solicitarParada(this); };
                     }
                 }
+            } else if (modo === 'extrair_pedidos') {
+                if (confirm("Procurar pedidos novos no portal e enviar por e-mail os que não estão na planilha?")) {
+                    socket.emit('comando_direto', { modo: modo, portal: 'coupa' });
+                }
             } else {
-                socket.emit('comando_direto', { modo: modo, portal: 'coupa' }); 
+                socket.emit('comando_direto', { modo: modo, portal: 'coupa' });
             }
         }
         
@@ -1044,6 +1057,15 @@ function solicitarParada(btnElement) {
         // LIMPEZA DA TAREFA CONCLUÍDA (Bug da duplicação resolvido)
         // =================================================================
         socket.on('tarefa_concluida', function(dados) {
+            if (dados.evento === 'Listagem de Pedidos') {
+                const n = Number(dados.total) || 0;
+                let msg = n === 0 ? 'Nenhum pedido novo fora da planilha.'
+                    : `${n} pedido(s) novo(s): ${(dados.pedidos || []).join(', ')}.` +
+                      (dados.email_enviado ? ' E-mail enviado.' : ' O e-mail NÃO foi enviado (veja o log do robô).');
+                if (dados.erro) msg = `Erro: ${dados.erro}\n\n${msg}`;
+                mostrarModal(dados.sucesso ? 'Pedidos Novos' : 'Pedidos Novos: falhou', msg, dados.sucesso ? 'sucesso' : 'alerta');
+                return;
+            }
             if (dados.evento === 'Lote de Extração') {
                 localStorage.removeItem('coupa_extracting'); 
                 
