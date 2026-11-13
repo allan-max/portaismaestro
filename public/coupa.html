@@ -1059,7 +1059,8 @@ function solicitarParada(btnElement) {
         socket.on('tarefa_concluida', function(dados) {
             if (dados.evento === 'Listagem de Pedidos') {
                 const n = Number(dados.total) || 0;
-                let msg = n === 0 ? 'Nenhum pedido novo fora da planilha.'
+                let msg = dados.semente && n === 0 ? 'Primeira execução: histórico de pedidos registrado, sem e-mail. Da próxima vez só os novos serão avisados.'
+                    : n === 0 ? 'Nenhum pedido novo fora da planilha.'
                     : `${n} pedido(s) novo(s): ${(dados.pedidos || []).join(', ')}.` +
                       (dados.email_enviado ? ' E-mail enviado.' : ' O e-mail NÃO foi enviado (veja o log do robô).');
                 if (dados.erro) msg = `Erro: ${dados.erro}\n\n${msg}`;
