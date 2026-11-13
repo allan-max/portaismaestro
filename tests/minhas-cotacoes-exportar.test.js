@@ -1190,7 +1190,7 @@ test('Salva o erro minimalista em vermelho no evento e oculta o alerta quando o 
     assert.ok(!htmlModalSemErro.includes('pc-alerta-erro-evento'), 'O alerta de erro deve sumir do modal após reenviar a resposta');
 });
 
-test('DAV pelo Cotafrete: sem DAV anexado a Planilha Base vai junto e a tela mostra gerando, erro e pronto', async () => {
+test('DAV pelo Cotafrete: com a caixinha marcada a Planilha Base vai junto e a tela mostra gerando, erro e pronto', async () => {
     const { context, handlers } = setupMinhasCotacoesEnv();
     const Tela = context.window.Tela;
     handlers.retorno_planilha_json({
@@ -1206,15 +1206,27 @@ test('DAV pelo Cotafrete: sem DAV anexado a Planilha Base vai junto e a tela mos
     assert.ok(Tela.cartao(cota, 0).includes('Erro no DAV'));
     assert.ok(Tela.detalhe(cota).includes('pc-dav-status erro') && Tela.detalhe(cota).includes('Item 1: código inativo'));
 
-    // envio sem DAV: a planilha .xlsx vai junto e a tela passa a "gerando"
+    // sem a caixinha marcada, NÃO gera o DAV (mesmo sem DAV anexado)
     let enviado = null;
-    context.enviarRespostaCotacaoPortal = async (payload) => { enviado = payload; return { sucesso: true, gerando_dav: true }; };
+    context.enviarRespostaCotacaoPortal = async (payload) => { enviado = payload; return { sucesso: true }; };
     const d = Tela.dadosResposta(cota);
     d.planilhaNome = 'base.xlsx';
     d.planilhaArquivo = { name: 'base.xlsx' };
     d.itens = [{ n: 1, produto: 'VÁLVULA', quantidade: 3, preco: '150,00', prazo: '10', ncm: '', origem: '0', icms: '18' }];
+    Tela.estado.respondendoPortal = true;
+    assert.ok(Tela.detalhe(cota).includes('id="drop-dav"') && Tela.detalhe(cota).includes('Gerar DAV com base na planilha'));
+    await Tela.enviarRespostaDoModal(cota);
+    assert.equal(enviado.planilha, null);
+
+    // caixinha marcada: o campo do DAV some, a planilha .xlsx vai junto e a tela passa a "gerando"
+    d.gerarDavPlanilha = true;
+    d.davs = [{ name: 'esquecido.pdf' }];
+    Tela.estado.respondendoPortal = true;
+    assert.ok(!Tela.detalhe(cota).includes('id="drop-dav"'));
+    context.enviarRespostaCotacaoPortal = async (payload) => { enviado = payload; return { sucesso: true, gerando_dav: true }; };
     await Tela.enviarRespostaDoModal(cota);
     assert.deepEqual(enviado.planilha, { name: 'base.xlsx' });
+    assert.equal(enviado.davs.length, 0);
     assert.equal(Tela.davDe(cota).estado, 'gerando');
     assert.ok(Tela.cartao(cota, 0).includes('Gerando DAV'));
 
@@ -1223,7 +1235,10 @@ test('DAV pelo Cotafrete: sem DAV anexado a Planilha Base vai junto e a tela mos
     const html = Tela.detalhe(cota);
     assert.ok(html.includes('DAV 16700 pronto') && html.includes('Item 1: confira o preço'));
 
-    // com DAV anexado à mão, a planilha não vai e o aviso some
+    // desmarcada: o campo do DAV volta; o DAV anexado à mão vai, a planilha não e o aviso some
+    d.gerarDavPlanilha = false;
+    Tela.estado.respondendoPortal = true;
+    assert.ok(Tela.detalhe(cota).includes('id="drop-dav"'));
     d.davs = [{ name: 'manual.pdf' }];
     context.enviarRespostaCotacaoPortal = async (payload) => { enviado = payload; return { sucesso: true }; };
     await Tela.enviarRespostaDoModal(cota);

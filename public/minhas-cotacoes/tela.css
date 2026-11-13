@@ -181,9 +181,10 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .pc-resp-painel-topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
 .pc-resp-painel-topo h3 { margin-bottom: 4px; font-size: 13px; }
 .pc-resp-painel-topo p { margin: 0; font-size: 11px; color: var(--muted); }
-.pc-drop-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-.pc-drop-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.pc-drop-col-baixo { padding-top: 37px; }
+.pc-drop-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: auto auto; column-gap: 12px; }
+/* subgrid: as caixinhas dividem a 1ª linha e os campos de arrastar a 2ª, então ficam sempre alinhados lado a lado */
+.pc-drop-col { display: grid; grid-row: span 2; grid-template-rows: subgrid; row-gap: 6px; min-width: 0; }
+.pc-drop-corpo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .pc-dropzone { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 6px; min-height: 118px; padding: 16px 12px; border: 1.5px dashed #394d67; border-radius: 12px; background: #182231; color: #dbe7f5; cursor: pointer; transition: border-color .15s, background .15s, transform .15s; }
 .pc-dropzone:hover, .pc-dropzone.arrastando { border-color: var(--cyan); background: #1c2c42; transform: translateY(-1px); }
 .pc-dropzone.preenchido { border-style: solid; border-color: #2f6fb1; background: #172a40; }
@@ -228,7 +229,8 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 
 @media (max-width: 750px) {
   .pc-drop-grid { grid-template-columns: 1fr; }
-  .pc-drop-col-baixo { padding-top: 0; }
+  .pc-drop-grid { grid-template-rows: none; row-gap: 12px; }
+  .pc-drop-topo { display: none; }
   .pc-resp-campos-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
@@ -273,7 +275,8 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   .pc-det-num h2 { font-size: 24px; }
   .pc-modal-barra { padding-left: 16px; }
   .pc-det-topo, .pc-acoes, .pc-det-sec { padding-left: 16px; padding-right: 16px; }
-  .pc-acoes .pc-resp { margin-left: 0; }  .pc-nav .source-pill, .pc-nav .admin-account span:last-child { display: none; }
+  .pc-acoes .pc-resp { margin-left: 0; }
+  .pc-nav .source-pill, .pc-nav .admin-account span:last-child { display: none; }
 }
 
 /* Barra do topo em telas menores: os links ficam só com ícone (o texto continua para leitores de tela) */

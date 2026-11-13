@@ -219,7 +219,8 @@
         if (!estado.respostas[k]) {
             estado.respostas[k] = {
                 planilhaNome: '',
-                planilhaArquivo: null,   // sem DAV anexado, vai ao Cotafrete para gerar o DAV
+                planilhaArquivo: null,   // com "Gerar DAV com base na planilha", vai ao Cotafrete
+                gerarDavPlanilha: false,
                 planilhaErro: '',
                 carregandoPlanilha: false,
                 davs: [],
@@ -526,12 +527,14 @@
             <div class="pc-resp-painel-topo">
                 <div>
                     <h3>Responder no portal <span class="tag">${esc(portal.toUpperCase())}</span></h3>
-                    <p>Arraste a Planilha Base e o Datasheet nos campos abaixo. Sem DAV anexado, o Cotafrete gera o DAV pela Planilha Base.</p>
+                    <p>Arraste a Planilha Base e o Datasheet nos campos abaixo. Marque "Gerar DAV com base na planilha" para o Cotafrete gerar o DAV.</p>
                 </div>
                 <button type="button" class="button text small" data-acao="fechar-resp-portal" data-id="${k}">Fechar</button>
             </div>
             <div class="pc-drop-grid">
-                <div class="pc-drop-col pc-drop-col-baixo">
+                <div class="pc-drop-col">
+                    <div class="pc-drop-topo"></div>
+                    <div class="pc-drop-corpo">
                     <label class="pc-dropzone ${d.planilhaNome ? 'preenchido' : ''}" id="drop-planilha-base" data-drop-tipo="planilha" data-id="${k}">
                         <input type="file" id="input-resp-planilha" data-resp-file="planilha" data-id="${k}" accept=".xlsx,.xls" hidden>
                         <span class="pc-drop-icone">${icone('base')}</span>
@@ -540,22 +543,28 @@
                     </label>
                     ${d.planilhaNome ? `<div class="pc-drop-arquivos"><div class="pc-drop-arq ok"><span title="${esc(d.planilhaNome)}">${icone('excel')}<b>${esc(d.planilhaNome)}</b></span><button type="button" class="pc-drop-rem" data-acao="limpar-planilha-resp" data-id="${k}" title="Remover planilha" aria-label="Remover planilha">${icone('fechar')}</button></div></div>` : ''}
                     ${d.planilhaErro ? `<small class="pc-drop-erro">${esc(d.planilhaErro)}</small>` : ''}
+                    </div>
                 </div>
-                <div class="pc-drop-col pc-drop-col-baixo">
-                    <label class="pc-dropzone ${d.davs.length ? 'preenchido' : ''}" id="drop-dav" data-drop-tipo="dav" data-id="${k}">
-                        <input type="file" id="input-resp-dav" data-resp-file="dav" data-id="${k}" accept=".pdf" multiple hidden>
-                        <span class="pc-drop-icone">${icone('upload')}</span>
-                        <strong>Arraste o DAV</strong>
-                        <small>${d.davs.length ? 'ou clique para selecionar (.pdf)' : 'opcional: vazio, o Cotafrete gera (.pdf)'}</small>
+                <div class="pc-drop-col">
+                    <label class="pc-check-ds-linha" title="Ao clicar em Enviar, o Cotafrete gera o DAV com a Planilha Base">
+                        <input type="checkbox" class="pc-check" id="check-gerar-dav-planilha" data-check-gerar-dav="${k}" ${d.gerarDavPlanilha ? 'checked' : ''}>
+                        <span>Gerar DAV com base na planilha</span>
                     </label>
-                    ${listaArq(d.davs, 'dav')}
+                    <div class="pc-drop-corpo">${d.gerarDavPlanilha ? '' : `
+                        <label class="pc-dropzone ${d.davs.length ? 'preenchido' : ''}" id="drop-dav" data-drop-tipo="dav" data-id="${k}">
+                            <input type="file" id="input-resp-dav" data-resp-file="dav" data-id="${k}" accept=".pdf" multiple hidden>
+                            <span class="pc-drop-icone">${icone('upload')}</span>
+                            <strong>Arraste o DAV</strong>
+                            <small>ou clique para selecionar (.pdf)</small>
+                        </label>
+                        ${listaArq(d.davs, 'dav')}`}</div>
                 </div>
                 <div class="pc-drop-col">
                     <label class="pc-check-ds-linha" title="Anexar um Datasheet diferente em cada item do evento">
                         <input type="checkbox" class="pc-check" id="check-datasheet-por-linha" data-check-ds-linha="${k}" ${d.datasheetPorLinha ? 'checked' : ''}>
                         <span>Datasheet por linha</span>
                     </label>
-                    ${!d.datasheetPorLinha ? `
+                    <div class="pc-drop-corpo">${!d.datasheetPorLinha ? `
                         <label class="pc-dropzone ${d.datasheets.length ? 'preenchido' : ''}" id="drop-datasheet" data-drop-tipo="datasheet" data-id="${k}">
                             <input type="file" id="input-resp-datasheet" data-resp-file="datasheet" data-id="${k}" accept=".pdf" multiple hidden>
                             <span class="pc-drop-icone">${icone('upload')}</span>
@@ -563,7 +572,7 @@
                             <small>${d.datasheets.length ? `${d.datasheets.length} anexado(s) · arraste ou clique para adicionar mais (.pdf)` : 'ou clique para selecionar um ou mais (.pdf)'}</small>
                         </label>
                         ${listaArq(d.datasheets, 'datasheet')}
-                    ` : ''}
+                    ` : ''}</div>
                 </div>
             </div>
             ${secaoItens}
@@ -1384,6 +1393,11 @@
             toast('Preencha ao menos o Valor Unitário de Venda ou Prazo de um item antes de enviar.');
             return;
         }
+        const gerarDav = Boolean(d.gerarDavPlanilha);
+        if (gerarDav && !(d.planilhaArquivo && /\.xlsx$/i.test(d.planilhaNome))) {
+            toast('Para gerar o DAV, a Planilha Base precisa ser .xlsx.');
+            return;
+        }
         d.enviando = true;
         redesenhar();
         try {
@@ -1398,9 +1412,9 @@
                 portal,
                 evento: num,
                 itens: d.itens,
-                davs: d.davs,
-                // sem DAV anexado, a Planilha Base vai junto e o Cotafrete gera o DAV
-                planilha: (!d.davs.length && /\.xlsx$/i.test(d.planilhaNome)) ? d.planilhaArquivo : null,
+                // "Gerar DAV com base na planilha": o DAV anexado não vai; a Planilha Base vai e o Cotafrete gera o DAV
+                davs: gerarDav ? [] : d.davs,
+                planilha: gerarDav ? d.planilhaArquivo : null,
                 datasheets: d.datasheetPorLinha ? [] : d.datasheets,
                 datasheetPorLinha: Boolean(d.datasheetPorLinha),
                 datasheetsPorItem,
@@ -1535,6 +1549,11 @@
     }, true);
     document.addEventListener('change', e => {
         const t = e.target;
+        if (t.dataset.checkGerarDav) {
+            const c = porId(Number(t.dataset.checkGerarDav));
+            if (c) { dadosResposta(c).gerarDavPlanilha = t.checked; redesenhar(); }
+            return;
+        }
         if (t.dataset.checkDsLinha) {
             alternarDatasheetPorLinha(Number(t.dataset.checkDsLinha), t.checked);
             return;
