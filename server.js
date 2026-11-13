@@ -22,6 +22,10 @@ const { criarDashboardFontes } = require('./lib/dashboard-fontes');
 const { criarAuditoria } = require('./lib/auditoria');
 const { criarDashboardAuditoria, ipDe } = require('./lib/dashboard-auditoria');
 const { criarSincronizacao } = require('./lib/sincronizacao');
+const { criarAtividade } = require('./lib/atividade-usuarios');
+// O atualizador automático só reinicia o site sem ação de usuário nos últimos minutos (lê portal.estado)
+const atividadeUsuarios = criarAtividade({ arquivo: path.join(__dirname, 'portal.estado') });
+setInterval(() => atividadeUsuarios.gravar(), 15 * 1000).unref();
 const { criarEmails, CSP_HTML_EMAIL } = require('./lib/emails');
 const donoCotacao = require('./lib/dono-cotacao');
 
@@ -117,6 +121,10 @@ app.use(express.static(path.join(__dirname, 'public'), {
     maxAge: 0,
     etag: true
 }));
+app.use((req, res, next) => {   // envio de arquivo/formulário por HTTP também é ação de usuário
+    if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') atividadeUsuarios.marcar();
+    next();
+});
 app.use(express.json());
 
 let estado_global = { status: 'desligado', portal_atual: null, fila_pendente: [], tarefas_concluidas: [] };
@@ -690,10 +698,11 @@ io.on('connection', (socket) => {
         email: socket.usuarioLogado ? socket.usuarioLogado.email : null, ip: ipDe(socket), area, acao, ...extra
     });
     const doRobo = () => socket.id === bot_socket_id;
-    socket.onAny(() => {
+    socket.onAny((evento) => {
         const nome = socket.id === bot_socket_id ? 'gerenciador' : socket.id === sync_socket_id ? 'nf'
             : socket.id === emails_socket_id ? 'emails' : null;
         if (nome) conexoes[nome].visto_em = new Date().toISOString();
+        else atividadeUsuarios.registrar(evento);
     });
     // Respostas das fontes para os dashboards (Sync, NFs, Atividade): só o socket certo é aceito.
     for (const evento of ['retorno_sync_planilha_painel', 'retorno_nf_painel', 'retorno_eventos_nf', 'retorno_eventos', 'retorno_servidor_metricas', 'retorno_sincronizacao_estado']) {
