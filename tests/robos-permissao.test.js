@@ -89,6 +89,11 @@ test('comandos aos robôs: sem acesso aos portais nada chega; com acesso só mod
   operador.socket.emit('comando_direto', { modo: 'ligar_robo', portal: 'ariba', prioridades: 'A B', clientId: 'forjado', extra: 'x' });
   assert.deepEqual(await chegou, { modo: 'ligar_robo', portal: 'ariba', prioridades: 'A B' });
 
+  // Botão "Pedidos Novos" da tela do Coupa
+  const pedidos = event(bot, 'comando_para_robo');
+  operador.socket.emit('comando_direto', { modo: 'extrair_pedidos', portal: 'coupa' });
+  assert.deepEqual(await pedidos, { modo: 'extrair_pedidos', portal: 'coupa' });
+
   // Modo fora da lista ('responder' só pela fila) ou portal desconhecido: descartado
   doRobo.length = 0;
   operador.socket.emit('comando_direto', { modo: 'responder', portal: 'coupa', evento: '1' });

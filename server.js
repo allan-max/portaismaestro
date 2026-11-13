@@ -575,7 +575,7 @@ const auditPorCliente = new Map();      // `${tipo}:${clientId}` -> id do regist
 // comando_direto: portais e campos que as telas (coupa, vale, me, ariba, findes) mandam
 const PORTAIS_COMANDO = new Set(['coupa', 'vale', 'me', 'ariba', 'findes', 'comprasgov', 'arcelormittal']);
 const CAMPOS_COMANDO = ['modo', 'portal', 'evento', 'versao', 'empresas', 'prioridades'];
-const MODOS_AUDITADOS = new Set(['ligar_robo', 'desligar_robo', 'forcar_troca', 'solicitar_parada', 'parar_extracao', 'extrair', 'verificar', 'mover_anexos_findes', 'iniciar_findes', 'parar_findes', 'ligar_robo_antigo', 'desligar_robo_antigo']);
+const MODOS_AUDITADOS = new Set(['ligar_robo', 'desligar_robo', 'forcar_troca', 'solicitar_parada', 'parar_extracao', 'extrair', 'verificar', 'extrair_pedidos', 'mover_anexos_findes', 'iniciar_findes', 'parar_findes', 'ligar_robo_antigo', 'desligar_robo_antigo']);
 let syncNfAuditId = null;
 
 // Só quem ainda é admin com sessão válida continua recebendo ao vivo (rebaixado, bloqueado ou expirado sai da sala)
@@ -1075,6 +1075,8 @@ io.on('connection', (socket) => {
                 estado_global.status = 'extraindo';
             } else if (dados.modo === 'verificar') {
                 estado_global.status = 'verificando';
+            } else if (dados.modo === 'extrair_pedidos') {
+                estado_global.status = 'extraindo_pedidos';
             } else if (dados.modo === 'solicitar_parada' || dados.modo === 'parar_extracao') {
                 // 👇 A CHAVE MÁGICA PARA A INTERFACE NÃO PISCAR E VOLTAR AO NORMAL 👇
                 estado_global.status = 'parando'; 
