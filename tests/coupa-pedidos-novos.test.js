@@ -20,3 +20,10 @@ test('coupa.html mostra aviso quando o robô recusa o comando (ex.: modo respost
     // gerenciador manda tarefa_concluida { evento: 'Comando extrair_pedidos', sucesso: false, erro } e o servidor volta a tela para ocioso
     assert.match(html, /String\(dados\.evento \|\| ''\)\.startsWith\('Comando '\) && !dados\.sucesso\) \{\s*mostrarModal\('Comando recusado', dados\.erro/);
 });
+
+test('coupa.html mostra a contagem de onde os pedidos estavam e a página dos novos', () => {
+    assert.match(html, /dados\.contagem/);
+    assert.match(html, /'banco do robô'/);
+    assert.match(html, /\(dados\.novos_lidos \|\| \[\]\)\.map\(p => `\$\{p\.pedido\} \(\$\{p\.cliente\}, página \$\{p\.pagina\}\)`\)/);
+    assert.match(html, /PEDIDOS-LISTAGEM-COUPA\.json/);
+});

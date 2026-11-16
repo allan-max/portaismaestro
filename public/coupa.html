@@ -275,7 +275,7 @@
         }
         .modal-icon { font-size: 40px; margin-bottom: 15px; }
         .modal-title { font-size: 1.2rem; font-weight: 700; color: #fff; margin-bottom: 10px; }
-        .modal-text { font-size: 0.9rem; color: #cbd5e1; margin-bottom: 20px; }
+        .modal-text { font-size: 0.9rem; color: #cbd5e1; margin-bottom: 20px; max-height: 60vh; overflow-y: auto; }
         .modal-btn {
             background: #3b82f6; color: #fff; border: none; padding: 10px 20px;
             border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; width: 100%;
@@ -1068,6 +1068,15 @@ function solicitarParada(btnElement) {
                     : n === 0 ? 'Nenhum pedido novo fora da planilha.'
                     : `${n} pedido(s) novo(s): ${(dados.pedidos || []).join(', ')}.` +
                       (dados.email_enviado ? ' E-mail enviado.' : ' O e-mail NÃO foi enviado (veja o log do robô).');
+                // Onde estavam os pedidos vistos no portal; a lista completa, com cliente e página, fica no JSON
+                if (dados.contagem) {
+                    const c = dados.contagem;
+                    msg += `\n\nPedidos vistos no portal:\n• na planilha: ${c['planilha'] || 0}\n• só no banco do robô: ${c['banco do robô'] || 0}` +
+                        `\n• na planilha e no banco do robô: ${c['planilha e banco do robô'] || 0}\n• novos: ${c['novo'] || 0}`;
+                    const novos = (dados.novos_lidos || []).map(p => `${p.pedido} (${p.cliente}, página ${p.pagina})`);
+                    if (novos.length) msg += `\n\nNovos:\n${novos.slice(0, 30).join('\n')}` + (novos.length > 30 ? `\n… e mais ${novos.length - 30}` : '');
+                    msg += '\n\nLista completa com a página de cada pedido: PEDIDOS-LISTAGEM-COUPA.json (Banco-de-dados).';
+                }
                 if (dados.erro) msg = `Erro: ${dados.erro}\n\n${msg}`;
                 mostrarModal(dados.sucesso ? 'Pedidos Novos' : 'Pedidos Novos: falhou', msg, dados.sucesso ? 'sucesso' : 'alerta');
                 return;
