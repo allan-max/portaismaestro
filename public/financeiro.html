@@ -58,10 +58,22 @@
         .passo .pasta { display: block; font-size: 10px; opacity: .6; margin-top: 3px; font-family: Consolas, monospace; }
         .passo.feito { color: var(--text); }
         .passo.feito .bola { border-color: var(--green); background: var(--green); color: #04210f; }
+        .passo.atual .bola { border-color: var(--blue); color: var(--blue); animation: pulso 1.6s ease-in-out infinite; }
+        .passo.erro { color: var(--text); }
+        .passo.erro .bola { border-color: var(--red); background: var(--red); color: #2a0606; }
+        @keyframes pulso { 50% { box-shadow: 0 0 0 6px rgba(77,168,218,.18); } }
+        @media (prefers-reduced-motion: reduce) { .passo.atual .bola { animation: none; } }
+        .info { margin-top: 14px; font-size: 12px; color: var(--muted); text-align: center; min-height: 16px; }
+        .info.ok { color: var(--green); }
+        .info.ruim { color: var(--red); }
+        .info.demora { color: #f4bf68; }
         .rodape { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 26px; }
         .btn { background: linear-gradient(90deg, #373b54, #6d1b3f); color: #fff; border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 15px 48px;
-            font: 600 14px Inter; letter-spacing: 1.5px; text-transform: uppercase; cursor: not-allowed; opacity: .35; }
-        .aviso { font-size: 12px; color: var(--muted); }
+            font: 600 14px Inter; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; transition: .2s; }
+        .btn:hover:not(:disabled) { filter: brightness(1.2); }
+        .btn:disabled { cursor: not-allowed; opacity: .35; }
+        .aviso { font-size: 12px; color: var(--muted); text-align: center; }
+        .aviso.ruim { color: var(--red); }
         @media (max-width: 760px) {
             header { padding: 18px 16px; }
             .conexao, #nome-conta { display: none; }
@@ -88,26 +100,26 @@
             <p>Arraste o PDF do extrato e o PDF da fatura do cartão. Cada arquivo mostra em que etapa está.</p>
         </div>
 
-        <section class="linha">
+        <section class="linha" data-tipo="extrato" data-pasta="\EXTRATO">
             <div class="drop" tabindex="0">
                 <button class="tirar" title="Remover arquivo" type="button">×</button>
                 <span class="rot">Arraste aqui</span><span class="nome">Extrato bancário</span><small>PDF · clique para escolher</small>
                 <input type="file" accept="application/pdf,.pdf" hidden>
             </div>
-            <div class="trilha"></div>
+            <div><div class="trilha"></div><div class="info" aria-live="polite"></div></div>
         </section>
-        <section class="linha">
+        <section class="linha" data-tipo="cartao" data-pasta="\CARTAO">
             <div class="drop" tabindex="0">
                 <button class="tirar" title="Remover arquivo" type="button">×</button>
                 <span class="rot">Arraste aqui</span><span class="nome">Fatura do cartão</span><small>PDF · clique para escolher</small>
                 <input type="file" accept="application/pdf,.pdf" hidden>
             </div>
-            <div class="trilha"></div>
+            <div><div class="trilha"></div><div class="info" aria-live="polite"></div></div>
         </section>
 
         <div class="rodape">
-            <button class="btn" disabled>Enviar</button>
-            <span class="aviso">O envio para o HSE ainda não está disponível. Por enquanto, a tela só mostra o arquivo escolhido.</span>
+            <button class="btn" id="enviar" type="button">Enviar</button>
+            <span class="aviso" id="aviso">O PDF vai para a pasta do robô no servidor. O resultado aparece aqui sozinho, pode deixar a tela aberta.</span>
         </div>
     </main>
 
@@ -144,41 +156,116 @@
             window.location.href = 'index.html';
         }
 
-        const PASSOS = [['Anexado', ''], ['Enviado', '\\entrada'], ['Processando', 'HSE'], ['Resultado', '\\concluido · \\erro']];
+        // O site grava o PDF na pasta do robô financeiro (SERVIDOR2). O robô move para JA PROCESSADOS ou ERROS_LEITURA;
+        // o servidor confere as pastas e avisa por 'financeiro_estado'.
+        const DEMORA_MS = 30 * 60 * 1000;
+        const PASSOS = ['Anexado', 'Enviado', 'Processando', 'Resultado'];
+        const FEITOS = { enviado: 2, processando: 3, processado: 4, erro: 4 };
+        let ultimos = { extrato: null, cartao: null };
+        const linhas = {};
 
-        function desenharTrilha(trilha, anexado) {
-            trilha.innerHTML = PASSOS.map(([nome, pasta], i) => {
-                const feito = anexado && i === 0;
-                return `<div class="passo${feito ? ' feito' : ''}"><div class="bola">${feito ? '✓' : i + 1}</div>${nome}<span class="pasta">${pasta}</span></div>`;
+        const hora = ms => new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+        const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+        function desenhar(tipo) {
+            const L = linhas[tipo], envio = ultimos[tipo];
+            // arquivo anexado e ainda não enviado manda na trilha; senão vale o último envio
+            const status = L.arquivo ? 'anexado' : envio ? envio.status : null;
+            const feitos = status === 'anexado' ? 1 : FEITOS[status] || 0;
+            const pastas = ['', L.pasta, 'robô', '\\JA PROCESSADOS · \\ERROS_LEITURA'];
+            L.trilha.innerHTML = PASSOS.map((nome, i) => {
+                let classe = '', bola = i + 1, rotulo = nome;
+                if (i === 3 && status === 'processado') { classe = ' feito'; bola = '✓'; rotulo = 'Concluído'; }
+                else if (i === 3 && status === 'erro') { classe = ' erro'; bola = '!'; rotulo = 'Erro na leitura'; }
+                else if (i < feitos) { classe = ' feito'; bola = '✓'; }
+                else if (i === feitos && feitos >= 2 && feitos < 4) classe = ' atual';
+                return `<div class="passo${classe}"><div class="bola">${bola}</div>${rotulo}<span class="pasta">${esc(pastas[i])}</span></div>`;
             }).join('');
+
+            let texto = '', tom = '';
+            if (!L.arquivo && envio) {
+                const nome = `${esc(envio.original || envio.arquivo)} · enviado ${hora(envio.enviado_em)}`;
+                if (envio.status === 'processado') { texto = `${nome} · processado ${hora(envio.concluido_em)}`; tom = 'ok'; }
+                else if (envio.status === 'erro') { texto = `${nome} · o robô não conseguiu ler (pasta ERROS_LEITURA)`; tom = 'ruim'; }
+                else if (Date.now() - envio.enviado_em > DEMORA_MS) { texto = `${nome} · O robô ainda não pegou o arquivo. Continuo olhando.`; tom = 'demora'; }
+                else texto = `${nome} · ${envio.status === 'enviado' ? 'esperando o robô pegar' : 'o robô está processando'}`;
+            }
+            L.info.className = 'info' + (tom ? ' ' + tom : '');
+            L.info.innerHTML = texto;
         }
 
+        const btnEnviar = document.getElementById('enviar'), aviso = document.getElementById('aviso');
+        const AVISO_PADRAO = aviso.textContent;
+        function atualizarBotao() { btnEnviar.disabled = !Object.values(linhas).some(L => L.arquivo); }
+        function avisar(texto, ruim) { aviso.textContent = texto; aviso.classList.toggle('ruim', !!ruim); }
+
         document.querySelectorAll('.linha').forEach(linha => {
-            const drop = linha.querySelector('.drop'), input = drop.querySelector('input'), legenda = drop.querySelector('small'), trilha = linha.querySelector('.trilha');
-            desenharTrilha(trilha, false);
+            const tipo = linha.dataset.tipo;
+            const drop = linha.querySelector('.drop'), input = drop.querySelector('input'), legenda = drop.querySelector('small');
+            const L = linhas[tipo] = { arquivo: null, pasta: linha.dataset.pasta, trilha: linha.querySelector('.trilha'), info: linha.querySelector('.info') };
 
             function mostrar(arquivo) {
                 if (!arquivo) return;
                 if (!/\.pdf$/i.test(arquivo.name)) { alert('Escolha um arquivo PDF.'); return; }
+                L.arquivo = arquivo;
                 drop.classList.add('cheio');
                 legenda.textContent = '✓ ' + arquivo.name;
-                desenharTrilha(trilha, true);
+                desenhar(tipo); atualizarBotao();
             }
-            function limpar() {
+            L.limpar = function () {
+                L.arquivo = null;
                 drop.classList.remove('cheio');
                 legenda.textContent = 'PDF · clique para escolher';
                 input.value = '';
-                desenharTrilha(trilha, false);
-            }
+                desenhar(tipo); atualizarBotao();
+            };
 
             drop.addEventListener('click', e => { if (!e.target.closest('.tirar')) input.click(); });
             drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
-            drop.querySelector('.tirar').addEventListener('click', limpar);
+            drop.querySelector('.tirar').addEventListener('click', L.limpar);
             input.addEventListener('change', () => mostrar(input.files[0]));
             drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
             drop.addEventListener('dragleave', () => drop.classList.remove('over'));
             drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); mostrar(e.dataTransfer.files[0]); });
+            desenhar(tipo);
         });
+        atualizarBotao();
+
+        async function enviarUm(tipo) {
+            const L = linhas[tipo];
+            const fd = new FormData();
+            fd.append('pdf', L.arquivo);
+            fd.append('tipo', tipo);
+            fd.append('sessionId', sessionAtual);
+            const r = await fetch('/api/financeiro/enviar', { method: 'POST', body: fd });
+            const dados = await r.json().catch(() => ({}));
+            if (r.status === 401) { localStorage.clear(); window.location.href = 'index.html'; return null; }
+            if (!r.ok) throw new Error(dados.error || `Erro ${r.status} ao enviar.`);
+            ultimos[tipo] = dados.envio;
+            L.limpar();
+            return dados.envio;
+        }
+
+        btnEnviar.addEventListener('click', async () => {
+            btnEnviar.disabled = true;
+            avisar('Enviando…');
+            const erros = [];
+            for (const tipo of Object.keys(linhas)) {
+                if (!linhas[tipo].arquivo) continue;
+                try { await enviarUm(tipo); }
+                catch (e) { erros.push(`${tipo === 'extrato' ? 'Extrato' : 'Cartão'}: ${e.message}`); }
+            }
+            if (erros.length) avisar(erros.join(' · '), true); else avisar(AVISO_PADRAO);
+            atualizarBotao();
+        });
+
+        socket.on('connect', () => socket.emit('pedir_financeiro_estado'));
+        socket.on('financeiro_estado', estado => {
+            ultimos = { extrato: estado && estado.extrato || null, cartao: estado && estado.cartao || null };
+            Object.keys(linhas).forEach(desenhar);
+        });
+        // o aviso de demora aparece sem precisar de mensagem nova do servidor
+        setInterval(() => Object.keys(linhas).forEach(desenhar), 30000);
     </script>
 </body>
 </html>
