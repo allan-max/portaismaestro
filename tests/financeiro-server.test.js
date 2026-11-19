@@ -33,6 +33,11 @@ test('tela entra na sala financeiro e recebe o estado', () => {
 });
 
 test('conferência periódica das pastas avisa a sala quando muda', () => {
-  assert.match(server, /if \(financeiro\.conferir\(\)\) io\.to\('financeiro'\)\.emit\('financeiro_estado', financeiro\.estado\(\)\)/);
+  assert.match(server, /if \(await financeiro\.conferir\(\)\) io\.to\('financeiro'\)\.emit\('financeiro_estado', financeiro\.estado\(\)\)/);
   assert.match(server, /FINANCEIRO_DIR/);
+});
+
+test('rota espera a cópia terminar (envio assíncrono não trava o site)', () => {
+  assert.ok(blocoRota.includes('async (req, res) =>'));
+  assert.ok(blocoRota.includes('await financeiro.enviar('));
 });

@@ -2197,16 +2197,16 @@ const financeiro = criarFinanceiro({
 });
 function podeFinanceiro(ficha) { return !!ficha && (ficha.setor === 'financeiro' || ficha.admin === true); }
 const CODIGOS_FINANCEIRO = { TIPO_INVALIDO: 400, NAO_PDF: 400, PASTA_INDISPONIVEL: 503 };
-setInterval(() => {
+setInterval(async () => {
     try {
-        if (financeiro.conferir()) io.to('financeiro').emit('financeiro_estado', financeiro.estado());
+        if (await financeiro.conferir()) io.to('financeiro').emit('financeiro_estado', financeiro.estado());
     } catch (e) { console.error('Financeiro: erro ao conferir as pastas:', e.message); }
 }, 10000).unref();
 
 app.post('/api/financeiro/enviar', (req, res, next) => upload.single('pdf')(req, res, err => {
     if (err) return res.status(400).json({ error: 'Arquivo inválido: ' + err.message });
     next();
-}), (req, res) => {
+}), async (req, res) => {
     try {
         const ficha = typeof req.body.sessionId === 'string' ? lerSessao(cofreSessoes, { sessionId: req.body.sessionId }) : null;
         if (!ficha) return res.status(401).json({ error: 'Sessão inválida ou expirada. Entre novamente.' });
@@ -2217,7 +2217,7 @@ app.post('/api/financeiro/enviar', (req, res, next) => upload.single('pdf')(req,
         const nomeOriginal = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
         let envio;
         try {
-            envio = financeiro.enviar({ tipo: String(req.body.tipo || ''), nomeOriginal, origem: req.file.path, email: ficha.email });
+            envio = await financeiro.enviar({ tipo: String(req.body.tipo || ''), nomeOriginal, origem: req.file.path, email: ficha.email });
         } catch (e) {
             if (!CODIGOS_FINANCEIRO[e.codigo]) throw e;
             return res.status(CODIGOS_FINANCEIRO[e.codigo]).json({ error: e.message, codigo: e.codigo });
