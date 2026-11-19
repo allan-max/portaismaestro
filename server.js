@@ -29,6 +29,7 @@ setInterval(() => atividadeUsuarios.gravar(), 15 * 1000).unref();
 const { criarEmails, CSP_HTML_EMAIL } = require('./lib/emails');
 const donoCotacao = require('./lib/dono-cotacao');
 const { criarDavRespostas, mesclarNcms } = require('./lib/dav-respostas');
+const { criarFinanceiro } = require('./lib/financeiro');
 
 
 // 🛡️ AIRBAG ANTI-CRASH (Impede o servidor de morrer por erros invisíveis)
@@ -717,6 +718,14 @@ io.on('connection', (socket) => {
         socket.on(evento, (dados = {}) => { dashboardFontes.receber(evento, socket.id, dados);
     });
     }
+    // Tela Financeiro: mostra onde o PDF enviado está (pasta do robô, JA PROCESSADOS ou ERROS_LEITURA)
+    socket.on('pedir_financeiro_estado', () => {
+        const ficha = lerSessao(cofreSessoes, socket);
+        if (!ficha) { socket.emit('sessao_invalida'); return; }
+        if (!podeFinanceiro(ficha)) return;
+        socket.join('financeiro');
+        socket.emit('financeiro_estado', financeiro.estado());
+    });
     socket.on('solicitar_log_txt', (dados = {}) => {
         const requestId = typeof dados?.requestId === 'string' ? dados.requestId.slice(0, 80) : '';
         if (!autorizarAdmin(cofreSessoes, socket, 'retorno_log_txt', requestId)) return;
@@ -2177,6 +2186,53 @@ app.post('/api/responder', (req, res, next) => uploadResposta(req, res, err => {
         if (!res.headersSent) res.status(500).json({ error: "Erro interno no servidor." });
     } finally {
         for (const file of arquivos) fs.unlink(file.path, () => {});
+    }
+});
+
+// === FINANCEIRO: PDF do extrato/cartão vai para a pasta do robô financeiro no SERVIDOR2 ===
+// O robô (fora deste projeto) move o PDF para "JA PROCESSADOS" ou "ERROS_LEITURA"; o site só grava e acompanha.
+const financeiro = criarFinanceiro({
+    raiz: process.env.FINANCEIRO_DIR || '\\\\SERVIDOR2\\Publico\\ALLAN\\FINANCEIRO',
+    arquivoEstado: path.join(__dirname, 'dados', 'financeiro_envios.json')
+});
+function podeFinanceiro(ficha) { return !!ficha && (ficha.setor === 'financeiro' || ficha.admin === true); }
+const CODIGOS_FINANCEIRO = { TIPO_INVALIDO: 400, NAO_PDF: 400, PASTA_INDISPONIVEL: 503 };
+setInterval(async () => {
+    try {
+        if (await financeiro.conferir()) io.to('financeiro').emit('financeiro_estado', financeiro.estado());
+    } catch (e) { console.error('Financeiro: erro ao conferir as pastas:', e.message); }
+}, 10000).unref();
+
+app.post('/api/financeiro/enviar', (req, res, next) => upload.single('pdf')(req, res, err => {
+    if (err) return res.status(400).json({ error: 'Arquivo inválido: ' + err.message });
+    next();
+}), async (req, res) => {
+    try {
+        const ficha = typeof req.body.sessionId === 'string' ? lerSessao(cofreSessoes, { sessionId: req.body.sessionId }) : null;
+        if (!ficha) return res.status(401).json({ error: 'Sessão inválida ou expirada. Entre novamente.' });
+        if (!podeFinanceiro(ficha)) return res.status(403).json({ error: 'Esta área é do Financeiro.' });
+        if (!req.file) return res.status(400).json({ error: 'Escolha um arquivo PDF.' });
+        if (!/\.pdf$/i.test(req.file.originalname)) return res.status(400).json({ error: 'Escolha um arquivo PDF.' });
+        // multer entrega o nome em latin1: "Extrato Março.pdf" chegaria como "MarÃ§o"
+        const nomeOriginal = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
+        let envio;
+        try {
+            envio = await financeiro.enviar({ tipo: String(req.body.tipo || ''), nomeOriginal, origem: req.file.path, email: ficha.email });
+        } catch (e) {
+            if (!CODIGOS_FINANCEIRO[e.codigo]) throw e;
+            return res.status(CODIGOS_FINANCEIRO[e.codigo]).json({ error: e.message, codigo: e.codigo });
+        }
+        registrarAuditoria({
+            email: ficha.email, ip: String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.ip,
+            area: 'financeiro', acao: 'enviar_pdf', alvo: envio.arquivo, detalhes: { tipo: envio.tipo }
+        });
+        io.to('financeiro').emit('financeiro_estado', financeiro.estado());
+        res.json({ sucesso: true, envio });
+    } catch (error) {
+        console.error('Erro no /api/financeiro/enviar:', error);
+        if (!res.headersSent) res.status(500).json({ error: 'Erro interno no servidor.' });
+    } finally {
+        if (req.file) fs.unlink(req.file.path, () => {});
     }
 });
 
