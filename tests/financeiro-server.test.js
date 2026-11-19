@@ -41,3 +41,12 @@ test('rota espera a cópia terminar (envio assíncrono não trava o site)', () =
   assert.ok(blocoRota.includes('async (req, res) =>'));
   assert.ok(blocoRota.includes('await financeiro.enviar('));
 });
+
+test('botão Limpar: socket confere permissão, limpa e avisa a sala', () => {
+  const i = server.indexOf("socket.on('financeiro_limpar_erro'");
+  assert.ok(i > 0);
+  const bloco = server.slice(i, i + 700);
+  assert.match(bloco, /podeFinanceiro\(/);
+  assert.match(bloco, /financeiro\.limparErro\(/);
+  assert.match(bloco, /io\.to\('financeiro'\)\.emit\('financeiro_estado'/);
+});

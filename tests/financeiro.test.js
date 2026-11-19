@@ -132,7 +132,10 @@ test('envios sobrevivem a reiniciar o site', async () => {
 test('arquivo de estado corrompido começa vazio', async () => {
   const { arquivoEstado, novo } = setup();
   fs.writeFileSync(arquivoEstado, '{lixo');
-  assert.deepEqual(novo().estado(), { extrato: null, cartao: null });
+  const est = novo().estado();
+  assert.equal(est.extrato, null);
+  assert.equal(est.cartao, null);
+  assert.deepEqual(est.erros, []);
 });
 
 test('guarda só os 50 envios mais recentes', async () => {
@@ -179,4 +182,35 @@ test('achado 3: cópia vai primeiro para .part e só vira .pdf inteira', async (
   assert.deepEqual(destinos, ['x_20261119_143005.pdf.part']);
   assert.deepEqual(fs.readdirSync(path.join(raiz, 'EXTRATO')).filter(n => n.endsWith('.part')), []);
   assert.ok(fs.existsSync(path.join(raiz, 'EXTRATO', 'x_20261119_143005.pdf')));
+});
+
+test('erros: estado lista os erros não limpos, mais novo primeiro, e manda a hora do servidor', async () => {
+  const { raiz, fin, origem, relogio } = setup();
+  const a = await fin.enviar({ tipo: 'extrato', nomeOriginal: 'a.pdf', origem: origem(), email: 'a@x' });
+  relogio.agora += 1000;
+  const b = await fin.enviar({ tipo: 'cartao', nomeOriginal: 'b.pdf', origem: origem(), email: 'a@x' });
+  fs.renameSync(path.join(raiz, 'EXTRATO', a.arquivo), path.join(raiz, 'EXTRATO', 'ERROS_LEITURA', a.arquivo));
+  fs.renameSync(path.join(raiz, 'CARTAO', b.arquivo), path.join(raiz, 'CARTAO', 'ERROS_LEITURA', b.arquivo));
+  await fin.conferir();
+  const est = fin.estado();
+  assert.deepEqual(est.erros.map(e => e.id), [b.id, a.id]);
+  assert.equal(est.agora, relogio.agora);
+});
+
+test('erros: limpar tira o erro da lista e sobrevive a reiniciar o site', async () => {
+  const { raiz, fin, novo, origem } = setup();
+  const a = await fin.enviar({ tipo: 'extrato', nomeOriginal: 'a.pdf', origem: origem(), email: 'a@x' });
+  fs.renameSync(path.join(raiz, 'EXTRATO', a.arquivo), path.join(raiz, 'EXTRATO', 'ERROS_LEITURA', a.arquivo));
+  await fin.conferir();
+  assert.equal(fin.limparErro(a.id), true);
+  assert.deepEqual(fin.estado().erros, []);
+  assert.deepEqual(novo().estado().erros, []);
+  assert.equal(fin.estado().extrato.status, 'erro');
+});
+
+test('erros: limpar id desconhecido ou envio sem erro não faz nada', async () => {
+  const { fin, origem } = setup();
+  const a = await fin.enviar({ tipo: 'extrato', nomeOriginal: 'a.pdf', origem: origem(), email: 'a@x' });
+  assert.equal(fin.limparErro('nao-existe'), false);
+  assert.equal(fin.limparErro(a.id), false);
 });

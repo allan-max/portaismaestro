@@ -67,6 +67,19 @@
         .info.ok { color: var(--green); }
         .info.ruim { color: var(--red); }
         .info.demora { color: #f4bf68; }
+        /* Painel de erros: fica no canto direito até o usuário limpar cada erro */
+        .painel-erros { position: fixed; top: 90px; right: 20px; width: 300px; max-height: calc(100vh - 110px); overflow-y: auto; z-index: 10;
+            background: rgba(30,12,18,.92); backdrop-filter: blur(14px); border: 1px solid rgba(255,82,82,.35); border-radius: 14px; padding: 14px; }
+        .painel-erros[hidden] { display: none; }
+        .painel-erros h2 { font-size: 12px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--red); margin-bottom: 10px; }
+        .erro-item { border-top: 1px solid var(--border); padding: 10px 0 4px; font-size: 12px; }
+        .erro-item:first-child { border-top: 0; padding-top: 0; }
+        .erro-item b { display: block; font-weight: 600; word-break: break-all; }
+        .erro-item p { color: var(--muted); margin: 4px 0 8px; line-height: 1.4; word-break: break-word; }
+        .limpar { background: transparent; border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 5px 12px; font: 500 11px Inter; cursor: pointer; }
+        .limpar:hover { background: rgba(255,255,255,.08); }
+        @media (max-width: 1400px) { .painel-erros { top: auto; bottom: 16px; right: 16px; max-height: 45vh; } }
+        @media (max-width: 760px) { .painel-erros { left: 16px; right: 16px; width: auto; } }
         .rodape { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 26px; }
         .btn { background: linear-gradient(90deg, #373b54, #6d1b3f); color: #fff; border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 15px 48px;
             font: 600 14px Inter; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; transition: .2s; }
@@ -122,6 +135,10 @@
             <span class="aviso" id="aviso">O PDF vai para a pasta do robô no servidor. O resultado aparece aqui sozinho, pode deixar a tela aberta.</span>
         </div>
     </main>
+    <aside class="painel-erros" id="painel-erros" hidden aria-live="polite">
+        <h2>Erros de leitura</h2>
+        <div id="lista-erros"></div>
+    </aside>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
     <script>
@@ -159,6 +176,10 @@
         // O site grava o PDF na pasta do robô financeiro (SERVIDOR2). O robô move para JA PROCESSADOS ou ERROS_LEITURA;
         // o servidor confere as pastas e avisa por 'financeiro_estado'.
         const DEMORA_MS = 30 * 60 * 1000;
+        const ERRO_VISIVEL_MS = 20 * 1000;   // erro fica na trilha 20 s; depois a linha volta ao começo e o erro fica só no painel
+        let diferencaRelogio = 0;            // relógio do servidor - relógio do navegador
+        let listaErros = [];
+        const timersErro = {};
         const PASSOS = ['Anexado', 'Enviado', 'Processando', 'Resultado'];
         const FEITOS = { enviado: 2, processando: 3, processado: 4, erro: 4 };
         let ultimos = { extrato: null, cartao: null };
@@ -167,8 +188,19 @@
         const hora = ms => new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
         const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
+        // erro com mais de 20 s some da trilha (a linha volta ao começo); o painel da direita continua mostrando
+        function envioNaTrilha(tipo) {
+            const envio = ultimos[tipo];
+            clearTimeout(timersErro[tipo]);
+            if (!envio || envio.status !== 'erro' || !envio.concluido_em) return envio;
+            const resta = envio.concluido_em + ERRO_VISIVEL_MS - (Date.now() + diferencaRelogio);
+            if (resta <= 0) return null;
+            timersErro[tipo] = setTimeout(() => desenhar(tipo), resta + 50);
+            return envio;
+        }
+
         function desenhar(tipo) {
-            const L = linhas[tipo], envio = ultimos[tipo];
+            const L = linhas[tipo], envio = envioNaTrilha(tipo);
             // arquivo anexado e ainda não enviado manda na trilha; senão vale o último envio
             const status = L.arquivo ? 'anexado' : envio ? envio.status : null;
             const feitos = status === 'anexado' ? 1 : FEITOS[status] || 0;
@@ -260,8 +292,30 @@
         });
 
         socket.on('connect', () => socket.emit('pedir_financeiro_estado'));
+        function desenharErros() {
+            document.getElementById('painel-erros').hidden = !listaErros.length;
+            document.getElementById('lista-erros').innerHTML = listaErros.map(e => {
+                const pasta = (e.tipo === 'cartao' ? '\\CARTAO' : '\\EXTRATO') + '\\ERROS_LEITURA';
+                return `<div class="erro-item">
+                    <b>${esc(e.original || e.arquivo)}</b>
+                    <p>${e.tipo === 'cartao' ? 'Fatura do cartão' : 'Extrato bancário'} · ${hora(e.concluido_em || e.enviado_em)}<br>
+                    O robô não conseguiu ler o arquivo. Ele está em ${esc(pasta)} como ${esc(e.arquivo)}.</p>
+                    <button class="limpar" type="button" data-id="${esc(e.id)}">Limpar</button>
+                </div>`;
+            }).join('');
+        }
+        document.getElementById('lista-erros').addEventListener('click', ev => {
+            const b = ev.target.closest('.limpar');
+            if (!b) return;
+            b.disabled = true;
+            socket.emit('financeiro_limpar_erro', { id: b.dataset.id });
+        });
+
         socket.on('financeiro_estado', estado => {
-            ultimos = { extrato: estado && estado.extrato || null, cartao: estado && estado.cartao || null };
+            if (estado && Number.isFinite(estado.agora)) diferencaRelogio = estado.agora - Date.now();
+            listaErros = estado && Array.isArray(estado.erros) ? estado.erros : [];
+            desenharErros();
+            ultimos ={ extrato: estado && estado.extrato || null, cartao: estado && estado.cartao || null };
             Object.keys(linhas).forEach(desenhar);
         });
         // o aviso de demora aparece sem precisar de mensagem nova do servidor

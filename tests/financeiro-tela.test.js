@@ -32,3 +32,14 @@ test('não diz mais que o envio está indisponível', () => {
   assert.ok(!html.includes('ainda não está disponível'));
   assert.ok(!html.includes('<button class="btn" disabled>'));
 });
+
+test('erro fica 20 s na trilha e depois a linha volta ao começo', () => {
+  assert.match(html, /ERRO_VISIVEL_MS = 20 \* 1000/);
+  assert.ok(html.includes('estado.agora'));
+});
+
+test('painel de erros à direita com botão Limpar', () => {
+  assert.ok(html.includes('id="painel-erros"'));
+  assert.ok(html.includes("socket.emit('financeiro_limpar_erro'"));
+  assert.ok(html.includes('>Limpar<'));
+});

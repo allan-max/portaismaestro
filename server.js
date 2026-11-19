@@ -726,6 +726,16 @@ io.on('connection', (socket) => {
         socket.join('financeiro');
         socket.emit('financeiro_estado', financeiro.estado());
     });
+    // Botão "Limpar" do painel de erros: o usuário já resolveu, o erro some para todos da tela Financeiro
+    socket.on('financeiro_limpar_erro', (dados = {}) => {
+        const ficha = lerSessao(cofreSessoes, socket);
+        if (!ficha) { socket.emit('sessao_invalida'); return; }
+        if (!podeFinanceiro(ficha)) return;
+        const id = typeof dados.id === 'string' ? dados.id.slice(0, 80) : '';
+        if (!financeiro.limparErro(id)) return;
+        audit('financeiro', 'limpar_erro', { alvo: id });
+        io.to('financeiro').emit('financeiro_estado', financeiro.estado());
+    });
     socket.on('solicitar_log_txt', (dados = {}) => {
         const requestId = typeof dados?.requestId === 'string' ? dados.requestId.slice(0, 80) : '';
         if (!autorizarAdmin(cofreSessoes, socket, 'retorno_log_txt', requestId)) return;
