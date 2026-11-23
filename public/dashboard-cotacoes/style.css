@@ -242,7 +242,7 @@ tbody tr:hover { background: #ffffff04; }
 .insight strong { font-size: 11px; font-weight: 550; }
 .insight p { color: var(--muted); font-size: 10px; margin-top: 3px; }
 .insight .panel-link { padding: 0; min-height: 22px; }
-.vendor-table { min-width: 860px; }
+.vendor-table { min-width: 1100px; }
 .vendor-table .seller-cell { font-weight: 550; }
 .summary-rail { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--border); }
 .summary-rail > div { padding: 20px; border-right: 1px solid var(--border); }
