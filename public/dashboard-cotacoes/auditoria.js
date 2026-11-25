@@ -5,12 +5,12 @@
   const ROTULOS = {
     editar_linha: 'Editou linha', apagar_linha: 'Apagou linha', marcar_respondida: 'Marcou cotação como respondida',
     atribuir_vendedor: 'Atribuiu vendedor', cotacao_manual: 'Registrou cotação manual', pedido_manual: 'Registrou pedido manual',
-    sincronizar_nf: 'Sincronizou NFs', gravar_nf_planilha: 'Gravou NF na planilha', responder_evento: 'Respondeu evento',
+    sincronizar_nf: 'Sincronizou NFs', gravar_nf_planilha: 'Gravou NF na planilha', responder_evento: 'Respondeu evento', cotabot_cotar: 'Pediu cotação ao Cotabot',
     cancelar_evento: 'Cancelou evento', extracao_fila: 'Iniciou extração em fila', imprimir: 'Imprimiu evento',
     robo_ligar_robo: 'Ligou o robô', robo_desligar_robo: 'Desligou o robô', robo_forcar_troca: 'Forçou troca de portal',
     robo_solicitar_parada: 'Pediu parada do robô', robo_parar_extracao: 'Parou a extração', robo_extrair: 'Iniciou extração',
     robo_verificar: 'Iniciou verificação', robo_mover_anexos_findes: 'Moveu anexos Findes', promover_usuario: 'Promoveu a admin',
-    acesso_dashboard: 'Alterou acesso ao dashboard', acesso_planilha: 'Alterou acesso à planilha', acesso_portais: 'Alterou acesso aos portais', acesso_busca_outros: 'Alterou pesquisa de cotações de outros vendedores',
+    acesso_dashboard: 'Alterou acesso ao dashboard', acesso_planilha: 'Alterou acesso à planilha', acesso_portais: 'Alterou acesso aos portais', acesso_busca_outros: 'Alterou pesquisa de cotações de outros vendedores', acesso_cotabot: 'Alterou acesso ao Cotabot',
     vincular_vendedor: 'Vinculou vendedor ao usuário', salvar_config: 'Salvou configuração', definir_apelido: 'Definiu apelido',
     login: 'Entrou no portal', login_falha: 'Falha de login', cadastro: 'Cadastrou-se', troca_senha: 'Trocou a senha',
     rodar_agora: 'Rodou agora (sincronização)'

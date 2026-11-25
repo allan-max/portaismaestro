@@ -1,0 +1,63 @@
+/* Tela do Cotabot: usa os tokens de dashboard-cotacoes/style.css e o topo de dashboard-comum/comum.css */
+body { background: var(--bg); min-height: 100vh; }
+.cb-main { max-width: 920px; margin: 0 auto; padding: 28px 16px 48px; display: flex; flex-direction: column; gap: 16px; }
+.cb-cabecalho { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.cb-cabecalho p { margin-top: 6px; max-width: 60ch; }
+.cb-eyebrow { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--cyan); font-weight: 600; margin-bottom: 4px; }
+
+.cb-status { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--panel); font-size: 12px; color: var(--muted); white-space: nowrap; }
+.cb-status .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+.cb-status.off .status-dot { background: var(--red); }
+
+.cb-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 22px; margin: 0; }
+form.cb-card { padding: 0; }
+.cb-sec { padding: 18px 22px; border-bottom: 1px solid var(--border); }
+.cb-sec:last-child { border-bottom: 0; }
+.cb-rotulo { display: block; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+
+.cb-input { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 9px 10px; font: inherit; }
+.cb-input::placeholder { color: var(--dim); }
+.cb-input:focus { outline: none; border-color: var(--blue); }
+textarea.cb-input { resize: vertical; min-height: 58px; }
+
+.cb-item { display: grid; grid-template-columns: 34px 1fr 96px 34px; gap: 8px; align-items: start; margin-bottom: 8px; }
+.cb-n { background: var(--panel-hover); border-radius: 6px; padding: 7px 0; text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; }
+.cb-remover { width: 34px; height: 36px; }
+.cb-limite { display: block; margin-top: 8px; }
+
+.cb-acoes { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.cb-aviso { font-size: 12.5px; flex: 1; min-width: 200px; }
+.cb-aviso.erro { color: var(--red); }
+.cb-aviso.alerta { color: var(--amber); }
+
+.cb-usos { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.cb-uso { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.cb-uso b { font-size: 20px; font-variant-numeric: tabular-nums; }
+.cb-barra { height: 6px; background: var(--bg); border-radius: 4px; margin: 6px 0; overflow: hidden; }
+.cb-barra i { display: block; height: 100%; width: 0; background: var(--blue); }
+
+.cb-barra { position: relative; }
+.cb-barra i.cheia { background: var(--red); }
+.cb-teto { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--amber); }
+.cb-estimativa { color: var(--text); }
+
+.cb-pedido { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.cb-pedido-topo { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cb-etiqueta { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+.cb-etiqueta.cotando, .cb-etiqueta.fila, .cb-etiqueta.enviando { color: var(--cyan); border-color: var(--cyan); }
+.cb-etiqueta.pronto { color: var(--green); border-color: var(--green); }
+.cb-etiqueta.erro { color: var(--red); border-color: var(--red); }
+.cb-msg { font-size: 12.5px; color: var(--muted); }
+.cb-pedido .button { align-self: flex-start; }
+.cb-pedido-itens { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; }
+.cb-pi-desc { display: block; overflow-wrap: anywhere; }
+.cb-pi-info { display: block; color: var(--muted); overflow-wrap: anywhere; }
+.cb-pi.erro .cb-pi-info { color: var(--red); }
+.cb-pi.cotando .cb-pi-info { color: var(--cyan); }
+.cb-pi a { color: var(--blue); }
+
+@media (max-width: 600px) {
+    .cb-item { grid-template-columns: 28px 1fr 72px 34px; }
+    .cb-sec, .cb-card { padding-left: 14px; padding-right: 14px; }
+    form.cb-card { padding: 0; }
+}

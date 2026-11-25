@@ -30,6 +30,7 @@ const { criarEmails, CSP_HTML_EMAIL } = require('./lib/emails');
 const donoCotacao = require('./lib/dono-cotacao');
 const { criarDavRespostas, mesclarNcms } = require('./lib/dav-respostas');
 const { criarFinanceiro } = require('./lib/financeiro');
+const { criarCotabot } = require('./lib/cotabot');
 
 
 // 🛡️ AIRBAG ANTI-CRASH (Impede o servidor de morrer por erros invisíveis)
@@ -255,6 +256,11 @@ function limparErroEvento(eventoId) {
         io.to('frontend').emit('erro_evento_atualizado', { evento: limpo, erro: '' });
     }
 }
+
+// Cotabot: robô que cota itens na VM, via gerenciador (lib/cotabot.js, gerenciador/ponte_cotabot.py)
+const cotabot = criarCotabot({
+    pasta: process.env.COTABOT_PASTA || path.join(__dirname, 'dados', 'cotabot'), io, obterRobo: () => bot_socket_id
+});
 
 // DAV gerado pelo Cotafrete a partir da Planilha Base (lib/dav-respostas.js)
 const davRespostas = criarDavRespostas({
@@ -642,7 +648,7 @@ const EVENTOS_DO_ROBO = new Set([
     'retorno_registro_cotacao_manual', 'atualizar_fila_extracao', 'progresso_fila_extracao',
     'captcha_resolvido_do_robo', 'prints_resposta_evento', 'relatar_progresso_findes_antigo', 'findes_textos_gerados',
     'baixar_pdf_findes', 'sincronizar_estado_findes', 'sincronizar_estado_findes_antigo',
-    'status_dav', 'dav_pronto'
+    'status_dav', 'dav_pronto', 'cotabot_status', 'cotabot_pronto', 'cotabot_uso'
 ]);
 
 function notificar_todos(mensagem = null) {
@@ -1003,6 +1009,11 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Cotabot (gerenciador/ponte_cotabot.py). Só o robô chega aqui (EVENTOS_DO_ROBO).
+    socket.on('cotabot_status', (dados) => cotabot.status(dados || {}));
+    socket.on('cotabot_pronto', (dados) => cotabot.pronto(dados || {}));
+    socket.on('cotabot_uso', (dados) => cotabot.receberUso(dados || {}));
+
     socket.on('dav_pronto', (dados) => {
         const evento = String((dados && dados.evento) || '').trim();
         if (!EVENTO_VALIDO.test(evento)) return;
@@ -1145,6 +1156,7 @@ io.on('connection', (socket) => {
             const hasPlanilhaAccess = Boolean(dados.hasPlanilhaAccess || dados.isAdmin);
             const hasBuscaOutrosAccess = Boolean(dados.hasBuscaOutrosAccess || dados.isAdmin);
             const hasEmailsAccess = Boolean(dados.hasEmailsAccess || dados.isAdmin);   // não libera portais
+            const hasCotabotAccess = Boolean(dados.hasCotabotAccess || dados.isAdmin);   // tela do Cotabot; não libera portais
             cofreSessoes.set(sessionId, JSON.stringify({ 
                 email: dados.user, 
                 admin: dados.isAdmin, 
@@ -1154,6 +1166,7 @@ io.on('connection', (socket) => {
                 planilha_access: hasPlanilhaAccess,
                 busca_outros_access: hasBuscaOutrosAccess,
                 emails_access: hasEmailsAccess,
+                cotabot_access: hasCotabotAccess,
                 vendedor: dados.vendedor || '',
                 nome: dados.nome || '',   // nome completo: decide o dono das cotações (lib/dono-cotacao.js)
                 setor: dados.setor || '',
@@ -1171,6 +1184,7 @@ io.on('connection', (socket) => {
                 planilha_access: hasPlanilhaAccess,
                 busca_outros_access: hasBuscaOutrosAccess,
                 emails_access: hasEmailsAccess,
+                cotabot_access: hasCotabotAccess,
                 vendedor: dados.vendedor || '',
                 nome: dados.nome || '',    // nome da conta no topo do Financeiro
                 setor: dados.setor || ''   // 'financeiro' abre financeiro.html
@@ -1245,6 +1259,7 @@ io.on('connection', (socket) => {
         if (socket.id === bot_socket_id) {
             bot_socket_id = null; marcarConexao('gerenciador', false);
             sincronizacao.fonteCaiu('robo');
+            cotabot.roboCaiu();
             console.log("❌ Ligação com o Robô Local perdida.");
         }
         if (socket.id === emails_socket_id) {
@@ -1275,6 +1290,7 @@ io.on('connection', (socket) => {
                 portais_access: !!db[email].portais_access,
                 busca_outros_access: !!db[email].busca_outros_access,
                 emails_access: !!db[email].emails_access,
+                cotabot_access: !!db[email].cotabot_access,
                 bloqueado: !!db[email].bloqueado,
                 vendedor: db[email].vendedor || '',
                 nome: db[email].nome || '',
@@ -1337,7 +1353,7 @@ io.on('connection', (socket) => {
 
     socket.on('admin_alterar_acesso_dashboard', (dados) => {
         if (!checkRole('admin')) return;
-        const campo = ['dashboard_access', 'planilha_access', 'portais_access', 'busca_outros_access', 'emails_access'].includes(dados.campo)
+        const campo = ['dashboard_access', 'planilha_access', 'portais_access', 'busca_outros_access', 'emails_access', 'cotabot_access'].includes(dados.campo)
             ? dados.campo
             : 'dashboard_access';
 
@@ -1368,6 +1384,7 @@ io.on('connection', (socket) => {
                         if (dados.planilha_access !== undefined) u.planilha_access = dados.planilha_access;
                         if (dados.busca_outros_access !== undefined) u.busca_outros_access = dados.busca_outros_access || !!u.admin;
                         if (dados.emails_access !== undefined) u.emails_access = dados.emails_access || !!u.admin;
+                        if (dados.cotabot_access !== undefined) u.cotabot_access = dados.cotabot_access || !!u.admin;
                         if (u.dashboard_access) u.portais_access = true;
                         cofreSessoes.set(sId, JSON.stringify(u));
                     }
@@ -2269,6 +2286,45 @@ Regras rígidas:
         console.error("Erro no chat:", error);
         res.status(500).json({ error: "Falha na comunicação com IA." });
     }
+});
+
+// === COTABOT (public/cotabot.html) ===
+// Sessão no cabeçalho x-session-id (nunca na URL). Vale para admin ou quem tem "Cotabot" (cotabot_access).
+function fichaCotabot(req, res) {
+    const sessionId = req.get('x-session-id');
+    const ficha = sessionId ? lerSessao(cofreSessoes, { sessionId }) : null;
+    if (!ficha) { res.status(401).json({ error: 'Sessão inválida ou expirada. Entre novamente.' }); return null; }
+    if (ficha.admin !== true && ficha.cotabot_access !== true) { res.status(403).json({ error: 'Sem acesso ao Cotabot.' }); return null; }
+    return ficha;
+}
+
+app.post('/api/cotabot/cotar', (req, res) => {
+    const ficha = fichaCotabot(req, res);
+    if (!ficha) return;
+    const corpo = req.body || {};
+    const r = cotabot.pedir({ email: ficha.email, vendedor: ficha.vendedor || ficha.nome, evento: corpo.evento, itens: corpo.itens, sites: corpo.sites });
+    if (r.erro) return res.status(r.status || 400).json({ error: r.erro });
+    registrarAuditoria({
+        email: ficha.email, ip: String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.ip,
+        area: 'portal', acao: 'cotabot_cotar', alvo: r.pedido.evento || r.pedido.id, detalhes: { qtd_itens: r.pedido.itens.length }
+    });
+    res.json({ sucesso: true, id: r.pedido.id });
+});
+
+app.get('/api/cotabot/estado', (req, res) => {
+    const ficha = fichaCotabot(req, res);
+    if (!ficha) return;
+    res.set('Cache-Control', 'no-store');
+    res.json(cotabot.estadoPara(ficha));
+});
+
+app.get('/api/cotabot/planilha/:id', (req, res) => {
+    const ficha = fichaCotabot(req, res);
+    if (!ficha) return;
+    const arq = cotabot.planilhaPara(req.params.id, ficha);
+    if (!arq) return res.status(404).json({ error: 'Planilha não encontrada.' });
+    res.set({ 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
+    res.download(arq.caminho, arq.nome);
 });
 
 app.get('/api/planilha-anmyna', (req, res) => {

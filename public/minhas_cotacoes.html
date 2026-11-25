@@ -39,6 +39,8 @@
         const temAcessoEstatisticas = isAdmin || localStorage.getItem('maestro_dashboard') === 'true';
         // Só evita pedir à toa: quem confere a permissão "Pesquisar cotações de outros vendedores" é o servidor
         const podeBuscarOutrosVendedores = isAdmin || localStorage.getItem('maestro_busca_outros') === 'true';
+        // Cotabot (robô que cota): só aparece para quem tem a permissão "Cotabot" na tela de Contas
+        const temAcessoCotabot = isAdmin || localStorage.getItem('maestro_cotabot') === 'true';
 
         const socket = io({ auth: { sessionId: sessionAtual }, transports: ['websocket'], upgrade: false });
 

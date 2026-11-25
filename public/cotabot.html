@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+    <title>MAESTRO | Cotabot</title>
+    <link rel="icon" type="image/png" href="favicon-32x32.png">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700&family=JetBrains+Mono:wght@500;600&display=swap">
+    <link rel="stylesheet" href="dashboard-cotacoes/style.css">
+    <link rel="stylesheet" href="dashboard-comum/comum.css">
+    <link rel="stylesheet" href="cotabot/tela.css">
+</head>
+<body>
+    <nav class="dash-nav" aria-label="Topo">
+        <a class="brand" href="minhas_cotacoes.html"><span class="brand-logo"><img src="img/logo-maestro-dashboard.png" alt=""></span><span class="brand-texto">MAESTRO</span></a>
+        <a class="voltar" href="minhas_cotacoes.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+            <span>Voltar para Minhas cotações</span>
+        </a>
+    </nav>
+
+    <main class="cb-main">
+        <header class="cb-cabecalho">
+            <div>
+                <span class="cb-eyebrow">Robô de cotação</span>
+                <h1>Cotabot</h1>
+                <p class="muted">Informe os itens do evento. O robô pesquisa nos fornecedores e devolve a Planilha Base preenchida.</p>
+            </div>
+            <span class="cb-status off" id="cb-robo"><span class="status-dot"></span><span>Robô não conectado</span></span>
+        </header>
+
+        <section class="cb-card" aria-labelledby="cb-uso-titulo">
+            <h2 id="cb-uso-titulo" class="cb-rotulo">Uso do plano Claude pelo robô</h2>
+            <div class="cb-usos" id="cb-usos">
+                <div class="cb-uso"><small>Limite de 5 horas</small><b>—</b><div class="cb-barra"><i></i></div><small>sem leitura ainda</small></div>
+                <div class="cb-uso"><small>Limite semanal</small><b>—</b><div class="cb-barra"><i></i></div><small>sem leitura ainda</small></div>
+                <div class="cb-uso"><small>Média por item</small><b>—</b><small>nenhum item medido</small></div>
+            </div>
+            <small class="cb-limite" id="cb-uso-lido"></small>
+        </section>
+
+        <form class="cb-card" id="cb-form" novalidate>
+            <div class="cb-sec">
+                <label class="cb-rotulo" for="cb-evento">Número do evento</label>
+                <input id="cb-evento" class="cb-input" maxlength="40" placeholder="ex.: 310170" autocomplete="off">
+            </div>
+            <div class="cb-sec">
+                <span class="cb-rotulo" id="cb-itens-rotulo">Itens (descrição e quantidade)</span>
+                <div id="cb-itens" role="list" aria-labelledby="cb-itens-rotulo"></div>
+                <button type="button" class="button small" id="cb-add">+ Adicionar item</button>
+                <small class="cb-limite" id="cb-contador"></small>
+            </div>
+            <div class="cb-sec">
+                <label class="cb-rotulo" for="cb-sites">Sites para cotar (opcional, um por linha)</label>
+                <textarea id="cb-sites" class="cb-input" rows="3" placeholder="Vazio = 9 fornecedores padrão (Martins, Tambasa, FastShop, Casa e Vídeo, Fujioka, Bartofil, Gazin, Friopeças, Belmicro) + Google.&#10;Escreva google numa linha para incluir o Google. Ex.: kabum.com.br"></textarea>
+            </div>
+            <div class="cb-sec cb-acoes">
+                <button type="submit" class="button primary" id="cb-enviar">Cotar itens</button>
+                <div class="cb-aviso" id="cb-aviso" role="status" aria-live="polite"></div>
+            </div>
+        </form>
+
+        <section class="cb-card" aria-labelledby="cb-pedidos-titulo">
+            <h2 id="cb-pedidos-titulo" class="cb-rotulo">Minhas cotações no Cotabot</h2>
+            <div id="cb-pedidos"><p class="muted">Nenhuma cotação enviada ainda.</p></div>
+        </section>
+    </main>
+
+    <script src="cotabot/tela.js"></script>
+</body>
+</html>

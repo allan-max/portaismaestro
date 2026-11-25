@@ -351,6 +351,7 @@
                     </details>
                 ` : ''}
                 ${(typeof temAcessoPortais !== 'undefined' && temAcessoPortais) ? `<a href="index.html?portais=1">${icone('robo')}<span>Portais</span></a>` : ''}
+                ${(typeof temAcessoCotabot !== 'undefined' && temAcessoCotabot) ? `<a href="cotabot.html">${icone('busca')}<span>Cotabot</span></a>` : ''}
                 ${(typeof temAcessoEstatisticas !== 'undefined' && temAcessoEstatisticas) ? `<a href="dashboard2.html">${icone('cotacoes')}<span>Estatísticas</span></a>` : ''}
             </div>
             <div class="dash-nav-right">

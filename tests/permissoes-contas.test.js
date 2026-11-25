@@ -40,9 +40,10 @@ test('contas: tabela nao contem coluna de Planilha Geral e contem Portais e Esta
     assert.doesNotMatch(html, /Permissões ·/);
     const cabecalho = [...html.matchAll(/<th>([^<]*)<\/th>/g)].map(m => m[1]);
     assert.deepEqual(cabecalho, ['Usuário (E-mail)', 'Vendedor vinculado (Planilha)', 'Setor', 'Portais (Robôs)',
-        'Estatísticas (Comercial)', 'Planilhas', 'Pesquisar cotações de outros vendedores', 'E-mails', 'Ações']);
+        'Estatísticas (Comercial)', 'Planilhas', 'Pesquisar cotações de outros vendedores', 'E-mails', 'Cotabot', 'Ações']);
     assert.match(html, /data-campo="portais_access"/);
     assert.match(html, /data-campo="emails_access"/);
+    assert.match(html, /data-campo="cotabot_access"/);
     assert.match(html, /data-campo="dashboard_access"/);
 });
 
