@@ -372,6 +372,33 @@
         @keyframes trex-braco { from { transform: rotate(-20deg); } to { transform: rotate(25deg); } }
         @keyframes trex-boca { from { transform: rotate(0deg); } to { transform: rotate(11deg); } }
 
+        /* 🧔 VOLTA PARA VALE: um senhor de barba branca e terno empurra o "Base", que gruda no "Metais",
+           e leva o "BaseMetais" para trás do painel. Perto do painel ele solta um "Faz o L!". */
+        .cena-trex .palavra { position: absolute; margin: 0; white-space: nowrap; will-change: transform; }
+        .cena-trex .palavra::before { display: none; }
+        .cena-trex .empurrador { position: absolute; will-change: transform; filter: drop-shadow(0 8px 10px rgba(0,0,0,0.35)); }
+        .empurrador .corpo { animation: pres-balanca 0.36s ease-in-out infinite alternate; transform-origin: 50% 100%; }
+        .empurrador .perna { transform-box: fill-box; transform-origin: 50% 0; }
+        .empurrador .perna-frente { animation: pres-passo 0.36s ease-in-out infinite alternate; }
+        .empurrador .perna-tras { animation: pres-passo 0.36s ease-in-out infinite alternate-reverse; }
+        .empurrador.parado .corpo, .empurrador.parado .perna { animation-play-state: paused; }
+        @keyframes pres-balanca { from { transform: translateY(0); } to { transform: translateY(-3px); } }
+        @keyframes pres-passo { from { transform: rotate(-20deg); } to { transform: rotate(18deg); } }
+        .cena-trex .fala {
+            position: absolute; padding: 10px 16px; border-radius: 16px;
+            background: #fff; color: #C8102E; font-weight: 800; font-size: 1.35rem; white-space: nowrap;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            transform-origin: 85% 100%; scale: 0; opacity: 0;
+        }
+        .cena-trex .fala::after {
+            content: ''; position: absolute; right: 18px; bottom: -10px;
+            border: 10px solid transparent; border-top-color: #fff; border-bottom: 0;
+        }
+        .cena-trex .fala.mostra { animation: fala-aparece 0.4s cubic-bezier(.3,1.6,.5,1) forwards; }
+        @keyframes fala-aparece { from { scale: 0; opacity: 0; } to { scale: 1; opacity: 1; } }
+        .cena-trex .fala.some { animation: fala-some 0.3s ease-in forwards; }
+        @keyframes fala-some { from { scale: 1; opacity: 1; } to { scale: 0.8; opacity: 0; } }
+
         .cena-trex .poeira {
             position: absolute; width: 16px; height: 16px; border-radius: 50%;
             background: rgba(230, 220, 200, 0.55);
@@ -737,12 +764,165 @@
         let trexRodando = false;
         function escolherEmpresa(chave) {
             const semAnimacao = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-            if (chave !== 'vale_base_metais' || chave === empresaAtual || semAnimacao || trexRodando) {
-                if (!trexRodando) trocarEmpresa(chave);
-                return;
-            }
-            correrTrex(() => trocarEmpresa(chave));
+            if (trexRodando) return;
+            if (chave === empresaAtual || semAnimacao) { trocarEmpresa(chave); return; }
+            if (chave === 'vale_base_metais') correrTrex(() => trocarEmpresa(chave));
+            else if (chave === 'vale') empurrarBaseMetais(() => trocarEmpresa(chave));
+            else trocarEmpresa(chave);
         }
+
+        // 🧔 Vale Base Metais -> Vale: senhor de barba branca empurra o "BaseMetais" para trás do painel
+        const PRESIDENTE_SVG = `
+<svg viewBox="0 0 110 160" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <g class="corpo">
+    <g class="perna perna-tras">
+      <path d="M40 98 L34 140 L44 141 L50 100 Z" fill="#18223A"/>
+      <path d="M30 138 h18 q5 0 5 5 v3 h-24 z" fill="#111"/>
+    </g>
+    <!-- paletó, inclinado para frente (empurrando) -->
+    <path d="M38 52 C46 46 62 46 70 54 L66 100 L36 102 C32 86 32 66 38 52 Z" fill="#22304F"/>
+    <path d="M56 50 L64 52 L58 76 Z" fill="#F4F4F4"/>
+    <path d="M59 54 L62 55 L60 72 L57 74 Z" fill="#C8102E"/>
+    <path d="M48 52 L58 76 L52 66 Z" fill="#1A2540"/>
+    <!-- braço de trás -->
+    <path d="M60 58 L94 64 L94 71 L58 68 Z" fill="#1A2540"/>
+    <circle cx="97" cy="67.5" r="5" fill="#D9A27E"/>
+    <!-- cabeça -->
+    <circle cx="64" cy="32" r="15" fill="#E2AE88"/>
+    <path d="M50 34 C48 22 54 16 62 16 C56 18 52 24 53 32 Z" fill="#BDBDBD"/>
+    <path d="M52 22 C58 15 70 15 76 21 C70 18 60 18 52 24 Z" fill="#D6D6D6"/>
+    <!-- barba branca -->
+    <path d="M52 34 C52 44 58 52 66 52 C74 52 80 46 80 36 C76 40 72 42 66 42 C60 42 56 40 52 34 Z" fill="#ECECEC"/>
+    <path d="M64 40 C68 38 74 38 77 40 C74 42 68 43 64 40 Z" fill="#DCDCDC"/>
+    <path d="M67 41 q4 2 8 0" stroke="#8A4B3A" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+    <path d="M77 30 q4 3 1 6" stroke="#B07A5C" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+    <path d="M66 26 q4 -2 8 0" stroke="#7A7A7A" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <circle cx="71" cy="29.5" r="1.5" fill="#2A1A12"/>
+    <circle cx="57" cy="33" r="3" fill="#D9A27E"/>
+    <!-- braço da frente -->
+    <path d="M58 60 L96 70 L96 78 L56 70 Z" fill="#22304F"/>
+    <path d="M94 69 l4 0 l0 10 l-4 -1 z" fill="#F4F4F4"/>
+    <circle cx="101" cy="74" r="5.5" fill="#E2AE88"/>
+    <g class="perna perna-frente">
+      <path d="M48 98 L50 140 L60 140 L60 100 Z" fill="#1F2A44"/>
+      <path d="M46 138 h18 q5 0 5 5 v3 h-24 z" fill="#111"/>
+    </g>
+  </g>
+</svg>`;
+
+        function empurrarBaseMetais(aoSumir) {
+            trexRodando = true;
+            const hero = document.querySelector('.hero');
+            const foto = document.querySelector('.foto-lado');
+            const h1 = document.getElementById('hero-empresa');
+            const rHero = hero.getBoundingClientRect();
+            const fonte = parseFloat(getComputedStyle(h1).fontSize);
+
+            // posição de cada palavra do título atual ("Vale Base Metais")
+            const no = h1.firstChild, texto = no.textContent;
+            const caixa = (ini, fim) => {
+                const r = document.createRange(); r.setStart(no, ini); r.setEnd(no, fim);
+                const b = r.getBoundingClientRect();
+                return { left: b.left - rHero.left, top: b.top - rHero.top, width: b.width, height: b.height };
+            };
+            const iBase = texto.indexOf('Base'), iMetais = texto.indexOf('Metais');
+            const pVale = caixa(0, 4), pBase = caixa(iBase, iBase + 4), pMetais = caixa(iMetais, iMetais + 6);
+
+            const cena = document.createElement('div');
+            cena.className = 'cena-trex';
+            hero.appendChild(cena);
+            const palavra = (txt, p) => {
+                const el = document.createElement('div');
+                el.className = 'hero-empresa palavra'; el.textContent = txt;
+                Object.assign(el.style, { left: p.left + 'px', top: p.top + 'px' });
+                cena.appendChild(el); return el;
+            };
+            const elVale = palavra('Vale', pVale);
+            const elMetais = palavra('Metais', pMetais);
+            const elBase = palavra('Base', pBase);
+
+            const pres = document.createElement('div');
+            pres.className = 'empurrador';
+            pres.innerHTML = PRESIDENTE_SVG;
+            const alt = Math.max(120, fonte * 2.6), larg = alt * 110 / 160;
+            const chao = pBase.top + pBase.height * 0.92;
+            Object.assign(pres.style, { width: larg + 'px', height: alt + 'px', top: (chao - alt) + 'px' });
+            cena.insertBefore(pres, elVale);                          // passa por trás do "Vale"
+            const maoX = larg * 0.97;                                  // ponta das mãos, em relação ao boneco
+
+            const fala = document.createElement('div');
+            fala.className = 'fala'; fala.textContent = 'Faz o L!';
+            fala.style.top = (chao - alt - 48) + 'px';
+            cena.appendChild(fala);
+
+            h1.style.color = 'transparent';
+            h1.style.minHeight = h1.offsetHeight + 'px';   // no celular o título cai de 2 para 1 linha: segura a altura até o fim da cena
+
+            const heroLeft = hero.offsetLeft, borda = foto.clientWidth - heroLeft;   // borda do painel, em coordenadas do .hero
+            const inicio = -heroLeft - larg - 20;
+            const vAndar = 0.34, vEmpurrar = 0.24;
+            // se "Metais" está em outra linha (celular), ele pula para o lado do "Base" quando o empurrão começa
+            const mesmaLinha = Math.abs(pMetais.top - pBase.top) < 4;
+            let t0 = null, xAtual = inicio, ultimo = null, encostou = false, falou = false, sumiu = false, paradoAte = null, pulo = null;
+
+            function quadro(agora) {
+                if (t0 === null) { t0 = agora; ultimo = agora; }
+                const dt = agora - ultimo; ultimo = agora;
+                const mao = xAtual + maoX;
+
+                if (paradoAte !== null && agora < paradoAte) { requestAnimationFrame(quadro); return; }
+                if (paradoAte !== null) { paradoAte = null; pres.classList.remove('parado'); }
+
+                xAtual += (encostou ? vEmpurrar : vAndar) * dt;
+                pres.style.transform = `translateX(${xAtual}px)`;
+                fala.style.left = (xAtual + larg * 0.62 - fala.offsetWidth) + 'px';   // balão à esquerda da cabeça, sem cortar no painel
+
+                if (!encostou && mao >= pBase.left) {
+                    encostou = true;
+                    if (!mesmaLinha) pulo = agora;
+                }
+                if (encostou && !sumiu) {
+                    const baseX = mao - pBase.left;
+                    elBase.style.transform = `translateX(${baseX}px)`;
+                    const fimBase = pBase.left + baseX + pBase.width;
+                    if (mesmaLinha) {
+                        const metaisX = Math.max(0, fimBase - pMetais.left);
+                        elMetais.style.transform = `translateX(${metaisX}px)`;
+                    } else {
+                        // pulinho de "Metais" até grudar no "Base"
+                        const k = Math.min(1, (agora - pulo) / 350);
+                        const dx = (fimBase - pMetais.left) * k + (1 - k) * 0;
+                        const dy = (pBase.top - pMetais.top) * k - Math.sin(Math.PI * k) * 30;
+                        elMetais.style.transform = `translate(${k < 1 ? dx : fimBase - pMetais.left}px, ${dy}px)`;
+                    }
+                    // "Faz o L!" quando chega perto do painel
+                    if (!falou && mao >= borda - fonte * 2.2) {
+                        falou = true;
+                        fala.classList.add('mostra');
+                    }
+                    // "BaseMetais" sumiu atrás do painel: troca a empresa e ele para para falar
+                    if (pBase.left + baseX >= borda) {
+                        sumiu = true;
+                        elBase.remove(); elMetais.remove();
+                        aoSumir();
+                        pres.classList.add('parado');
+                        paradoAte = agora + 1400;
+                    }
+                }
+                if (sumiu && paradoAte === null && xAtual > borda + 10) {
+                    h1.style.color = ''; h1.style.minHeight = '';
+                    cena.remove();
+                    trexRodando = false;
+                    return;
+                }
+                if (sumiu && paradoAte === null && !fala.classList.contains('some')) {
+                    fala.classList.add('some');
+                }
+                requestAnimationFrame(quadro);
+            }
+            requestAnimationFrame(quadro);
+        }
+
 
         function correrTrex(aoPousar) {
             trexRodando = true;
