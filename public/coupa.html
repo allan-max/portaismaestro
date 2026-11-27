@@ -114,28 +114,28 @@
         .hero-numeros dd { margin: 0; font-size: 1.8rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 
         /* ================= LADO DIREITO: PAINEL ================= */
-        .painel-lado { background: var(--painel); transition: background 0.4s; overflow-y: auto; padding: 96px 36px 40px 36px; }
+        .painel-lado { background: var(--painel); transition: background 0.4s; overflow-y: auto; padding: 82px 28px 20px 28px; }
         .painel-lado::-webkit-scrollbar { width: 6px; }
         .painel-lado::-webkit-scrollbar-thumb { background: var(--linha-forte); border-radius: 6px; }
 
         .header-card { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 4px; }
-        .header-card h2 { margin: 0; font-size: 1.25rem; font-weight: 800; display: flex; align-items: center; gap: 10px; white-space: nowrap; flex-shrink: 0; }
-        .header-card h2 img { height: 32px; width: auto; }
+        .header-card h2 { margin: 0; font-size: 1.12rem; font-weight: 800; display: flex; align-items: center; gap: 10px; white-space: nowrap; flex-shrink: 0; }
+        .header-card h2 img { height: 26px; width: auto; }
         .status-badge { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 5px 10px; border-radius: 999px; background: var(--nevoa); }
         #log { font-size: 0.75rem; color: var(--cinza); max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .led { width: 8px; height: 8px; border-radius: 50%; background: var(--desligado); flex-shrink: 0; }
         .led.active { background: var(--ok); }
         .led.running { background: var(--trabalhando); }
         .led.offline { background: var(--perigo); }
-        .sub { margin: 0 0 24px 0; font-size: 0.92rem; color: var(--cinza); }
+        .sub { margin: 0 0 12px 0; font-size: 0.85rem; color: var(--cinza); }
 
         /* SELETOR DE EMPRESA (Vale usa o portal 'coupa', Vale Base Metais usa o portal 'vale') */
-        .seletor-empresa { border: 0; padding: 0; margin: 0 0 18px 0; min-width: 0; }
+        .seletor-empresa { border: 0; padding: 0; margin: 0 0 12px 0; min-width: 0; }
         .seletor-empresa legend { padding: 0; margin-bottom: 8px; font-size: 0.85rem; font-weight: 600; color: var(--cinza); }
         .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .seg-opcao {
             position: relative; display: flex; align-items: center; gap: 10px;
-            padding: 14px; border-radius: 12px;
+            padding: 10px 12px; border-radius: 10px;
             border: 1.5px solid var(--linha); background: var(--papel);
             font-weight: 700; line-height: 1.2; color: var(--tinta);
             cursor: pointer; transition: border-color 0.2s, background 0.2s;
@@ -155,10 +155,10 @@
         .btn-base {
             width: 100%;
             display: flex; justify-content: center; align-items: center; gap: 10px;
-            margin-bottom: 10px; padding: 13px 14px; min-height: 48px;
+            margin-bottom: 8px; padding: 8px 12px; min-height: 40px;
             border-radius: 12px; border: 1.5px solid var(--linha);
             background: var(--papel); color: var(--tinta);
-            font-family: inherit; font-size: 0.95rem; font-weight: 700;
+            font-family: inherit; font-size: 0.88rem; font-weight: 700;
             cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
         }
         .btn-base i { width: 1em; text-align: center; }
@@ -166,7 +166,10 @@
         .btn-base:active:not(:disabled) { transform: translateY(1px); }
         .btn-base:disabled { opacity: 0.45; cursor: not-allowed; }
 
-        #btn-ligar { padding: 15px 14px; font-size: 1rem; background: var(--tinta); border-color: var(--tinta); color: #fff; margin-bottom: 14px; }
+        #btn-ligar { font-size: 0.95rem; background: var(--tinta); border-color: var(--tinta); color: #fff; }
+        /* ligar e imprimir lado a lado: economiza uma linha inteira */
+        .linha-acoes { display: grid; grid-template-columns: 1.6fr 1fr; gap: 8px; margin-bottom: 10px; }
+        .linha-acoes .btn-base { margin-bottom: 0; }
         #btn-ligar:hover:not(:disabled) { background: #1C4046; border-color: #1C4046; }
         #btn-ligar.btn-assumir { background: var(--perigo-claro); border-color: var(--perigo); color: var(--perigo); }
 
@@ -177,18 +180,17 @@
         }
         .btn-stop:hover:not(:disabled), #btn-ligar.btn-stop:hover:not(:disabled) { background: var(--perigo) !important; color: #fff !important; }
 
-        #btn-abrir-res, .btn-destaque { grid-column: span 2; background: var(--amarelo); border-color: var(--amarelo); color: var(--tinta); }
+        #btn-abrir-res, .btn-destaque { background: var(--amarelo); border-color: var(--amarelo); color: var(--tinta); }
         #btn-abrir-res:hover:not(:disabled), .btn-destaque:hover:not(:disabled) { background: #E0A800; border-color: #E0A800; }
-        #btn-pedidos { grid-column: span 2; }
 
         /* CONTADORES (aparecem durante a extração e quando há arquivos para imprimir) */
         .contador {
-            display: none; margin-bottom: 10px; padding: 12px 14px;
+            display: none; margin-bottom: 8px; padding: 7px 12px;
             border-radius: 12px; background: var(--nevoa);
             font-size: 0.9rem; color: var(--cinza);
         }
         .contador strong { font-size: 1.3rem; font-weight: 800; color: var(--tinta); margin-left: 4px; font-variant-numeric: tabular-nums; }
-        .contador .par { display: flex; justify-content: space-between; gap: 12px; }
+        .contador .par { display: flex; justify-content: flex-start; gap: 28px; }
 
         /* CAPTCHA */
         #area-captcha {
@@ -201,7 +203,7 @@
         #imagem-captcha { max-width: 100%; border-radius: 8px; cursor: crosshair; display: block; }
 
         /* MÓDULOS E TRAVA */
-        .modulos { position: relative; margin-top: 8px; min-height: 260px; }
+        .modulos { position: relative; margin-top: 4px; min-height: 220px; }
         .lock-overlay {
             position: absolute; inset: 0; z-index: 50;
             display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
@@ -218,23 +220,26 @@
         }
         #txt-status i { color: var(--cor-empresa); }
 
-        .grid-botoes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        /* Extrair, Verificar e Pedidos numa linha só; Responder ocupa a linha de baixo */
+        .grid-botoes { display: flex; flex-wrap: wrap; gap: 8px; }
+        .grid-botoes .btn-base { width: auto; flex: 1 1 0; min-width: 0; padding: 8px 6px; gap: 7px; }
+        .grid-botoes #btn-abrir-res { flex-basis: 100%; }
         .grid-botoes .btn-base { margin-bottom: 0; }
 
         /* LOG E FILAS */
         .terminal-box {
-            margin-top: 18px; padding: 14px; height: 140px; overflow-y: auto;
+            margin-top: 10px; padding: 10px 12px; height: 96px; overflow-y: auto;
             border-radius: 12px; background: var(--nevoa);
             font-family: ui-monospace, Consolas, monospace; font-size: 0.8rem; line-height: 1.6;
             color: #33474A;
         }
         .terminal-box div { color: #33474A !important; }
 
-        .fila-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
-        .fila-box { padding: 12px; border-radius: 12px; border: 1.5px solid var(--linha); }
+        .fila-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+        .fila-box { padding: 8px 10px; border-radius: 10px; border: 1.5px solid var(--linha); }
         .fila-box h4 { margin: 0 0 6px 0; font-size: 0.85rem; font-weight: 700; color: var(--cinza); display: flex; align-items: center; gap: 7px; }
-        .fila-list { list-style: none; padding: 0; margin: 0; font-size: 0.9rem; color: var(--tinta); }
-        .fila-list li { padding: 5px 0; border-bottom: 1px solid var(--linha); display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+        .fila-list { list-style: none; padding: 0; margin: 0; max-height: 96px; overflow-y: auto; font-size: 0.9rem; color: var(--tinta); }
+        .fila-list li { padding: 3px 0; border-bottom: 1px solid var(--linha); display: flex; justify-content: space-between; align-items: center; gap: 6px; }
         .fila-list li:last-child { border-bottom: none; }
         .fila-list li[style*="color: #64748b"] { color: var(--cinza) !important; }
         .fila-list li span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -353,8 +358,9 @@
         @media (max-width: 480px) {
             .floating-navbar { gap: 2px; padding: 5px 6px; max-width: calc(100vw - 16px); }
             .nav-item { padding: 9px; font-size: 14px; }
-            .grid-botoes, .fila-grid { grid-template-columns: 1fr; }
-            #btn-abrir-res, #btn-pedidos { grid-column: span 1; }
+            .fila-grid { grid-template-columns: 1fr; }
+            .grid-botoes .btn-base { flex-basis: 100%; }
+            .linha-acoes { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -411,9 +417,12 @@
                 <p id="aviso-empresa" class="aviso-empresa" hidden>Desligue o robô para trocar de empresa.</p>
             </fieldset>
 
-            <button id="btn-ligar" onclick="ligarRobo()" class="btn-base">
-                <i class="fa-solid fa-power-off"></i> Iniciar servidor
-            </button>
+            <div class="linha-acoes">
+                <button id="btn-ligar" onclick="ligarRobo()" class="btn-base">
+                    <i class="fa-solid fa-power-off"></i> Iniciar servidor
+                </button>
+                <button id="btn-imprimir" class="btn-base" onclick="solicitarImpressao()"><i class="fa-solid fa-print"></i> Imprimir</button>
+            </div>
 
             <div id="painel-progresso" class="contador">
                 <div class="par"><span>Eventos novos <strong id="qtd-novos">0</strong></span><span>Extraídos <strong id="qtd-retirados">0</strong></span></div>
@@ -423,7 +432,6 @@
                 Prontos para imprimir <strong id="qtd-arquivos-imprimir">0</strong>
             </div>
 
-            <button id="btn-imprimir" class="btn-base" onclick="solicitarImpressao()"><i class="fa-solid fa-print"></i> Imprimir arquivos</button>
 
             <div id="area-captcha">
                 <h4><i class="fa-solid fa-shield-halved"></i> O portal pediu um captcha</h4>
@@ -678,7 +686,7 @@
             }
 
             const btnImprimir = document.getElementById('btn-imprimir');
-            if (btnImprimir) { btnImprimir.innerHTML = '<i class="fa-solid fa-print"></i> Imprimir arquivos'; btnImprimir.disabled = false; }
+            if (btnImprimir) { btnImprimir.innerHTML = '<i class="fa-solid fa-print"></i> Imprimir'; btnImprimir.disabled = false; }
 
             const listaPendentes = document.getElementById('lista-pendentes');
             if (estado.fila_pendente && estado.fila_pendente.length > 0) {
