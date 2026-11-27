@@ -13,6 +13,10 @@
 </head>
 <body>
     <nav class="dash-nav" aria-label="Topo">
+        <button type="button" class="button cb-config" id="cb-config" title="Padrões de fornecedores por categoria ou marca">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+            <span>Configurações</span>
+        </button>
         <a class="brand" href="minhas_cotacoes.html"><span class="brand-logo"><img src="img/logo-maestro-dashboard.png" alt=""></span><span class="brand-texto">MAESTRO</span></a>
         <a class="voltar" href="minhas_cotacoes.html">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
@@ -52,8 +56,8 @@
                 <small class="cb-limite" id="cb-contador"></small>
             </div>
             <div class="cb-sec">
-                <label class="cb-rotulo" for="cb-sites">Sites para cotar (opcional, um por linha)</label>
-                <textarea id="cb-sites" class="cb-input" rows="3" placeholder="Vazio = 9 fornecedores padrão (Martins, Tambasa, FastShop, Casa e Vídeo, Fujioka, Bartofil, Gazin, Friopeças, Belmicro) + Google.&#10;Escreva google numa linha para incluir o Google. Ex.: kabum.com.br"></textarea>
+                <label class="cb-rotulo" for="cb-sites">Mais lugares para cotar (opcional, um por linha, vale para todos os itens)</label>
+                <textarea id="cb-sites" class="cb-input" rows="3" placeholder="Somam aos lugares marcados em cada item. Ex.: kabum.com.br"></textarea>
             </div>
             <div class="cb-sec cb-acoes">
                 <button type="submit" class="button primary" id="cb-enviar">Cotar itens</button>
@@ -67,6 +71,10 @@
         </section>
     </main>
 
+    <dialog class="cb-dialogo" id="cb-dialogo" aria-label="Padrões de fornecedores"></dialog>
+
+    <script src="cotabot/reconhecer.js"></script>
+    <script src="cotabot/config.js"></script>
     <script src="cotabot/tela.js"></script>
 </body>
 </html>

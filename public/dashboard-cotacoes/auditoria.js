@@ -5,7 +5,7 @@
   const ROTULOS = {
     editar_linha: 'Editou linha', apagar_linha: 'Apagou linha', marcar_respondida: 'Marcou cotação como respondida',
     atribuir_vendedor: 'Atribuiu vendedor', cotacao_manual: 'Registrou cotação manual', pedido_manual: 'Registrou pedido manual',
-    sincronizar_nf: 'Sincronizou NFs', gravar_nf_planilha: 'Gravou NF na planilha', responder_evento: 'Respondeu evento', cotabot_cotar: 'Pediu cotação ao Cotabot',
+    sincronizar_nf: 'Sincronizou NFs', gravar_nf_planilha: 'Gravou NF na planilha', responder_evento: 'Respondeu evento', cotabot_cotar: 'Pediu cotação ao Cotabot', cotabot_padrao: 'Salvou padrão do Cotabot', cotabot_padrao_apagado: 'Apagou padrão do Cotabot',
     cancelar_evento: 'Cancelou evento', extracao_fila: 'Iniciou extração em fila', imprimir: 'Imprimiu evento',
     robo_ligar_robo: 'Ligou o robô', robo_desligar_robo: 'Desligou o robô', robo_forcar_troca: 'Forçou troca de portal',
     robo_solicitar_parada: 'Pediu parada do robô', robo_parar_extracao: 'Parou a extração', robo_extrair: 'Iniciou extração',

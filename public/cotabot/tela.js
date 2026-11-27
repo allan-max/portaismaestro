@@ -26,6 +26,104 @@
         $('cb-contador').textContent = `${linhas.length} de ${MAX_ITENS} itens`;
     }
 
+    // ---------- padrões: onde cotar cada item (lib/cotabot-padroes.js no servidor) ----------
+    const R = window.CotabotReconhecer;
+    let padroes = [];
+
+    // Grupos que aparecem no item: reconhecidos pela descrição + os que a pessoa adicionou; nenhum = padrão geral.
+    function gruposDoItem(linha) {
+        const desc = linha.querySelector('.cb-desc').value;
+        const grupos = R.reconhecer(desc, padroes).map(a => ({ padrao: a.padrao, motivo: `achou "${a.palavra}"` }));
+        for (const id of linha._manuais) {
+            const p = padroes.find(x => x.id === id);
+            if (p && !grupos.some(g => g.padrao.id === id)) grupos.push({ padrao: p, motivo: 'adicionado', manual: true });
+        }
+        if (!grupos.length) {
+            const geral = R.padraoGeral(padroes);
+            if (geral) grupos.push({ padrao: geral, motivo: 'nenhuma categoria reconhecida' });
+        }
+        return grupos;
+    }
+
+    const chaveDe = (padrao, fornecedor) => `${padrao.id}|${fornecedor}`;
+
+    function caixinha(rotulo, marcado, aoMudar) {
+        const label = el('label', 'cb-chip');
+        const input = el('input');
+        input.type = 'checkbox';
+        input.checked = marcado;
+        input.addEventListener('change', () => aoMudar(input.checked));
+        label.append(input, el('span', '', rotulo));
+        return label;
+    }
+
+    function desenharOnde(linha) {
+        const caixa = linha.querySelector('.cb-onde');
+        caixa.replaceChildren();
+        if (!linha.querySelector('.cb-desc').value.trim()) {
+            caixa.appendChild(el('small', 'muted', 'Os lugares onde o robô vai cotar aparecem aqui quando você escrever a descrição.'));
+            return;
+        }
+        for (const g of gruposDoItem(linha)) {
+            const bloco = el('div', 'cb-grupo');
+            const topo = el('div', 'cb-grupo-topo');
+            topo.append(el('b', '', g.padrao.nome), el('small', 'muted', g.motivo));
+            if (g.manual) {
+                const tirar = el('button', 'cb-tirar', '✕');
+                tirar.type = 'button';
+                tirar.title = `Tirar ${g.padrao.nome} deste item`;
+                tirar.setAttribute('aria-label', tirar.title);
+                tirar.addEventListener('click', () => { linha._manuais.delete(g.padrao.id); desenharOnde(linha); });
+                topo.appendChild(tirar);
+            }
+            bloco.appendChild(topo);
+            const chips = el('div', 'cb-chips');
+            for (const f of g.padrao.fornecedores) {
+                const k = chaveDe(g.padrao, f);
+                chips.appendChild(caixinha(f, !linha._desmarcados.has(k), marcado => {
+                    if (marcado) linha._desmarcados.delete(k); else linha._desmarcados.add(k);
+                }));
+            }
+            bloco.appendChild(chips);
+            if (g.padrao.regra) bloco.appendChild(el('small', 'cb-regra', 'Regra de compra: ' + g.padrao.regra));
+            caixa.appendChild(bloco);
+        }
+        const rodape = el('div', 'cb-chips');
+        rodape.appendChild(caixinha('Google', linha._google, marcado => { linha._google = marcado; }));
+        const restantes = padroes.filter(p => !gruposDoItem(linha).some(g => g.padrao.id === p.id));
+        if (restantes.length) {
+            const sel = el('select', 'cb-input cb-mais');
+            sel.setAttribute('aria-label', 'Adicionar categoria a este item');
+            sel.appendChild(new Option('+ Adicionar categoria', ''));
+            restantes.forEach(p => sel.appendChild(new Option(p.nome, p.id)));
+            sel.addEventListener('change', () => {
+                if (sel.value) { linha._manuais.add(sel.value); desenharOnde(linha); }
+            });
+            rodape.appendChild(sel);
+        }
+        caixa.appendChild(rodape);
+    }
+
+    function lugaresDoItem(linha, extras) {
+        const grupos = gruposDoItem(linha).map(g => ({
+            padrao: g.padrao,
+            marcados: g.padrao.fornecedores.filter(f => !linha._desmarcados.has(chaveDe(g.padrao, f)))
+        }));
+        return R.montarLugares(grupos, linha._google, extras);
+    }
+
+    async function carregarPadroes() {
+        try {
+            const resp = await api('/api/cotabot/padroes');
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            padroes = (await resp.json()).padroes || [];
+        } catch (e) {
+            if (String(e.message) === 'sessão expirada') return;
+            aviso('Não deu para carregar os padrões de fornecedores: ' + e.message, 'erro');
+        }
+        lista.querySelectorAll('.cb-item').forEach(desenharOnde);
+    }
+
     function addItem(desc = '', qtd = 1) {
         if (lista.querySelectorAll('.cb-item').length >= MAX_ITENS) return;
         const linha = document.createElement('div');
@@ -34,18 +132,31 @@
         linha.innerHTML = `<span class="cb-n"></span>
             <textarea class="cb-input cb-desc" rows="2" maxlength="3000" placeholder="Descrição do item (pode colar a do portal)"></textarea>
             <input class="cb-input cb-qtd" type="number" min="1" inputmode="numeric" title="Quantidade">
-            <button type="button" class="icon-button cb-remover" title="Remover item">✕</button>`;
+            <button type="button" class="icon-button cb-remover" title="Remover item">✕</button>
+            <div class="cb-onde"></div>`;
+        linha._desmarcados = new Set();   // "padrao|fornecedor" que a pessoa desmarcou
+        linha._manuais = new Set();       // padrões adicionados à mão
+        linha._google = true;
         linha.querySelector('.cb-desc').value = desc;
         linha.querySelector('.cb-qtd').value = qtd;
+        let espera = null;
+        linha.querySelector('.cb-desc').addEventListener('input', () => {
+            clearTimeout(espera);
+            espera = setTimeout(() => desenharOnde(linha), 300);
+        });
         linha.querySelector('.cb-remover').addEventListener('click', () => { linha.remove(); renumerar(); });
         lista.appendChild(linha);
+        desenharOnde(linha);
         renumerar();
         return linha;
     }
 
+    // Itens com descrição, cada um com os lugares marcados + os escritos no campo de baixo (valem para todos).
     function itensPreenchidos() {
+        const extras = $('cb-sites').value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
         return [...lista.querySelectorAll('.cb-item')]
-            .map(l => ({ descricao: l.querySelector('.cb-desc').value.trim(), quantidade: l.querySelector('.cb-qtd').value }))
+            .map((l, i) => ({ n: i + 1, descricao: l.querySelector('.cb-desc').value.trim(), quantidade: l.querySelector('.cb-qtd').value,
+                ...lugaresDoItem(l, extras) }))
             .filter(i => i.descricao);
     }
 
@@ -216,13 +327,16 @@
         e.preventDefault();
         const itens = itensPreenchidos();
         if (!itens.length) return aviso('Coloque a descrição de pelo menos um item.', 'erro');
+        const semLugar = itens.find(i => !i.sites.length);
+        if (semLugar) return aviso(`O item ${semLugar.n} está sem nenhum lugar marcado para cotar.`, 'erro');
         const botao = $('cb-enviar');
         botao.disabled = true;
         aviso('Enviando...', '');
         try {
             const resp = await api('/api/cotabot/cotar', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ evento: $('cb-evento').value.trim(), sites: $('cb-sites').value, itens })
+                body: JSON.stringify({ evento: $('cb-evento').value.trim(), sites: $('cb-sites').value,
+                    itens: itens.map(({ descricao, quantidade, sites, regras }) => ({ descricao, quantidade, sites, regras })) })
             });
             const corpo = await resp.json().catch(() => ({}));
             if (!resp.ok) throw new Error(corpo.error || `HTTP ${resp.status}`);
@@ -242,4 +356,6 @@
     if (evento) $('cb-evento').value = evento.slice(0, 40);
     addItem();
     atualizar();
+    carregarPadroes();
+    window.CotabotConfig.iniciar({ api, aoMudar: carregarPadroes });
 })();

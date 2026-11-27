@@ -31,6 +31,7 @@ const donoCotacao = require('./lib/dono-cotacao');
 const { criarDavRespostas, mesclarNcms } = require('./lib/dav-respostas');
 const { criarFinanceiro } = require('./lib/financeiro');
 const { criarCotabot } = require('./lib/cotabot');
+const { criarPadroes: criarPadroesCotabot } = require('./lib/cotabot-padroes');
 
 
 // 🛡️ AIRBAG ANTI-CRASH (Impede o servidor de morrer por erros invisíveis)
@@ -260,6 +261,10 @@ function limparErroEvento(eventoId) {
 // Cotabot: robô que cota itens na VM, via gerenciador (lib/cotabot.js, gerenciador/ponte_cotabot.py)
 const cotabot = criarCotabot({
     pasta: process.env.COTABOT_PASTA || path.join(__dirname, 'dados', 'cotabot'), io, obterRobo: () => bot_socket_id
+});
+// Padrões do Cotabot (categoria/marca -> fornecedores), um só para a empresa; editados na tela do Cotabot
+const padroesCotabot = criarPadroesCotabot({
+    arquivo: path.join(process.env.COTABOT_PASTA || path.join(__dirname, 'dados', 'cotabot'), 'padroes.json')
 });
 
 // DAV gerado pelo Cotafrete a partir da Planilha Base (lib/dav-respostas.js)
@@ -2316,6 +2321,51 @@ app.get('/api/cotabot/estado', (req, res) => {
     if (!ficha) return;
     res.set('Cache-Control', 'no-store');
     res.json(cotabot.estadoPara(ficha));
+});
+
+app.get('/api/cotabot/padroes', (req, res) => {
+    const ficha = fichaCotabot(req, res);
+    if (!ficha) return;
+    res.set('Cache-Control', 'no-store');
+    res.json({ padroes: padroesCotabot.listar() });
+});
+
+// Criar (POST /padroes) ou editar (POST /padroes/:id) um padrão: qualquer conta com acesso ao Cotabot; fica na auditoria.
+function salvarPadraoCotabot(req, res, id) {
+    const ficha = fichaCotabot(req, res);
+    if (!ficha) return;
+    let r;
+    try {
+        r = padroesCotabot.salvar(id, req.body || {}, ficha.email);
+    } catch (e) {
+        console.error('Erro ao gravar padrões do Cotabot:', e.message);
+        return res.status(500).json({ error: 'Não deu para gravar o padrão.' });
+    }
+    if (r.erro) return res.status(r.status || 400).json({ error: r.erro });
+    registrarAuditoria({
+        email: ficha.email, ip: String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.ip,
+        area: 'portal', acao: 'cotabot_padrao', alvo: r.padrao.nome, detalhes: { id: r.padrao.id, novo: !id }
+    });
+    res.json({ sucesso: true, padrao: r.padrao });
+}
+app.post('/api/cotabot/padroes', (req, res) => salvarPadraoCotabot(req, res, ''));
+app.post('/api/cotabot/padroes/:id', (req, res) => salvarPadraoCotabot(req, res, String(req.params.id || '').slice(0, 60)));
+
+app.post('/api/cotabot/padroes/:id/apagar', (req, res) => {
+    const ficha = fichaCotabot(req, res);
+    if (!ficha) return;
+    let r;
+    try {
+        r = padroesCotabot.apagar(String(req.params.id || '').slice(0, 60));
+    } catch (e) {
+        return res.status(500).json({ error: 'Não deu para apagar o padrão.' });
+    }
+    if (r.erro) return res.status(r.status || 400).json({ error: r.erro });
+    registrarAuditoria({
+        email: ficha.email, ip: String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.ip,
+        area: 'portal', acao: 'cotabot_padrao_apagado', alvo: String(req.params.id || '').slice(0, 60)
+    });
+    res.json({ sucesso: true });
 });
 
 app.get('/api/cotabot/planilha/:id', (req, res) => {

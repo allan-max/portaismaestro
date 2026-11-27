@@ -56,8 +56,52 @@ textarea.cb-input { resize: vertical; min-height: 58px; }
 .cb-pi.cotando .cb-pi-info { color: var(--cyan); }
 .cb-pi a { color: var(--blue); }
 
+/* Onde cotar cada item: caixinhas dos fornecedores dos padrões (check azul = vai cotar ali) */
+.cb-onde { grid-column: 2 / -1; display: flex; flex-direction: column; gap: 10px; padding: 2px 0 10px; }
+.cb-grupo { display: flex; flex-direction: column; gap: 6px; }
+.cb-grupo-topo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; }
+.cb-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.cb-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 7px; border: 1px solid var(--border); border-radius: 999px;
+    font-size: 12px; color: var(--muted); cursor: pointer; user-select: none; background: var(--bg); }
+.cb-chip input { accent-color: #2563eb; width: 15px; height: 15px; margin: 0; cursor: pointer; }
+.cb-chip:has(input:checked) { border-color: #3777ff; color: var(--text); background: rgba(37, 99, 235, .14); }
+.cb-chip:has(input:focus-visible) { outline: 2px solid var(--blue); outline-offset: 2px; }
+.cb-regra { color: var(--amber); }
+.cb-tirar { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 12px; padding: 2px 6px; border-radius: 6px; }
+.cb-tirar:hover { background: var(--panel-hover); color: var(--text); }
+.cb-mais { width: auto; padding: 4px 8px; font-size: 12px; border-radius: 999px; }
+
+/* Botão de configurações (canto superior esquerdo) e janela dos padrões */
+.cb-config { min-height: 34px; }
+.cb-config svg { width: 16px; height: 16px; }
+.cb-dialogo { width: min(980px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 0; border: 1px solid var(--border);
+    border-radius: var(--radius); background: var(--panel); color: var(--text); }
+.cb-dialogo::backdrop { background: rgba(5, 8, 12, .7); }
+.cbc-cabecalho { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 0; }
+.cbc-cabecalho h2 { font-size: 16px; margin: 0; }
+.cbc-intro { padding: 4px 20px 12px; margin: 0; font-size: 12.5px; border-bottom: 1px solid var(--border); }
+.cbc-corpo { display: grid; grid-template-columns: 260px 1fr; min-height: 0; }
+.cbc-lado { border-right: 1px solid var(--border); padding: 14px; display: flex; flex-direction: column; gap: 10px;
+    max-height: calc(100vh - 190px); overflow-y: auto; }
+.cbc-lista { display: flex; flex-direction: column; gap: 4px; }
+.cbc-item { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 8px 10px; border-radius: 8px;
+    border: 1px solid transparent; background: none; color: var(--text); cursor: pointer; font: inherit; font-size: 12.5px; }
+.cbc-item small { font-size: 11px; }
+.cbc-item:hover { background: var(--panel-hover); }
+.cbc-item.ativo { border-color: #3777ff; background: rgba(37, 99, 235, .14); }
+.cbc-form { padding: 14px 20px 18px; display: flex; flex-direction: column; gap: 12px; max-height: calc(100vh - 190px); overflow-y: auto; }
+.cbc-titulo { margin: 0; font-size: 14px; }
+.cbc-campo { display: flex; flex-direction: column; gap: 4px; }
+.cbc-campo .cb-rotulo { margin-bottom: 0; }
+.cbc-geral { align-self: flex-start; border-radius: 8px; }
+.cbc-acoes { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.cbc-apagar { color: var(--red); }
+
 @media (max-width: 600px) {
     .cb-item { grid-template-columns: 28px 1fr 72px 34px; }
+    .cbc-corpo { grid-template-columns: 1fr; }
+    .cbc-lado { border-right: 0; border-bottom: 1px solid var(--border); max-height: 30vh; }
+    .cb-config span { display: none; }
     .cb-sec, .cb-card { padding-left: 14px; padding-right: 14px; }
     form.cb-card { padding: 0; }
 }

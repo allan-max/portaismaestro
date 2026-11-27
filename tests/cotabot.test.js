@@ -21,11 +21,12 @@ const ADMIN = { email: 'adm@x', admin: true };
 test('pedir manda cotabot_cotar ao gerenciador só com itens válidos', () => {
     const { cb, emitidos } = montar();
     const r = cb.pedir({ email: ALLAN.email, vendedor: 'Allan', evento: '310170', sites: 'google',
-        itens: [{ descricao: ' Geladeira ', quantidade: '2' }, { descricao: '   ' }] });
+        itens: [{ descricao: ' Geladeira ', quantidade: '2', sites: ['Martins', 'Martins', ' ', 'google'], regras: ['Conferir frete.'] },
+            { descricao: '   ' }] });
     assert.ok(r.pedido);
     const env = emitidos.find(e => e.nome === 'cotabot_cotar');
     assert.equal(env.alvo, 'robo-1');
-    assert.deepEqual(env.dados.itens, [{ descricao: 'Geladeira', quantidade: 2 }]);
+    assert.deepEqual(env.dados.itens, [{ descricao: 'Geladeira', quantidade: 2, sites: ['Martins', 'google'], regras: ['Conferir frete.'] }]);
     assert.equal(env.dados.pedido, r.pedido.id);
 });
 

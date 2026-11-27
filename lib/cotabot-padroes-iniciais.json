@@ -1,0 +1,92 @@
+[
+  {
+    "id": "geral",
+    "nome": "Geral (categoria não reconhecida)",
+    "geral": true,
+    "palavras": [],
+    "fornecedores": ["Martins", "Tambasa", "FastShop", "Casa e Vídeo", "Fujioka", "Bartofil", "Gazin", "Friopeças", "Belmicro"],
+    "regra": ""
+  },
+  {
+    "id": "furukawa-sohoplus",
+    "nome": "Furukawa / SohoPlus",
+    "palavras": ["furukawa", "sohoplus", "soho plus"],
+    "fornecedores": ["Telcabos", "Router 66", "Klint Lantele", "Oderço", "Hayamax", "All Nations", "Viksul", "Dimensional"],
+    "regra": ""
+  },
+  {
+    "id": "limpeza",
+    "nome": "Materiais de limpeza e descartáveis",
+    "palavras": ["vassoura", "rodo", "detergente", "sabao", "sabonete", "copo descartavel", "descartavel", "desinfetante",
+      "agua sanitaria", "alcool", "pano de chao", "esponja", "papel higienico", "papel toalha", "saco de lixo",
+      "limpeza", "multiuso", "lustra moveis", "limpa vidros"],
+    "fornecedores": ["Atacado São Paulo", "Cesconetto", "Atacado Real", "FX Distribuidora", "Infopel", "Lube", "Bartofil", "Assaí Atacadista"],
+    "regra": ""
+  },
+  {
+    "id": "ar-condicionado",
+    "nome": "Ar-condicionado",
+    "palavras": ["ar condicionado", "split", "btu", "btus", "hi wall", "cassete", "piso teto"],
+    "fornecedores": ["Friovix", "Frigelar", "Dufrio", "Climario", "Martins", "Fujioka", "Tambasa",
+      "Elgin (fabricante)", "Philco (fabricante)", "Midea / Carrier (fabricante)", "Electrolux (fabricante)",
+      "Consul (fabricante)", "Agratto (fabricante)"],
+    "regra": "Compras em quantidade: cotar diretamente com o fabricante, que costuma oferecer preços mais competitivos. Ao cotar com o fabricante, sempre conferir o pedido mínimo e o valor do frete."
+  },
+  {
+    "id": "eletroportateis",
+    "nome": "Eletroportáteis",
+    "palavras": ["grill", "mixer", "cafeteira", "sanduicheira", "garrafa termica", "liquidificador", "air fryer",
+      "fritadeira", "batedeira", "multiprocessador", "processador de alimentos", "panela eletrica", "chaleira",
+      "fogao eletrico", "cooktop", "torradeira", "espremedor", "ferro de passar", "ventilador", "micro ondas",
+      "microondas", "forno eletrico", "purificador de agua", "bebedouro"],
+    "fornecedores": ["Martins", "Tambasa", "FastShop", "Casa e Vídeo", "Fujioka", "Bartofil", "Gazin", "Friopeças", "Belmicro"],
+    "regra": "Compra em quantidade: cotar direto com o fabricante, que costuma ter o preço mais competitivo. No fabricante, sempre conferir o pedido mínimo e o frete."
+  },
+  {
+    "id": "logitech",
+    "nome": "Logitech",
+    "palavras": ["logitech"],
+    "fornecedores": ["Agis", "Mazer", "Pauta", "SND", "Fagundez", "GMI", "Port", "ScanSource", "Ingram Micro", "Martins",
+      "Gazin", "Fujioka", "Golden", "All Nations", "Gibson", "Coleção"],
+    "regra": ""
+  },
+  {
+    "id": "intelbras",
+    "nome": "Intelbras",
+    "palavras": ["intelbras"],
+    "fornecedores": ["Sudeste", "Router", "Linhavix", "Mazer", "Plantec"],
+    "regra": ""
+  },
+  {
+    "id": "impressoras",
+    "nome": "Impressoras e rotuladoras",
+    "palavras": ["impressora", "multifuncional", "rotuladora", "okidata", "brother", "canon"],
+    "fornecedores": ["Ativa Distribuição", "Cogra", "Port", "Agis", "Gomaq", "Reis Office (foco em Okidata, Brother e Canon)"],
+    "regra": ""
+  },
+  {
+    "id": "impressora-3d",
+    "nome": "Impressora 3D",
+    "palavras": ["impressora 3d", "3d printer", "filamento"],
+    "fornecedores": ["Pauta", "Agis", "Fujioka"],
+    "regra": ""
+  },
+  {
+    "id": "automacao",
+    "nome": "Impressoras de automação",
+    "palavras": ["impressora termica", "impressora de etiqueta", "etiquetadora", "zebra", "argox", "bematech",
+      "impressora de cupom", "leitor de codigo de barras"],
+    "fornecedores": ["Interway (foco em impressoras de automação)", "ScanSource (foco em impressoras de automação)"],
+    "regra": ""
+  },
+  {
+    "id": "informatica",
+    "nome": "Informática, hardware e TVs",
+    "palavras": ["notebook", "computador", "desktop", "monitor", "tv", "televisor", "televisao", "smart tv", "ssd",
+      "memoria ram", "processador", "placa de video", "placa mae", "mouse", "teclado", "headset", "webcam", "tablet",
+      "nobreak", "projetor", "hd externo", "pendrive", "all in one"],
+    "fornecedores": ["Agis", "Mazer", "Pauta", "SND", "Fagundez", "GMI", "ScanSource", "Ingram Micro", "Martins", "Gazin",
+      "Fujioka", "Golden", "All Nations", "Mais Próxima", "Rcell", "Gibson", "Tambasa", "Belmicro", "Coleção", "iByte", "Miranda"],
+    "regra": ""
+  }
+]
