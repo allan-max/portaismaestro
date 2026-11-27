@@ -381,7 +381,6 @@
         .empurrador .perna { transform-box: fill-box; transform-origin: 50% 0; }
         .empurrador .perna-frente { animation: pres-passo 0.36s ease-in-out infinite alternate; }
         .empurrador .perna-tras { animation: pres-passo 0.36s ease-in-out infinite alternate-reverse; }
-        .empurrador.parado .corpo, .empurrador.parado .perna { animation-play-state: paused; }
         @keyframes pres-balanca { from { transform: translateY(0); } to { transform: translateY(-3px); } }
         @keyframes pres-passo { from { transform: rotate(-20deg); } to { transform: rotate(18deg); } }
         .cena-trex .fala {
@@ -844,7 +843,7 @@
             const pres = document.createElement('div');
             pres.className = 'empurrador';
             pres.innerHTML = PRESIDENTE_SVG;
-            const alt = Math.max(120, fonte * 2.6), larg = alt * 110 / 160;
+            const alt = Math.max(90, fonte * 1.8), larg = alt * 110 / 160;
             const chao = pBase.top + pBase.height * 0.92;
             Object.assign(pres.style, { width: larg + 'px', height: alt + 'px', top: (chao - alt) + 'px' });
             cena.insertBefore(pres, elVale);                          // passa por trás do "Vale"
@@ -863,15 +862,13 @@
             const vAndar = 0.34, vEmpurrar = 0.24;
             // se "Metais" está em outra linha (celular), ele pula para o lado do "Base" quando o empurrão começa
             const mesmaLinha = Math.abs(pMetais.top - pBase.top) < 4;
-            let t0 = null, xAtual = inicio, ultimo = null, encostou = false, falou = false, sumiu = false, paradoAte = null, pulo = null;
+            let t0 = null, xAtual = inicio, ultimo = null, encostou = false, falou = false, sumiu = false, pulo = null;
 
             function quadro(agora) {
                 if (t0 === null) { t0 = agora; ultimo = agora; }
                 const dt = agora - ultimo; ultimo = agora;
                 const mao = xAtual + maoX;
 
-                if (paradoAte !== null && agora < paradoAte) { requestAnimationFrame(quadro); return; }
-                if (paradoAte !== null) { paradoAte = null; pres.classList.remove('parado'); }
 
                 xAtual += (encostou ? vEmpurrar : vAndar) * dt;
                 pres.style.transform = `translateX(${xAtual}px)`;
@@ -900,22 +897,20 @@
                         falou = true;
                         fala.classList.add('mostra');
                     }
-                    // "BaseMetais" sumiu atrás do painel: troca a empresa e ele para para falar
+                    // "BaseMetais" sumiu atrás do painel: troca a empresa e ele segue andando
                     if (pBase.left + baseX >= borda) {
                         sumiu = true;
                         elBase.remove(); elMetais.remove();
                         aoSumir();
-                        pres.classList.add('parado');
-                        paradoAte = agora + 1400;
                     }
                 }
-                if (sumiu && paradoAte === null && xAtual > borda + 10) {
+                if (sumiu && xAtual > borda + 10) {
                     h1.style.color = ''; h1.style.minHeight = '';
                     cena.remove();
                     trexRodando = false;
                     return;
                 }
-                if (sumiu && paradoAte === null && !fala.classList.contains('some')) {
+                if (falou && xAtual + larg * 0.62 > borda && !fala.classList.contains('some')) {   // cabeça passou para trás do painel
                     fala.classList.add('some');
                 }
                 requestAnimationFrame(quadro);
