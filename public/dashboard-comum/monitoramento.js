@@ -77,7 +77,7 @@
         { id: 'cadastro', nome: 'Cadastro automático', subtitulo: 'Pedidos na planilha', categoria: 'servico', icone: 'cadastro', href: 'nfs.html', idLog: null, arquivoLog: 'Histórico Cadastro' },
         { id: 'sync_planilha', nome: 'Sync planilha', subtitulo: 'Planilha ⇄ Portal', categoria: 'servico', icone: 'sync', href: 'sync.html', idLog: null, arquivoLog: 'Histórico Sync' },
         { id: 'coupa', nome: 'Robô Coupa', subtitulo: 'Extração, Pente Fino e Respostas', categoria: 'robo', icone: 'robo', href: 'coupa.html', idLog: 'coupa', arquivoLog: 'log-coupa.txt' },
-        { id: 'vale', nome: 'Robô Vale', subtitulo: 'Extração Nimbi / Vale', categoria: 'robo', icone: 'robo', href: 'vale.html', idLog: 'vale', arquivoLog: 'log-vale.txt' },
+        { id: 'vale', nome: 'Robô Vale', subtitulo: 'Extração Nimbi / Vale', categoria: 'robo', icone: 'robo', href: 'coupa.html?empresa=vale_base_metais', idLog: 'vale', arquivoLog: 'log-vale.txt' },
         { id: 'ariba', nome: 'Robô SAP Ariba', subtitulo: 'AEGEA e Estácio · .NET', categoria: 'robo', icone: 'robo', href: 'ariba.html', idLog: 'ariba', arquivoLog: 'aribasourcing.txt' },
         { id: 'me', nome: 'Mercado Eletrônico', subtitulo: 'Extração de cotações e PDFs', categoria: 'robo', icone: 'robo', href: 'me.html', idLog: 'me', arquivoLog: 'mercadoeletronico.txt' },
         { id: 'findes', nome: 'Robô Findes', subtitulo: 'Coleta CDE e materiais · .NET', categoria: 'robo', icone: 'robo', href: 'findes.html', idLog: 'findes', arquivoLog: 'findes.txt' },
@@ -89,7 +89,7 @@
     const ARQUIVOS_LOG_REDE = [
         { id: 'coupa', nome: 'Robô Coupa', arquivo: 'log-coupa.txt', href: 'coupa.html', txt: true },
         { id: 'me', nome: 'Mercado Eletrônico', arquivo: 'mercadoeletronico.txt', href: 'me.html', txt: true },
-        { id: 'vale', nome: 'Robô Vale', arquivo: 'log-vale.txt', href: 'vale.html', txt: true },
+        { id: 'vale', nome: 'Robô Vale', arquivo: 'log-vale.txt', href: 'coupa.html?empresa=vale_base_metais', txt: true },
         { id: 'ariba', nome: 'Robô SAP Ariba', arquivo: 'aribasourcing.txt', href: 'ariba.html', txt: true },
         { id: 'findes', nome: 'Robô Findes', arquivo: 'findes.txt', href: 'findes.html', txt: true },
         { id: 'gerenciador', nome: 'Gerenciador Central', arquivo: 'gerenciador.log', href: 'atividade.html', txt: true },
